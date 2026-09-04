@@ -1,0 +1,71 @@
+package com.xxl.ai.api.framework.service.impl;
+
+import com.xxl.ai.api.framework.mapper.system.LogMapper;
+import com.xxl.ai.api.framework.model.adaptor.LogAdaptor;
+import com.xxl.ai.api.framework.model.dto.LogDTO;
+import com.xxl.ai.api.framework.model.entity.Log;
+import com.xxl.ai.api.framework.service.LogService;
+import com.xxl.tool.response.PageModel;
+import com.xxl.tool.response.Response;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * 日志 Service 实现
+ * 
+ * @author xuxueli 2024-10-27 12:19:06
+ */
+@Service
+public class LogServiceImpl implements LogService {
+
+	@Resource
+	private LogMapper logMapper;
+
+	@Override
+	public Response<String> insert(Log xxlBootLog) {
+		// 参数校验
+		if (xxlBootLog == null) {
+			return Response.ofFail("必要参数缺失");
+        }
+		logMapper.insert(xxlBootLog);
+		return Response.ofSuccess();
+	}
+
+	@Override
+	public Response<String> delete(List<Integer> ids) {
+		// 执行删除
+		int ret = logMapper.delete(ids);
+		return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+	}
+
+	@Override
+	public Response<String> update(Log xxlBootLog) {
+		// 执行更新
+		int ret = logMapper.update(xxlBootLog);
+		return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+	}
+
+	@Override
+	public Response<Log> load(int id) {
+		// 根据 ID 查询
+		Log record = logMapper.load(id);
+		return Response.ofSuccess(record);
+	}
+
+	@Override
+	public PageModel<LogDTO> pageList(int type, int module, String title, int offset, int pagesize) {
+		// 分页查询
+		List<Log> pageList = logMapper.pageList(type, module, title, offset, pagesize);
+		int totalCount = logMapper.pageListCount(type, module, title, offset, pagesize);
+
+		// 实体转 DTO（补充 IP 地理位置）
+		List<LogDTO> pageListDTO = LogAdaptor.adaptor(pageList);
+
+		PageModel<LogDTO> pageModel = new PageModel<>();
+		pageModel.setData(pageListDTO);
+		pageModel.setTotal(totalCount);
+		return pageModel;
+	}
+}

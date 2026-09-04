@@ -1,0 +1,62 @@
+package com.xxl.ai.api.framework.controller.base;
+
+import com.xxl.ai.api.framework.model.dto.LoginRequest;
+import com.xxl.tool.http.HttpTool;
+import com.xxl.tool.http.http.HttpResponse;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * 登录 Controller 测试
+ * 
+ * @author xuxueli 2024-01-01
+ */
+public class LoginControllerTest {
+    private static final Logger logger = LoggerFactory.getLogger(LoginControllerTest.class);
+
+    private static final String API_SERVICE_URL = "http://localhost:8090";
+    private static final String TEST_USER = "admin";
+    private static final String TEST_PASS = "123456";
+    private static final String TEST_TOKEN_KEY = "xxl-sso-login-token";
+    private static final String TEST_TOKEN_VALUE = "eyJ1c2VySWQiOiIxIiwiZXhwaXJlVGltZSI6MCwic2lnbmF0dXJlIjoiNjdhMjNkZjE3OTk5NGNjMDgyNmVmYjMzNmY3MWIyMjMifQ";
+
+    @Test
+    void login_test() {
+        HttpResponse response = HttpTool.createPost(API_SERVICE_URL + "/auth/login")
+                .request(new LoginRequest(TEST_USER, TEST_PASS))
+                .execute();
+        logger.info("Response: {}", response.response());
+        assertTrue(response.isSuccess());
+    }
+
+
+    @Test
+    void logout_test() {
+        HttpResponse response = HttpTool.createPost(API_SERVICE_URL + "/auth/logout")
+                .header(TEST_TOKEN_KEY, TEST_TOKEN_VALUE)
+                .execute();
+        logger.info("Response: {}", response.response());
+        assertTrue(response.isSuccess());
+    }
+
+    @Test
+    void loginCheck_test() {
+        HttpResponse response = HttpTool.createPost(API_SERVICE_URL + "/auth/loginCheck")
+                .header(TEST_TOKEN_KEY, TEST_TOKEN_VALUE)
+                .execute();
+        logger.info("Response: {}", response.response());
+        assertTrue(response.isSuccess());
+    }
+
+    @Test
+    void captcha_test() {
+        HttpResponse response = HttpTool.createGet(API_SERVICE_URL + "/auth/captcha")
+                .execute();
+        logger.info("Response: {}", response.response());
+        assertTrue(response.isSuccess());
+    }
+
+}

@@ -1,0 +1,338 @@
+<!--
+  组件：Navbar（顶部导航栏）
+  功能：根据 navType 切换不同导航模式（左侧菜单/混合菜单/顶部菜单），
+        右侧渲染搜索、全屏、主题切换、布局尺寸、通知、用户菜单等操作项
+-->
+<template>
+  <div class="navbar" :class="'nav-' + settingsStore.navType">
+    <!-- 侧边栏折叠按钮 -->
+    <Hamburger id="hamburger-container" :is-active="appStore.sidebar.opened" class="hamburger-container" @toggleClick="toggleSideBar" />
+
+    <!-- 面包屑导航：导航模式：
+        side=左侧菜单（显示面包屑）
+        mix=混合模式（显示 TopBarMix）
+        top=顶部菜单模式（显示 SidebarLogo + TopBar）
+    -->
+
+    <!-- 面包屑导航（左侧菜单模式） -->
+    <Breadcrumb v-if="settingsStore.navType === 'side'" id="breadcrumb-container" class="breadcrumb-container" />
+
+    <!-- 顶部导航（混合模式） -->
+    <TopBarMix v-if="settingsStore.navType === 'mix'" id="topmenu-container" class="topmenu-container" />
+
+    <!-- 顶部导航+Logo（顶部菜单模式） -->
+    <template v-if="settingsStore.navType === 'top'">
+      <!-- 侧边栏 Logo -->
+      <SidebarLogo v-show="settingsStore.sidebarLogo" :collapse="false"></SidebarLogo>
+      <!-- 顶部菜单栏（顶部菜单模式-3） -->
+      <TopBar id="topbar-container" class="topbar-container" />
+    </template>
+
+    <!-- 右侧操作区 -->
+    <div class="right-menu">
+      <template v-if="appStore.device !== 'mobile'">
+        <!-- 搜索 -->
+        <HeaderSearch id="header-search" class="right-menu-item" />
+        <!-- 全屏 -->
+        <Screenfull id="screenfull" class="right-menu-item hover-effect" />
+        <!-- 主题 -->
+        <el-tooltip :content="t('layout.nav.themeMode')" effect="dark" placement="bottom">
+          <div class="right-menu-item hover-effect theme-switch-wrapper" @click="toggleTheme">
+            <SvgIcon v-if="settingsStore.isDark" icon-class="sunny" />
+            <SvgIcon v-if="!settingsStore.isDark" icon-class="moon" />
+          </div>
+        </el-tooltip>
+        <!-- 布局尺寸 -->
+        <el-tooltip :content="t('layout.nav.layoutSize')" effect="dark" placement="bottom">
+          <SizeSelect id="size-select" class="right-menu-item hover-effect" />
+        </el-tooltip>
+        <!-- 通知 -->
+        <el-tooltip :content="t('layout.nav.message')" effect="dark" placement="bottom">
+          <HeaderMessage id="header-message" class="right-menu-item hover-effect" />
+        </el-tooltip>
+      </template>
+
+      <!-- 用户头像与下拉菜单 -->
+      <el-dropdown
+        @command="handleCommand"
+        class="avatar-container right-menu-item hover-effect"
+        trigger="hover"
+        :show-timeout="50"
+        :hide-timeout="500"
+      >
+        <!-- 用户信息  -->
+        <div class="avatar-wrapper">
+          <el-icon class="user-icon"><User /></el-icon>
+          <span class="user-realName"> {{ userStore.realName }} </span>
+          <el-icon class="caret-icon"><ArrowDown /></el-icon>
+        </div>
+
+        <!-- 下拉框  -->
+        <template #dropdown>
+          <el-dropdown-menu>
+            <!-- 个人中心  -->
+            <router-link to="/user/profile">
+              <el-dropdown-item>{{ t('layout.nav.profile') }}</el-dropdown-item>
+            </router-link>
+            <!-- 布局设置  -->
+            <el-dropdown-item command="setLayout" v-if="settingsStore.showSettings">
+              <span>{{ t('layout.nav.layoutSetting') }}</span>
+            </el-dropdown-item>
+            <!-- 退出登录  -->
+            <el-dropdown-item divided command="logout">
+              <span>{{ t('layout.nav.logout') }}</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ElMessageBox } from 'element-plus'
+import Breadcrumb from './Breadcrumb.vue'
+import TopBarMix from './TopBarMix.vue'
+import TopBar from './TopBar.vue'
+import SidebarLogo from '../Sidebar/SidebarLogo.vue'
+import Hamburger from './Hamburger.vue'
+import Screenfull from './Screenfull.vue'
+import SizeSelect from './SizeSelect.vue'
+import HeaderSearch from './HeaderSearch.vue'
+import HeaderMessage from './HeaderMessage.vue'
+import { useAppStore, useUserStore, useSettingsStore } from '@/store'
+import defaultSettings from '@/default-settings'
+import { nextTick } from 'vue'
+import { t } from '@/i18n'
+import { SvgIcon } from '@/components'
+
+const appStore = useAppStore()
+const userStore = useUserStore()
+const settingsStore = useSettingsStore()
+
+/*
+ * 切换侧边栏展开/收起
+ */
+function toggleSideBar() {
+  appStore.toggleSideBar(false)
+}
+
+/*
+ * 用户下拉菜单命令处理
+ */
+function handleCommand(command: string | number | object) {
+  switch (command) {
+    case 'setLayout':
+      setLayout()
+      break
+    case 'logout':
+      logout()
+      break
+  }
+}
+
+/*
+ * 退出登录：二次确认后清除登录态并跳转首页
+ */
+function logout() {
+  ElMessageBox.confirm(t('layout.nav.logoutConfirm'), t('modal.title'), {
+    confirmButtonText: t('modal.confirmButton'),
+    cancelButtonText: t('modal.cancelButton'),
+    type: 'warning'
+  })
+    .then(() => {
+      userStore.logout().then(() => {
+        location.href = defaultSettings.homePath
+      })
+    })
+    .catch(() => {})
+}
+
+/*
+ * 触发布局设置面板打开
+ * emit: setLayout（由 layout/index.vue 父组件监听，控制右侧设置面板显隐）
+ */
+const emits = defineEmits(['setLayout'])
+function setLayout() {
+  emits('setLayout')
+}
+
+/*
+ * 主题切换：浅色、暗色
+ *   - 支持 View Transition API 实现圆形扩散动画
+ *   - fallback 分支（无 API / 减少动效模式）：直接切换
+ *   - animation 分支：startViewTransition + clipPath 圆形过渡，固定从左上角扩散
+ */
+async function toggleTheme() {
+  const wasDark = settingsStore.isDark
+
+  const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const isSupported = document.startViewTransition && !isReducedMotion
+
+  /* fallback：降级到直接切换 */
+  if (!isSupported) {
+    settingsStore.toggleTheme()
+    return
+  }
+
+  /* animation：圆形扩散过渡动画 */
+  try {
+    const transition = document.startViewTransition!(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      settingsStore.toggleTheme()
+      await nextTick()
+    })
+    await transition.ready
+
+    /* 固定起点：左上角，向外扩散的 clipPath 动画 */
+    const x = 0
+    const y = 0
+    const endRadius = Math.hypot(window.innerWidth, window.innerHeight)
+    const clipPath = [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`]
+    document.documentElement.animate(
+      {
+        clipPath: !wasDark ? [...clipPath].reverse() : clipPath
+      },
+      {
+        duration: 650,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        fill: 'forwards',
+        pseudoElement: !wasDark ? '::view-transition-old(root)' : '::view-transition-new(root)'
+      }
+    )
+    await transition.finished
+  } catch (error) {
+    console.warn('View transition failed, falling back to immediate toggle:', error)
+    settingsStore.toggleTheme()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.navbar.nav-top {
+  .hamburger-container {
+    display: none !important;
+  }
+}
+
+.navbar {
+  height: 50px;
+  overflow: hidden;
+  position: relative;
+  background: var(--navbar-bg);
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  display: flex;
+  align-items: center;
+  // padding: 0 8px;
+  box-sizing: border-box;
+
+  .hamburger-container {
+    line-height: 46px;
+    height: 100%;
+    cursor: pointer;
+    transition: background 0.3s;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 8px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.025);
+    }
+  }
+
+  .breadcrumb-container {
+    flex-shrink: 0;
+  }
+
+  .topmenu-container {
+    position: absolute;
+    left: 50px;
+  }
+
+  .topbar-container {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    margin-left: 8px;
+  }
+
+  .right-menu {
+    height: 100%;
+    line-height: 50px;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+
+    &:focus {
+      outline: none;
+    }
+
+    .right-menu-item {
+      display: inline-block;
+      padding: 0 8px;
+      height: 100%;
+      font-size: 18px;
+      color: #5a5e66;
+      vertical-align: text-bottom;
+
+      &.hover-effect {
+        cursor: pointer;
+        transition: background 0.3s;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.025);
+        }
+      }
+
+      &.theme-switch-wrapper {
+        display: flex;
+        align-items: center;
+
+        svg {
+          transition: transform 0.3s;
+
+          &:hover {
+            transform: scale(1.15);
+          }
+        }
+      }
+    }
+
+    .avatar-container {
+      padding-right: 0px;
+      padding-left: 0px;
+      margin-left: -5px;
+      display: flex;
+      align-items: center;
+
+      .avatar-wrapper {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 8px;
+        cursor: pointer;
+
+        .user-icon {
+          font-size: 18px;
+          margin-right: 6px;
+        }
+
+        .user-realName {
+          font-size: 14px;
+          font-weight: bold;
+          white-space: nowrap;
+        }
+
+        .caret-icon {
+          font-size: 12px;
+          margin-left: 4px;
+        }
+      }
+    }
+  }
+}
+</style>

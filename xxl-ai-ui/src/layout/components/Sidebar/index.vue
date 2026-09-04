@@ -1,0 +1,136 @@
+<!--
+  组件：Sidebar（侧边栏）
+  功能：左侧菜单容器，含 Logo、菜单树、折叠切换。
+        混合模式下只显示当前顶级菜单的子路由。
+-->
+<template>
+  <div :class="['sidebar-theme-wrapper', { 'has-logo': showLogo }, sideTheme]" class="sidebar-container">
+    <!-- Logo -->
+    <SidebarLogo v-if="showLogo" :collapse="isCollapse" />
+    <!-- 菜单滚动容器 -->
+    <el-scrollbar wrap-class="scrollbar-wrapper">
+      <el-menu
+        :default-active="activeMenu"
+        :collapse="isCollapse"
+        :background-color="getMenuBackground"
+        :text-color="getMenuTextColor"
+        :unique-opened="true"
+        :active-text-color="theme"
+        :collapse-transition="false"
+        mode="vertical"
+        :class="sideTheme"
+      >
+        <!-- 菜单项 -->
+        <SidebarItem v-for="(route, index) in sidebarRouters" :key="(route.path || '') + index" :item="route" :base-path="route.path" />
+      </el-menu>
+    </el-scrollbar>
+  </div>
+</template>
+
+<script setup lang="ts">
+import SidebarLogo from './SidebarLogo.vue'
+import SidebarItem from './SidebarItem.vue'
+import variables from '@/assets/styles/variables.module.scss'
+import { useAppStore, useRoutesStore, useSettingsStore } from '@/store'
+import type { RouteData } from '@/store/modules/routes'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const appStore = useAppStore()
+const settingsStore = useSettingsStore()
+const store = useRoutesStore()
+
+/*
+ * 侧边栏路由列表。
+ *   - 混合模式（navType='mix'）且存在顶级作用域 mixScope 时，只显示该顶级菜单下的子路由；
+ *   - 否则全量展示。
+ *
+ * computed：
+ *   - 自动追踪依赖（现有的响应式数据），当依赖变化时自动重新计算
+ */
+const sidebarRouters = computed<RouteData[]>(() => {
+  const routes: RouteData[] = store.fullRoutes
+  /*
+   * mixScope 由 TopBarMix 联动写入，标识当前激活的顶级菜单 path。
+   * 默认scope为 ''/假值，不会过滤。
+   */
+  if (settingsStore.navType === 'mix' && appStore.mixScope) {
+    const menu = routes.find((r) => r.path === appStore.mixScope)
+    if (menu?.children) return menu.children
+  }
+  return routes
+})
+
+const showLogo = computed(() => settingsStore.sidebarLogo)
+const sideTheme = computed(() => settingsStore.sideTheme)
+const theme = computed(() => settingsStore.theme)
+const isCollapse = computed(() => !appStore.sidebar.opened)
+
+/*
+ * 菜单背景色：深色模式 / theme-dark / theme-light
+ */
+const getMenuBackground = computed(() => {
+  if (settingsStore.isDark) {
+    return 'var(--sidebar-bg)'
+  }
+  return sideTheme.value === 'theme-dark' ? variables.menuBg : variables.menuLightBg
+})
+
+/*
+ * 菜单文字色：深色模式 / theme-dark / theme-light
+ */
+const getMenuTextColor = computed(() => {
+  if (settingsStore.isDark) {
+    return 'var(--sidebar-text)'
+  }
+  return sideTheme.value === 'theme-dark' ? variables.menuText : variables.menuLightText
+})
+
+/*
+ * 当前激活菜单：优先取 meta.activeMenu，否则取 route.path
+ */
+const activeMenu = computed(() => {
+  const { meta, path } = route
+  if (meta.activeMenu) {
+    return meta.activeMenu
+  }
+  return path
+})
+</script>
+
+<style lang="scss" scoped>
+.sidebar-container {
+  background-color: v-bind(getMenuBackground);
+
+  .scrollbar-wrapper {
+    background-color: v-bind(getMenuBackground);
+  }
+
+  .el-menu {
+    border: none;
+    height: 100%;
+    width: 100% !important;
+
+    .el-menu-item,
+    .el-sub-menu__title {
+      &:hover {
+        background-color: var(--menu-hover, rgba(0, 0, 0, 0.06)) !important;
+      }
+    }
+
+    .el-menu-item {
+      color: v-bind(getMenuTextColor);
+
+      &.is-active {
+        color: var(--menu-active-text, #409eff);
+        background-color: var(--menu-hover, rgba(0, 0, 0, 0.06)) !important;
+      }
+    }
+
+    .el-sub-menu__title {
+      color: v-bind(getMenuTextColor);
+    }
+  }
+}
+</style>

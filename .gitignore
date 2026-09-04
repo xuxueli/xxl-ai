@@ -1,0 +1,22 @@
+# for backend
+*.iml
+/.idea
+**/target/
+.classpath
+.project
+.DS_Store
+.gitattributes
+
+# for fontend
+node_modules/
+dist/
+.vite/
+package-lock.json
+auto-imports.d.ts
+
+# for ai
+.opencode
+.omo
+.claude
+.specify
+specs

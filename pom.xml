@@ -12,6 +12,7 @@
 	<url>https://www.xuxueli.com/</url>
 
 	<modules>
+		<module>xxl-ai-api</module>
 	</modules>
 
 	<properties>
@@ -24,15 +25,93 @@
 		<maven.test.skip>true</maven.test.skip>
 		<!-- plugin -->
 		<maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+		<maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+		<maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+		<maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
 		<!-- base -->
 		<slf4j-api.version>2.0.18</slf4j-api.version>
-		<junit-jupiter.version>6.1.0</junit-jupiter.version>
+		<!-- spring -->
+		<spring-boot.version>4.1.1</spring-boot.version>
+		<!-- mybatis & db -->
+		<mybatis-spring-boot-starter.version>4.1.0</mybatis-spring-boot-starter.version>
+		<mysql-connector-j.version>26.7.0</mysql-connector-j.version>
+		<!-- xxl-sso -->
+		<xxl-sso.version>2.4.1</xxl-sso.version>
+		<!-- poi (excel) -->
+		<poi.version>5.5.1</poi.version>
+		<!-- ip2region -->
+		<ip2region.version>3.3.7</ip2region.version>
+		<!-- spring-ai -->
+		<spring-ai.version>2.0.1</spring-ai.version>
+		<!-- milvus -->
+		<milvus.version>3.0.8</milvus.version>
 
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
-			
+			<!-- springboot -->
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring-boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<!-- mybatis -->
+			<dependency>
+				<groupId>org.mybatis.spring.boot</groupId>
+				<artifactId>mybatis-spring-boot-starter</artifactId>
+				<version>${mybatis-spring-boot-starter.version}</version>
+			</dependency>
+			<!-- mysql -->
+			<dependency>
+				<groupId>com.mysql</groupId>
+				<artifactId>mysql-connector-j</artifactId>
+				<version>${mysql-connector-j.version}</version>
+			</dependency>
+
+			<!-- xxl-sso -->
+			<dependency>
+				<groupId>com.xuxueli</groupId>
+				<artifactId>xxl-sso-core</artifactId>
+				<version>${xxl-sso.version}</version>
+			</dependency>
+
+			<!-- ip2region -->
+			<dependency>
+				<groupId>org.lionsoul</groupId>
+				<artifactId>ip2region</artifactId>
+				<version>${ip2region.version}</version>
+			</dependency>
+
+			<!-- poi -->
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi-ooxml</artifactId>
+				<version>${poi.version}</version>
+			</dependency>
+
+			<!-- ********************************* for plugin start ********************************* -->
+			<!-- spring-ai -->
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-starter-model-ollama</artifactId>
+				<version>${spring-ai.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-starter-model-openai</artifactId>
+				<version>${spring-ai.version}</version>
+			</dependency>
+			<!-- milvus -->
+			<dependency>
+				<groupId>io.milvus</groupId>
+				<artifactId>milvus-sdk-java</artifactId>
+				<version>${milvus.version}</version>
+			</dependency>
+			<!-- ********************************* for plugin end ********************************* -->
 
 		</dependencies>
 	</dependencyManagement>

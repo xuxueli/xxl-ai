@@ -1,0 +1,64 @@
+package com.xxl.ai.api.framework.service;
+
+import com.xxl.ai.api.framework.model.dto.ResourceDTO;
+import com.xxl.ai.api.framework.model.entity.Resource;
+import com.xxl.tool.response.PageModel;
+import com.xxl.tool.response.Response;
+
+import java.util.List;
+
+/**
+* Resource Service
+*
+* Created by xuxueli on '2024-07-28 12:52:39'.
+*/
+public interface ResourceService {
+
+    /**
+    * 新增
+    */
+    public Response<String> insert(Resource xxlBootResource);
+
+    /**
+    * 删除
+    */
+    public Response<String> delete(List<Integer> ids);
+
+    /**
+     * 更新
+     */
+    public Response<String> update(Resource xxlBootResource);
+
+    /**
+     * 批量更新排序
+     */
+    public Response<String> updateSort(List<Integer> ids, List<Integer> orders);
+
+    /**
+    * Load查询
+    */
+    public Response<Resource> load(int id);
+
+    /**
+    * 分页查询
+    */
+    public PageModel<Resource> pageList(int offset, int pagesize);
+
+    /**
+     * Tree查询
+     */
+    public List<ResourceDTO> treeList(String name, int status);
+
+    /**
+     * Tree查询（已授权）
+     */
+    /*public List<XxlAiResourceDTO> treeListByUserId(int userId);*/
+
+    /**
+     * 根据 用户ID 获取 资源列表（已授权）
+     * @param userId 用户ID
+     * @param visible 显示状态：0-显示、1-隐藏、-1-不过滤
+     */
+    List<Resource> queryResourceByUserid(int userId, int visible);
+
+}

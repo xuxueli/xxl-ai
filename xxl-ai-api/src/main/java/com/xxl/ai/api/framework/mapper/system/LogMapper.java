@@ -1,0 +1,61 @@
+package com.xxl.ai.api.framework.mapper.system;
+
+import com.xxl.ai.api.framework.model.entity.Log;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 日志 Mapper
+ * 
+ * @author xuxueli 2024-01-01
+ */
+@Mapper
+public interface LogMapper {
+
+    /**
+    * 新增
+    */
+    public int insert(@Param("xxlBootLog") Log xxlBootLog);
+
+    /**
+    * 删除
+    */
+    public int delete(@Param("ids") List<Integer> ids);
+
+    /**
+    * 更新
+    */
+    public int update(@Param("xxlBootLog") Log xxlBootLog);
+
+    /**
+    * Load查询
+    */
+    public Log load(@Param("id") int id);
+
+    /**
+    * 分页查询Data
+    */
+	public List<Log> pageList(@Param("type") int type,
+                                     @Param("module") int module,
+                                     @Param("title") String title,
+                                     @Param("offset") int offset,
+                                     @Param("pagesize") int pagesize);
+
+    /**
+    * 分页查询Count
+    */
+    public int pageListCount(@Param("type") int type,
+                             @Param("module") int module,
+                             @Param("title") String title,
+                             @Param("offset") int offset,
+                             @Param("pagesize") int pagesize);
+
+    /**
+     * 按日期统计日志趋势
+     */
+    List<Map<String, Object>> trendList(@Param("days") int days);
+
+}

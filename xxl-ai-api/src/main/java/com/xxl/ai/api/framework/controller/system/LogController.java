@@ -1,0 +1,139 @@
+package com.xxl.ai.api.framework.controller.system;
+
+import com.xxl.ai.api.framework.constant.enums.LogModuleEnum;
+import com.xxl.ai.api.framework.constant.enums.LogTypeEnum;
+import com.xxl.ai.api.framework.model.dto.LogDTO;
+import com.xxl.ai.api.framework.model.dto.LogExcelDTO;
+import com.xxl.ai.api.framework.model.entity.Log;
+import com.xxl.ai.api.framework.service.LogService;
+import com.xxl.sso.core.annotation.XxlSso;
+import com.xxl.tool.core.DateTool;
+import com.xxl.tool.excel.ExcelTool;
+import com.xxl.tool.response.PageModel;
+import com.xxl.tool.response.Response;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Log Controller
+ *
+ * Created by xuxueli on '2024-10-27 12:19:06'.
+ */
+@RestController
+@RequestMapping("/system/log")
+public class LogController {
+
+    @Resource
+    private LogService xxlBootLogService;
+
+    /**
+     * 日志页面（FreeMarker）
+     */
+    @RequestMapping
+    @XxlSso
+    public String index(Model model) {
+        model.addAttribute("LogTypeEnum", LogTypeEnum.values());
+        model.addAttribute("LogModuleEnum", LogModuleEnum.values());
+        return "/framework/system/log";
+    }
+
+    /**
+     * 分页查询
+     *
+     * @param offset   偏移量
+     * @param pagesize 每页条数
+     * @param type     日志类型（-1 全部）
+     * @param module   系统模块编码（0 全部）
+     * @param title    日志标题（模糊匹配）
+     */
+    @RequestMapping("/pageList")
+    @XxlSso
+    public Response<PageModel<LogDTO>> pageList(@RequestParam(defaultValue = "0") int offset,
+                                                @RequestParam(defaultValue = "10") int pagesize,
+                                                @RequestParam(defaultValue = "-1") int type,
+                                                @RequestParam(defaultValue = "0") int module,
+                                                String title) {
+        PageModel<LogDTO> pageModel = xxlBootLogService.pageList(type, module, title, offset, pagesize);
+        return Response.ofSuccess(pageModel);
+    }
+
+    /**
+     * 根据 ID 查询单条日志
+     */
+    @RequestMapping("/load")
+    @XxlSso
+    public Response<Log> load(int id) {
+        return xxlBootLogService.load(id);
+    }
+
+    /**
+     * 新增日志
+     */
+    @RequestMapping("/insert")
+    @XxlSso
+    public Response<String> insert(Log xxlBootLog) {
+        return xxlBootLogService.insert(xxlBootLog);
+    }
+
+    /**
+     * 批量删除日志
+     */
+    @RequestMapping("/delete")
+    @XxlSso
+    public Response<String> delete(@RequestParam("ids[]") List<Integer> ids) {
+        return xxlBootLogService.delete(ids);
+    }
+
+    /**
+     * 更新日志
+     */
+    @RequestMapping("/update")
+    @XxlSso
+    public Response<String> update(Log xxlBootLog) {
+        return xxlBootLogService.update(xxlBootLog);
+    }
+
+    /**
+     * 导出 Excel
+     */
+    @PostMapping("/export")
+    @XxlSso
+    public void export(HttpServletResponse response,
+                       @RequestParam(defaultValue = "-1") int type,
+                       @RequestParam(defaultValue = "0") int module,
+                       String title) throws Exception {
+
+        PageModel<LogDTO> pageModel = xxlBootLogService.pageList(type, module, title, 0, 100000);
+        List<LogDTO> list = pageModel.getData();
+        List<LogExcelDTO> excelDTOList = list.stream().map(LogExcelDTO::new).toList();
+
+        // file data
+        byte[] byteArray = ExcelTool.writeExcel(excelDTOList);
+        String fileName = "excel-"+ DateTool.formatDateTime(new Date()) +".xlsx";
+
+        // write file
+        writeResponse(response, byteArray, fileName);
+
+    }
+
+    /**
+     * write response
+     */
+    public static void writeResponse(HttpServletResponse response, byte[] byteArray, String fileName) throws Exception {
+        response.reset();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename*=utf-8''" + fileName);
+        response.setContentLength(byteArray.length);
+        response.getOutputStream().write(byteArray);
+        response.getOutputStream().flush();
+    }
+
+}

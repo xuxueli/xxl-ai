@@ -1,0 +1,439 @@
+package com.xxl.ai.api.framework.service.impl;
+
+import com.xxl.ai.api.framework.mapper.tool.CodegenFieldMapper;
+import com.xxl.ai.api.framework.mapper.tool.CodegenMapper;
+import com.xxl.ai.api.framework.model.adaptor.CodegenAdaptor;
+import com.xxl.ai.api.framework.model.adaptor.CodegenFieldAdaptor;
+import com.xxl.ai.api.framework.model.dto.CodegenDTO;
+import com.xxl.ai.api.framework.model.dto.CodegenFieldDTO;
+import com.xxl.ai.api.framework.model.entity.Codegen;
+import com.xxl.ai.api.framework.model.entity.CodegenField;
+import com.xxl.ai.api.framework.service.CodegenService;
+import com.xxl.ai.api.framework.util.codegen.ClassInfo;
+import com.xxl.ai.api.framework.util.codegen.FieldInfo;
+import com.xxl.ai.api.framework.util.codegen.TableParseUtil;
+import com.xxl.tool.core.StringTool;
+import com.xxl.tool.freemarker.FtlTool;
+import com.xxl.tool.response.PageModel;
+import com.xxl.tool.response.Response;
+import freemarker.template.Configuration;
+import freemarker.template.TemplateException;
+import jakarta.annotation.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+/**
+ * 代码生成 Service 实现
+ * 
+ * @author xuxueli 2024-01-01
+ */
+@Service
+public class CodegenServiceImpl implements CodegenService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CodegenServiceImpl.class);
+
+    @Resource
+    private CodegenMapper codegenMapper;
+
+    @Resource
+    private CodegenFieldMapper codegenFieldMapper;
+
+    @Resource
+    private Configuration freemarkerConfig;
+
+
+    @Override
+    public PageModel<CodegenDTO> pageList(String tableName, String tableComment, int offset, int pagesize) {
+        List<Codegen> list = codegenMapper.pageList(tableName, tableComment, offset, pagesize);
+        int total = codegenMapper.pageListCount(tableName, tableComment, offset, pagesize);
+        PageModel<CodegenDTO> pm = new PageModel<>();
+        pm.setData(CodegenAdaptor.adaptor(list));
+        pm.setTotal(total);
+        return pm;
+    }
+
+    @Override
+    public Response<String> delete(List<Integer> ids) {
+        codegenFieldMapper.deleteByCodegenIds(ids);
+        return codegenMapper.delete(ids) > 0 ? Response.ofSuccess() : Response.ofFail();
+    }
+
+    @Override
+    public Response<String> update(CodegenDTO dto) {
+
+        // 生成模板（tplCategory）必填校验：仅支持单表（crud）与树表（tree）
+        if (dto == null || !List.of("crud", "tree").contains(dto.getTplCategory())) {
+            return Response.ofFail("生成模板不能为空");
+        }
+
+        Codegen c = new Codegen();
+        c.setId(dto.getId());
+        c.setTableName(dto.getTableName());
+        c.setTableComment(dto.getTableComment());
+        c.setRemark(dto.getRemark());
+        c.setPackageName(dto.getPackageName());
+        c.setModuleName(dto.getModuleName());
+        c.setBusinessName(dto.getBusinessName());
+        c.setFunctionName(dto.getFunctionName());
+        c.setFunctionAuthor(dto.getFunctionAuthor());
+        c.setFormColNum(dto.getFormColNum());
+        c.setTplCategory(dto.getTplCategory());
+        c.setTplWebType(dto.getTplWebType());
+
+        int ret = codegenMapper.update(c);
+        if (ret <= 0) return Response.ofFail();
+
+        // 保存字段
+        List<CodegenFieldDTO> fieldList = dto.getFieldList();
+        if (fieldList != null && !fieldList.isEmpty()) {
+            codegenFieldMapper.deleteByCodegenIds(List.of((int) c.getId()));
+            for (CodegenFieldDTO fd : fieldList) {
+                codegenFieldMapper.insert(toEntity(c.getId(), fd));
+            }
+        }
+        return Response.ofSuccess();
+    }
+
+    /**
+     * CodegenFieldDTO 转实体
+     *
+     * @param codegenId 归属表编号
+     * @param dto       DTO
+     * @return 实体
+     */
+    private CodegenField toEntity(long codegenId, CodegenFieldDTO dto) {
+        CodegenField f = new CodegenField();
+        f.setId(dto.getId());
+        f.setCodegenId(codegenId);
+        f.setColumnName(dto.getColumnName());
+        f.setColumnComment(dto.getColumnComment());
+        f.setJavaType(dto.getJavaType());
+        f.setJavaField(dto.getJavaField());
+        f.setIsRequired(dto.getIsRequired());
+        f.setIsInsert(dto.getIsInsert());
+        f.setIsEdit(dto.getIsEdit());
+        f.setIsList(dto.getIsList());
+        f.setIsQuery(dto.getIsQuery());
+        f.setQueryType(dto.getQueryType());
+        f.setHtmlType(dto.getHtmlType());
+        f.setDictType(dto.getDictType());
+        f.setSort(dto.getSort());
+        return f;
+    }
+
+    @Override
+    public Response<CodegenDTO> loadDetail(int id) {
+        Codegen entity = codegenMapper.load(id);
+        List<CodegenField> rows = codegenFieldMapper.findByCodegenId(id);
+
+        List<CodegenDTO> list = CodegenAdaptor.adaptor(List.of(entity));
+        CodegenDTO dto = list.get(0);
+        dto.setFieldList(CodegenFieldAdaptor.adaptor(rows));
+
+        return Response.ofSuccess(dto);
+    }
+
+    @Override
+    public Response<String> createTable(String tableSql, String tplWebType) {
+        try {
+            // parse class-info
+            ClassInfo ci = TableParseUtil.processTableIntoClassInfo(tableSql);
+
+            // ClassInfo 2 Codegen
+            Codegen c = new Codegen();
+            c.setTableName(ci.getTableName());
+            c.setTableComment(ci.getClassComment());
+            c.setPackageName("com.xxl.ai.api.business");
+            c.setModuleName("demo");
+            c.setBusinessName(ci.getClassName());
+
+            String funcName = ci.getClassComment() != null && !ci.getClassComment().isEmpty()
+                    ? ci.getClassComment()
+                    : ci.getClassName() + "管理";
+            c.setFunctionName(funcName);
+            c.setFunctionAuthor("xxl-ai");
+            c.setFormColNum(1);
+            c.setTplCategory("crud");
+            c.setTplWebType(tplWebType); // 前端传递：新建时携带前端模板类型（vue=element-plus-typescript、react=antd-typescript），与前端选择匹配
+
+            codegenMapper.insert(c);
+
+            // 保存字段
+            if (ci.getFieldList() != null) {
+                for (int i = 0; i < ci.getFieldList().size(); i++) {
+                    // FieldInfo 2 CodegenField
+                    FieldInfo fi = ci.getFieldList().get(i);
+                    String colName = fi.getColumnName().toLowerCase();
+
+                    CodegenField f = new CodegenField();
+                    f.setCodegenId(c.getId());
+                    f.setColumnName(fi.getColumnName());
+                    f.setColumnComment(fi.getFieldComment());
+                    f.setJavaField(fi.getFieldName());
+                    f.setJavaType(fi.getFieldClass());
+
+                    boolean isWhitelist = List.of("id", "add_time", "update_time").contains(colName);
+                    // id 主键：自增不参与新增/编辑；白名单字段（id/add_time/update_time）不参与列表/查询
+                    boolean isIdField = "id".equals(colName);
+
+                    f.setIsInsert(isIdField ? "0" : "1");
+                    f.setIsEdit(isIdField ? "0" : "1");
+                    f.setIsList(isWhitelist ? "0" : "1");
+                    f.setIsQuery(isWhitelist ? "0" : "1");
+                    f.setIsRequired("0");
+
+                    f.setQueryType(colName.endsWith("name") || colName.endsWith("title") ? "LIKE" : "EQ");
+                    f.setHtmlType(inferHtmlType(colName, fi.getFieldClass(), fi.getColumnType()));
+                    f.setSort(i + 1);
+
+                    codegenFieldMapper.insert(f);
+                }
+            }
+            return Response.ofSuccess();
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return Response.ofFail("建表失败");
+        }
+    }
+
+    /**
+     * 根据列名、Java类型、SQL类型推断合适的显示组件
+     *
+     * @param colName  列名
+     * @param javaType Java 类型
+     * @param sqlType  SQL 类型
+     * @return 显示组件类型
+     */
+    private String inferHtmlType(String colName, String javaType, String sqlType) {
+        if (sqlType != null) {
+            String st = sqlType.toLowerCase();
+            if (st.contains("text") || st.contains("blob")) {
+                return "textarea";
+            }
+            if (st.startsWith("tinyint") && colName.contains("status")) {
+                return "radio";
+            }
+        }
+        if (colName.endsWith("status") || colName.endsWith("type") || colName.equals("sex")) {
+            return "radio";
+        }
+        if (colName.endsWith("content") || colName.endsWith("description") || colName.endsWith("desc")) {
+            return "editor";
+        }
+        if (colName.endsWith("image") || colName.endsWith("img") || colName.endsWith("avatar")) {
+            return "imageUpload";
+        }
+        if (colName.endsWith("file") || colName.endsWith("attachment")) {
+            return "fileUpload";
+        }
+        if (colName.endsWith("time") || colName.endsWith("date")) {
+            return "datetime";
+        }
+        if ("String".equals(javaType) && sqlType != null && sqlType.contains("(")) {
+            String digits = sqlType.replaceAll("\\D", "");
+            if (!digits.isEmpty() && Integer.parseInt(digits) > 500) {
+                return "textarea";
+            }
+        }
+        return "input";
+    }
+
+    @Override
+    public Response<Map<String, String>> preview(int id) {
+        Codegen codegen = codegenMapper.load(id);
+        if (codegen == null) return Response.ofFail("表不存在");
+        List<CodegenField> fields = codegenFieldMapper.findByCodegenId(id);
+        // 校验 id 主键字段：前端页面交互（编辑/删除/新增判定）强依赖 id
+        if (!hasIdField(fields)) {
+            return Response.ofFail("业务表缺少 id 主键字段，无法生成代码");
+        }
+
+        try {
+            Map<String, Object> params = buildTemplateContext(codegen, fields);
+
+            // generate java
+            Map<String, String> result = new LinkedHashMap<>();
+            result.put("java/entity.java.ftl", render("java/entity.java.ftl", params));
+            result.put("java/mapper.java.ftl", render("java/mapper.java.ftl", params));
+            result.put("java/mapper.xml.ftl", render("java/mapper.xml.ftl", params));
+            result.put("java/service.java.ftl", render("java/service.java.ftl", params));
+            result.put("java/serviceImpl.java.ftl", render("java/serviceImpl.java.ftl", params));
+            result.put("java/controller.java.ftl", render("java/controller.java.ftl", params));
+
+            // generate sql
+            result.put("sql/sql.ftl", render("sql/sql.ftl", params));
+
+            // generate web（根据 tplWebType 选择 vue3 或 react 模板）
+            if (isReactTpl(codegen.getTplWebType())) {
+                result.put("react/types.ts.ftl", render("react/types.ts.ftl", params));
+                result.put("react/api.ts.ftl", render("react/api.ts.ftl", params));
+                if ("tree".equals(codegen.getTplCategory())) {
+                    result.put("react/index-tree.tsx.ftl", render("react/index-tree.tsx.ftl", params));
+                } else {
+                    result.put("react/index.tsx.ftl", render("react/index.tsx.ftl", params));
+                }
+            } else {
+                result.put("vue3/types.ts.ftl", render("vue3/types.ts.ftl", params));
+                result.put("vue3/api.ts.ftl", render("vue3/api.ts.ftl", params));
+                if ("tree".equals(codegen.getTplCategory())) {
+                    result.put("vue3/index-tree.vue.ftl", render("vue3/index-tree.vue.ftl", params));
+                } else {
+                    result.put("vue3/index.vue.ftl", render("vue3/index.vue.ftl", params));
+                }
+            }
+
+            return Response.ofSuccess(result);
+        } catch (IOException | TemplateException e) {
+            logger.error(e.getMessage(), e);
+            return Response.ofFail("代码生成失败: "  + e.getMessage());
+        }
+    }
+
+    @Override
+    public byte[] downloadCode(List<Integer> ids) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        // 多表下载
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (int id : ids) {
+
+                // load data
+                Codegen codegen = codegenMapper.load(id);
+                if (codegen == null) continue;
+                List<CodegenField> fields = codegenFieldMapper.findByCodegenId(codegen.getId());
+
+                // 校验 id 主键字段：缺失时跳过该表
+                if (!hasIdField(fields)) {
+                    logger.warn("代码生成跳过表[{}]：缺少 id 主键字段", codegen.getTableName());
+                    continue;
+                }
+
+                // param
+                Map<String, Object> params = buildTemplateContext(codegen, fields);
+                String pkg = codegen.getPackageName() != null ? codegen.getPackageName().replace('.', '/') : "com.xxl.ai.api.business";
+                String module = codegen.getModuleName() != null ? codegen.getModuleName() : "demo";
+                String cn = codegen.getBusinessName() != null ? codegen.getBusinessName() : "Demo";
+                // 业务名小写：用于前端 business 聚合目录，与菜单 url（/module/name）及页面 import 路径保持一致
+                String cnLower = cn.toLowerCase();
+
+                // generate java（后端与前端镜像：business/{module}/{business} 双层目录）
+                addZipEntry(zos, "main/java/" + pkg + "/" + module + "/" + cnLower + "/model/" + cn + ".java", render("java/entity.java.ftl", params));
+                addZipEntry(zos, "main/java/" + pkg + "/" + module + "/" + cnLower + "/mapper/" + cn + "Mapper.java", render("java/mapper.java.ftl", params));
+                addZipEntry(zos, "main/resources/mapper/" + module + "/" + cnLower + "/" + cn + "Mapper.xml", render("java/mapper.xml.ftl", params));
+                addZipEntry(zos, "main/java/" + pkg + "/" + module + "/" + cnLower + "/service/" + cn + "Service.java", render("java/service.java.ftl", params));
+                addZipEntry(zos, "main/java/" + pkg + "/" + module + "/" + cnLower + "/service/impl/" + cn + "ServiceImpl.java", render("java/serviceImpl.java.ftl", params));
+                addZipEntry(zos, "main/java/" + pkg + "/" + module + "/" + cnLower + "/controller/" + cn + "Controller.java", render("java/controller.java.ftl", params));
+
+                // generate sql
+                addZipEntry(zos, "main/resources/mapper/" + module + "/" + cnLower + "/" + cn + "-init.sql", render("sql/sql.ftl", params));
+
+                // generate web（根据 tplWebType 选择 vue3 或 react 模板；业务模块按页面聚合落位 business/{module}/{page}，内部再分 pages/api/types）
+                if (isReactTpl(codegen.getTplWebType())) {
+                    addZipEntry(zos, "react/business/" + module + "/" + cnLower + "/types/index.d.ts", render("react/types.ts.ftl", params));
+                    addZipEntry(zos, "react/business/" + module + "/" + cnLower + "/api/index.ts", render("react/api.ts.ftl", params));
+                    if ("tree".equals(codegen.getTplCategory())) {
+                        addZipEntry(zos, "react/business/" + module + "/" + cnLower + "/pages/index.tsx", render("react/index-tree.tsx.ftl", params));
+                    } else {
+                        addZipEntry(zos, "react/business/" + module + "/" + cnLower + "/pages/index.tsx", render("react/index.tsx.ftl", params));
+                    }
+                } else {
+                    addZipEntry(zos, "vue/business/" + module + "/" + cnLower + "/types/index.ts", render("vue3/types.ts.ftl", params));
+                    addZipEntry(zos, "vue/business/" + module + "/" + cnLower + "/api/index.ts", render("vue3/api.ts.ftl", params));
+                    if ("tree".equals(codegen.getTplCategory())) {
+                        addZipEntry(zos, "vue/business/" + module + "/" + cnLower + "/pages/index.vue", render("vue3/index-tree.vue.ftl", params));
+                    } else {
+                        addZipEntry(zos, "vue/business/" + module + "/" + cnLower + "/pages/index.vue", render("vue3/index.vue.ftl", params));
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+        return baos.toByteArray();
+    }
+
+    /**
+     * 判断是否使用 react 前端模板
+     *     - react：antd（Ant Design + TypeScript）
+     *     - vue3：element-plus-typescript
+     *
+     * @param tplWebType 前端模板类型
+     * @return 使用 react 模板返回 true
+     */
+    private boolean isReactTpl(String tplWebType) {
+        return "antd-typescript".equals(tplWebType);
+    }
+
+    /**
+      * 模板基础路径
+      */
+    private static final String TPL_PATH = "/tool/codegen/";
+
+    /**
+     * 渲染 FreeMarker 模板
+     *
+     * @param ftl    模板文件名
+     * @param params 模板参数
+     * @return 渲染后的字符串
+     */
+    private String render(String ftl, Map<String, Object> params) throws IOException, TemplateException {
+        return FtlTool.processString(freemarkerConfig, TPL_PATH + ftl, params);
+    }
+
+    /**
+     * 写入文件到 zip 包
+     *
+     * @param zos     ZipOutputStream
+     * @param name    文件名
+     * @param content 文件内容
+     */
+    private void addZipEntry(ZipOutputStream zos, String name, String content) throws IOException {
+        if (content == null) return;
+        zos.putNextEntry(new ZipEntry(name));
+        zos.write(content.getBytes(StandardCharsets.UTF_8));
+        zos.closeEntry();
+    }
+
+    /**
+     * 构建模板上下文
+     *
+     * @param codegen 业务表实体
+     * @param fields  字段列表
+     * @return 模板上下文
+     */
+    private Map<String, Object> buildTemplateContext(Codegen codegen, List<CodegenField> fields) {
+        Map<String, Object> ctx = new HashMap<>();
+        ctx.put("codegen", codegen);
+        ctx.put("fields", fields);
+        return ctx;
+    }
+
+    /**
+     * 校验字段列表是否包含 id 主键字段
+     * 前端生成页面的编辑/删除/新增判定等交互强依赖 id 字段
+     *
+     * @param fields 字段列表
+     * @return 包含 id 字段返回 true
+     */
+    private boolean hasIdField(List<CodegenField> fields) {
+        if (fields == null || fields.isEmpty()) {
+            return false;
+        }
+        for (CodegenField field : fields) {
+            if ("id".equals(field.getJavaField())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+}
