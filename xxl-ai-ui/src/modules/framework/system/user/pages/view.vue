@@ -4,7 +4,7 @@
 -->
 <template>
   <el-drawer
-    :title="t('authz.user.detailTitle')"
+    :title="t('system.user.detailTitle')"
     v-model="visible"
     direction="rtl"
     size="680px"
@@ -14,11 +14,11 @@
   >
     <div v-loading="loading" class="drawer-content">
       <!-- 基本信息 -->
-      <h4 class="section-header">{{ t('authz.user.baseInfo') }}</h4>
+      <h4 class="section-header">{{ t('system.user.baseInfo') }}</h4>
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.id') }}：</label>
+            <label class="info-label">{{ t('system.user.id') }}：</label>
             <span class="info-value plaintext">{{ info.id }}</span>
           </div>
         </el-col>
@@ -26,7 +26,7 @@
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.username') }}：</label>
+            <label class="info-label">{{ t('system.user.username') }}：</label>
             <span class="info-value plaintext">{{ info.username }}</span>
           </div>
         </el-col>
@@ -42,7 +42,7 @@
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.email') }}：</label>
+            <label class="info-label">{{ t('system.user.email') }}：</label>
             <span class="info-value plaintext">{{ info.email }}</span>
           </div>
         </el-col>
@@ -50,7 +50,7 @@
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.statusLabel') }}：</label>
+            <label class="info-label">{{ t('system.user.statusLabel') }}：</label>
             <span class="info-value plaintext">
               <el-tag size="small" :type="info.status === 0 ? 'success' : 'danger'">{{ statusText(info.status) }}</el-tag>
             </span>
@@ -60,13 +60,13 @@
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.role') }}：</label>
-            <span class="info-value plaintext">{{ roleNames || t('authz.user.noRole') }}</span>
+            <label class="info-label">{{ t('system.user.role') }}：</label>
+            <span class="info-value plaintext">{{ roleName || t('system.user.noRole') }}</span>
           </div>
         </el-col>
       </el-row>
       <!-- 其他信息 -->
-      <h4 class="section-header">{{ t('authz.user.otherInfo') }}</h4>
+      <h4 class="section-header">{{ t('system.user.otherInfo') }}</h4>
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
@@ -90,11 +90,10 @@
 <script setup lang="ts">
 defineOptions({ name: 'UserView' })
 import { t } from '@/i18n'
-import { listRole } from '@/modules/framework/authz/role/api'
+import { listRoleOptions } from '../api'
 import { loadEnumItem } from '@/modules/framework/system/dict/api'
 import { parseTime } from '@/utils/common'
 import type { User } from '../types'
-import type { Role } from '@/modules/framework/authz/role/types'
 import type { EnumOption } from '@/types'
 import { computed, ref } from 'vue'
 
@@ -102,17 +101,12 @@ const visible = ref(false)
 const loading = ref(false)
 const info = ref<User>({})
 const statusOptions = ref<EnumOption[]>([])
-const roleOptions = ref<Role[]>([])
+const roleOptions = ref<EnumOption[]>([])
 
-const roleNames = computed(() => {
-  const roleIds = info.value.roleIds as number[] | undefined
-  if (!roleIds || !roleIds.length) return ''
-  return (
-    roleOptions.value
-      .filter((r) => roleIds.includes(r.id as number))
-      .map((r) => r.name)
-      .join(t('authz.user.roleJoin')) || ''
-  )
+const roleName = computed(() => {
+  const roleCode = info.value.role
+  if (!roleCode) return ''
+  return roleOptions.value.find((i) => i.code === roleCode)?.title || roleCode
 })
 
 /** 状态编码 → 文案 */
@@ -126,8 +120,8 @@ function open(row: User) {
   visible.value = true
   loading.value = true
   info.value = { ...row }
-  listRole({ offset: 0, pagesize: 999 }).then((response) => {
-    roleOptions.value = response.data.data
+  listRoleOptions().then((response) => {
+    roleOptions.value = response.data
   })
   loadEnumItem('UserStatuEnum')
     .then((res) => {

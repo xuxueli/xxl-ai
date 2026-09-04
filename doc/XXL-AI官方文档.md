@@ -406,7 +406,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 
 - 平台核心：`framework` 包仅承载平台内置能力（登录、权限、系统管理、工具等），不承载具体业务；
 - 业务扩展：新增业务一律落位到 `business/{module}` 包（后端）、`resources/mapper/{module}/{business}/`（Mapper XML）；
-- 菜单零路由：前端菜单完全由数据库 `xxl_ai_resource` 驱动，新建页面文件后仅需插入菜单记录（`url` 配置为 `/module/business`）并授权，前端 `loadView` 自动映射页面，全程无需改动路由代码；
+- 菜单零路由：平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化），新建页面文件后在对应角色 static 资源列表追加菜单项（`url` 配置为 `/module/business`）即可，前端 `loadView` 自动映射页面，全程无需改动路由代码；
 - 模块/业务命名：两级命名 `{module}/{business}`，`{module}` 为业务模块域（对应后端包 `business.{module}`、权限前缀 `{module}:*`，可聚合多个业务页），`{business}` 为具体业务页/实体名（对应 Controller 与菜单 url）；
 - 前后端落位对照：
 
@@ -416,7 +416,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 前端   页面        src/modules/business/{module}/{business}/pages/index.vue
 前端   接口封装    src/modules/business/{module}/{business}/api/index.ts
 前端   类型        src/modules/business/{module}/{business}/types/index.ts
-菜单   xxl_ai_resource(type=0/1/2) + xxl_ai_role_res 授权，url 驱动零路由改动
+菜单   XxlRoleEnum 角色 static 资源列表（type=0/1/2，url 驱动零路由改动）
 ```
 
 ### 5.6、AI + Skill 辅助开发设计

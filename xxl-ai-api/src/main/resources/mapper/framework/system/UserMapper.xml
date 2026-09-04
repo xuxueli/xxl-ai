@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.xxl.ai.api.framework.mapper.authz.UserMapper">
+<mapper namespace="com.xxl.ai.api.framework.mapper.system.UserMapper">
 
 	<resultMap id="User" type="com.xxl.ai.api.framework.model.entity.User" >
 		<result column="id" property="id" />
@@ -9,6 +9,7 @@
 	    <result column="password" property="password" />
 	    <result column="token" property="token" />
 	    <result column="status" property="status" />
+		<result column="role" property="role" />
 		<result column="real_name" property="realName" />
 		<result column="email" property="email" />
 		<result column="add_time" property="addTime" />
@@ -21,6 +22,7 @@
 		t.password,
 		t.token,
 		t.status,
+		t.role,
 		t.real_name,
 		t.email,
 		t.add_time,
@@ -33,6 +35,7 @@
 			password,
 			token,
 			status,
+			role,
 			real_name,
 			email,
 			add_time,
@@ -42,6 +45,7 @@
 			 #{password},
 			 #{token},
 			 #{status},
+			 #{role},
 			 #{realName},
 			 #{email},
 			 NOW(),
@@ -72,6 +76,7 @@
 			</if>
 			token = #{token},
 			status = #{status},
+			role = #{role},
 			real_name = #{realName},
 			email = #{email},
 			update_time = NOW()

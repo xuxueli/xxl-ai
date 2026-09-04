@@ -12,6 +12,7 @@ public class User {
 	private String password;		// 密码
 	private String token;			// 登录token
 	private int status;				// 状态：0-正常、1-停用
+	private String role;			// 角色编码：admin-管理员、user-普通用户
 	private String realName;		// 用户名称
 	private String email;			// 邮箱
 	private Date addTime;
@@ -56,6 +57,14 @@ public class User {
 
 	public void setStatus(int status) {
 		this.status = status;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
 	}
 
 	public String getRealName() {

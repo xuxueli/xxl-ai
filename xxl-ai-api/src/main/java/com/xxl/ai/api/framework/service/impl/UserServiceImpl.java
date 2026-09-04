@@ -1,13 +1,11 @@
 package com.xxl.ai.api.framework.service.impl;
 
-import com.xxl.ai.api.framework.mapper.authz.RoleMapper;
-import com.xxl.ai.api.framework.mapper.authz.UserMapper;
-import com.xxl.ai.api.framework.mapper.authz.UserRoleMapper;
+import com.xxl.ai.api.framework.constant.enums.XxlRoleEnum;
+import com.xxl.ai.api.framework.mapper.system.UserMapper;
 import com.xxl.ai.api.framework.model.adaptor.UserAdaptor;
 import com.xxl.ai.api.framework.model.dto.UserDTO;
-import com.xxl.ai.api.framework.model.entity.Role;
 import com.xxl.ai.api.framework.model.entity.User;
-import com.xxl.ai.api.framework.model.entity.UserRole;
+import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.service.UserService;
 import com.xxl.ai.api.framework.util.I18nUtil;
 import com.xxl.tool.core.CollectionTool;
@@ -20,8 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -35,9 +31,7 @@ public class UserServiceImpl implements UserService {
     @Resource
     private UserMapper userMapper;
     @Resource
-    private RoleMapper roleMapper;
-    @Resource
-    private UserRoleMapper userRoleMapper;
+    private RoleService roleService;
 
     /**
      * 新增
@@ -47,8 +41,6 @@ public class UserServiceImpl implements UserService {
 
         // adapt
         User user = UserAdaptor.adapt(xxlJobUser);
-        List<Integer> roleIds = xxlJobUser.getRoleIds();
-
 
         // valid empty
         if (user == null) {
@@ -75,11 +67,8 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordHash);
 
         // valid user role
-        if (CollectionTool.isNotEmpty(roleIds)) {
-            List<Role> roles = roleMapper.queryByRoleIds(roleIds);
-            if (!(roles!=null && roles.size()==roleIds.size())) {
-                return Response.ofFail("操作失败，角色ID非法");
-            }
+        if (XxlRoleEnum.match(user.getRole()) == null) {
+            return Response.ofFail("操作失败，角色编码非法");
         }
 
         // check repeat
@@ -90,15 +79,6 @@ public class UserServiceImpl implements UserService {
 
         // save user
         userMapper.insert(user);
-
-        // save user-role
-        if (CollectionTool.isNotEmpty(roleIds)) {
-            List<UserRole> userRoleList = roleIds
-                    .stream()
-                    .map(roleId-> new UserRole(user.getId(), roleId))
-                    .collect(Collectors.toList());
-            userRoleMapper.batchInsert(userRoleList);
-        }
 
         return Response.ofSuccess();
     }
@@ -128,13 +108,6 @@ public class UserServiceImpl implements UserService {
             return Response.ofFail( I18nUtil.getString("user_update_loginuser_limit") );
         }
 
-        // valid user role
-        List<UserRole> userRoleList = userRoleMapper.queryByUserIds(userIds);
-        if (CollectionTool.isNotEmpty(userRoleList)) {
-            return Response.ofFail("无法删除，请先取消关联角色");
-        }
-
-
         int ret = userMapper.deleteByIds(userIds);
         return ret>0? Response.ofSuccess() : Response.ofFail();
     }
@@ -147,7 +120,6 @@ public class UserServiceImpl implements UserService {
 
         // adapt
         User user = UserAdaptor.adapt(xxlJobUser);
-        List<Integer> roleIds = xxlJobUser.getRoleIds();
 
         // avoid opt login seft
         if (loginUserName.equals(user.getUsername())) {
@@ -168,25 +140,12 @@ public class UserServiceImpl implements UserService {
         }
 
         // valid user role
-        if (CollectionTool.isNotEmpty(roleIds)) {
-            List<Role> roles = roleMapper.queryByRoleIds(roleIds);
-            if (!(roles!=null && roles.size()==roleIds.size())) {
-                return Response.ofFail("操作失败，角色ID非法");
-            }
+        if (XxlRoleEnum.match(user.getRole()) == null) {
+            return Response.ofFail("操作失败，角色编码非法");
         }
 
         // update user
         int ret = userMapper.update(user);
-
-        // update user-role
-        userRoleMapper.deleteByUserId(user.getId());
-        if (CollectionTool.isNotEmpty(roleIds)) {
-            List<UserRole> userRoleList = roleIds
-                    .stream()
-                    .map(roleId-> new UserRole(user.getId(), roleId))
-                    .collect(Collectors.toList());
-            userRoleMapper.batchInsert(userRoleList);
-        }
 
         return ret>0? Response.ofSuccess() : Response.ofFail();
     }
@@ -252,23 +211,9 @@ public class UserServiceImpl implements UserService {
         // adaptor
         List<UserDTO> pageListDto = new ArrayList<>();
         if (CollectionTool.isNotEmpty(pageList)) {
-            // find role
-            List<Integer> userIds = pageList.stream().map(User::getId).collect(Collectors.toList());
-            List<UserRole> userRoleList = userRoleMapper.queryByUserIds(userIds);
-
-            // user-roleids map
-            Map<Integer, List<Integer>> userIdToRoleIdsMap = Optional
-                    .ofNullable(userRoleList)
-                    .orElse(new ArrayList<>()).stream()
-                    .collect(Collectors.groupingBy(
-                            UserRole::getUserId,
-                            Collectors.mapping(UserRole::getRoleId, Collectors.toList())
-                    ));
-
-            // dto list
             pageListDto = pageList
                     .stream()
-                    .map(item->UserAdaptor.adapt2dto(item, false, userIdToRoleIdsMap))
+                    .map(item->UserAdaptor.adapt2dto(item, false))
                     .collect(Collectors.toList());
         }
 
@@ -295,13 +240,10 @@ public class UserServiceImpl implements UserService {
         }
 
         // convert to DTO
-        UserDTO userDTO = UserAdaptor.adapt2dto(user, true, null);
+        UserDTO userDTO = UserAdaptor.adapt2dto(user, true);
 
-        // query role names
-        List<Role> roleList = roleMapper.queryByUserid(user.getId());
-        if (CollectionTool.isNotEmpty(roleList)) {
-            userDTO.setRoleNames(roleList.stream().map(Role::getName).collect(Collectors.toList()));
-        }
+        // query role name
+        userDTO.setRoleName(roleService.queryRoleNameByCode(user.getRole()));
 
         return Response.ofSuccess(userDTO);
     }

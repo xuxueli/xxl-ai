@@ -1,8 +1,8 @@
 package com.xxl.ai.api.framework.controller.base;
 
+import com.xxl.ai.api.framework.constant.enums.XxlRoleEnum;
 import com.xxl.ai.api.framework.mapper.system.LogMapper;
-import com.xxl.ai.api.framework.mapper.authz.RoleMapper;
-import com.xxl.ai.api.framework.mapper.authz.UserMapper;
+import com.xxl.ai.api.framework.mapper.system.UserMapper;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
@@ -26,8 +26,6 @@ public class DashboardController {
     @Resource
     private UserMapper userMapper;
     @Resource
-    private RoleMapper roleMapper;
-    @Resource
     private LogMapper logMapper;
 
     /**
@@ -38,7 +36,7 @@ public class DashboardController {
     public Response<Map<String, Object>> stats() {
 
         int userCount = userMapper.pageListCount(0, 10, null, -1);
-        int roleCount = roleMapper.pageListCount(0, 999, null, -1);
+        int roleCount = XxlRoleEnum.values().length;
         int logCount = logMapper.pageListCount(-1, 0, null, 0, 10);
 
         Map<String, Object> data = new HashMap<>();

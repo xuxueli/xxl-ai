@@ -1,7 +1,7 @@
 import type { PageQuery } from '@/types'
 /**
- * 用户管理类型定义（views/authz/user 页面）
- * 对应后端 User.java
+ * 用户管理类型定义（modules/framework/system/user 页面）
+ * 对应后端 User.java（角色由枚举 XxlRoleEnum 定义，存储角色编码）
  */
 
 /** 用户实体（对应 User.java，用户管理 CRUD） */
@@ -11,8 +11,14 @@ export interface User {
   username?: string
   /** 密码 */
   password?: string
+  /** 角色编码：admin-管理员、user-普通用户 */
+  role?: string
+  /** 角色名称（非DB字段，loadProfile 返回） */
+  roleName?: string
   /** 真实姓名 */
   realName?: string
+  /** 邮箱 */
+  email?: string
   /** 状态：0-正常、1-停用 */
   status?: number
   addTime?: string
@@ -31,8 +37,9 @@ export interface UserQuery {
 }
 
 /** 用户表单（新增/修改入参） */
-export type UserForm = Pick<User, 'id' | 'username' | 'realName' | 'status' | 'password'> & {
-  roleIds?: number[]
+export type UserForm = Pick<User, 'id' | 'username' | 'realName' | 'email' | 'status' | 'password'> & {
+  /** 角色编码 */
+  role?: string
 }
 
 /** 用户列表请求参数（请求形态：offset/pagesize，供 api 使用） */

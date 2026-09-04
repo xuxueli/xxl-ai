@@ -1,11 +1,22 @@
 import { request } from '@/utils/request'
 import type { User, UserForm, UserListQuery } from '../types'
-import type { PageModel, Response } from '@/types'
+import type { EnumOption, PageModel, Response } from '@/types'
 
 /**
  * 名称：用户管理 API
- * 能力：提供用户列表、增删改、状态与个人中心相关接口。
+ * 能力：提供用户列表、增删改、状态与个人中心相关接口，以及角色下拉选项查询。
  */
+
+/**
+ * 查询角色下拉选项（角色由后端枚举 XxlRoleEnum 定义）。
+ * @returns 角色选项列表（{ code, title }）。
+ */
+export function listRoleOptions(): Promise<Response<EnumOption[]>> {
+  return request({
+    url: '/system/role/list',
+    method: 'get'
+  })
+}
 
 /**
  * 分页查询用户列表。
@@ -14,7 +25,7 @@ import type { PageModel, Response } from '@/types'
  */
 export function listUser(query: UserListQuery): Promise<Response<PageModel<User>>> {
   return request({
-    url: '/authz/user/pageList',
+    url: '/system/user/pageList',
     method: 'get',
     params: query
   })
@@ -27,7 +38,7 @@ export function listUser(query: UserListQuery): Promise<Response<PageModel<User>
  */
 export function addUser(data: UserForm): Promise<Response<unknown>> {
   return request({
-    url: '/authz/user/add',
+    url: '/system/user/add',
     method: 'post',
     params: data
   })
@@ -40,7 +51,7 @@ export function addUser(data: UserForm): Promise<Response<unknown>> {
  */
 export function updateUser(data: UserForm): Promise<Response<unknown>> {
   return request({
-    url: '/authz/user/update',
+    url: '/system/user/update',
     method: 'post',
     params: data
   })
@@ -53,7 +64,7 @@ export function updateUser(data: UserForm): Promise<Response<unknown>> {
  */
 export function delUser(ids: number | number[]): Promise<Response<unknown>> {
   return request({
-    url: '/authz/user/delete',
+    url: '/system/user/delete',
     method: 'post',
     params: { ids: Array.isArray(ids) ? ids : [ids] }
   })
@@ -65,7 +76,7 @@ export function delUser(ids: number | number[]): Promise<Response<unknown>> {
  */
 export function getUserProfile(): Promise<Response<User>> {
   return request({
-    url: '/authz/user/loadProfile',
+    url: '/system/user/loadProfile',
     method: 'get'
   })
 }
@@ -77,7 +88,7 @@ export function getUserProfile(): Promise<Response<User>> {
  */
 export function updateUserProfile(data: User): Promise<Response<unknown>> {
   return request({
-    url: '/authz/user/updateProfile',
+    url: '/system/user/updateProfile',
     method: 'post',
     data: data
   })
@@ -91,7 +102,7 @@ export function updateUserProfile(data: User): Promise<Response<unknown>> {
  */
 export function updateUserPwd(oldPassword: string, newPassword: string): Promise<Response<unknown>> {
   return request({
-    url: '/authz/user/updatePwd',
+    url: '/system/user/updatePwd',
     method: 'post',
     params: { oldPassword, newPassword }
   })

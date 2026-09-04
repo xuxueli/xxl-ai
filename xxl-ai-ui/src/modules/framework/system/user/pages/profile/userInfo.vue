@@ -8,7 +8,7 @@
     <el-form-item :label="t('common.realName')" prop="realName">
       <el-input v-model="form.realName" maxlength="30" />
     </el-form-item>
-    <el-form-item :label="t('authz.user.email')" prop="email">
+    <el-form-item :label="t('system.user.email')" prop="email">
       <el-input v-model="form.email" maxlength="100" />
     </el-form-item>
     <el-form-item>
@@ -44,7 +44,7 @@ const form = ref<UserInfoForm>({}) // 表单数据
 const rules = ref<FormRules>({
   // 表单校验规则
   realName: [{ required: true, message: t('common.requiredMsg', [t('common.realName')]), trigger: 'blur' }],
-  email: [{ type: 'email', message: t('authz.user.emailInvalid'), trigger: 'blur' }]
+  email: [{ type: 'email', message: t('system.user.emailInvalid'), trigger: 'blur' }]
 })
 
 /** 提交按钮 */

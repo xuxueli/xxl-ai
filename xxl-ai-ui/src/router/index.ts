@@ -45,7 +45,7 @@ export const constantRoutes = [
       {
         name: 'Profile',
         path: '/user/profile/:activeTab?',
-        component: () => import('@/modules/framework/authz/user/pages/profile/index.vue'),
+        component: () => import('@/modules/framework/system/user/pages/profile/index.vue'),
         meta: { title: '个人中心', icon: 'user' }
       }
     ]

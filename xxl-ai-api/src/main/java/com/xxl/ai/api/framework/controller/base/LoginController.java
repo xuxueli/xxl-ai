@@ -8,10 +8,8 @@ import com.xxl.ai.api.framework.model.dto.CaptchaDTO;
 import com.xxl.ai.api.framework.model.dto.LoginRequest;
 import com.xxl.ai.api.framework.model.entity.Config;
 import com.xxl.ai.api.framework.model.entity.Log;
-import com.xxl.ai.api.framework.model.entity.Role;
 import com.xxl.ai.api.framework.model.entity.User;
 import com.xxl.ai.api.framework.service.ConfigService;
-import com.xxl.ai.api.framework.service.ResourceService;
 import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.service.UserService;
 import com.xxl.ai.api.framework.util.I18nUtil;
@@ -58,8 +56,6 @@ public class LoginController {
 
 	@Resource
 	private UserService userService;
-	@Resource
-	private ResourceService resourceService;
 	@Resource
 	private RoleService roleService;
 	@Resource
@@ -108,17 +104,12 @@ public class LoginController {
 		}
 
 		// 2、find permission + role
-		List<com.xxl.ai.api.framework.model.entity.Resource> resourceList = resourceService.queryResourceByUserid(xxlBootUser.getId(), -1);
+		List<String> roles = roleService.queryRoleByUserid(xxlBootUser.getId());
+		List<com.xxl.ai.api.framework.model.entity.Resource> resourceList = roleService.queryResourceByUserid(xxlBootUser.getId(), -1);
 		List<String> permissions = CollectionTool.isNotEmpty(resourceList) ?
 				resourceList.stream()
 						.map(com.xxl.ai.api.framework.model.entity.Resource::getPermission)
-						.collect(Collectors.toCollection(ArrayList::new)) :
-				new ArrayList<>();
-
-		List<Role> roleList = roleService.queryRoleByUserid(xxlBootUser.getId());
-		List<String> roles = CollectionTool.isNotEmpty(roleList) ?
-				roleList.stream()
-						.map(Role::getCode)
+						.filter(StringTool::isNotBlank)
 						.collect(Collectors.toCollection(ArrayList::new)) :
 				new ArrayList<>();
 

@@ -37,7 +37,7 @@ xxl-ai-ui/src
 2. **建表**：`xxl_ai_*` SQL，公共字段 `id/add_time/update_time`，TINYINT 状态，`COMMENT` 注释；SQL 脚本写入该需求子目录（如 `{business}-table.sql`、`{business}-init.sql`）。
 3. **生成或手写代码**：本 Skill 缺省策略为 AI 按模板直生等价代码落位（后端 6 件套 + 前端 vue3 文件），落位细则见下方「后端落位清单 / 前端落位清单」。
 4. **落位**：前后端双层镜像——后端 Java 落 `business/{module}/{business}`，Mapper XML 落 `resources/mapper/{module}/{business}/`；前端业务模块聚合落 `modules/business/{module}/{business}/`（pages/index.vue + api/index.ts + types/index.ts）。
-5. **菜单/权限**：插 `xxl_ai_resource` 菜单(type=1)+按钮(type=2)+`xxl_ai_role_res` 授权；页面按钮用 `v-hasPermi`。
+5. **菜单/权限**：在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
 6. **验证**：起 `xxl-ai-api`(8090) + `xxl-ai-ui`(3000，代理 /api→8090)，菜单可见、CRUD 可用、权限生效；验证结果回填 `plan.md`。
 
 > ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `mysql`），其 CLI 默认连接字符集是 **latin1**，必须按下列姿势执行：
@@ -85,10 +85,10 @@ xxl-ai-ui/src
 SQL 脚本：`{business}-table.sql`
 
 ## 三、菜单 / 授权
-- 菜单（type=1）：`{名称}` permission=`{module}:{business}` url=`/{module}/{business}`
-- 按钮（type=2）：新增 `:add` / 修改 `:edit` / 删除 `:remove`
-- 角色授权：`xxl_ai_role_res` role_id=1
-- SQL 脚本：`{business}-init.sql`
+- 菜单（type=1）：`{名称}` permission=`{module}:{business}` url=`/{module}/{business}`，追加进 `XxlRoleEnum` 对应角色的 static 资源列表
+- 按钮（type=2）：新增 `:add` / 修改 `:edit` / 删除 `:remove`，parentId 指向所属菜单
+- 授权：加入某角色静态资源列表（如 `ADMIN_RESOURCES`）即对该角色可见，无需数据库授权
+- 落盘：`{business}-init.sql`（仅建表/种子数据；菜单走枚举注册）
 
 ## 四、后端改造
 | 文件 | 位置 | 要点 |
@@ -112,7 +112,7 @@ SQL 脚本：`{business}-table.sql`
 ## 六、验证结果 / 变更记录
 - [ ] 需求结论确认并回填第一节
 - [ ] 建表 SQL 执行通过，字段与实体一致
-- [ ] 菜单/按钮/授权已插库且终端可见
+- [ ] XxlRoleEnum 菜单/按钮已注册且终端可见
 - [ ] 后端 `mvn -q compile` 通过
 - [ ] 前端 vue-tsc / eslint 通过
 - [ ] 联调：菜单可见、CRUD/搜索可用、无权限按钮隐藏、空参数友好提示
@@ -152,7 +152,7 @@ SQL 脚本：`{business}-table.sql`
 
 **i18n 落位**：用户可见文案一律 `import { t } from '@/i18n'` 引用，**禁止硬编码中文**（注释除外）；文案 key 统一维护在 `src/i18n/locales/{zh,en}.json` **单一文件**内（按域名节点分区，如 `business.*`；`app` 前置 → 公共组 `common` 等 → 平台业务组 `authz/system` 等 → 常规业务模块，顺序与另一套 UI 保持一致），zh/en 成对补。通用词（新增/修改/删除/搜索/操作/状态/正常/停用/保存成功…）复用 `common.*`，插值用 `t('key',[v])`（`{0}`）。
 
-types 参考 `src/modules/framework/authz/user/types/index.ts` 封口写法；api 参考 `src/modules/framework/authz/user/api/index.ts`。
+types 参考 `src/modules/framework/system/user/types/index.ts` 封口写法；api 参考 `src/modules/framework/system/user/api/index.ts`。
 
 ### index.vue 骨架（三段式，template 略）
 
@@ -207,27 +207,21 @@ getList()
 </script>
 ```
 
-- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:demo:add|edit|remove']"`、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible">` + `@/components` 的 Editor/ImageUpload 等按需引入。**列表页完整样例看 `src/modules/framework/system/config/pages/index.vue`、`src/modules/framework/authz/user/pages/index.vue`。**
+- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:demo:add|edit|remove']"`、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible">` + `@/components` 的 Editor/ImageUpload 等按需引入。**列表页完整样例看 `src/modules/framework/system/config/pages/index.vue`、`src/modules/framework/system/user/pages/index.vue`。**
 - `getList()` 一律经 `usePageParams(queryParams)()` 转 `offset/pagesize`；从 `response.data.data / response.data.total` 取值。
 
-## 菜单 / 权限注册 SQL
+## 菜单 / 权限注册（枚举资源，替代原资源表）
 
-模板（生成 `{business}-init.sql`）。要点：
+平台菜单/按钮已下线 `xxl_ai_resource`/`xxl_ai_role_res`，改为在 `framework/constant/enums/XxlRoleEnum.java` 各角色 **static 代码块** 中追加 `Resource` 项注册：
 
-```sql
--- 菜单（type=1；url 同时充当路由 path 与 modules/ 组件定位 key）
-INSERT INTO `xxl_ai_resource` (`parent_id`,`name`,`type`,`permission`,`url`,`icon`,`order`,`status`,`visible`,`add_time`,`update_time`)
-VALUES (0, 'Demo管理', 1, 'demo:demo', '/demo/demo', '', 999, 0, 0, now(), now());
-SELECT @parentId := LAST_INSERT_ID();
--- 按钮（type=2）
-INSERT INTO `xxl_ai_resource` (`parent_id`,`name`,`type`,`permission`,`url`,`icon`,`order`,`status`,`visible`,`add_time`,`update_time`)
-VALUES (@parentId, 'Demo新增', 2, 'demo:demo:add', '', '', 1, 0, 0, now(), now()),
-       (@parentId, 'Demo修改', 2, 'demo:demo:edit', '', '', 2, 0, 0, now(), now()),
-       (@parentId, 'Demo删除', 2, 'demo:demo:remove', '', '', 3, 0, 0, now(), now());
--- 授权（默认管理员）
-INSERT INTO `xxl_ai_role_res` (`role_id`,`res_id`,`add_time`,`update_time`)
-VALUES (1, @parentId, now(), now()), (1, @parentId+1, now(), now()), (1, @parentId+2, now(), now()), (1, @parentId+3, now(), now());
+```java
+// 菜单（type=1：url 同时充当路由 path 与 modules/ 组件定位 key）
+ADMIN_RESOURCES.add(res(7, 2, "Demo管理", ResourceTypeEnum.MENU, "demo:demo", "/demo/demo", "", 210));
+// 按钮（type=2：parentId 指向所属菜单，permission 形如 {module}:{business}:add|edit|remove）
+ADMIN_RESOURCES.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:add", "", "", 1));
 ```
+
+要点：资源 id 全局唯一、parentId 指向父目录/菜单；加入 `ADMIN_RESOURCES`/`USER_RESOURCES` 静态列表即对对应角色可见。页面由 `loadView` 按 `url` 自动映射，**无需改路由**。平台内置枚举/资源一律不动 `business` 包。
 
 页面文件 `src/modules/business/{module}/{business}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
 
@@ -241,13 +235,13 @@ VALUES (1, @parentId, now(), now()), (1, @parentId+1, now(), now()), (1, @parent
 - [ ] `xxl-ai-api` 下 `mvn -q compile` 通过。
 - [ ] 后端：Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
 - [ ] 前端：types 三件齐（实体/Query/ListQuery）并登记 barrel；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
-- [ ] 权限：按钮 `v-hasPermi`，资源表菜单+按钮已插且已授权。注释符合 AGENTS.md 6.1。
+- [ ] 权限：按钮 `v-hasPermi`，XxlRoleEnum 菜单+按钮已注册。注释符合 AGENTS.md 6.1。
 - [ ] i18n：页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`。语言配置 `default-settings.ts` 的 `language`。
 - [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`。
 - [ ] 联调：菜单可见、列表/新增/修改/删除/搜索可用、权限失效项按钮隐藏、空参数后端友好提示。
 
 ## 参考文件（绝对路径）
 
-- 列表页规范样例：`xxl-ai-ui/src/modules/framework/authz/user/pages/index.vue`
-- API / 类型样例：`xxl-ai-ui/src/modules/framework/authz/user/{api,types}/index.ts`
+- 列表页规范样例：`xxl-ai-ui/src/modules/framework/system/user/pages/index.vue`
+- API / 类型样例：`xxl-ai-ui/src/modules/framework/system/user/{api,types}/index.ts`
 - 菜单 / 权限注册 SQL 模板：见上文「菜单 / 权限注册 SQL」（内置代码生成器已下线，按模板直生等价代码）

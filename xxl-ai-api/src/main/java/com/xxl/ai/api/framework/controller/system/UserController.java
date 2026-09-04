@@ -1,10 +1,9 @@
-package com.xxl.ai.api.framework.controller.authz;
+package com.xxl.ai.api.framework.controller.system;
 
 import com.xxl.ai.api.framework.annotation.XxlLog;
 import com.xxl.ai.api.framework.constant.enums.LogModuleEnum;
 import com.xxl.ai.api.framework.constant.enums.LogTypeEnum;
 import com.xxl.ai.api.framework.model.dto.UserDTO;
-import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.service.UserService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.sso.core.helper.XxlSsoHelper;
@@ -21,19 +20,19 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
+ * 用户管理 Controller
+ *
  * @author xuxueli 2019-05-04 16:39:50
  */
 @RestController
-@RequestMapping("/authz/user")
+@RequestMapping("/system/user")
 public class UserController {
 
     @Resource
     private UserService userService;
-    @Resource
-    private RoleService roleService;
 
     @RequestMapping("/pageList")
-    @XxlSso(permission = "authz:user")
+    @XxlSso(permission = "system:user")
     public Response<PageModel<UserDTO>> pageList(@RequestParam(required = false, defaultValue = "0") int offset,
                                                  @RequestParam(required = false, defaultValue = "10") int pagesize,
                                                  String username,
@@ -44,24 +43,24 @@ public class UserController {
     }
 
     @RequestMapping("/add")
-    @XxlSso(permission = "authz:user")
+    @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "新增用户")
-    public Response<String> add(UserDTO xxlJobUser) {
-        return userService.insert(xxlJobUser);
+    public Response<String> add(UserDTO userDTO) {
+        return userService.insert(userDTO);
     }
 
     @RequestMapping("/update")
-    @XxlSso(permission = "authz:user")
+    @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "更新用户")
-    public Response<String> update(HttpServletRequest request, UserDTO xxlJobUser) {
+    public Response<String> update(HttpServletRequest request, UserDTO userDTO) {
         // xxl-sso, logincheck
         Response<LoginInfo> loginInfoResponse = XxlSsoHelper.loginCheckWithAttr(request);
 
-        return userService.update(xxlJobUser, loginInfoResponse.getData().getUserName());
+        return userService.update(userDTO, loginInfoResponse.getData().getUserName());
     }
 
     @RequestMapping("/delete")
-    @XxlSso(permission = "authz:user")
+    @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "删除用户")
     public Response<String> delete(HttpServletRequest request,
                                    @RequestParam("ids[]") List<Integer> ids) {

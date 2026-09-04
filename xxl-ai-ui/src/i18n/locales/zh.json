@@ -241,7 +241,7 @@
       "loggingIn": "登 录 中..."
     }
   },
-  "authz": {
+  "system": {
     "user": {
       "username": "账号",
       "usernameFormat": "格式：小写字母开头，字母/数字",
@@ -262,7 +262,6 @@
       "baseInfo": "基本信息",
       "otherInfo": "其他信息",
       "noRole": "无角色",
-      "roleJoin": "、",
       "personalInfo": "个人信息",
       "basicInfo": "基本资料",
       "modifyPassword": "修改密码",
@@ -278,42 +277,6 @@
       "confirmPasswordPlaceholder": "请确认新密码",
       "passwordMismatch": "两次输入的密码不一致"
     },
-    "role": {
-      "id": "角色编号",
-      "name": "角色名称",
-      "roleKey": "权限字符",
-      "statusPlaceholder": "角色状态",
-      "order": "显示顺序",
-      "menuPermission": "菜单权限",
-      "selectAll": "全选/全不选",
-      "linkAll": "父子联动",
-      "loadingText": "加载中，请稍候",
-      "confirmDelete": "是否确认删除角色编号为\"{0}\"的数据项？"
-    },
-    "resource": {
-      "menuName": "资源名称",
-      "statusPlaceholder": "资源状态",
-      "statusLabel": "资源状态",
-      "type": "资源类型",
-      "typeColumn": "类型",
-      "typeDir": "目录",
-      "typeMenu": "菜单",
-      "typeBtn": "按钮",
-      "order": "显示排序",
-      "permission": "权限标识",
-      "url": "菜单地址",
-      "visible": "显示状态",
-      "parent": "上级资源",
-      "parentPlaceholder": "选择上级资源",
-      "icon": "资源图标",
-      "iconPlaceholder": "点击选择图标",
-      "rootNode": "根节点",
-      "visibleTip": "选择隐藏则将不会出现在侧边栏，但仍然可以访问",
-      "statusTip": "选择停用则将不会出现在侧边栏，也不能被访问",
-      "confirmDelete": "是否确认删除名称为\"{0}\"的数据项?"
-    }
-  },
-  "system": {
     "config": {
       "configName": "配置名称",
       "configKey": "配置Key",

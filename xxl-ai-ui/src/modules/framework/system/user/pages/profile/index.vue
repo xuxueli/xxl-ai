@@ -10,7 +10,7 @@
         <el-card class="box-card">
           <template v-slot:header>
             <div class="clearfix">
-              <span>{{ t('authz.user.personalInfo') }}</span>
+              <span>{{ t('system.user.personalInfo') }}</span>
             </div>
           </template>
 
@@ -19,22 +19,22 @@
             <ul class="list-group list-group-striped">
               <li class="list-group-item">
                 <SvgIcon icon-class="user" />
-                {{ t('authz.user.account') }}
+                {{ t('system.user.account') }}
                 <div class="pull-right">{{ state.user.username }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="email" />
-                {{ t('authz.user.emailLabel') }}
+                {{ t('system.user.emailLabel') }}
                 <div class="pull-right">{{ state.user.email }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="peoples" />
-                {{ t('authz.user.roleLabel') }}
-                <div class="pull-right">{{ state.roleNames }}</div>
+                {{ t('system.user.roleLabel') }}
+                <div class="pull-right">{{ state.roleName }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="date" />
-                {{ t('authz.user.createDate') }}
+                {{ t('system.user.createDate') }}
                 <div class="pull-right">{{ state.user.addTime }}</div>
               </li>
             </ul>
@@ -47,17 +47,17 @@
         <el-card>
           <template v-slot:header>
             <div class="clearfix">
-              <span>{{ t('authz.user.basicInfo') }}</span>
+              <span>{{ t('system.user.basicInfo') }}</span>
             </div>
           </template>
           <el-tabs v-model="selectedTab">
             <!-- 基本资料 -->
-            <el-tab-pane :label="t('authz.user.basicInfo')" name="userinfo">
+            <el-tab-pane :label="t('system.user.basicInfo')" name="userinfo">
               <userInfo :user="state.user" />
             </el-tab-pane>
 
             <!-- 修改密码 -->
-            <el-tab-pane :label="t('authz.user.modifyPassword')" name="resetPwd">
+            <el-tab-pane :label="t('system.user.modifyPassword')" name="resetPwd">
               <resetPwd />
             </el-tab-pane>
           </el-tabs>
@@ -84,17 +84,17 @@ const selectedTab = ref('userinfo') // 当前选中的 tab
 const state = reactive<{
   // 用户信息、角色数据
   user: User
-  roleNames: string
+  roleName: string
 }>({
   user: {}, // 用户信息
-  roleNames: '' // 角色名称列表
+  roleName: '' // 角色名称
 })
 
 /** 获取当前登录用户个人信息 */
 function getUser() {
   getUserProfile().then((res) => {
     state.user = res.data
-    state.roleNames = ((state.user.roleNames as string[]) || []).join(', ')
+    state.roleName = (state.user.roleName as string) || ''
   })
 }
 

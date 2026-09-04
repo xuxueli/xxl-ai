@@ -1,7 +1,6 @@
 package com.xxl.ai.api.framework.model.dto;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * @author xuxueli 2019-05-04 16:43:12
@@ -13,14 +12,14 @@ public class UserDTO {
 	private String password;		// 密码
 	private String token;			// 登录token
 	private int status;				// 状态：0-正常、1-停用
+	private String role;			// 角色编码：admin-管理员、user-普通用户
 	private String realName;		// 用户名称
+	private String email;			// 邮箱
 	private Date addTime;
 	private Date updateTime;
 
 	// other
-	private List<Integer> roleIds;
-	private List<String> roleNames;	// 角色名称列表（非DB字段）
-	private String email;			// 邮箱
+	private String roleName;		// 角色名称（非DB字段，由枚举编码翻译）
 
 
 	public int getId() {
@@ -63,6 +62,14 @@ public class UserDTO {
 		this.status = status;
 	}
 
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
 	public String getRealName() {
 		return realName;
 	}
@@ -87,20 +94,12 @@ public class UserDTO {
 		this.updateTime = updateTime;
 	}
 
-	public List<Integer> getRoleIds() {
-		return roleIds;
+	public String getRoleName() {
+		return roleName;
 	}
 
-	public void setRoleIds(List<Integer> roleIds) {
-		this.roleIds = roleIds;
-	}
-
-	public List<String> getRoleNames() {
-		return roleNames;
-	}
-
-	public void setRoleNames(List<String> roleNames) {
-		this.roleNames = roleNames;
+	public void setRoleName(String roleName) {
+		this.roleName = roleName;
 	}
 
 	public String getEmail() {

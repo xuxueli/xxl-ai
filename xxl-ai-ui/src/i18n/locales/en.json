@@ -241,7 +241,7 @@
       "loggingIn": "Signing In..."
     }
   },
-  "authz": {
+  "system": {
     "user": {
       "username": "Username",
       "usernameFormat": "Format: start with a lowercase letter, letters/digits",
@@ -262,7 +262,6 @@
       "baseInfo": "Basic Information",
       "otherInfo": "Other Information",
       "noRole": "No Role",
-      "roleJoin": ", ",
       "personalInfo": "Personal Information",
       "basicInfo": "Basic Profile",
       "modifyPassword": "Change Password",
@@ -278,42 +277,6 @@
       "confirmPasswordPlaceholder": "Please confirm new password",
       "passwordMismatch": "The two passwords entered do not match"
     },
-    "role": {
-      "id": "Role ID",
-      "name": "Role Name",
-      "roleKey": "Permission Key",
-      "statusPlaceholder": "Role Status",
-      "order": "Display Order",
-      "menuPermission": "Menu Permissions",
-      "selectAll": "Select All/None",
-      "linkAll": "Parent-Child Link",
-      "loadingText": "Loading, please wait...",
-      "confirmDelete": "Are you sure you want to delete role ID \"{0}\"?"
-    },
-    "resource": {
-      "menuName": "Resource Name",
-      "statusPlaceholder": "Resource Status",
-      "statusLabel": "Resource Status",
-      "type": "Resource Type",
-      "typeColumn": "Type",
-      "typeDir": "Directory",
-      "typeMenu": "Menu",
-      "typeBtn": "Button",
-      "order": "Display Order",
-      "permission": "Permission Key",
-      "url": "Menu URL",
-      "visible": "Visible Status",
-      "parent": "Parent Resource",
-      "parentPlaceholder": "Select parent resource",
-      "icon": "Resource Icon",
-      "iconPlaceholder": "Click to select icon",
-      "rootNode": "Root Node",
-      "visibleTip": "If hidden, it will not appear in the sidebar but can still be accessed",
-      "statusTip": "If disabled, it will not appear in the sidebar and cannot be accessed",
-      "confirmDelete": "Are you sure you want to delete \"{0}\"?"
-    }
-  },
-  "system": {
     "config": {
       "configName": "Config Name",
       "configKey": "Config Key",

@@ -91,22 +91,21 @@ src
 └── types/index.ts                /* 全局基础类型（Response/PageModel/PageQuery…） */
 ```
 
-- 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/authz/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
+- 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/system/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
 - 业务新增示例：`src/modules/business/{module}/{business}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}.{business}` 双层镜像。
 
 ### 4.3 菜单零路由改动约定
 
-前端菜单完全由数据库 `xxl_ai_resource` 驱动，**新增页面无需动路由代码**：
+平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化，已下线 `xxl_ai_resource`/`xxl_ai_role_res` 表），**新增页面无需动路由代码**：
 
-- Vue：界面文件 `modules/{framework|business}/{domain}/{module}/pages/{xxx}(/index).vue` 建好后，在资源表插入 `type=1` 菜单并配置 `url='/module/xxx'`（url 同时充当路由 path 与前端组件定位 key），前端 `loadView` 按 `modules/` 下相对路径（自动剥离 `framework/`/`business/` 与 `pages/` 段）映射对应页面。
-
-新菜单需在 `xxl_ai_role_res` 中给角色授权（默认管理员 `role_id=1`）。
+- Vue：界面文件 `modules/{framework|business}/{domain}/{module}/pages/{xxx}(/index).vue` 建好后，登录后由 `/getRouters` 按当前用户角色下发菜单资源构建动态路由；`url` 同时充当路由 path 与前端组件定位 key，前端 `loadView` 按 `modules/` 下相对路径（自动剥离 `framework/`/`business/` 与 `pages/` 段）映射对应页面（如 `/system/user` → `modules/framework/system/user/pages/index.vue`）。
+- 新增平台菜单：在 `XxlRoleEnum` 对应角色的 static 资源列表中追加 `Resource` 项（`url` 指向页面路径），即可对该角色可见、无需改路由与数据库。
 
 ## 五、新功能开发标准流程
 
 1. **建表**：数据库新建 `xxl_ai_*` 业务表（规范见 6.5）。
 2. **生成/手写代码**：按对应 Skill 模板直接生成等价代码。
-3. **落位与权限**：按对应 Skill 落位后端/前端文件；插入资源表菜单 + 按钮 + 角色授权。
+3. **落位与权限**：按对应 Skill 落位后端/前端文件；在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单/按钮项。
 4. **联调验证**：起后端 + 前端，验证菜单可见、CRUD 可用、权限生效。
 5. **规范复核**：对照第六节规范与 Skill 内「校验清单」过一遍再提交。
 
@@ -141,7 +140,7 @@ src
 ### 6.4 前端 Vue 规范
 
 - 组件 import 名称与模板标签统一 PascalCase（`import NoticeDetailView` 对应 `<NoticeDetailView>`）。
-- script 除基础 import 外，按 “ref data → fun → page init” 三节组织，节顶注释为 `/* --- {功能，前后33个-} --- */`，参考 `modules/framework/authz/user/pages/index.vue`。
+- script 除基础 import 外，按 “ref data → fun → page init” 三节组织，节顶注释为 `/* --- {功能，前后33个-} --- */`，参考 `modules/framework/system/user/pages/index.vue`。
 - 响应式数据一律使用 `ref`，禁止 `reactive` 与 `toRefs(data)` 解构；逻辑相关数据收敛为对象：`queryParams`（搜索栏）、`table`（表格数据与状态）、`formState`（表单数据与规则）。
 - 避免啰嗦写法：`defineModel('visible')` + 模板 `v-model` 直连，不用 props/emits/computed 桥接；模板直接用 `props.row`，不建冗余 computed 别名。
 - 列表页固定套路：`getList()` 经 `usePageParams(queryParams)(产生 offset/pagesize` 后请求，从 `response.data.data / response.data.total` 赋值。
@@ -160,7 +159,7 @@ src
 - 前端权限：Vue `v-hasPermi="['{module}:{business}:add']"`（或 `v-hasRole="['admin']"`）。
 - 下拉选项来源：
   - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举才放 `framework/constant/enums`），前端 `useEnumOption('XxxEnum')` 自动经 `loadEnumItem` 拉取（`loadEnumItem` 展开「平台枚举包 + business 根包」内包含 IEnum 枚举的包，按枚举名解析，平台包优先）；
-- 菜单资源：`xxl_ai_resource`（type 0 目录 / 1 菜单 / 2 按钮），`status`（0 正常 / 1 停用），`visible`（0 显示 / 1 隐藏）。
+- 菜单资源：平台菜单/按钮由 `XxlRoleEnum` 各角色 static 代码块定义（资源 `url` 充当路由 path 与组件定位 key；类型/状态/显隐沿用 `ResourceTypeEnum`/`ResourceStatuEnum`/`ResourceVisibleEnum`），登录按用户角色聚合下发。
 
 ### 6.7 国际化文案（i18n）
 

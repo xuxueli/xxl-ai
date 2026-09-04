@@ -1,4 +1,4 @@
-package com.xxl.ai.api.framework.mapper.authz;
+package com.xxl.ai.api.framework.mapper.system;
 
 import com.xxl.ai.api.framework.model.entity.User;
 import org.apache.ibatis.annotations.Mapper;

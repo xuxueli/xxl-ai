@@ -3,7 +3,7 @@ package com.xxl.ai.api.framework.controller.base;
 import com.xxl.ai.api.framework.constant.enums.ResourceTypeEnum;
 import com.xxl.ai.api.framework.model.dto.MetaVo;
 import com.xxl.ai.api.framework.model.dto.RouterVo;
-import com.xxl.ai.api.framework.service.ResourceService;
+import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.util.I18nUtil;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.sso.core.helper.XxlSsoHelper;
@@ -31,7 +31,7 @@ import java.util.Map;
 public class IndexController {
 
 	@Resource
-	private ResourceService resourceService;
+	private RoleService roleService;
 
     // ---------------------- index ----------------------
 
@@ -61,7 +61,7 @@ public class IndexController {
 
 		// query user resource
 		int userId = Integer.parseInt(loginCheckResult.getData().getUserId());
-		List<com.xxl.ai.api.framework.model.entity.Resource> resourceList = resourceService.queryResourceByUserid(userId, -1);
+		List<com.xxl.ai.api.framework.model.entity.Resource> resourceList = roleService.queryResourceByUserid(userId, -1);
 
 		// 直接从 flat list 构建 RouterVo 树（Resource 实体无 children 字段）
 		List<RouterVo> routerList = buildRoutersFromFlatList(resourceList);
