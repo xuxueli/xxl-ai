@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.xuxueli</groupId>
+	<artifactId>xxl-ai</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>${project.artifactId}</name>
+	<description>XXL-AI, A highly-scalable AI development platform. </description>
+	<url>https://www.xuxueli.com/</url>
+
+	<modules>
+	</modules>
+
+	<properties>
+		<!-- env -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<maven.test.skip>true</maven.test.skip>
+		<!-- plugin -->
+		<maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+		<!-- base -->
+		<slf4j-api.version>2.0.18</slf4j-api.version>
+		<junit-jupiter.version>6.1.0</junit-jupiter.version>
+
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			
+
+		</dependencies>
+	</dependencyManagement>
+
+	<licenses>
+		<license>
+			<name>GNU General Public License version 3</name>
+			<url>https://opensource.org/licenses/GPL-3.0</url>
+		</license>
+	</licenses>
+	<scm>
+		<tag>master</tag>
+		<url>https://github.com/xuxueli/xxl-ai.git</url>
+		<connection>scm:git:https://github.com/xuxueli/xxl-ai.git</connection>
+		<developerConnection>scm:git:git@github.com:xuxueli/xxl-ai.git</developerConnection>
+	</scm>
+	<developers>
+		<developer>
+			<id>XXL</id>
+			<name>xuxueli</name>
+			<email>931591021@qq.com</email>
+			<url>https://github.com/xuxueli</url>
+		</developer>
+	</developers>
+
+	<profiles>
+		<profile>
+			<id>release</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<!-- Compiler -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<version>${maven-compiler-plugin.version}</version>
+						<configuration>
+							<source>${maven.compiler.source}</source>
+							<target>${maven.compiler.target}</target>
+							<parameters>true</parameters>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+</project>
