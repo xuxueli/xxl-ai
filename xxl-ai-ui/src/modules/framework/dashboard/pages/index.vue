@@ -43,25 +43,21 @@
         </el-card>
       </el-col>
 
-      <!-- 消息列表 -->
+      <!-- 示例数据 -->
       <el-col :xs="24" :lg="7">
         <el-card shadow="hover" class="msg-card">
           <template v-slot:header>
             <div class="card-header">
               <div class="card-header-left">
                 <SvgIcon icon-class="list" />
-                <span>{{ t('dashboard.message') }}</span>
+                <span>{{ t('demo.title') }}</span>
               </div>
             </div>
           </template>
-          <div v-if="messages.length === 0" class="msg-empty">{{ t('dashboard.messageEmpty') }}</div>
-          <div v-else class="msg-list">
-            <div v-for="item in messages" :key="item.id" class="msg-item" @click="handleMsgClick(item)">
+          <div class="msg-list">
+            <div v-for="item in sampleData" :key="item.id" class="msg-item">
               <div class="msg-title">{{ item.title }}</div>
               <div class="msg-meta">
-                <el-tag size="small" :type="item.category === 0 ? 'success' : 'warning'">
-                  {{ item.category === 0 ? t('dashboard.notify') : t('dashboard.announce') }}
-                </el-tag>
                 <span class="msg-time">{{ item.addTime }}</span>
               </div>
             </div>
@@ -69,21 +65,15 @@
         </el-card>
       </el-col>
     </el-row>
-
-    <!-- 消息详情 -->
-    <MessageDetailView ref="messageDetailRef" />
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Index' })
 import { getStats, getLogTrend } from '../api'
-import { listMessageTop, markMessageRead } from '@/modules/framework/system/message/api'
 import { parseTime } from '@/utils/common'
 import * as echarts from 'echarts'
-import MessageDetailView from '@/layout/components/Navbar/HeaderMessageDetail.vue'
 import type { ECharts } from 'echarts'
-import type { Message } from '@/modules/framework/system/message/types'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '@/i18n'
 import { SvgIcon } from '@/components'
@@ -97,18 +87,32 @@ interface StatItem {
   bg: string
 }
 
+/** 示例数据项 */
+interface SampleDataItem {
+  id: number
+  title: string
+  addTime: string
+}
+
 // 指标卡片
 const stats = ref<StatItem[]>([
   { label: t('dashboard.userCount'), value: 0, icon: 'user', color: '#5b6abf', bg: '#eef0fb' },
   { label: t('dashboard.roleCount'), value: 0, icon: 'peoples', color: '#319c8a', bg: '#e8f6f3' },
   { label: t('dashboard.logCount'), value: 0, icon: 'log', color: '#d4943c', bg: '#fcf4e8' },
-  { label: t('dashboard.messageCount'), value: 0, icon: 'message', color: '#c5566a', bg: '#fbeef1' }
+  { label: t('demo.title'), value: 6, icon: 'list', color: '#c5566a', bg: '#fbeef1' }
 ])
 
-const messages = ref<Message[]>([])
+// 示例数据（站内消息已下线，仪表盘展示静态示例数据）
+const sampleData = ref<SampleDataItem[]>([
+  { id: 1, title: t('demo.t1'), addTime: '2026-09-01' },
+  { id: 2, title: t('demo.t2'), addTime: '2026-09-02' },
+  { id: 3, title: t('demo.t3'), addTime: '2026-09-03' },
+  { id: 4, title: t('demo.t4'), addTime: '2026-09-04' },
+  { id: 5, title: t('demo.t5'), addTime: '2026-09-05' }
+])
+
 const chartRef = ref<HTMLElement>()
 const chartDays = ref(30)
-const messageDetailRef = ref<InstanceType<typeof MessageDetailView>>()
 let chartInstance: ECharts | null = null
 
 /**
@@ -116,7 +120,6 @@ let chartInstance: ECharts | null = null
  */
 onMounted(() => {
   loadStats()
-  loadMessages()
   nextTick(loadChart)
 })
 
@@ -136,25 +139,7 @@ function loadStats() {
     stats.value[0].value = data.userCount
     stats.value[1].value = data.roleCount
     stats.value[2].value = data.logCount
-    stats.value[3].value = data.messageCount
   })
-}
-
-/**
- * 消息列表 - 数据加载
- */
-function loadMessages() {
-  listMessageTop().then((res) => {
-    messages.value = res.data || []
-  })
-}
-
-/**
- * 消息列表 - 点击查看详情，标记已读
- */
-function handleMsgClick(item: Message) {
-  messageDetailRef.value!.open(item.id as number)
-  markMessageRead(item.id as number)
 }
 
 /**

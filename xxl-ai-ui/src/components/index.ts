@@ -7,7 +7,6 @@
 export { default as SvgIcon } from './SvgIcon/index.vue'
 export { default as RightToolbar } from './RightToolbar/index.vue'
 export { default as Pagination } from './Pagination/index.vue'
-export { default as DictTag } from './DictTag/index.vue'
 export { default as IconSelect } from './IconSelect/index.vue'
 export { default as TreePanel } from './TreePanel/index.vue'
 export { default as Editor } from './Editor/index.vue'

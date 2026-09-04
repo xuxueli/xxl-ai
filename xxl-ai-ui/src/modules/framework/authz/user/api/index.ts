@@ -9,7 +9,7 @@ import type { PageModel, Response } from '@/types'
 
 /**
  * 分页查询用户列表。
- * @param query 查询参数（offset/pagesize/username/status/orgIds）。
+ * @param query 查询参数（offset/pagesize/username/status）。
  * @returns 用户分页列表（response.data.data / response.data.total）。
  */
 export function listUser(query: UserListQuery): Promise<Response<PageModel<User>>> {

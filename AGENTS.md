@@ -4,7 +4,7 @@
 
 ## 一、项目概览
 
-XXL-AI 是快速开发平台，采用 Monorepo 统一托管「后端服务」与「前端工程」，可一键构建部署。
+XXL-AI 是AI应用开发平台，采用 Monorepo 统一托管「后端服务」与「前端工程」，可一键构建部署。
 
 | 模块 | 说明 |
 |---|---|
@@ -71,7 +71,7 @@ com/xxl/ai/api/framework
 
 **新增业务一律落 `business/{module}/{business}` 双层镜像包**（`framework` 仅属于平台内置能力，不要塞业务）：
 
-- 前端 `src/modules/business/{module}/{business}/`（pages/api/types）与后端 `com.xxl.ai.api.business.{module}.{business}`（controller/service/mapper/model/enums 子包）**双层镜像**，业务后缀与接口路径 `/{module}/{business}` 一致；首个模块可走内置代码生成器产出（模板见第七节与对应 Skill）。
+- 前端 `src/modules/business/{module}/{business}/`（pages/api/types）与后端 `com.xxl.ai.api.business.{module}.{business}`（controller/service/mapper/model/enums 子包）**双层镜像**，业务后缀与接口路径 `/{module}/{business}` 一致；首个模块按对应 Skill 模板直生等价代码落位。
 
 Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/{module}/{business}/`（业务，与前/后端目录镜像）。
 
@@ -85,13 +85,13 @@ src
 │   ├── pages/                    /* 页面 + 页内组件（index.vue、data.vue、XxxFormModal.vue…） */
 │   ├── api/                      /* 接口封装（index.ts，同目录聚合） */
 │   └── types/                    /* 类型定义（index.ts，同目录聚合） */
-├── composables                   /* usePageParams / useDict / useEnumOption / useFormReset */
+├── composables                   /* usePageParams / useEnumOption / useFormReset */
 ├── i18n                          /* 文案中心：locales/{zh,en}.json（JSON 数据纯存储，t() 引用） */
 ├── components / directive / utils / store   /* 平台公共层（框架与业务共用） */
 └── types/index.ts                /* 全局基础类型（Response/PageModel/PageQuery…） */
 ```
 
-- 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/authz/org/`、`src/modules/framework/system/dict/`（pages/{index,data}.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
+- 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/authz/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
 - 业务新增示例：`src/modules/business/{module}/{business}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}.{business}` 双层镜像。
 
 ### 4.3 菜单零路由改动约定
@@ -105,7 +105,7 @@ src
 ## 五、新功能开发标准流程
 
 1. **建表**：数据库新建 `xxl_ai_*` 业务表（规范见 6.5）。
-2. **生成/手写代码**：可后台使用内置代码生成器（见七），或按对应 Skill 模板直生等价代码。
+2. **生成/手写代码**：按对应 Skill 模板直接生成等价代码。
 3. **落位与权限**：按对应 Skill 落位后端/前端文件；插入资源表菜单 + 按钮 + 角色授权。
 4. **联调验证**：起后端 + 前端，验证菜单可见、CRUD 可用、权限生效。
 5. **规范复核**：对照第六节规范与 Skill 内「校验清单」过一遍再提交。
@@ -125,7 +125,7 @@ src
 ### 6.2 后端分层与接口规范
 
 - 分层职责清晰：Controller 参数接收与校验、Service 业务逻辑、Mapper 数据访问，不跨层越权。
-- 接口路径「模块前缀 + 动词式后缀」：`/system/message/pageList`、`/load`、`/insert`、`/delete`、`/update`。
+- 接口路径「模块前缀 + 动词式后缀」：`/system/log/pageList`、`/load`、`/insert`、`/delete`、`/update`。
 - 业务接口统一 `@RequestMapping("/{module}/{business}")` + `@XxlSso` 鉴权注解。
 - Java set/get 方法不折叠，使用正常方法体。
 - mapper XML 中显式配置字段映射（resultMap），`add_time`/`update_time` 写入用 `NOW()`。
@@ -141,7 +141,7 @@ src
 ### 6.4 前端 Vue 规范
 
 - 组件 import 名称与模板标签统一 PascalCase（`import NoticeDetailView` 对应 `<NoticeDetailView>`）。
-- script 除基础 import 外，按 “ref data → fun → page init” 三节组织，节顶注释为 `/* --- {功能，前后33个-} --- */`，参考 `modules/framework/system/message/pages/index.vue`。
+- script 除基础 import 外，按 “ref data → fun → page init” 三节组织，节顶注释为 `/* --- {功能，前后33个-} --- */`，参考 `modules/framework/authz/user/pages/index.vue`。
 - 响应式数据一律使用 `ref`，禁止 `reactive` 与 `toRefs(data)` 解构；逻辑相关数据收敛为对象：`queryParams`（搜索栏）、`table`（表格数据与状态）、`formState`（表单数据与规则）。
 - 避免啰嗦写法：`defineModel('visible')` + 模板 `v-model` 直连，不用 props/emits/computed 桥接；模板直接用 `props.row`，不建冗余 computed 别名。
 - 列表页固定套路：`getList()` 经 `usePageParams(queryParams)(产生 offset/pagesize` 后请求，从 `response.data.data / response.data.total` 赋值。
@@ -158,29 +158,23 @@ src
 
 - 登录鉴权：后端 `@XxlSso`；按钮权限标识 `{module}:{business}:add / edit / remove`。
 - 前端权限：Vue `v-hasPermi="['{module}:{business}:add']"`（或 `v-hasRole="['admin']"`）。
-- 下拉选项两种来源：
-  - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举才放 `framework/constant/enums`），前端 `useEnumOption('XxxEnum')` 自动经 `loadEnumItem` 拉取（loadEnumItem 展开「平台枚举包 + business 根包」内包含 IEnum 枚举的包，按枚举名解析，平台包优先）；
-  - 数据字典：录入 `xxl_ai_dict`，前端 `useDict('dictType')`。
+- 下拉选项来源：
+  - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举才放 `framework/constant/enums`），前端 `useEnumOption('XxxEnum')` 自动经 `loadEnumItem` 拉取（`loadEnumItem` 展开「平台枚举包 + business 根包」内包含 IEnum 枚举的包，按枚举名解析，平台包优先）；
 - 菜单资源：`xxl_ai_resource`（type 0 目录 / 1 菜单 / 2 按钮），`status`（0 正常 / 1 停用），`visible`（0 显示 / 1 隐藏）。
 
 ### 6.7 国际化文案（i18n）
 
 - 文案统一维护于 `src/i18n/locales/{zh,en}.json`（**单一文件**，JSON 数据纯存储不支持注释，按 `domain.module.token` 嵌套、按域名节点分区），业务页面/components/utils/layouts **一律 `import { t } from '@/i18n'` 引用，禁止硬编码中文**（中文注释除外）。
-- 文件内模块顺序固定：`app`（应用级常量）前置，其次公共组 `common`/`modal`/`request`/`layout`/`components`，再次平台业务组 `auth`/`authz`/`system`/`tool`/`dashboard`/`help`/`error`，常规业务模块（`business.*` 等）放最后；新增模块按组插入、勿打乱既有顺序。
+- 文件内模块顺序固定：`app`（应用级常量）前置，其次公共组 `common`/`modal`/`request`/`layout`/`components`，再次平台业务组 `auth`/`authz`/`system`/`dashboard`/`help`/`error`，常规业务模块（`business.*` 等）放最后；新增模块按组插入、勿打乱既有顺序。
 - 语言由 `default-settings.ts` 的 `language: 'zh' | 'en'` 配置控制，**不支持运行时切换**；element-plus 组件语言随该配置。
 - key 复用约定：通用词（新增/修改/删除/搜索/重置/操作/状态/备注/全部/正常/停用/保存成功/删除成功…）统一走 `common.*`，`modal.*`（系统提示/确定/取消）、`request.*`（错误/超时提示）；模块特有词建 `{domain}.{module}.*`。新增文案必须 zh/en **成对**提交，缺失键回退中文再回退 key。
 - 插值：`t('key', [v])`（占位 `{0}` 下标）或 `t('key', { name })`（占位 `{name}`），禁止字符串拼接。
-- 后端下发的菜单名与 dict/enum 标签不属于前端文案，不进 i18n 文件。
+- 后端下发的菜单名与 enum 标签不属于前端文案，不进 i18n 文件。
 
-## 七、内置代码生成器
+## 七、代码生成策略
 
-| 位置 | 用法 | 产物 |
-|---|---|---|
-| 后台菜单「工具-代码生成」/ `POST /tool/codegen/createTable`（传建表 SQL + `tplWebType`） | 创建表 → 编辑字段（`COLLECT`, import queryType/htmlType/dictType，isQuery/isList/isInsert/isEdit/isRequired）→ preview 预览 / batchGenCode 下载 zip | 后端 `business/{module}/{business}` 6 件套、前端 vue3 文件、`-init.sql`（菜单+按钮+授权），落位见 Skill |
-
-- vue 前端模板固定传 `tplWebType='element-plus-typescript'`。
-- 生成代码强制依赖 `id` 主键；业务代码落 `business/{module}/{business}` 而**不是** `framework`。
-- Skill 缺省策略：AI 按模板直生等价代码落位，同时在交付说明中提示可走后台生成器。
+- 平台内置代码生成器已下线（代码生成 / 表单构建 / 字典管理 不再提供）。
+- Skill 缺省策略：AI 按模板直生等价代码落位（后端 6 件套、前端 vue3 文件、`-init.sql` 菜单按钮授权），落位细则见 Skill。
 
 ## 八、验收与提交
 

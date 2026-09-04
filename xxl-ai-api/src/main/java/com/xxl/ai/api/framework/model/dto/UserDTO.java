@@ -9,7 +9,6 @@ import java.util.List;
 public class UserDTO {
 
 	private int id;
-	private int orgId;				// 组织ID
 	private String username;		// 账号
 	private String password;		// 密码
 	private String token;			// 登录token
@@ -20,10 +19,8 @@ public class UserDTO {
 
 	// other
 	private List<Integer> roleIds;
-	private String orgName;			// 组织名称（非DB字段）
 	private List<String> roleNames;	// 角色名称列表（非DB字段）
 	private String email;			// 邮箱
-	private String phone;			// 手机号码
 
 
 	public int getId() {
@@ -32,22 +29,6 @@ public class UserDTO {
 
 	public void setId(int id) {
 		this.id = id;
-	}
-
-	public int getOrgId() {
-		return orgId;
-	}
-
-	public void setOrgId(int orgId) {
-		this.orgId = orgId;
-	}
-
-	public String getOrgName() {
-		return orgName;
-	}
-
-	public void setOrgName(String orgName) {
-		this.orgName = orgName;
 	}
 
 	public String getUsername() {
@@ -128,14 +109,6 @@ public class UserDTO {
 
 	public void setEmail(String email) {
 		this.email = email;
-	}
-
-	public String getPhone() {
-		return phone;
-	}
-
-	public void setPhone(String phone) {
-		this.phone = phone;
 	}
 
 }

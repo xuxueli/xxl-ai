@@ -54,7 +54,7 @@ export type ListQuery<T extends object> = PageQuery & Partial<Omit<T, 'pageNum' 
 
 /**
  * 枚举项统一结构
- * 对应 loadEnumItem 接口返回项（如 MessageCategoryEnum、MessageStatusEnum）
+ * 对应 loadEnumItem 接口返回项（如 UserStatuEnum、RoleStatusEnum）
  */
 export interface EnumOption {
   /** 枚举编码 */
@@ -62,23 +62,6 @@ export interface EnumOption {
   /** 展示标题 */
   title?: string
   [key: string]: unknown
-}
-
-// --------------------------------- 字典数据（useDict / loadDictItem） ---------------------------------
-
-/**
- * 字典项通用结构（useDict 组合式函数返回的每一项）
- * 由后端 loadDictItem 字段映射为 { label, value }，供 el-option / DictTag 使用
- */
-export interface DictTagOption {
-  /** 展示文案 */
-  label?: string | number
-  /** 字典值 */
-  value?: number | string
-  /** Element Plus 标签类型（预留） */
-  elTagType?: string
-  /** Element Plus 标签自定义类（预留） */
-  elTagClass?: string
 }
 
 // --------------------------------- 登录认证 ---------------------------------

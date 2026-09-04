@@ -1,12 +1,10 @@
 package com.xxl.ai.api.framework.service.impl;
 
-import com.xxl.ai.api.framework.mapper.authz.OrgMapper;
 import com.xxl.ai.api.framework.mapper.authz.RoleMapper;
 import com.xxl.ai.api.framework.mapper.authz.UserMapper;
 import com.xxl.ai.api.framework.mapper.authz.UserRoleMapper;
 import com.xxl.ai.api.framework.model.adaptor.UserAdaptor;
 import com.xxl.ai.api.framework.model.dto.UserDTO;
-import com.xxl.ai.api.framework.model.entity.Org;
 import com.xxl.ai.api.framework.model.entity.Role;
 import com.xxl.ai.api.framework.model.entity.User;
 import com.xxl.ai.api.framework.model.entity.UserRole;
@@ -36,8 +34,6 @@ public class UserServiceImpl implements UserService {
 
     @Resource
     private UserMapper userMapper;
-    @Resource
-    private OrgMapper orgMapper;
     @Resource
     private RoleMapper roleMapper;
     @Resource
@@ -247,11 +243,11 @@ public class UserServiceImpl implements UserService {
      * 分页查询
      */
     @Override
-    public PageModel<UserDTO> pageList(int offset, int pagesize, String username, int status, List<Integer> orgIds) {
+    public PageModel<UserDTO> pageList(int offset, int pagesize, String username, int status) {
 
         // data
-        List<User> pageList = userMapper.pageList(offset, pagesize, username, status, orgIds);
-        int totalCount = userMapper.pageListCount(offset, pagesize, username, status, orgIds);
+        List<User> pageList = userMapper.pageList(offset, pagesize, username, status);
+        int totalCount = userMapper.pageListCount(offset, pagesize, username, status);
 
         // adaptor
         List<UserDTO> pageListDto = new ArrayList<>();
@@ -274,17 +270,6 @@ public class UserServiceImpl implements UserService {
                     .stream()
                     .map(item->UserAdaptor.adapt2dto(item, false, userIdToRoleIdsMap))
                     .collect(Collectors.toList());
-        }
-
-        // fill orgName
-        if (CollectionTool.isNotEmpty(pageListDto)) {
-            List<Org> orgList = orgMapper.queryOrg(null, -1);
-            Map<Integer, String> orgMap = orgList.stream().collect(Collectors.toMap(Org::getId, Org::getName));
-            pageListDto.forEach(dto -> {
-                if (dto.getOrgId() > 0 && orgMap.containsKey(dto.getOrgId())) {
-                    dto.setOrgName(orgMap.get(dto.getOrgId()));
-                }
-            });
         }
 
         // result
@@ -311,14 +296,6 @@ public class UserServiceImpl implements UserService {
 
         // convert to DTO
         UserDTO userDTO = UserAdaptor.adapt2dto(user, true, null);
-
-        // query org name
-        if (user.getOrgId() > 0) {
-            Org org = orgMapper.load(user.getOrgId());
-            if (org != null) {
-                userDTO.setOrgName(org.getName());
-            }
-        }
 
         // query role names
         List<Role> roleList = roleMapper.queryByUserid(user.getId());

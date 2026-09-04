@@ -11,8 +11,6 @@ export interface DashboardStats {
   roleCount: number
   /** 日志数量 */
   logCount: number
-  /** 消息数量 */
-  messageCount: number
 }
 
 /** 日志趋势单日数据点 */

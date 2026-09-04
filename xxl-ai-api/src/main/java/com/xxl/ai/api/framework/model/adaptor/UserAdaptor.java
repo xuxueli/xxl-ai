@@ -24,7 +24,6 @@ public class UserAdaptor {
 
         User xxlUser = new User();
         xxlUser.setId(xxlJobUser.getId());
-        xxlUser.setOrgId(xxlJobUser.getOrgId());
         xxlUser.setUsername(xxlJobUser.getUsername());
         xxlUser.setPassword(xxlJobUser.getPassword());
         xxlUser.setToken(xxlJobUser.getToken());
@@ -44,7 +43,6 @@ public class UserAdaptor {
 
         UserDTO xxlUser = new UserDTO();
         xxlUser.setId(xxlJobUser.getId());
-        xxlUser.setOrgId(xxlJobUser.getOrgId());
         xxlUser.setUsername(xxlJobUser.getUsername());
         if (withPwd) {
             xxlUser.setPassword(xxlJobUser.getPassword());

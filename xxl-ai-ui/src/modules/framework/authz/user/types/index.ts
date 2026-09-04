@@ -7,10 +7,6 @@ import type { PageQuery } from '@/types'
 /** 用户实体（对应 User.java，用户管理 CRUD） */
 export interface User {
   id?: number
-  /** 组织ID */
-  orgId?: number
-  /** 组织名称（前端列表联查字段） */
-  orgName?: string
   /** 账号 */
   username?: string
   /** 密码 */
@@ -32,12 +28,10 @@ export interface UserQuery {
   username?: string
   /** 状态：-1 全部 */
   status: number
-  /** 组织ID集合 */
-  orgIds: number[]
 }
 
 /** 用户表单（新增/修改入参） */
-export type UserForm = Pick<User, 'id' | 'orgId' | 'username' | 'realName' | 'status' | 'password'> & {
+export type UserForm = Pick<User, 'id' | 'username' | 'realName' | 'status' | 'password'> & {
   roleIds?: number[]
 }
 
@@ -45,8 +39,6 @@ export type UserForm = Pick<User, 'id' | 'orgId' | 'username' | 'realName' | 'st
 export interface UserListQuery extends PageQuery {
   /** 账号关键词 */
   username?: string
-  /** 组织ID集合（逗号分隔） */
-  orgIds?: string
   /** 状态：-1 全部 */
   status?: number
 }

@@ -46,10 +46,6 @@
         <el-tooltip :content="t('layout.nav.layoutSize')" effect="dark" placement="bottom">
           <SizeSelect id="size-select" class="right-menu-item hover-effect" />
         </el-tooltip>
-        <!-- 通知 -->
-        <el-tooltip :content="t('layout.nav.message')" effect="dark" placement="bottom">
-          <HeaderMessage id="header-message" class="right-menu-item hover-effect" />
-        </el-tooltip>
       </template>
 
       <!-- 用户头像与下拉菜单 -->
@@ -99,7 +95,6 @@ import Hamburger from './Hamburger.vue'
 import Screenfull from './Screenfull.vue'
 import SizeSelect from './SizeSelect.vue'
 import HeaderSearch from './HeaderSearch.vue'
-import HeaderMessage from './HeaderMessage.vue'
 import { useAppStore, useUserStore, useSettingsStore } from '@/store'
 import defaultSettings from '@/default-settings'
 import { nextTick } from 'vue'

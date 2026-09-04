@@ -1,7 +1,6 @@
 package com.xxl.ai.api.framework.controller.base;
 
 import com.xxl.ai.api.framework.mapper.system.LogMapper;
-import com.xxl.ai.api.framework.mapper.system.MessageMapper;
 import com.xxl.ai.api.framework.mapper.authz.RoleMapper;
 import com.xxl.ai.api.framework.mapper.authz.UserMapper;
 import com.xxl.sso.core.annotation.XxlSso;
@@ -30,8 +29,6 @@ public class DashboardController {
     private RoleMapper roleMapper;
     @Resource
     private LogMapper logMapper;
-    @Resource
-    private MessageMapper messageMapper;
 
     /**
      * 首页统计数据
@@ -40,16 +37,14 @@ public class DashboardController {
     @XxlSso
     public Response<Map<String, Object>> stats() {
 
-        int userCount = userMapper.pageListCount(0, 10, null, -1, null);
+        int userCount = userMapper.pageListCount(0, 10, null, -1);
         int roleCount = roleMapper.pageListCount(0, 999, null, -1);
         int logCount = logMapper.pageListCount(-1, 0, null, 0, 10);
-        int messageCount = messageMapper.pageListCount(-1, -1, null, 0, 10);
 
         Map<String, Object> data = new HashMap<>();
         data.put("userCount", userCount);
         data.put("roleCount", roleCount);
         data.put("logCount", logCount);
-        data.put("messageCount", messageCount);
 
         return Response.ofSuccess(data);
     }

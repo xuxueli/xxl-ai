@@ -4,7 +4,6 @@ import com.xxl.ai.api.framework.annotation.XxlLog;
 import com.xxl.ai.api.framework.constant.enums.LogModuleEnum;
 import com.xxl.ai.api.framework.constant.enums.LogTypeEnum;
 import com.xxl.ai.api.framework.model.dto.UserDTO;
-import com.xxl.ai.api.framework.service.OrgService;
 import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.service.UserService;
 import com.xxl.sso.core.annotation.XxlSso;
@@ -32,18 +31,15 @@ public class UserController {
     private UserService userService;
     @Resource
     private RoleService roleService;
-    @Resource
-    private OrgService orgService;
 
     @RequestMapping("/pageList")
     @XxlSso(permission = "authz:user")
     public Response<PageModel<UserDTO>> pageList(@RequestParam(required = false, defaultValue = "0") int offset,
                                                  @RequestParam(required = false, defaultValue = "10") int pagesize,
                                                  String username,
-                                                 @RequestParam(required = false, defaultValue = "-1") int status,
-                                                 @RequestParam(required = false) List<Integer> orgIds) {
+                                                 @RequestParam(required = false, defaultValue = "-1") int status) {
 
-        PageModel<UserDTO> pageModel = userService.pageList(offset, pagesize, username, status, orgIds);
+        PageModel<UserDTO> pageModel = userService.pageList(offset, pagesize, username, status);
         return Response.ofSuccess(pageModel);
     }
 

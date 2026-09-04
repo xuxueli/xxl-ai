@@ -33,11 +33,6 @@
                 <div class="pull-right">{{ state.user.email }}</div>
               </li>
               <li class="list-group-item">
-                <SvgIcon icon-class="tree" />
-                {{ t('authz.user.dept') }}
-                <div class="pull-right">{{ state.user.orgName }}</div>
-              </li>
-              <li class="list-group-item">
                 <SvgIcon icon-class="peoples" />
                 {{ t('authz.user.roleLabel') }}
                 <div class="pull-right">{{ state.roleNames }}</div>

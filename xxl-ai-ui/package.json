@@ -2,7 +2,7 @@
   "name": "XXL-AI",
   "version": "0.0.1-SNAPSHOT",
   "private": true,
-  "description": "XXL-AI | 快速开发平台",
+  "description": "XXL-AI | AI应用开发平台",
   "repository": "git@github.com:xuxueli/xxl-ai.git",
   "author": "xuxueli",
   "license": "GPL",

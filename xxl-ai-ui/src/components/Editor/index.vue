@@ -103,7 +103,7 @@ const options = ref<any>({
       ['link', 'image', 'video']
     ]
   },
-  placeholder: t('common.inputPlaceholder', [t('system.message.content')]),
+  placeholder: t('common.inputPlaceholder', [t('common.content')]),
   readOnly: props.readOnly
 })
 

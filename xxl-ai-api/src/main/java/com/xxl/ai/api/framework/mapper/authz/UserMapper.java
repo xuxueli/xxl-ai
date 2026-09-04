@@ -28,13 +28,11 @@ public interface UserMapper {
 	List<User> pageList(@Param("offset") int offset,
 							   @Param("pagesize") int pagesize,
 							   @Param("username") String username,
-							   @Param("status") int status,
-							   @Param("orgIds") List<Integer> orgIds);
+							   @Param("status") int status);
 	int pageListCount(@Param("offset") int offset,
 					  @Param("pagesize") int pagesize,
 					  @Param("username") String username,
-					  @Param("status") int status,
-					  @Param("orgIds") List<Integer> orgIds);
+					  @Param("status") int status);
 
 
 	int updateToken(@Param("id") int id, @Param("token") String token);

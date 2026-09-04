@@ -8,7 +8,7 @@
  *
  * 典型用法（组件内）：
  *   // 下载 ZIP 压缩包
- *   this.$download.zip('/tool/codegen/batchGenCode', 'boot.zip')
+ *   this.$download.zip('/system/log/export', 'log.zip')
  */
 import { ElLoading, ElMessage } from 'element-plus'
 import { saveAs } from 'file-saver'

@@ -1,4 +1,4 @@
-## 《快速开发平台 XXL-AI》
+## 《AI应用开发平台 XXL-AI》
 
 [![Actions Status](https://github.com/xuxueli/xxl-ai/workflows/Java%20CI/badge.svg)](https://github.com/xuxueli/xxl-ai/actions)
 [![GitHub release](https://img.shields.io/github/release/xuxueli/xxl-ai.svg)](https://github.com/xuxueli/xxl-ai/releases)
@@ -14,7 +14,7 @@
 
 ### 1.1 概述
 
-XXL-AI 是一个快速开发平台，易学易用、AI驱动、开箱即用，内置安全登录、RBAC 权限管控、端到端代码生成、AI+SKILL加速开发、响应式 UI 等能力，重点包括三类能力：
+XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、学习简单、轻量级、易扩展。现已开放源代码，开箱即用。内置安全登录、RBAC 权限管控、AI+SKILL加速开发、响应式 UI 等能力，重点包括三类能力：
 
 - **一套仓库，Vue 分离模式**：采用 Monorepo 统一托管后端 API（xxl-ai-api）与前端工程（xxl-ai-ui，Vue3 + Element Plus + TypeScript），前后端独立部署、联通构建，做业务扩展最顺滑。
 - **一行 SQL，全栈生成**：内置端到端代码生成器，只需提供建表 SQL，即可自动生成 后端 "controller/service/mapper/xml/entity" 与 前端 "types/api/view" 全套代码，并附带 菜单 + 按钮 + 授权 初始化 SQL，从数据库到可运行页面一键打通。
@@ -325,7 +325,6 @@ xxl-ai/
 │           ├── mapper/
 │           │   ├── framework/                 # 核心 MyBatis 映射文件
 │           │   └── {module}/{business}/       # 【扩展点】业务扩展 MyBatis 映射文件
-│           ├── templates/tool/codegen/        # 代码生成 模板文件（java / vue3 / sql）
 │           └── i18n/                          # 国际化资源文件
 │
 └── xxl-ai-ui/                               # 【前后端分离】前端UI服务（3000）

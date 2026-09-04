@@ -5,8 +5,8 @@
  * 避免各页面重复编写 "loadEnumItem(...).then(res => options.value = res.data)"。
  *
  * 用法：
- *   const { MessageCategoryEnum: categoryOptions, MessageStatusEnum: statusOptions } =
- *     useEnumOption('MessageCategoryEnum', 'MessageStatusEnum')
+ *   const { UserStatuEnum: statusOptions, RoleStatusEnum } =
+ *     useEnumOption('UserStatuEnum', 'RoleStatusEnum')
  */
 import { ref, type Ref } from 'vue'
 import { loadEnumItem } from '@/modules/framework/system/dict/api'
@@ -14,8 +14,8 @@ import type { EnumOption } from '@/types'
 
 /**
  * 批量加载枚举选项
- * @param enumNames 枚举类名列表，如 'MessageCategoryEnum'
- * @returns 以枚举名为 key 的响应式选项对象，如 { MessageCategoryEnum: Ref<EnumOption[]> }
+ * @param enumNames 枚举类名列表，如 'UserStatuEnum'
+ * @returns 以枚举名为 key 的响应式选项对象，如 { UserStatuEnum: Ref<EnumOption[]> }
  */
 export function useEnumOption(...enumNames: string[]): Record<string, Ref<EnumOption[]>> {
   const options: Record<string, Ref<EnumOption[]>> = {}
