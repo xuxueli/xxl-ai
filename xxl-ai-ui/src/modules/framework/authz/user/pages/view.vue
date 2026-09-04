@@ -42,14 +42,6 @@
       <el-row :gutter="20" class="mb8">
         <el-col :span="24">
           <div class="info-item">
-            <label class="info-label">{{ t('authz.user.phone') }}：</label>
-            <span class="info-value plaintext">{{ info.phone }}</span>
-          </div>
-        </el-col>
-      </el-row>
-      <el-row :gutter="20" class="mb8">
-        <el-col :span="24">
-          <div class="info-item">
             <label class="info-label">{{ t('authz.user.email') }}：</label>
             <span class="info-value plaintext">{{ info.email }}</span>
           </div>

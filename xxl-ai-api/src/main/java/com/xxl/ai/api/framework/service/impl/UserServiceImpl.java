@@ -320,7 +320,6 @@ public class UserServiceImpl implements UserService {
         // write field
         user.setRealName(userDTO.getRealName());
         user.setEmail(userDTO.getEmail());
-        user.setPhone(userDTO.getPhone());
 
         int ret = userMapper.update(user);
         return ret>0 ? Response.ofSuccess() : Response.ofFail();

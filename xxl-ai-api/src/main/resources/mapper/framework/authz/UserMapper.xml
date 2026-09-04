@@ -11,7 +11,6 @@
 	    <result column="status" property="status" />
 		<result column="real_name" property="realName" />
 		<result column="email" property="email" />
-		<result column="phone" property="phone" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
 	</resultMap>
@@ -24,7 +23,6 @@
 		t.status,
 		t.real_name,
 		t.email,
-		t.phone,
 		t.add_time,
 		t.update_time
 	</sql>
@@ -37,7 +35,6 @@
 			status,
 			real_name,
 			email,
-			phone,
 			add_time,
 			update_time
 		) VALUES (
@@ -47,7 +44,6 @@
 			 #{status},
 			 #{realName},
 			 #{email},
-			 #{phone},
 			 NOW(),
 			 NOW()
 		 );
@@ -78,7 +74,6 @@
 			status = #{status},
 			real_name = #{realName},
 			email = #{email},
-			phone = #{phone},
 			update_time = NOW()
 		WHERE id = #{id}
 	</update>

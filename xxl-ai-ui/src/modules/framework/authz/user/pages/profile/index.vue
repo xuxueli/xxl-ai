@@ -23,11 +23,6 @@
                 <div class="pull-right">{{ state.user.username }}</div>
               </li>
               <li class="list-group-item">
-                <SvgIcon icon-class="phone" />
-                {{ t('authz.user.phoneNumber') }}
-                <div class="pull-right">{{ state.user.phone }}</div>
-              </li>
-              <li class="list-group-item">
                 <SvgIcon icon-class="email" />
                 {{ t('authz.user.emailLabel') }}
                 <div class="pull-right">{{ state.user.email }}</div>

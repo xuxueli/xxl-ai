@@ -147,11 +147,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item :label="t('authz.user.phone')" prop="phone">
-              <el-input v-model="formState.form.phone" :placeholder="t('common.inputPlaceholder', [t('authz.user.phone')])" maxlength="11" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item :label="t('common.status')">
               <el-radio-group v-model="formState.form.status">
                 <el-radio v-for="item in statusOptions" :key="item.code" :value="item.code">{{ item.title }}</el-radio>
@@ -195,7 +190,6 @@ const resetForm = useFormReset()
 
 /** 编辑表单数据（User 基础上补充表单用到的附加字段） */
 interface UserFormData extends User {
-  phone?: string
   email?: string
   roleIds?: number[]
 }
@@ -243,7 +237,6 @@ const formState = ref<FormState<UserFormData>>({
       { pattern: /^[a-z][a-z0-9]*$/, message: t('authz.user.usernameFormat'), trigger: 'blur' }
     ],
     realName: [{ required: true, message: t('common.requiredMsg', [t('common.realName')]), trigger: 'blur' }],
-    phone: [{ pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/, message: t('authz.user.phoneInvalid'), trigger: 'blur' }],
     email: [{ type: 'email', message: t('authz.user.emailInvalid'), trigger: ['blur', 'change'] }]
   }
 })
@@ -311,7 +304,6 @@ function reset() {
     username: undefined,
     realName: undefined,
     password: '123456',
-    phone: undefined,
     email: undefined,
     status: 0,
     roleIds: []
