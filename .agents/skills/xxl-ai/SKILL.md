@@ -1,6 +1,6 @@
 ---
 name: xxl-ai-vue
-description: 在 XXL-AI 前后端分离的 Vue3 模式（xxl-ai-api 端口 8090 + xxl-ai-ui 端口 3000，Element Plus + TypeScript）下新增或改造业务模块。当任务涉及修改 xxl-ai-api/src/main/java/com/xxl/ai/api/business 或 xxl-ai-ui/src/modules 时加载本技能。
+description: 在 XXL-AI 前后端分离的 Vue3 模式（xxl-ai-api 端口 8090 + xxl-ai-ui 端口 3000，Element Plus + TypeScript）下新增或改造业务模块。当任务涉及修改 xxl-ai-api/src/main/java/com/xxl/ai/api/business、平台菜单/权限注册（xxl-ai-api 下 framework/constant/enums/XxlRoleEnum.java）或 xxl-ai-ui/src/modules 时加载本技能。
 ---
 
 # XXL-AI · Vue3 分离模式开发 Skill
@@ -23,7 +23,7 @@ xxl-ai-api/src/main
 ├── java/com/xxl/ai/api/business/{module}/{business}  ← 新增业务落此（与前端双层镜像；按模板直生等价代码）
 └── resources/mapper/{module}/{business}/    ← 业务 Mapper XML（与前/后端目录镜像）
 xxl-ai-ui/src
-├── modules/framework/{domain}/{module}/     ← 平台内置模块（authz/system/…，同目录聚合 pages+api+types）
+├── modules/framework/{domain}/{module}/     ← 平台内置模块（auth/system/dashboard/…，同目录聚合 pages+api+types）
 ├── modules/business/{module}/{business}/    ← 业务模块（pages/ + api/ + types/ 三子目录，与后端双层镜像）
 └── types/index.ts                           ← 全局基础类型（Response/PageModel/PageQuery…）
 ```
@@ -40,7 +40,7 @@ xxl-ai-ui/src
 5. **菜单/权限**：在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
 6. **验证**：起 `xxl-ai-api`(8090) + `xxl-ai-ui`(3000，代理 /api→8090)，菜单可见、CRUD 可用、权限生效；验证结果回填 `plan.md`。
 
-> ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `mysql`），其 CLI 默认连接字符集是 **latin1**，必须按下列姿势执行：
+> ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `xxl-ai-mysql`，docker-compose 定义），服务端已配置 utf8mb4，但 CLIENT 侧 CLI 默认连接字符集是 **latin1**，必须按下列姿势执行：
 
 ## 需求落盘（xxl-ai-spec）
 
@@ -119,7 +119,7 @@ SQL 脚本：`{business}-table.sql`
 - [ ] 变更记录（本次改动时间与说明）
 ```
 
-## 后端落位清单（7 件套）
+## 后端落位清单（6 件套）
 
 以业务 `Demo`、模块 `demo` 为例，包名 `com.xxl.ai.api.business.demo.demo`（模块+业务双层镜像）：
 
@@ -140,17 +140,17 @@ SQL 脚本：`{business}-table.sql`
 - DTO 时间展示转字符串（`DateTool.formatDateTime`），用 Adaptor 完成 entity→dto。
 - 接口路径**全小写**：`/{module}/{business}/pageList|load|insert|delete|update`；删除批量 `@RequestParam("ids[]") List<Integer>`。
 
-## 前端落位清单（3 文件 + barrel）
+## 前端落位清单（3 文件）
 
 | 文件 | 位置 | 说明 |
 |---|---|---|
 | types | `src/modules/business/{module}/{business}/types/index.ts` | `Xxx` 实体 + `XxxQuery`(pageNum/pageSize 表单形态) + `XxxListQuery = ListQuery<XxxQuery>` |
-| api | `src/modules/business/{module}/{business}/api/index.ts` | `request({url:'/{module}/{page}/pageList',params:...})` |
+| api | `src/modules/business/{module}/{business}/api/index.ts` | `request({url:'/{module}/{business}/pageList',params:...})` |
 | view | `src/modules/business/{module}/{business}/pages/index.vue` | 三段式列表页 |
 
 页面（含弹窗 XxxFormModal.vue）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/ListQuery…）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
 
-**i18n 落位**：用户可见文案一律 `import { t } from '@/i18n'` 引用，**禁止硬编码中文**（注释除外）；文案 key 统一维护在 `src/i18n/locales/{zh,en}.json` **单一文件**内（按域名节点分区，如 `business.*`；`app` 前置 → 公共组 `common` 等 → 平台业务组 `authz/system` 等 → 常规业务模块，顺序与另一套 UI 保持一致），zh/en 成对补。通用词（新增/修改/删除/搜索/操作/状态/正常/停用/保存成功…）复用 `common.*`，插值用 `t('key',[v])`（`{0}`）。
+**i18n 落位**：用户可见文案一律 `import { t } from '@/i18n'` 引用，**禁止硬编码中文**（注释除外）；文案 key 统一维护在 `src/i18n/locales/{zh,en}.json` **单一文件**内（按域名节点分区，如 `business.*`；`app` 前置 → 公共组 `common`/`modal`/`request`/`layout`/`components` → 平台业务组 `auth`/`system`/`dashboard`/`help`/`error` → 常规业务模块），zh/en 成对补。通用词（新增/修改/删除/搜索/操作/状态/正常/停用/保存成功…）复用 `common.*`，插值用 `t('key',[v])`（`{0}`）。
 
 types 参考 `src/modules/framework/system/user/types/index.ts` 封口写法；api 参考 `src/modules/framework/system/user/api/index.ts`。
 
@@ -197,10 +197,10 @@ function reset() { formState.value.form = { id: undefined, name: undefined, stat
 function handleQuery() { queryParams.value.pageNum = 1; getList() }
 function resetQuery() { resetForm('queryRef'); handleQuery() }
 function handleSelectionChange(selection: Demo[]) { table.value.ids = selection.map(i => i.id as number); table.value.single = selection.length !== 1; table.value.multiple = !selection.length }
-function handleAdd() { reset(); formState.value.visible = true; formState.value.title = '新增Demo' }
-function handleUpdate(row: any) { reset(); const id = row?.id ?? table.value.ids[0]; if (id == null) return; getDemo(id).then(r => { formState.value.form = r.data; formState.value.visible = true; formState.value.title = '修改Demo' }) }
-function handleDelete(row: any) { const ids = row?.id ?? table.value.ids; if (ids == null || (Array.isArray(ids) && ids.length === 0)) return; modal.confirm('是否确认删除编号为"' + ids + '"的数据项？').then(() => delDemo(ids)).then(() => { getList(); modal.msgSuccess('删除成功') }).catch(() => {}) }
-function submitForm() { demoRef.value!.validate(valid => { if (!valid) return; (formState.value.form.id != null ? updateDemo(formState.value.form) : addDemo(formState.value.form)).then(() => { modal.msgSuccess(formState.value.form.id != null ? '修改成功' : '新增成功'); formState.value.visible = false; getList() }) }) }
+function handleAdd() { reset(); formState.value.visible = true; formState.value.title = t('common.titleAdd') }
+function handleUpdate(row: any) { reset(); const id = row?.id ?? table.value.ids[0]; if (id == null) return; getDemo(id).then(r => { formState.value.form = r.data; formState.value.visible = true; formState.value.title = t('common.titleEdit') }) }
+function handleDelete(row: any) { const ids = row?.id ?? table.value.ids; if (ids == null || (Array.isArray(ids) && ids.length === 0)) return; modal.confirm(t('demo.confirmDelete', [ids])).then(() => delDemo(ids)).then(() => { getList(); modal.msgSuccess(t('common.deleteSuccess')) }).catch(() => {}) }
+function submitForm() { demoRef.value!.validate(valid => { if (!valid) return; (formState.value.form.id != null ? updateDemo(formState.value.form) : addDemo(formState.value.form)).then(() => { modal.msgSuccess(formState.value.form.id != null ? t('common.updateSuccess') : t('common.addSuccess')); formState.value.visible = false; getList() }) }) }
 
 // --------------------------------- page init ---------------------------------
 getList()
@@ -227,14 +227,14 @@ ADMIN_RESOURCES.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:
 
 ## 枚举下拉（可选）
 
-业务模块枚举（含下拉）统一放 `business/{module}/{business}/enums`，实现 `EnumTool.IEnum(getCode/getTitle)`；`framework/constant/enums` 仅保留平台内置枚举，业务代码一律不侵入。`loadEnumItem` 展开「平台枚举包 + business 根包」内包含 IEnum 枚举的包，按枚举名解析（平台包优先），前端 `useEnumOption('XxxEnum')` 自动取 `{code,title}`。
+业务模块枚举（含下拉）统一放 `business/{module}/{business}/enums`，实现 `EnumTool.IEnum(getCode/getTitle)`；`framework/constant/enums` 仅保留平台内置枚举，业务代码一律不侵入。后端 `/system/dict/loadEnumItem` 动态扫描 `com.xxl.ai` 根包内包含 IEnum 枚举的包（一次扫描后缓存），按枚举名解析；前端 `useEnumOption('XxxEnum')` 自动取 `{code,title}`（实现见 `src/composables/useEnumOption.ts`）。
 
 ## 校验清单
 
 - [ ] 需求子目录 `xxl-ai-spec/{yyyyMMdd}-{business}/` 已创建，`plan.md`（六大块齐全）+ SQL 已落盘并同步。
 - [ ] `xxl-ai-api` 下 `mvn -q compile` 通过。
 - [ ] 后端：Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
-- [ ] 前端：types 三件齐（实体/Query/ListQuery）并登记 barrel；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
+- [ ] 前端：types 三件齐（实体/Query/ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
 - [ ] 权限：按钮 `v-hasPermi`，XxlRoleEnum 菜单+按钮已注册。注释符合 AGENTS.md 6.1。
 - [ ] i18n：页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`。语言配置 `default-settings.ts` 的 `language`。
 - [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`。
@@ -244,4 +244,4 @@ ADMIN_RESOURCES.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:
 
 - 列表页规范样例：`xxl-ai-ui/src/modules/framework/system/user/pages/index.vue`
 - API / 类型样例：`xxl-ai-ui/src/modules/framework/system/user/{api,types}/index.ts`
-- 菜单 / 权限注册 SQL 模板：见上文「菜单 / 权限注册 SQL」（内置代码生成器已下线，按模板直生等价代码）
+- 菜单 / 权限注册模板：见上文「菜单 / 权限注册（枚举资源，替代原资源表）」，按 `res()/ResourceTypeEnum` 追加即注册，无需改数据库与路由；内置代码生成器已下线，按模板直生等价代码

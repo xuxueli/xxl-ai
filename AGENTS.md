@@ -10,7 +10,7 @@ XXL-AI 是AI应用开发平台，采用 Monorepo 统一托管「后端服务」�
 |---|---|
 | `xxl-ai-api` | 后端 API（Spring Boot 纯 API），端口 8090，SSO 登录态存 Redis |
 | `xxl-ai-ui` | Vue3 前端（Element Plus + TypeScript + Vite），端口 3000 |
-| `doc/db` | 数据库初始化脚本（`xxl_ai`，含 AI 插件表 `xxl_ai_ai_*`） |
+| `doc/db` | 数据库初始化脚本（`xxl_ai`：用户/配置/审计日志等框架表与种子数据） |
 | `docker` | 一键部署栈（mysql + redis + api + ui） |
 
 通用依赖：`xxl-tool`（工具与统一响应）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis。
@@ -30,7 +30,7 @@ Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个�
 ### 3.1 初始化数据库
 
 ```sql
--- 建库 + 全量框架表 + 种子数据（内置 Vue 分离模式菜单图标）
+-- 建库 + 全量框架表 + 种子数据（角色/菜单由 XxlRoleEnum 枚举定义，无需资源表）
 source doc/db/tables_xxl_ai.sql;
 ```
 
@@ -60,9 +60,9 @@ cd docker && docker compose up -d --build
 
 ```
 com/xxl/ai/api/framework
-├── controller/{system,authz,tool,base}      /* 接口入口，只做参数接收与校验 */
+├── controller/{system,base}                 /* 接口入口，只做参数接收与校验 */
 ├── service/  +  service/impl/               /* 业务逻辑：接口 + 实现 */
-├── mapper/{system,authz,tool}               /* 数据访问接口 */
+├── mapper/system                            /* 数据访问接口 */
 ├── model/{entity,dto,adaptor}               /* 实体 / 展示DTO / 实体转DTO */
 ├── constant/{enums,consts}                  /* 枚举与常量 */
 ├── web/{xxlsso,xxllog,error}                /* 登录态、审计日志、错误页 */
@@ -77,7 +77,7 @@ Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resou
 
 ### 4.2 前端 Vue（xxl-ai-ui）
 
-模块化统一管理：全部模块按「模块自包含」落位 `src/modules`，顶级用 `framework/`（平台内置：authz/system/tool/dashboard/…）与 `business/`（项目业务）隔离；同一模块的页面、接口、类型按 `pages/`、`api/`、`types/` 三个子目录聚合维护。
+模块化统一管理：全部模块按「模块自包含」落位 `src/modules`，顶级用 `framework/`（平台内置：auth/system/dashboard/help/…）与 `business/`（项目业务）隔离；同一模块的页面、接口、类型按 `pages/`、`api/`、`types/` 三个子目录聚合维护。
 
 ```
 src
@@ -158,13 +158,13 @@ src
 - 登录鉴权：后端 `@XxlSso`；按钮权限标识 `{module}:{business}:add / edit / remove`。
 - 前端权限：Vue `v-hasPermi="['{module}:{business}:add']"`（或 `v-hasRole="['admin']"`）。
 - 下拉选项来源：
-  - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举才放 `framework/constant/enums`），前端 `useEnumOption('XxxEnum')` 自动经 `loadEnumItem` 拉取（`loadEnumItem` 展开「平台枚举包 + business 根包」内包含 IEnum 枚举的包，按枚举名解析，平台包优先）；
+  - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举放 `framework/constant/enums`）；前端 `useEnumOption('XxxEnum')` 经 `/system/dict/loadEnumItem` 拉取（后端动态扫描 `com.xxl.ai` 根包内实现 `IEnum` 的枚举所在包，按枚举名解析，一次扫描后缓存并复用）；
 - 菜单资源：平台菜单/按钮由 `XxlRoleEnum` 各角色 static 代码块定义（资源 `url` 充当路由 path 与组件定位 key；类型/状态/显隐沿用 `ResourceTypeEnum`/`ResourceStatuEnum`/`ResourceVisibleEnum`），登录按用户角色聚合下发。
 
 ### 6.7 国际化文案（i18n）
 
 - 文案统一维护于 `src/i18n/locales/{zh,en}.json`（**单一文件**，JSON 数据纯存储不支持注释，按 `domain.module.token` 嵌套、按域名节点分区），业务页面/components/utils/layouts **一律 `import { t } from '@/i18n'` 引用，禁止硬编码中文**（中文注释除外）。
-- 文件内模块顺序固定：`app`（应用级常量）前置，其次公共组 `common`/`modal`/`request`/`layout`/`components`，再次平台业务组 `auth`/`authz`/`system`/`dashboard`/`help`/`error`，常规业务模块（`business.*` 等）放最后；新增模块按组插入、勿打乱既有顺序。
+- 文件内模块顺序固定：`app`（应用级常量）前置，其次公共组 `common`/`modal`/`request`/`layout`/`components`，再次平台业务组 `auth`/`system`/`dashboard`/`help`/`error`，常规业务模块（`business.*` 等）放最后；新增模块按组插入、勿打乱既有顺序。
 - 语言由 `default-settings.ts` 的 `language: 'zh' | 'en'` 配置控制，**不支持运行时切换**；element-plus 组件语言随该配置。
 - key 复用约定：通用词（新增/修改/删除/搜索/重置/操作/状态/备注/全部/正常/停用/保存成功/删除成功…）统一走 `common.*`，`modal.*`（系统提示/确定/取消）、`request.*`（错误/超时提示）；模块特有词建 `{domain}.{module}.*`。新增文案必须 zh/en **成对**提交，缺失键回退中文再回退 key。
 - 插值：`t('key', [v])`（占位 `{0}` 下标）或 `t('key', { name })`（占位 `{name}`），禁止字符串拼接。
@@ -173,7 +173,7 @@ src
 ## 七、代码生成策略
 
 - 平台内置代码生成器已下线（代码生成 / 表单构建 / 字典管理 不再提供）。
-- Skill 缺省策略：AI 按模板直生等价代码落位（后端 6 件套、前端 vue3 文件、`-init.sql` 菜单按钮授权），落位细则见 Skill。
+- Skill 缺省策略：AI 按模板直生等价代码落位（后端 6 件套、前端 vue3 文件、`-init.sql` 建表与种子数据），落位细则见 Skill；菜单/按钮授权统一走 `XxlRoleEnum` 枚举注册，不落 SQL。
 
 ## 八、验收与提交
 
