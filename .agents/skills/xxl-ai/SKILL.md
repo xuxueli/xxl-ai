@@ -1,9 +1,9 @@
 ---
-name: xxl-ai-vue
-description: 在 XXL-AI 前后端分离的 Vue3 模式（xxl-ai-api 端口 8090 + xxl-ai-ui 端口 3000，Element Plus + TypeScript）下新增或改造业务模块。当任务涉及修改 xxl-ai-api/src/main/java/com/xxl/ai/api/business、平台菜单/权限注册（xxl-ai-api 下 framework/constant/enums/XxlRoleEnum.java）或 xxl-ai-ui/src/modules 时加载本技能。
+name: xxl-ai
+description: 在 XXL-AI 前后端分离模式（xxl-ai-api 端口 8090 + xxl-ai-ui 端口 3000，Element Plus + TypeScript）下新增或改造业务模块。当任务涉及修改 xxl-ai-api/src/main/java/com/xxl/ai/api/business、平台菜单/权限注册（xxl-ai-api 下 framework/constant/enums/XxlRoleEnum.java）或 xxl-ai-ui/src/modules 时加载本技能。
 ---
 
-# XXL-AI · Vue3 分离模式开发 Skill
+# XXL-AI · 前后端分离模式开发 Skill
 
 目标：把 XXL-AI 的 `xxl-ai-api` + `xxl-ai-ui` 当作脚手架，规范、快速地新增/改造一个业务模块。本 Skill 覆盖「建表 → 后端 → 前端 → 菜单/权限 → 验证」全流程，含落位清单、代码骨架与校验清单。
 
@@ -52,7 +52,7 @@ xxl-ai-ui/src
 
 执行全程保持该目录与实现同步：先建目录落方案骨架 → 建表写 SQL → 落位实现 → 验证后回填结论。
 
-### plan.md 模板（Vue 分离模式）
+### plan.md 模板
 
 ```markdown
 # {业务名}开发方案（{module}/{business}）
@@ -62,7 +62,7 @@ xxl-ai-ui/src
 ## 一、需求相关
 | 项 | 结论 |
 |---|---|
-| 运行模式 | Vue3 分离（xxl-ai-api 8090 + xxl-ai-ui 3000） |
+| 运行模式 | 前后端分离（xxl-ai-api 8090 + xxl-ai-ui 3000） |
 | 模块/业务命名 | `{module}/{business}`，包 `com.xxl.ai.api.business.{module}` |
 | 核心字段与业务规则 | 字段清单 + 必填/唯一/模糊搜索规则 |
 | 状态/枚举下拉 | 无 / 枚举 `{XxxEnum}`（business/{module}/{business}/enums） |

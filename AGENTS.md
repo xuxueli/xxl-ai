@@ -15,11 +15,7 @@ XXL-AI 是AI应用开发平台，采用 Monorepo 统一托管「后端服务」�
 
 通用依赖：`xxl-tool`（工具与统一响应）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis。
 
-## 二、运行模式与 Skill 速查
-
-| 运行模式 | 组成 | 什么时候用 | 加载 Skill |
-|---|---|---|---|
-| Vue 分离 | `xxl-ai-api` + `xxl-ai-ui` | 前后端分离，前端用 Vue3 | `xxl-ai-vue` |
+## 二、 Skill 速查
 
 Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个业务模块」的完整落位与模板；本项目已内置可复现的执行环境会自动发现并加载匹配的 Skill。启动项目前先看第三节，写代码前先加载 Skill。
 
@@ -42,7 +38,7 @@ source doc/db/tables_xxl_ai.sql;
 # 后端 API（Redis 需先启动）
 cd xxl-ai-api && mvn spring-boot:run     # 8090
 
-# 前端 Vue（本地代理 /api → 8090）
+# 前端（本地代理 /api → 8090）
 cd xxl-ai-ui && npm i && npm run dev     # 3000
 ```
 
@@ -75,7 +71,7 @@ com/xxl/ai/api/framework
 
 Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/{module}/{business}/`（业务，与前/后端目录镜像）。
 
-### 4.2 前端 Vue（xxl-ai-ui）
+### 4.2 前端（xxl-ai-ui）
 
 模块化统一管理：全部模块按「模块自包含」落位 `src/modules`，顶级用 `framework/`（平台内置：auth/system/dashboard/help/…）与 `business/`（项目业务）隔离；同一模块的页面、接口、类型按 `pages/`、`api/`、`types/` 三个子目录聚合维护。
 
