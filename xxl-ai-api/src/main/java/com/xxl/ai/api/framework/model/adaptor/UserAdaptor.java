@@ -30,7 +30,6 @@ public class UserAdaptor {
         xxlUser.setStatus(xxlJobUser.getStatus());
         xxlUser.setRealName(xxlJobUser.getRealName());
         xxlUser.setEmail(xxlJobUser.getEmail());
-        xxlUser.setPhone(xxlJobUser.getPhone());
         xxlUser.setAddTime(xxlJobUser.getAddTime());
         xxlUser.setUpdateTime(xxlJobUser.getUpdateTime());
         return xxlUser;
@@ -51,7 +50,6 @@ public class UserAdaptor {
         xxlUser.setStatus(xxlJobUser.getStatus());
         xxlUser.setRealName(xxlJobUser.getRealName());
         xxlUser.setEmail(xxlJobUser.getEmail());
-        xxlUser.setPhone(xxlJobUser.getPhone());
         xxlUser.setAddTime(xxlJobUser.getAddTime());
         xxlUser.setUpdateTime(xxlJobUser.getUpdateTime());
         if (MapTool.isNotEmpty(userIdToRoleIdsMap)) {
