@@ -37,8 +37,6 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_supplier` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `space_id` BIGINT NOT NULL COMMENT '空间ID',
     `name` VARCHAR(50) NOT NULL COMMENT '供应商名称',
-    `code` VARCHAR(50) NOT NULL COMMENT '供应商编码',
-    `type` TINYINT NOT NULL DEFAULT 0 COMMENT '类型：0-LLM、1-嵌入、2-通用',
     `base_url` VARCHAR(200) NOT NULL DEFAULT '' COMMENT '接口地址',
     `api_key` VARCHAR(200) NOT NULL DEFAULT '' COMMENT 'API密钥',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-正常、1-停用',
@@ -251,22 +249,24 @@ INSERT INTO `xxl_ai_space` (`name`, `code`, `status`, `remark`, `add_time`, `upd
 VALUES ('默认空间', 'default', 0, '系统默认业务空间', NOW(), NOW());
 
 -- 4、预设供应商（admin 在页面可随时修改 BaseURL/Key）
-INSERT INTO `xxl_ai_supplier` (`space_id`, `name`, `code`, `type`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
+INSERT INTO `xxl_ai_supplier` (`id`,`space_id`, `name`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    (1, 'Deepseek', 'deepseek', 0, 'https://api.deepseek.com', '', 0, 'Deepseek 对话模型', NOW(), NOW()),
-    (1, '智谱GLM', 'glm', 2, 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 对话+嵌入模型', NOW(), NOW()),
-    (1, 'OpenCodeGo', 'opencodego', 0, '', '', 0, '占位供应商，BaseURL/模型请按需配置', NOW(), NOW());
+    (1, 1, 'OpenCodeGo', 'https://opencode.ai/zen/go/v1', '', 0, 'OpenCode Go模型', NOW(), NOW()),
+    (2, 1, 'Deepseek', 'https://api.deepseek.com/v1', '', 0, 'Deepseek 对话模型', NOW(), NOW()),
+    (3, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 对话+嵌入模型', NOW(), NOW()),
+    (4, 1, 'OpenAI`', 'https://api.openai.com/v1', '', 0, 'OpenAI 对话模型', NOW(), NOW());
 
 -- 5、预设供应商模型
 INSERT INTO `xxl_ai_supplier_model` (`supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
 VALUES
-    (1, 'Deepseek Chat', 'deepseek-chat', 0, 0, NOW(), NOW()),
-    (1, 'Deepseek Reasoner', 'deepseek-reasoner', 0, 0, NOW(), NOW()),
-    (2, 'GLM-4-Flash', 'glm-4-flash', 0, 0, NOW(), NOW()),
-    (2, 'GLM-4-Plus', 'glm-4-plus', 0, 0, NOW(), NOW()),
-    (2, 'GLM-4-Air', 'glm-4-air', 0, 0, NOW(), NOW()),
-    (2, 'Embedding-3', 'embedding-3', 1, 0, NOW(), NOW()),
-    (3, 'OpenCodeGo Chat', 'opencodego-chat', 0, 0, NOW(), NOW());
+    (1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
+    (1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
+    (2, 'Deepseek Chat', 'deepseek-chat', 0, 0, NOW(), NOW()),
+    (2, 'Deepseek Reasoner', 'deepseek-reasoner', 0, 0, NOW(), NOW()),
+    (3, 'GLM-4-Flash', 'glm-4-flash', 0, 0, NOW(), NOW()),
+    (3, 'GLM-4-Plus', 'glm-4-plus', 0, 0, NOW(), NOW()),
+    (3, 'GLM-4-Air', 'glm-4-air', 0, 0, NOW(), NOW()),
+    (3, 'Embedding-3', 'embedding-3', 1, 0, NOW(), NOW());
 
 -- 6、社区查询配置（框架配置）
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)

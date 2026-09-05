@@ -24,22 +24,18 @@ public interface SupplierMapper {
 
     Supplier load(@Param("id") long id);
 
-    Supplier loadByCode(@Param("spaceId") long spaceId, @Param("code") String code);
-
     List<Supplier> listBySpace(@Param("spaceId") long spaceId);
 
     List<Supplier> pageList(@Param("spaceId") long spaceId,
                             @Param("offset") int offset,
                             @Param("pagesize") int pagesize,
                             @Param("name") String name,
-                            @Param("type") int type,
                             @Param("status") int status);
 
     int pageListCount(@Param("spaceId") long spaceId,
                       @Param("offset") int offset,
                       @Param("pagesize") int pagesize,
                       @Param("name") String name,
-                      @Param("type") int type,
                       @Param("status") int status);
 
 }

@@ -9,10 +9,6 @@ export interface Supplier {
   spaceId?: number
   /** 供应商名称 */
   name?: string
-  /** 供应商编码 */
-  code?: string
-  /** 类型：0-对话LLM、1-嵌入模型、2-通用 */
-  type?: number
   /** 接口地址 */
   baseUrl?: string
   /** API密钥 */
@@ -30,7 +26,6 @@ export interface SupplierQuery {
   pageNum: number
   pageSize: number
   name?: string
-  type: number
   status: number
 }
 

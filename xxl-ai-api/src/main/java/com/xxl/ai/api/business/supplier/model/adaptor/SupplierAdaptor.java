@@ -25,8 +25,6 @@ public class SupplierAdaptor {
         supplier.setId(dto.getId());
         supplier.setSpaceId(dto.getSpaceId());
         supplier.setName(dto.getName());
-        supplier.setCode(dto.getCode());
-        supplier.setType(dto.getType());
         supplier.setBaseUrl(dto.getBaseUrl());
         supplier.setApiKey(dto.getApiKey());
         supplier.setStatus(dto.getStatus());
@@ -45,8 +43,6 @@ public class SupplierAdaptor {
         dto.setId(supplier.getId());
         dto.setSpaceId(supplier.getSpaceId());
         dto.setName(supplier.getName());
-        dto.setCode(supplier.getCode());
-        dto.setType(supplier.getType());
         dto.setBaseUrl(supplier.getBaseUrl());
         dto.setApiKey(supplier.getApiKey());
         dto.setStatus(supplier.getStatus());

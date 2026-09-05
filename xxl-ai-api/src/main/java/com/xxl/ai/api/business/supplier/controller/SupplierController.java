@@ -40,14 +40,13 @@ public class SupplierController {
                                                      @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
                                                      @RequestParam(required = false, defaultValue = "0") int offset,
                                                      @RequestParam(required = false, defaultValue = "10") int pagesize,
-                                                     String name,
-                                                     @RequestParam(required = false, defaultValue = "-1") int type,
-                                                     @RequestParam(required = false, defaultValue = "-1") int status) {
+String name,
+                                                      @RequestParam(required = false, defaultValue = "-1") int status) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
         }
-        PageModel<SupplierDTO> pageModel = supplierService.pageList(spaceResp.getData().getSpaceId(), offset, pagesize, name, type, status);
+        PageModel<SupplierDTO> pageModel = supplierService.pageList(spaceResp.getData().getSpaceId(), offset, pagesize, name, status);
         return Response.ofSuccess(pageModel);
     }
 

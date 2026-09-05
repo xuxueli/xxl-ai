@@ -18,7 +18,7 @@ public interface SupplierService {
     /**
      * 分页查询供应商列表
      */
-    PageModel<SupplierDTO> pageList(long spaceId, int offset, int pagesize, String name, int type, int status);
+    PageModel<SupplierDTO> pageList(long spaceId, int offset, int pagesize, String name, int status);
 
     /**
      * 按ID查询供应商

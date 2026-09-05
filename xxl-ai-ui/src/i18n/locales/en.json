@@ -357,10 +357,6 @@
     },
     "supplier": {
       "name": "Supplier Name",
-      "code": "Supplier Code",
-      "codePlaceholder": "lowercase letters/digits, starts with a letter",
-      "codeFormat": "Code format: lowercase letter start, lowercase letters/digits only",
-      "type": "Supplier Type",
       "baseUrl": "Base URL",
       "baseUrlPlaceholder": "e.g. https://api.deepseek.com",
       "apiKey": "API Key",

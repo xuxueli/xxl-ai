@@ -12,8 +12,6 @@ public class Supplier {
     private long id;            /* 供应商ID */
     private long spaceId;       /* 空间ID */
     private String name;        /* 供应商名称 */
-    private String code;        /* 供应商编码 */
-    private int type;           /* 类型：0-对话LLM、1-嵌入模型、2-通用 */
     private String baseUrl;     /* 接口地址 */
     private String apiKey;      /* API密钥 */
     private int status;         /* 状态：0-正常、1-停用 */
@@ -43,22 +41,6 @@ public class Supplier {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
     }
 
     public String getBaseUrl() {

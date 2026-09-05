@@ -34,9 +34,9 @@ public class SupplierServiceImpl implements SupplierService {
      * 分页查询供应商列表
      */
     @Override
-    public PageModel<SupplierDTO> pageList(long spaceId, int offset, int pagesize, String name, int type, int status) {
-        List<Supplier> pageList = supplierMapper.pageList(spaceId, offset, pagesize, name, type, status);
-        int totalCount = supplierMapper.pageListCount(spaceId, offset, pagesize, name, type, status);
+    public PageModel<SupplierDTO> pageList(long spaceId, int offset, int pagesize, String name, int status) {
+        List<Supplier> pageList = supplierMapper.pageList(spaceId, offset, pagesize, name, status);
+        int totalCount = supplierMapper.pageListCount(spaceId, offset, pagesize, name, status);
         List<SupplierDTO> pageListDto = SupplierAdaptor.adapt2dto(pageList);
         PageModel<SupplierDTO> pageModel = new PageModel<>();
         pageModel.setData(pageListDto);
@@ -54,7 +54,7 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     /**
-     * 新增供应商（空间内编码唯一校验）
+     * 新增供应商
      */
     @Override
     public Response<String> insert(long spaceId, SupplierDTO dto) {
@@ -62,15 +62,7 @@ public class SupplierServiceImpl implements SupplierService {
         if (supplier == null || StringTool.isBlank(supplier.getName())) {
             return Response.ofFail("供应商名称不能为空");
         }
-        if (StringTool.isBlank(supplier.getCode())) {
-            return Response.ofFail("供应商编码不能为空");
-        }
-        supplier.setCode(supplier.getCode().trim());
         supplier.setSpaceId(spaceId);
-        Supplier existSupplier = supplierMapper.loadByCode(spaceId, supplier.getCode());
-        if (existSupplier != null) {
-            return Response.ofFail("供应商编码已存在");
-        }
         supplierMapper.insert(supplier);
         return Response.ofSuccess();
     }
@@ -93,21 +85,13 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     /**
-     * 更新供应商（空间内编码唯一校验，排除自身）
+     * 更新供应商
      */
     @Override
     public Response<String> update(SupplierDTO dto) {
         Supplier supplier = SupplierAdaptor.adapt(dto);
         if (supplier == null || StringTool.isBlank(supplier.getName())) {
             return Response.ofFail("供应商名称不能为空");
-        }
-        if (StringTool.isBlank(supplier.getCode())) {
-            return Response.ofFail("供应商编码不能为空");
-        }
-        supplier.setCode(supplier.getCode().trim());
-        Supplier existSupplier = supplierMapper.loadByCode(supplier.getSpaceId(), supplier.getCode());
-        if (existSupplier != null && existSupplier.getId() != supplier.getId()) {
-            return Response.ofFail("供应商编码已存在");
         }
         int ret = supplierMapper.update(supplier);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();

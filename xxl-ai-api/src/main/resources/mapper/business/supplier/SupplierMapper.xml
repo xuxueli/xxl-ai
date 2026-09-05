@@ -7,8 +7,6 @@
 		<result column="id" property="id" />
 		<result column="space_id" property="spaceId" />
 		<result column="name" property="name" />
-		<result column="code" property="code" />
-		<result column="type" property="type" />
 		<result column="base_url" property="baseUrl" />
 		<result column="api_key" property="apiKey" />
 		<result column="status" property="status" />
@@ -21,8 +19,6 @@
 		t.id,
 		t.space_id,
 		t.name,
-		t.code,
-		t.type,
 		t.base_url,
 		t.api_key,
 		t.status,
@@ -33,9 +29,9 @@
 
 	<insert id="insert" parameterType="com.xxl.ai.api.business.supplier.model.entity.Supplier" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_supplier (
-			space_id, name, code, type, base_url, api_key, status, remark, add_time, update_time
+			space_id, name, base_url, api_key, status, remark, add_time, update_time
 		) VALUES (
-			 #{spaceId}, #{name}, #{code}, #{type}, #{baseUrl}, #{apiKey}, #{status}, #{remark}, NOW(), NOW()
+			 #{spaceId}, #{name}, #{baseUrl}, #{apiKey}, #{status}, #{remark}, NOW(), NOW()
 		 );
 	</insert>
 
@@ -54,8 +50,6 @@
 	<update id="update" parameterType="com.xxl.ai.api.business.supplier.model.entity.Supplier" >
 		UPDATE xxl_ai_supplier
 		SET name = #{name},
-			code = #{code},
-			type = #{type},
 			base_url = #{baseUrl},
 			api_key = #{apiKey},
 			status = #{status},
@@ -68,12 +62,6 @@
 		SELECT <include refid="Base_Column_List" />
 		FROM xxl_ai_supplier AS t
 		WHERE t.id = #{id}
-	</select>
-
-	<select id="loadByCode" parameterType="java.util.HashMap" resultMap="Supplier">
-		SELECT <include refid="Base_Column_List" />
-		FROM xxl_ai_supplier AS t
-		WHERE t.space_id = #{spaceId} AND t.code = #{code}
 	</select>
 
 	<select id="listBySpace" parameterType="java.util.HashMap" resultMap="Supplier">
@@ -90,9 +78,6 @@
 		<if test="name != null and name != ''">
 			AND t.name like CONCAT(CONCAT('%', #{name}), '%')
 		</if>
-		<if test="type gt -1">
-			AND t.type = #{type}
-		</if>
 		<if test="status gt -1">
 			AND t.status = #{status}
 		</if>
@@ -106,9 +91,6 @@
 		WHERE t.space_id = #{spaceId}
 		<if test="name != null and name != ''">
 			AND t.name like CONCAT(CONCAT('%', #{name}), '%')
-		</if>
-		<if test="type gt -1">
-			AND t.type = #{type}
 		</if>
 		<if test="status gt -1">
 			AND t.status = #{status}

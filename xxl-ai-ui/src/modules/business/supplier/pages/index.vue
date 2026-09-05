@@ -16,12 +16,6 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item :label="t('business.supplier.type')" prop="type">
-          <el-select v-model="queryParams.type" :placeholder="t('common.selectPlaceholder')" clearable style="width: 150px">
-            <el-option :label="t('common.all')" :value="-1" />
-            <el-option v-for="item in typeOptions" :key="item.code" :label="item.title" :value="item.code" />
-          </el-select>
-        </el-form-item>
         <el-form-item :label="t('common.status')" prop="status">
           <el-select v-model="queryParams.status" :placeholder="t('common.selectPlaceholder')" clearable style="width: 130px">
             <el-option :label="t('common.all')" :value="-1" />
@@ -55,16 +49,11 @@
 
       <!-- 供应商列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+        <el-table-column type="index" label="#" width="55" align="center" />
         <el-table-column type="selection" width="45" align="center" />
         <el-table-column :label="t('business.supplier.name')" align="center" prop="name" min-width="120" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.supplier.code')" align="center" prop="code" min-width="120" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.supplier.type')" align="center" width="100">
-          <template #default="scope">
-            <el-tag>{{ typeTitle(scope.row.type) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('business.supplier.baseUrl')" align="center" prop="baseUrl" min-width="200" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.supplier.apiKey')" align="center" width="170">
+        <el-table-column :label="t('business.supplier.baseUrl')" align="center" prop="baseUrl" min-width="180" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.supplier.apiKey')" align="center" width="180">
           <template #default="scope">
             <span>{{ scope.row.apiKey ? scope.row.apiKey.replace(/^(.{4}).*$/, '$1****') : '-' }}</span>
           </template>
@@ -76,7 +65,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="170" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="Cpu" @click="goModel(scope.row)">{{ t('business.supplier.model') }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['supplier:default']">{{
@@ -100,18 +89,10 @@
     </div>
 
     <!-- 添加或修改供应商对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="560px" append-to-body>
-      <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
+    <el-dialog :title="formState.title" v-model="formState.visible" width="640px" append-to-body>
+      <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="100px">
         <el-form-item :label="t('business.supplier.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.supplier.name')])" maxlength="50" />
-        </el-form-item>
-        <el-form-item :label="t('business.supplier.code')" prop="code">
-          <el-input v-model="formState.form.code" :placeholder="t('business.supplier.codePlaceholder')" maxlength="50" />
-        </el-form-item>
-        <el-form-item :label="t('business.supplier.type')" prop="type">
-          <el-select v-model="formState.form.type" style="width: 100%">
-            <el-option v-for="item in typeOptions" :key="item.code" :label="item.title" :value="item.code" />
-          </el-select>
         </el-form-item>
         <el-form-item :label="t('business.supplier.baseUrl')" prop="baseUrl">
           <el-input v-model="formState.form.baseUrl" :placeholder="t('business.supplier.baseUrlPlaceholder')" maxlength="200" />
@@ -149,7 +130,6 @@
 defineOptions({ name: 'Supplier' })
 import { t } from '@/i18n'
 import { listSupplier, addSupplier, updateSupplier, delSupplier } from '../api'
-import { useEnumOption } from '@/composables/useEnumOption'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
@@ -168,9 +148,8 @@ interface SupplierForm extends Supplier {}
 
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 供应商编辑表单 ref */
-const { SupplierTypeEnum: typeOptions } = useEnumOption('SupplierTypeEnum')
 
-const queryParams = ref<SupplierQuery>({ pageNum: 1, pageSize: 10, name: undefined, type: -1, status: -1 })
+const queryParams = ref<SupplierQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
 const table = ref<TableState<Supplier>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
@@ -179,21 +158,11 @@ const formState = ref<FormState<SupplierForm>>({
   title: '',
   form: {},
   rules: {
-    name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }],
-    code: [
-      { required: true, message: t('common.requiredMsg', [t('business.supplier.code')]), trigger: 'blur' },
-      { pattern: /^[a-z][a-z0-9]*$/, message: t('business.supplier.codeFormat'), trigger: 'blur' }
-    ]
+    name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }]
   }
 })
 
 // --------------------------------- fun ---------------------------------
-/** 供应商类型标题 */
-function typeTitle(type: number) {
-  const item = typeOptions.value.find((i) => i.code === type)
-  return item?.title ?? String(type)
-}
-
 function getList() {
   table.value.loading = true
   const params = usePageParams(queryParams)()
@@ -204,7 +173,7 @@ function getList() {
   })
 }
 function reset() {
-  formState.value.form = { id: undefined, name: undefined, code: undefined, type: 0, baseUrl: undefined, apiKey: undefined, status: 0, remark: undefined }
+  formState.value.form = { id: undefined, name: undefined, baseUrl: undefined, apiKey: undefined, status: 0, remark: undefined }
   resetForm('formRef')
 }
 function handleQuery() {

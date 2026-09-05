@@ -7,11 +7,11 @@ INSERT INTO `xxl_ai_space` (`name`, `code`, `status`, `remark`, `add_time`, `upd
 VALUES ('默认空间', 'default', 0, '系统默认业务空间', NOW(), NOW());
 
 -- 2、预设供应商（admin 在页面可随时修改 BaseURL/Key）
-INSERT INTO `xxl_ai_supplier` (`space_id`, `name`, `code`, `type`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
+INSERT INTO `xxl_ai_supplier` (`space_id`, `name`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-  (1, 'Deepseek', 'deepseek', 0, 'https://api.deepseek.com', '', 0, 'Deepseek 对话模型', NOW(), NOW()),
-  (1, '智谱GLM', 'glm', 2, 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 对话+嵌入模型', NOW(), NOW()),
-  (1, 'OpenCodeGo', 'opencodego', 0, '', '', 0, '占位供应商，BaseURL/模型请按需配置', NOW(), NOW());
+  (1, 'Deepseek', 'https://api.deepseek.com', '', 0, 'Deepseek 对话模型', NOW(), NOW()),
+  (1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 对话+嵌入模型', NOW(), NOW()),
+  (1, 'OpenCodeGo', '', '', 0, '占位供应商，BaseURL/模型请按需配置', NOW(), NOW());
 
 -- 3、预设供应商模型
 INSERT INTO `xxl_ai_supplier_model` (`supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
