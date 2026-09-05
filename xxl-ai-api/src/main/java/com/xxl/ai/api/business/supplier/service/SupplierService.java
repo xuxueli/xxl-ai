@@ -1,6 +1,7 @@
 package com.xxl.ai.api.business.supplier.service;
 
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
+import com.xxl.ai.api.business.supplier.model.dto.RemoteModelDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierConnectDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierDTO;
 import com.xxl.ai.api.business.supplier.model.entity.Supplier;
@@ -55,5 +56,10 @@ public interface SupplierService {
      * 连通测试（GET {baseUrl}/models 优先，失败回退 POST {baseUrl}/chat/completions）
      */
     Response<SupplierConnectDTO> testConnect(long spaceId, long supplierId);
+
+    /**
+     * 拉取远程可用模型（GET {baseUrl}/models，自动导入下拉）
+     */
+    Response<List<RemoteModelDTO>> loadRemoteModels(long spaceId, long supplierId);
 
 }

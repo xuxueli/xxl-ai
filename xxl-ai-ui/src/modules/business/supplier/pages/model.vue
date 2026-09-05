@@ -43,6 +43,11 @@
             {{ t('common.delete') }}
           </el-button>
         </el-col>
+        <el-col :span="1.5">
+          <el-button type="warning" plain icon="Download" @click="handleAutoImport" v-hasPermi="['supplier:default']">
+            {{ t('business.supplier.autoImport') }}
+          </el-button>
+        </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
@@ -113,21 +118,55 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 自动导入模型对话框 -->
+    <el-dialog :title="importState.title" v-model="importState.visible" width="640px" append-to-body>
+      <el-table
+        ref="importTableRef"
+        v-loading="importState.loading"
+        :data="importState.list"
+        height="400"
+        @selection-change="handleImportSelectionChange"
+      >
+        <el-table-column type="selection" width="45" align="center" :selectable="(row) => !row.imported" />
+        <el-table-column
+          :label="t('business.supplier.remoteModelId')"
+          align="center"
+          prop="modelId"
+          min-width="220"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column :label="t('common.status')" align="center" width="110">
+          <template #default="scope">
+            <el-tag v-if="scope.row.imported" type="info">{{ t('business.supplier.remoteImported') }}</el-tag>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty :description="importState.loading ? t('business.supplier.importLoading') : t('business.supplier.importModelPlaceholder')" />
+        </template>
+      </el-table>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" :disabled="!importState.ids.length" @click="confirmImport">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="cancelImport">{{ t('modal.cancelButton') }}</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'SupplierModel' })
 import { t } from '@/i18n'
-import { listSupplierModel, addSupplierModel, updateSupplierModel, delSupplierModel } from '../api'
+import { listSupplierModel, addSupplierModel, updateSupplierModel, delSupplierModel, loadRemoteModels, importRemoteModels } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
-import type { SupplierModel, SupplierModelQuery } from '../types'
-import type { FormInstance } from 'element-plus'
+import type { RemoteModel, SupplierModel, SupplierModelQuery } from '../types'
+import type { FormInstance, TableInstance } from 'element-plus'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -158,6 +197,16 @@ const formState = ref<FormState<ModelForm>>({
     model: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.modelCode')]), trigger: 'blur' }]
   }
 })
+
+/* 自动导入弹框状态（远程模型列表 + 勾选结果） */
+const importState = ref<{ visible: boolean; title: string; loading: boolean; list: RemoteModel[]; ids: string[] }>({
+  visible: false,
+  title: '',
+  loading: false,
+  list: [],
+  ids: []
+})
+const importTableRef = ref<TableInstance>() /* 导入弹框表格 ref */
 
 // --------------------------------- fun ---------------------------------
 /** 模型类型文案（按枚举选项解析，未命中回退原始值） */
@@ -233,6 +282,55 @@ function submitForm() {
 function cancel() {
   formState.value.visible = false
   reset()
+}
+
+// --------------------------------- 自动导入 ---------------------------------
+/** 打开自动导入弹框并拉取远程可用模型（已导入项置灰不可选） */
+function handleAutoImport() {
+  importState.value.visible = true
+  importState.value.title = t('business.supplier.importModelTitle')
+  importState.value.loading = true
+  importState.value.list = []
+  importState.value.ids = []
+  importTableRef.value?.clearSelection()
+  loadRemoteModels(supplierId)
+    .then((response) => {
+      importState.value.list = response.data
+    })
+    .catch(() => {
+      importState.value.visible = false
+    })
+    .finally(() => {
+      importState.value.loading = false
+    })
+}
+
+/** 导入弹框勾选变化 */
+function handleImportSelectionChange(selection: RemoteModel[]) {
+  importState.value.ids = selection.map((i) => i.modelId as string)
+}
+
+/** 确认导入勾选模型并刷新列表 */
+function confirmImport() {
+  const ids = importState.value.ids
+  if (!ids.length) {
+    modal.msgWarning(t('business.supplier.importEmpty'))
+    return
+  }
+  importRemoteModels(supplierId, ids)
+    .then(() => {
+      modal.msgSuccess(t('business.supplier.importSuccess'))
+      importState.value.visible = false
+      queryParams.value.pageNum = 1
+      getList()
+    })
+    .catch(() => {})
+}
+
+/** 取消自动导入 */
+function cancelImport() {
+  importState.value.visible = false
+  importState.value.ids = []
 }
 
 // --------------------------------- page init ---------------------------------

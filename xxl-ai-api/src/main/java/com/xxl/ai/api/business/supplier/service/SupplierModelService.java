@@ -44,4 +44,9 @@ public interface SupplierModelService {
      */
     List<SupplierModel> listBySupplier(long supplierId);
 
+    /**
+     * 批量导入远程模型（跳过已存在项）
+     */
+    Response<String> importRemote(long supplierId, List<String> models);
+
 }

@@ -5,6 +5,7 @@ import com.xxl.ai.api.business.supplier.model.entity.SupplierModel;
 import com.xxl.ai.api.business.supplier.mapper.SupplierMapper;
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.ai.api.business.supplier.model.adaptor.SupplierAdaptor;
+import com.xxl.ai.api.business.supplier.model.dto.RemoteModelDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierConnectDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierDTO;
 import com.xxl.ai.api.business.supplier.model.entity.Supplier;
@@ -13,6 +14,10 @@ import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +26,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 供应商 Service 实现
@@ -36,6 +45,9 @@ public class SupplierServiceImpl implements SupplierService {
     @Resource
     private SupplierModelMapper supplierModelMapper;
 
+    /** JSON 解析器（自动导入模型解析用） */
+    private static final Gson GSON = new Gson();
+
     /** 连通探测 HTTP 客户端（连接超时 5s，请求超时 8s） */
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -45,6 +57,7 @@ public class SupplierServiceImpl implements SupplierService {
     private static class ConnectOutcome {
         int httpCode = 0;       /* HTTP 状态码，0 表示网络异常未收到响应 */
         String message = "";    /* 异常信息 */
+        String body = "";       /* 响应体（成功响应时保留，供 /models 解析） */
     }
 
     /**
@@ -187,6 +200,7 @@ public class SupplierServiceImpl implements SupplierService {
             }
             HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
             outcome.httpCode = response.statusCode();
+            outcome.body = response.body();
         } catch (Exception e) {
             outcome.message = e.getMessage();
         }
@@ -240,6 +254,66 @@ public class SupplierServiceImpl implements SupplierService {
         runtime.setApiKey(supplier.getApiKey());
         runtime.setModelType(supplierModel.getType());
         return Response.ofSuccess(runtime);
+    }
+
+    /**
+     * 拉取远程可用模型（GET {baseUrl}/models，自动导入下拉）
+     */
+    @Override
+    public Response<List<RemoteModelDTO>> loadRemoteModels(long spaceId, long supplierId) {
+        Supplier supplier = supplierMapper.load(supplierId);
+        if (supplier == null || supplier.getSpaceId() != spaceId) {
+            return Response.ofFail("供应商不存在或不属于当前空间");
+        }
+        if (StringTool.isBlank(supplier.getBaseUrl())) {
+            return Response.ofFail("供应商接口地址为空，请先维护");
+        }
+        String baseUrl = supplier.getBaseUrl().trim();
+        String apiKey = supplier.getApiKey() == null ? "" : supplier.getApiKey().trim();
+        // 拉取远程模型列表
+        ConnectOutcome outcome = requestTest(baseUrl + "/models", apiKey, "GET", null);
+        if (outcome.httpCode != 200) {
+            if (isAuthFail(outcome.httpCode)) {
+                return Response.ofFail("模型拉取失败：HTTP " + outcome.httpCode + "，请检查 API 密钥");
+            }
+            if (outcome.httpCode > 0) {
+                return Response.ofFail("模型拉取失败：HTTP " + outcome.httpCode);
+            }
+            return Response.ofFail("模型拉取失败：" + (StringTool.isNotBlank(outcome.message) ? outcome.message : "网络异常"));
+        }
+        // 解析 /models 响应 data[].id，标注已导入项
+        Set<String> existSet = new HashSet<>();
+        List<SupplierModel> existList = supplierModelMapper.listBySupplier(supplierId);
+        if (CollectionTool.isNotEmpty(existList)) {
+            existSet = existList.stream().map(SupplierModel::getModel).collect(Collectors.toSet());
+        }
+        List<RemoteModelDTO> modelList = new ArrayList<>();
+        try {
+            JsonObject root = GSON.fromJson(outcome.body, JsonObject.class);
+            JsonArray data = root != null && root.has("data") ? root.getAsJsonArray("data") : null;
+            if (data != null) {
+                for (JsonElement item : data) {
+                    if (item == null || !item.isJsonObject()) {
+                        continue;
+                    }
+                    JsonElement idEle = item.getAsJsonObject().get("id");
+                    String modelId = idEle == null ? null : idEle.getAsString();
+                    if (StringTool.isBlank(modelId)) {
+                        continue;
+                    }
+                    RemoteModelDTO dto = new RemoteModelDTO();
+                    dto.setModelId(modelId);
+                    dto.setImported(existSet.contains(modelId));
+                    modelList.add(dto);
+                }
+            }
+        } catch (Exception e) {
+            return Response.ofFail("模型数据解析失败：" + e.getMessage());
+        }
+        if (CollectionTool.isEmpty(modelList)) {
+            return Response.ofFail("远程未返回可用模型");
+        }
+        return Response.ofSuccess(modelList);
     }
 
 }

@@ -2,9 +2,11 @@ package com.xxl.ai.api.business.supplier.controller;
 
 import com.xxl.ai.api.business.space.model.SpaceContext;
 import com.xxl.ai.api.business.space.service.SpaceService;
+import com.xxl.ai.api.business.supplier.model.dto.RemoteModelDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierModelDTO;
 import com.xxl.ai.api.business.supplier.model.entity.SupplierModel;
 import com.xxl.ai.api.business.supplier.service.SupplierModelService;
+import com.xxl.ai.api.business.supplier.service.SupplierService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
@@ -28,6 +30,8 @@ public class SupplierModelController {
 
     @Resource
     private SupplierModelService supplierModelService;
+    @Resource
+    private SupplierService supplierService;
     @Resource
     private SpaceService spaceService;
 
@@ -110,6 +114,37 @@ public class SupplierModelController {
         }
         List<SupplierModel> list = supplierModelService.listBySupplier(supplierId);
         return Response.ofSuccess(list);
+    }
+
+    /**
+     * 拉取远程可用模型（自动导入选择列表）
+     */
+    @RequestMapping("/loadRemoteModels")
+    @XxlSso(permission = "supplier:default")
+    public Response<List<RemoteModelDTO>> loadRemoteModels(HttpServletRequest request,
+                                                           @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                                           @RequestParam("supplierId") long supplierId) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return supplierService.loadRemoteModels(spaceResp.getData().getSpaceId(), supplierId);
+    }
+
+    /**
+     * 批量导入远程模型（自动导入保存）
+     */
+    @RequestMapping("/importRemote")
+    @XxlSso(permission = "supplier:default")
+    public Response<String> importRemote(HttpServletRequest request,
+                                         @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                         @RequestParam("supplierId") long supplierId,
+                                         @RequestParam("models[]") List<String> models) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return supplierModelService.importRemote(supplierId, models);
     }
 
 }

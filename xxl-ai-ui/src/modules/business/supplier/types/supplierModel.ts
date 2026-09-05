@@ -30,3 +30,11 @@ export interface SupplierModelQuery {
 
 /** 列表接口请求参数 */
 export type SupplierModelListQuery = ListQuery<SupplierModelQuery>
+
+/** 远程模型（自动导入） */
+export interface RemoteModel {
+  /** 远程模型标识 */
+  modelId?: string
+  /** 是否已导入当前供应商 */
+  imported?: boolean
+}

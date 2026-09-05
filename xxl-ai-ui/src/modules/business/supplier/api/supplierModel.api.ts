@@ -3,11 +3,21 @@
  */
 import request from '@/utils/request'
 import type { Response, PageModel } from '@/types'
-import type { SupplierModel, SupplierModelListQuery } from '../types'
+import type { RemoteModel, SupplierModel, SupplierModelListQuery } from '../types'
 
 /** 分页查询模型列表 */
 export function listSupplierModel(query: SupplierModelListQuery): Promise<Response<PageModel<SupplierModel>>> {
   return request({ url: '/supplier/model/pageList', method: 'get', params: query })
+}
+
+/** 拉取远程可用模型（自动导入选择列表） */
+export function loadRemoteModels(supplierId: number): Promise<Response<RemoteModel[]>> {
+  return request({ url: '/supplier/model/loadRemoteModels', method: 'get', params: { supplierId } })
+}
+
+/** 批量导入远程模型（自动导入保存） */
+export function importRemoteModels(supplierId: number, models: string[]): Promise<Response<string>> {
+  return request({ url: '/supplier/model/importRemote', method: 'post', params: { supplierId, models } })
 }
 
 /** 新增模型 */

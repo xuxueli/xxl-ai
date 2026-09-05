@@ -13,7 +13,10 @@ import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 供应商模型 Service 实现
@@ -119,6 +122,36 @@ public class SupplierModelServiceImpl implements SupplierModelService {
     @Override
     public List<SupplierModel> listBySupplier(long supplierId) {
         return supplierModelMapper.listBySupplier(supplierId);
+    }
+
+    /**
+     * 批量导入远程模型（默认对话模型、正常状态，跳过已存在项）
+     */
+    @Override
+    public Response<String> importRemote(long supplierId, List<String> models) {
+        if (CollectionTool.isEmpty(models)) {
+            return Response.ofFail("请选择要导入的模型");
+        }
+        Set<String> existSet = new HashSet<>();
+        List<SupplierModel> existList = supplierModelMapper.listBySupplier(supplierId);
+        if (CollectionTool.isNotEmpty(existList)) {
+            existSet = existList.stream().map(SupplierModel::getModel).collect(Collectors.toSet());
+        }
+        int count = 0;
+        for (String modelId : models) {
+            if (StringTool.isBlank(modelId) || existSet.contains(modelId.trim())) {
+                continue;
+            }
+            SupplierModel supplierModel = new SupplierModel();
+            supplierModel.setSupplierId(supplierId);
+            supplierModel.setName(modelId.trim());
+            supplierModel.setModel(modelId.trim());
+            supplierModel.setType(0);
+            supplierModel.setStatus(0);
+            supplierModelMapper.insert(supplierModel);
+            count++;
+        }
+        return count > 0 ? Response.ofSuccess() : Response.ofFail("所选模型均已导入，无需重复导入");
     }
 
 }

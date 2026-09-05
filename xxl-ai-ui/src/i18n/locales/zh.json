@@ -370,7 +370,15 @@
       "modelName": "模型名称",
       "modelCode": "模型标识",
       "modelType": "模型类型",
-      "confirmDeleteModel": "是否确认删除模型ID为\"{0}\"的数据项？"
+      "confirmDeleteModel": "是否确认删除模型ID为\"{0}\"的数据项？",
+      "autoImport": "自动导入",
+      "importModelTitle": "选择要导入的模型",
+      "importModelPlaceholder": "远程暂未返回可用模型",
+      "importLoading": "远程模型拉取中",
+      "importSuccess": "模型导入成功",
+      "importEmpty": "请选择要导入的模型",
+      "remoteModelId": "模型标识",
+      "remoteImported": "已导入"
     },
     "mcp": {
       "name": "MCP名称",

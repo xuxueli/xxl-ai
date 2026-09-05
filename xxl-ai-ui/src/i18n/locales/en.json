@@ -370,7 +370,15 @@
       "modelName": "Model Name",
       "modelCode": "Model ID",
       "modelType": "Model Type",
-      "confirmDeleteModel": "Are you sure to delete the model with ID \"{0}\"?"
+      "confirmDeleteModel": "Are you sure to delete the model with ID \"{0}\"?",
+      "autoImport": "Auto Import",
+      "importModelTitle": "Select Models to Import",
+      "importModelPlaceholder": "No available models returned from remote yet",
+      "importLoading": "Loading remote models",
+      "importSuccess": "Models imported successfully",
+      "importEmpty": "Please select models to import",
+      "remoteModelId": "Model ID",
+      "remoteImported": "Imported"
     },
     "mcp": {
       "name": "MCP Name",
