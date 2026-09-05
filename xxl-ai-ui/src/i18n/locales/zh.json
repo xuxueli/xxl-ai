@@ -365,6 +365,7 @@
       "supplier": "供应商",
       "model": "模型",
       "modelManage": "模型管理",
+      "testConnect": "连通测试",
       "confirmDelete": "是否确认删除供应商ID为\"{0}\"的数据项？",
       "modelName": "模型名称",
       "modelCode": "模型标识",

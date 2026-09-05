@@ -44,6 +44,19 @@
             {{ t('common.delete') }}
           </el-button>
         </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="info"
+            plain
+            icon="Connection"
+            :loading="testing"
+            :disabled="table.single"
+            @click="handleTestConnect"
+            v-hasPermi="['supplier:default']"
+          >
+            {{ t('business.supplier.testConnect') }}
+          </el-button>
+        </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
@@ -135,7 +148,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'Supplier' })
 import { t } from '@/i18n'
-import { listSupplier, addSupplier, updateSupplier, delSupplier } from '../api'
+import { listSupplier, addSupplier, updateSupplier, delSupplier, testConnectSupplier } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
@@ -154,6 +167,7 @@ interface SupplierForm extends Supplier {}
 
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 供应商编辑表单 ref */
+const testing = ref(false) /* 连通测试请求中状态 */
 
 const queryParams = ref<SupplierQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
@@ -241,6 +255,27 @@ function submitForm() {
 function cancel() {
   formState.value.visible = false
   reset()
+}
+
+/** 连通测试（勾选单行，后端读库存配置探测） */
+function handleTestConnect() {
+  const ids = table.value.ids as number[]
+  if (ids.length !== 1) return
+  testing.value = true
+  testConnectSupplier(ids[0])
+    .then((response) => {
+      const result = response.data
+      const message = result.message ?? `HTTP ${result.httpCode}`
+      if (result.connectable) {
+        modal.msgSuccess(message)
+      } else {
+        modal.msgError(message)
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      testing.value = false
+    })
 }
 
 // --------------------------------- 模型管理 ---------------------------------

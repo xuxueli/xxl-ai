@@ -1,6 +1,7 @@
 package com.xxl.ai.api.business.supplier.service;
 
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
+import com.xxl.ai.api.business.supplier.model.dto.SupplierConnectDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierDTO;
 import com.xxl.ai.api.business.supplier.model.entity.Supplier;
 import com.xxl.tool.response.PageModel;
@@ -49,5 +50,10 @@ public interface SupplierService {
      * 解析模型运行时配置（供应商 BaseURL/Key/模型标识），供对话、向量化使用
      */
     Response<SupplierRuntime> loadRuntime(long spaceId, long supplierId, long modelId);
+
+    /**
+     * 连通测试（GET {baseUrl}/models 优先，失败回退 POST {baseUrl}/chat/completions）
+     */
+    Response<SupplierConnectDTO> testConnect(long spaceId, long supplierId);
 
 }

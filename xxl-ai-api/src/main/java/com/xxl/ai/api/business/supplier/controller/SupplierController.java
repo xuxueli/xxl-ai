@@ -2,6 +2,7 @@ package com.xxl.ai.api.business.supplier.controller;
 
 import com.xxl.ai.api.business.space.model.SpaceContext;
 import com.xxl.ai.api.business.space.service.SpaceService;
+import com.xxl.ai.api.business.supplier.model.dto.SupplierConnectDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierDTO;
 import com.xxl.ai.api.business.supplier.model.entity.Supplier;
 import com.xxl.ai.api.business.supplier.service.SupplierService;
@@ -102,6 +103,21 @@ String name,
             return Response.ofFail(spaceResp.getMsg());
         }
         return supplierService.update(dto);
+    }
+
+    /**
+     * 连通测试（GET {baseUrl}/models 优先，失败回退 POST {baseUrl}/chat/completions）
+     */
+    @RequestMapping("/testConnect")
+    @XxlSso(permission = "supplier:default")
+    public Response<SupplierConnectDTO> testConnect(HttpServletRequest request,
+                                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                                    @RequestParam("id") long id) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return supplierService.testConnect(spaceResp.getData().getSpaceId(), id);
     }
 
     /**

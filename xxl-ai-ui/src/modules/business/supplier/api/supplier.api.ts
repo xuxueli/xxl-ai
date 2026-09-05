@@ -3,11 +3,16 @@
  */
 import request from '@/utils/request'
 import type { Response, PageModel } from '@/types'
-import type { Supplier, SupplierListQuery } from '../types'
+import type { Supplier, SupplierListQuery, SupplierConnect } from '../types'
 
 /** 分页查询供应商列表 */
 export function listSupplier(query: SupplierListQuery): Promise<Response<PageModel<Supplier>>> {
   return request({ url: '/supplier/pageList', method: 'get', params: query })
+}
+
+/** 连通测试（GET /models 优先，失败回退 POST /chat/completions） */
+export function testConnectSupplier(id: number): Promise<Response<SupplierConnect>> {
+  return request({ url: '/supplier/testConnect', method: 'get', params: { id } })
 }
 
 /** 新增供应商 */

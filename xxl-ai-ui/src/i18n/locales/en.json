@@ -365,6 +365,7 @@
       "supplier": "Supplier",
       "model": "Models",
       "modelManage": "Model Management",
+      "testConnect": "Connectivity Test",
       "confirmDelete": "Are you sure to delete the supplier with ID \"{0}\"?",
       "modelName": "Model Name",
       "modelCode": "Model ID",
