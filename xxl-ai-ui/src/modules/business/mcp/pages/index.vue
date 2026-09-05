@@ -58,7 +58,7 @@
         <el-table-column :label="t('business.mcp.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.mcp.type')" align="center" width="130">
           <template #default="scope">
-            <el-tag>{{ scope.row.type === 0 ? t('business.mcp.typeHttp') : t('business.mcp.typeSse') }}</el-tag>
+            <el-tag>{{ mcpTypeTitle(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('business.mcp.url')" align="center" prop="url" min-width="220" :show-overflow-tooltip="true" />
@@ -104,8 +104,7 @@
         </el-form-item>
         <el-form-item :label="t('business.mcp.type')" prop="type">
           <el-radio-group v-model="formState.form.type">
-            <el-radio :value="0">{{ t('business.mcp.typeHttp') }}</el-radio>
-            <el-radio :value="1">{{ t('business.mcp.typeSse') }}</el-radio>
+            <el-radio v-for="item in mcpTypeOptions" :key="item.code" :value="item.code">{{ item.title }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('business.mcp.url')" prop="url">
@@ -183,6 +182,7 @@ defineOptions({ name: 'Mcp' })
 import { t } from '@/i18n'
 import { listMcp, addMcp, updateMcp, delMcp, mcpCommunitySearch, mcpInstallFromCommunity } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
+import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
@@ -197,6 +197,9 @@ interface McpForm extends Mcp {}
 
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
+
+// 协议类型枚举选项（McpTypeEnum，来自后端）
+const { McpTypeEnum: mcpTypeOptions } = useEnumOption('McpTypeEnum')
 
 const queryParams = ref<McpQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
@@ -221,6 +224,11 @@ const community = ref({
 })
 
 // --------------------------------- fun ---------------------------------
+/** 协议类型文案（按枚举选项解析，未命中回退原始值） */
+function mcpTypeTitle(type: number) {
+  return mcpTypeOptions.value.find((i) => i.code === type)?.title ?? String(type)
+}
+
 function getList() {
   table.value.loading = true
   const params = usePageParams(queryParams)()

@@ -19,8 +19,7 @@
         <el-form-item :label="t('business.agent.publishStatus')" prop="publishStatus">
           <el-select v-model="queryParams.publishStatus" :placeholder="t('common.selectPlaceholder')" clearable style="width: 130px">
             <el-option :label="t('common.all')" :value="-1" />
-            <el-option :label="t('business.agent.unpublished')" :value="0" />
-            <el-option :label="t('business.agent.published')" :value="1" />
+            <el-option v-for="item in publishStatusOptions" :key="item.code" :label="item.title" :value="item.code" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -55,7 +54,7 @@
         <el-table-column :label="t('business.agent.publishStatus')" align="center" width="110">
           <template #default="scope">
             <el-tag :type="scope.row.publishStatus === 1 ? 'success' : 'info'">
-              {{ scope.row.publishStatus === 1 ? t('business.agent.published') : t('business.agent.unpublished') }}
+              {{ publishStatusTitle(scope.row.publishStatus) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -191,6 +190,7 @@ import { listMcpBySpace } from '@/modules/business/mcp/api'
 import { listSkillBySpace } from '@/modules/business/skill/api'
 import { listKnowledgeBaseBySpace } from '@/modules/business/knowledge/base/api'
 import { useFormReset } from '@/composables/useFormReset'
+import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
@@ -211,6 +211,9 @@ interface AgentForm extends Agent {}
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
 const origin = ref(window.location.origin)
+
+// 发布状态枚举选项（PublishStatusEnum，来自后端）
+const { PublishStatusEnum: publishStatusOptions } = useEnumOption('PublishStatusEnum')
 
 const supplierOptions = ref<Supplier[]>([])
 const chatModelOptions = ref<SupplierModel[]>([])
@@ -234,6 +237,11 @@ const formState = ref<FormState<AgentForm>>({
 })
 
 // --------------------------------- fun ---------------------------------
+/** 发布状态文案（按枚举选项解析，未命中回退原始值） */
+function publishStatusTitle(status: number) {
+  return publishStatusOptions.value.find((i) => i.code === status)?.title ?? String(status)
+}
+
 function getList() {
   table.value.loading = true
   const params = usePageParams(queryParams)()

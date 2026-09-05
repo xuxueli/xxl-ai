@@ -19,8 +19,7 @@
         <el-form-item :label="t('business.supplier.modelType')" prop="type">
           <el-select v-model="queryParams.type" :placeholder="t('common.selectPlaceholder')" clearable style="width: 130px">
             <el-option :label="t('common.all')" :value="-1" />
-            <el-option :label="t('business.supplier.modelChat')" :value="0" />
-            <el-option :label="t('business.supplier.modelEmbedding')" :value="1" />
+            <el-option v-for="item in modelTypeOptions" :key="item.code" :label="item.title" :value="item.code" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -54,7 +53,7 @@
         <el-table-column :label="t('business.supplier.modelCode')" align="center" prop="model" min-width="120" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.modelType')" align="center" width="130">
           <template #default="scope">
-            <el-tag>{{ scope.row.type === 0 ? t('business.supplier.modelChat') : t('business.supplier.modelEmbedding') }}</el-tag>
+            <el-tag>{{ modelTypeTitle(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('common.status')" align="center" width="110">
@@ -97,8 +96,7 @@
         </el-form-item>
         <el-form-item :label="t('business.supplier.modelType')" prop="type">
           <el-select v-model="formState.form.type" style="width: 100%">
-            <el-option :label="t('business.supplier.modelChat')" :value="0" />
-            <el-option :label="t('business.supplier.modelEmbedding')" :value="1" />
+            <el-option v-for="item in modelTypeOptions" :key="item.code" :label="item.title" :value="item.code" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('common.status')">
@@ -123,6 +121,7 @@ defineOptions({ name: 'SupplierModel' })
 import { t } from '@/i18n'
 import { listSupplierModel, addSupplierModel, updateSupplierModel, delSupplierModel } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
+import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
@@ -143,6 +142,9 @@ interface ModelForm extends SupplierModel {}
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 模型编辑表单 ref */
 
+// 模型类型枚举选项（ModelTypeEnum，来自后端）
+const { ModelTypeEnum: modelTypeOptions } = useEnumOption('ModelTypeEnum')
+
 const queryParams = ref<SupplierModelQuery>({ pageNum: 1, pageSize: 10, supplierId, name: undefined, type: -1 })
 
 const table = ref<TableState<SupplierModel>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
@@ -158,6 +160,11 @@ const formState = ref<FormState<ModelForm>>({
 })
 
 // --------------------------------- fun ---------------------------------
+/** 模型类型文案（按枚举选项解析，未命中回退原始值） */
+function modelTypeTitle(type: number) {
+  return modelTypeOptions.value.find((i) => i.code === type)?.title ?? String(type)
+}
+
 function getList() {
   table.value.loading = true
   const params = usePageParams(queryParams)()
