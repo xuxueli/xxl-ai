@@ -3,7 +3,6 @@ package com.xxl.ai.api.business.mcp.service.impl;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xxl.ai.api.business.common.client.CommunityClient;
 import com.xxl.ai.api.business.common.client.McpClient;
 import com.xxl.ai.api.business.mcp.enums.McpTypeEnum;
 import com.xxl.ai.api.business.mcp.mapper.McpMapper;
@@ -20,7 +19,6 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * MCP 服务 Service 实现
@@ -30,15 +28,10 @@ import java.util.Map;
 @Service
 public class McpServiceImpl implements McpService {
 
-    /** 社区地址配置Key */
-    private static final String COMMUNITY_URL_KEY = "system.mcp.community.url";
-
     private static final Gson GSON = new Gson();
 
     @Resource
     private McpMapper mcpMapper;
-    @Resource
-    private CommunityClient communityClient;
     @Resource
     private McpClient mcpClient;
 
@@ -72,9 +65,6 @@ public class McpServiceImpl implements McpService {
         mcp.setConfig(dto.getConfig());
         mcp.setUrl(dto.getUrl());
         mcp.setType(dto.getType());
-        if (StringTool.isBlank(mcp.getSource())) {
-            mcp.setSource("local");
-        }
         mcp.setSpaceId(spaceId);
         mcpMapper.insert(mcp);
         return Response.ofSuccess();
@@ -113,43 +103,6 @@ public class McpServiceImpl implements McpService {
     }
 
     /**
-     * 社区检索
-     */
-    @Override
-    public Response<List<Map<String, Object>>> communitySearch(String keyword) {
-        return communityClient.search(COMMUNITY_URL_KEY, keyword);
-    }
-
-    /**
-     * 从社区安装：将社区选中项落库（source=community）
-     */
-    @Override
-    public Response<String> installFromCommunity(long spaceId, McpDTO dto) {
-        if (dto == null || StringTool.isBlank(dto.getName()) || StringTool.isBlank(dto.getUrl())) {
-            return Response.ofFail("请选择有效的社区项（名称/地址不能为空）");
-        }
-        dto.setSource("community");
-        dto.setSpaceId(spaceId);
-        return insert(spaceId, dto);
-    }
-
-    /**
-     * 查询空间内 MCP 列表
-     */
-    @Override
-    public List<Mcp> listBySpace(long spaceId) {
-        return mcpMapper.listBySpace(spaceId);
-    }
-
-    /**
-     * 按ID集合查询 MCP 列表
-     */
-    @Override
-    public List<Mcp> listByIds(List<Long> ids) {
-        return mcpMapper.listByIds(ids);
-    }
-
-    /**
      * 连通性测试：initialize + tools/list
      */
     @Override
@@ -165,6 +118,22 @@ public class McpServiceImpl implements McpService {
         dto.setElapsedMs(result.getElapsedMs());
         dto.setMessage(result.getMessage());
         return Response.ofSuccess(dto);
+    }
+
+    /**
+     * 查询空间内 MCP 列表（Agent 绑定下拉）
+     */
+    @Override
+    public List<Mcp> listBySpace(long spaceId) {
+        return mcpMapper.listBySpace(spaceId);
+    }
+
+    /**
+     * 按ID集合查询 MCP 列表（Agent 配置回显）
+     */
+    @Override
+    public List<Mcp> listByIds(List<Long> ids) {
+        return mcpMapper.listByIds(ids);
     }
 
     /**

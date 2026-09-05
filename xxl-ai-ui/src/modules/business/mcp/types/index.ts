@@ -41,11 +41,6 @@ export interface McpQuery {
 /** 列表接口请求参数 */
 export type McpListQuery = ListQuery<McpQuery>
 
-/** 社区检索结果项（社区接口返回形态不固定，统一按可读字段解析） */
-export interface CommunityItem {
-  [key: string]: unknown
-}
-
 /** 连通性测试结果 */
 export interface McpConnectResult {
   /** 是否连通 */

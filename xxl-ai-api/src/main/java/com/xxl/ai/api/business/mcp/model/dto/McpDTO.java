@@ -15,8 +15,6 @@ public class McpDTO {
     private String headers;     /* 请求头(JSON) */
     private String config;      /* 完整MCP配置(JSON) */
     private String description; /* 描述 */
-    private String source;      /* 来源：local-本地、community-社区 */
-    private String sourceUrl;   /* 社区来源链接 */
     private int status;         /* 状态：0-正常、1-停用 */
     private String addTime;     /* 新增时间（格式化字符串） */
     private String updateTime;  /* 更新时间（格式化字符串） */
@@ -83,22 +81,6 @@ public class McpDTO {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public String getSourceUrl() {
-        return sourceUrl;
-    }
-
-    public void setSourceUrl(String sourceUrl) {
-        this.sourceUrl = sourceUrl;
     }
 
     public int getStatus() {

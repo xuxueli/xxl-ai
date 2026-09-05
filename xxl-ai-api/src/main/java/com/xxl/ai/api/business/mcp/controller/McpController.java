@@ -17,10 +17,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * MCP管理 Controller：MCP 在线配置 + 社区查询/安装
+ * MCP管理 Controller：MCP 在线配置管理 + 连通性测试
  *
  * @author xxl-ai 2026-09-05
  */
@@ -110,30 +109,6 @@ public class McpController {
             return Response.ofFail(spaceResp.getMsg());
         }
         return mcpService.test(spaceResp.getData().getSpaceId(), id);
-    }
-
-    /**
-     * 社区检索
-     */
-    @RequestMapping("/communitySearch")
-    @XxlSso(permission = "mcp:default")
-    public Response<List<Map<String, Object>>> communitySearch(String keyword) {
-        return mcpService.communitySearch(keyword);
-    }
-
-    /**
-     * 从社区安装（落库到当前空间）
-     */
-    @RequestMapping("/installFromCommunity")
-    @XxlSso(permission = "mcp:default")
-    public Response<String> installFromCommunity(HttpServletRequest request,
-                                                 @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                                 McpDTO dto) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return mcpService.installFromCommunity(spaceResp.getData().getSpaceId(), dto);
     }
 
     /**

@@ -3,7 +3,7 @@
  */
 import request from '@/utils/request'
 import type { Response, PageModel } from '@/types'
-import type { Mcp, McpListQuery, CommunityItem, McpConnectResult } from '../types'
+import type { Mcp, McpListQuery, McpConnectResult } from '../types'
 
 /** 分页查询 MCP 列表 */
 export function listMcp(query: McpListQuery): Promise<Response<PageModel<Mcp>>> {
@@ -28,16 +28,6 @@ export function updateMcp(data: Mcp): Promise<Response<string>> {
 /** 连通性测试（initialize + tools/list） */
 export function mcpTest(id: number): Promise<Response<McpConnectResult>> {
   return request({ url: '/mcp/test', method: 'post', params: { id } })
-}
-
-/** 社区检索 */
-export function mcpCommunitySearch(keyword: string): Promise<Response<CommunityItem[]>> {
-  return request({ url: '/mcp/communitySearch', method: 'get', params: { keyword } })
-}
-
-/** 从社区安装 */
-export function mcpInstallFromCommunity(data: Mcp): Promise<Response<string>> {
-  return request({ url: '/mcp/installFromCommunity', method: 'post', params: data })
 }
 
 /** 查询当前空间 MCP 列表（Agent 绑定下拉） */

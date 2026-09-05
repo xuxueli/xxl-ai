@@ -7,7 +7,6 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * MCP 服务 Service
@@ -35,16 +34,6 @@ public interface McpService {
      * 更新 MCP
      */
     Response<String> update(McpDTO dto);
-
-    /**
-     * 社区检索（可配置社区地址，不可达友好降级）
-     */
-    Response<List<Map<String, Object>>> communitySearch(String keyword);
-
-    /**
-     * 从社区安装：将社区选中项落库（source=community）
-     */
-    Response<String> installFromCommunity(long spaceId, McpDTO dto);
 
     /**
      * 查询空间内 MCP 列表（Agent 绑定下拉）

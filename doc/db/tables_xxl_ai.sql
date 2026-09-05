@@ -71,8 +71,6 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_mcp` (
     `headers` VARCHAR(500) NULL DEFAULT NULL COMMENT '请求头(JSON)',
     `config` TEXT NULL COMMENT '完整MCP配置(JSON)：http/sse{transport,url,headers} stdio{transport,command,args,env,cwd}',
     `description` VARCHAR(500) NULL DEFAULT NULL COMMENT '描述',
-    `source` VARCHAR(20) NOT NULL DEFAULT 'local' COMMENT '来源：local-本地、community-社区',
-    `source_url` VARCHAR(200) NULL DEFAULT NULL COMMENT '社区来源链接',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-正常、1-停用',
     `add_time` DATETIME NOT NULL COMMENT '新增时间',
     `update_time` DATETIME NOT NULL COMMENT '更新时间',
@@ -271,27 +269,26 @@ VALUES
 
 -- 6、社区查询配置（框架配置）
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
-VALUES ('MCP社区地址', 'system.mcp.community.url', 'https://registry.mcp.so/api', 0, 'MCP 社区检索接口地址，不可达时前端友好降级', NOW(), NOW()),
-       ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区检索接口地址，可配置为空则禁用社区查询', NOW(), NOW());
+VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区检索接口地址，可配置为空则禁用社区查询', NOW(), NOW());
 
 -- 7、预设 MCP 服务（覆盖 Streamable HTTP 与 stdio 本地进程两类，stdio 需宿主已安装 Node/npx 环境）
 --    注意：stdio 类以宿主进程方式运行，命令涉及本机执行请确认信任后再启用
-INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `description`, `source`, `source_url`, `status`, `add_time`, `update_time`)
+INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `description`, `status`, `add_time`, `update_time`)
 VALUES
     (1, 'Fetch 网页抓取', 0, 'https://mcp.genez.io/fetch', NULL,
      '{"transport":"http","url":"https://mcp.genez.io/fetch","headers":{}}',
-     '网页抓取与内容提取（公共托管，无需鉴权）', 'community', 'https://mcp.so/', 0, NOW(), NOW()),
+     '网页抓取与内容提取（公共托管，无需鉴权）', 0, NOW(), NOW()),
     (1, 'GitHub 代码与仓库', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}',
-     'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', 'community', 'https://mcp.so/', 0, NOW(), NOW()),
+     'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', 0, NOW(), NOW()),
     (1, 'Filesystem 文件系统', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}',
-     '本地文件系统读写（请按需调整授权目录参数）', 'community', 'https://mcp.so/', 0, NOW(), NOW()),
+     '本地文件系统读写（请按需调整授权目录参数）', 0, NOW(), NOW()),
     (1, 'Memory 知识图谱记忆', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}',
-     '跨会话知识图谱记忆', 'community', 'https://mcp.so/', 0, NOW(), NOW()),
+     '跨会话知识图谱记忆', 0, NOW(), NOW()),
     (1, 'Everything 全工具集', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}',
-     'MCP 全工具集（演示/联调用）', 'community', 'https://mcp.so/', 0, NOW(), NOW());
+     'MCP 全工具集（演示/联调用）', 0, NOW(), NOW());
 
 COMMIT;
