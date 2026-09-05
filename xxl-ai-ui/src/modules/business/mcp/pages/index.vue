@@ -176,14 +176,11 @@
             <el-tag type="success">{{ t('business.mcp.testToolCount', [testResult.data.toolCount]) }}</el-tag>
             <el-tag type="info">{{ t('business.mcp.testElapsed', [testResult.data.elapsedMs]) }}</el-tag>
           </div>
-          <el-alert
-            v-if="testResult.data.instructions"
-            type="info"
-            :closable="false"
-            :title="t('business.mcp.testInstructions')"
-            :description="testResult.data.instructions"
-            class="mt8"
-          />
+          <!-- 服务说明：markdown 渲染（净化后输出） -->
+          <div v-if="testResult.data.instructions" class="mcp-instructions mt8">
+            <div class="mcp-instructions-title">{{ t('business.mcp.testInstructions') }}</div>
+            <div class="mcp-instructions-body" v-html="renderMarkdown(testResult.data.instructions)"></div>
+          </div>
           <el-table
             v-if="testResult.data.tools?.length"
             :data="testResult.data.tools"
@@ -215,6 +212,14 @@ import type { FormState, TableState } from '@/types'
 import type { Mcp, McpQuery, McpConnectResult } from '../types'
 import type { FormInstance } from 'element-plus'
 import { computed, ref } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+/** Markdown 渲染（净化防 XSS） */
+function renderMarkdown(text: string): string {
+  const html = marked.parse(text ?? '') as string
+  return DOMPurify.sanitize(html)
+}
 
 const resetForm = useFormReset()
 
@@ -514,5 +519,59 @@ getList()
 }
 .mt8 {
   margin-top: 8px;
+}
+
+/* 服务说明（markdown 渲染） */
+.mcp-instructions {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  background-color: var(--el-fill-color-blank);
+  padding: 10px 14px;
+}
+.mcp-instructions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  margin-bottom: 6px;
+}
+.mcp-instructions-body {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--el-text-color-regular);
+  word-break: break-word;
+}
+.mcp-instructions-body :deep(p) {
+  margin: 4px 0;
+}
+.mcp-instructions-body :deep(h1),
+.mcp-instructions-body :deep(h2),
+.mcp-instructions-body :deep(h3) {
+  margin: 8px 0 4px;
+  font-size: 15px;
+}
+.mcp-instructions-body :deep(ul),
+.mcp-instructions-body :deep(ol) {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+.mcp-instructions-body :deep(code) {
+  background-color: var(--el-fill-color-light);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.mcp-instructions-body :deep(pre) {
+  background-color: var(--el-fill-color-light);
+  border-radius: 4px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.mcp-instructions-body :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+}
+.mcp-instructions-body :deep(a) {
+  color: var(--el-color-primary);
 }
 </style>
