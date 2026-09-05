@@ -105,10 +105,23 @@ public class McpClient {
                     .initializationTimeout(Duration.ofSeconds(15))
                     .build();
             sync.initialize();
-            McpSchema.ListToolsResult result = sync.listTools();
-            int toolCount = (result != null && result.tools() != null) ? result.tools().size() : 0;
+            String serverName = null;
+            String serverVersion = null;
+            McpSchema.Implementation serverInfo = sync.getServerInfo();
+            if (serverInfo != null) {
+                serverName = serverInfo.name();
+                serverVersion = serverInfo.version();
+            }
+            String instructions = sync.getServerInstructions();
+            List<McpToolDetail> tools = new ArrayList<>();
+            McpSchema.ListToolsResult listResult = sync.listTools();
+            if (listResult != null && listResult.tools() != null) {
+                for (McpSchema.Tool tool : listResult.tools()) {
+                    tools.add(new McpToolDetail(tool.name(), tool.title(), tool.description()));
+                }
+            }
             long elapsed = System.currentTimeMillis() - start;
-            return McpConnectResult.ok(toolCount, elapsed, "连接成功，发现 " + toolCount + " 个工具");
+            return McpConnectResult.ok(serverName, serverVersion, instructions, tools, elapsed, "连接成功，发现 " + tools.size() + " 个工具");
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - start;
             logger.warn("MCP 连通测试失败, id={}, name={}, err={}", mcp.getId(), mcp.getName(), e.getMessage());
@@ -458,17 +471,26 @@ public class McpClient {
      * 连通性测试结果
      */
     public static class McpConnectResult {
-        private boolean connectable;    /* 是否连通 */
-        private int toolCount;          /* 可用工具数量 */
-        private long elapsedMs;         /* 测试耗时（毫秒） */
-        private String message;         /* 测试过程描述 */
+        private boolean connectable;        /* 是否连通 */
+        private String serverName;          /* 服务名称（server_info.name） */
+        private String serverVersion;       /* 服务版本（server_info.version） */
+        private String instructions;        /* 服务说明（server instructions） */
+        private int toolCount;              /* 可用工具数量 */
+        private long elapsedMs;             /* 测试耗时（毫秒） */
+        private String message;             /* 测试过程描述 */
+        private List<McpToolDetail> tools;  /* 可用工具明细 */
 
-        public static McpConnectResult ok(int toolCount, long elapsedMs, String message) {
+        public static McpConnectResult ok(String serverName, String serverVersion, String instructions,
+                                          List<McpToolDetail> tools, long elapsedMs, String message) {
             McpConnectResult result = new McpConnectResult();
             result.connectable = true;
-            result.toolCount = toolCount;
+            result.serverName = serverName;
+            result.serverVersion = serverVersion;
+            result.instructions = instructions;
+            result.toolCount = tools.size();
             result.elapsedMs = elapsedMs;
             result.message = message;
+            result.tools = tools;
             return result;
         }
 
@@ -478,11 +500,24 @@ public class McpClient {
             result.toolCount = toolCount;
             result.elapsedMs = elapsedMs;
             result.message = message;
+            result.tools = new ArrayList<>();
             return result;
         }
 
         public boolean isConnectable() {
             return connectable;
+        }
+
+        public String getServerName() {
+            return serverName;
+        }
+
+        public String getServerVersion() {
+            return serverVersion;
+        }
+
+        public String getInstructions() {
+            return instructions;
         }
 
         public int getToolCount() {
@@ -495,6 +530,37 @@ public class McpClient {
 
         public String getMessage() {
             return message;
+        }
+
+        public List<McpToolDetail> getTools() {
+            return tools;
+        }
+    }
+
+    /**
+     * 工具明细（测试结果展示用）
+     */
+    public static class McpToolDetail {
+        private String name;        /* 工具名称 */
+        private String title;       /* 工具标题 */
+        private String description; /* 工具介绍 */
+
+        public McpToolDetail(String name, String title, String description) {
+            this.name = name;
+            this.title = title;
+            this.description = description;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getDescription() {
+            return description;
         }
     }
 

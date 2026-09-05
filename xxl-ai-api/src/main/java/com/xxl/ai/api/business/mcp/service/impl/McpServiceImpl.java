@@ -9,6 +9,7 @@ import com.xxl.ai.api.business.mcp.mapper.McpMapper;
 import com.xxl.ai.api.business.mcp.model.adaptor.McpAdaptor;
 import com.xxl.ai.api.business.mcp.model.dto.McpConnectDTO;
 import com.xxl.ai.api.business.mcp.model.dto.McpDTO;
+import com.xxl.ai.api.business.mcp.model.dto.McpToolDTO;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.ai.api.business.mcp.service.McpService;
 import com.xxl.tool.core.CollectionTool;
@@ -114,9 +115,23 @@ public class McpServiceImpl implements McpService {
         McpClient.McpConnectResult result = mcpClient.test(mcp);
         McpConnectDTO dto = new McpConnectDTO();
         dto.setConnectable(result.isConnectable());
+        dto.setServerName(result.getServerName());
+        dto.setServerVersion(result.getServerVersion());
+        dto.setInstructions(result.getInstructions());
         dto.setToolCount(result.getToolCount());
         dto.setElapsedMs(result.getElapsedMs());
         dto.setMessage(result.getMessage());
+        List<McpToolDTO> tools = new java.util.ArrayList<>();
+        if (result.getTools() != null) {
+            for (McpClient.McpToolDetail detail : result.getTools()) {
+                McpToolDTO tool = new McpToolDTO();
+                tool.setName(detail.getName());
+                tool.setTitle(detail.getTitle());
+                tool.setDescription(detail.getDescription());
+                tools.add(tool);
+            }
+        }
+        dto.setTools(tools);
         return Response.ofSuccess(dto);
     }
 

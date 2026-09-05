@@ -45,10 +45,28 @@ export type McpListQuery = ListQuery<McpQuery>
 export interface McpConnectResult {
   /** 是否连通 */
   connectable: boolean
+  /** 服务名称 */
+  serverName?: string
+  /** 服务版本 */
+  serverVersion?: string
+  /** 服务说明 */
+  instructions?: string
   /** 可用工具数量 */
   toolCount: number
   /** 测试耗时（毫秒） */
   elapsedMs: number
   /** 测试过程描述 */
   message: string
+  /** 可用工具明细 */
+  tools?: McpToolItem[]
+}
+
+/** 连通测试-工具明细 */
+export interface McpToolItem {
+  /** 工具名称 */
+  name: string
+  /** 工具标题 */
+  title?: string
+  /** 工具介绍 */
+  description?: string
 }

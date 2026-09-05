@@ -149,12 +149,7 @@
           />
         </el-form-item>
         <el-form-item :label="t('business.mcp.mcpConfig')">
-          <el-input v-model="previewConfig" type="textarea" :rows="6" readonly :placeholder="t('business.mcp.configPlaceholder')" />
-        </el-form-item>
-        <el-form-item v-if="formState.form.id != null">
-          <el-button type="primary" plain icon="Connection" :loading="testing" @click="handleTestForm">
-            {{ t('business.mcp.test') }}
-          </el-button>
+          <el-input v-model="previewConfig" class="mcp-config-preview" type="textarea" :rows="6" readonly :placeholder="t('business.mcp.configPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -162,6 +157,46 @@
           <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
           <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
         </div>
+      </template>
+    </el-dialog>
+
+    <!-- 连通测试结果对话框 -->
+    <el-dialog :title="t('business.mcp.testResult')" v-model="testResult.visible" width="620px" append-to-body>
+      <template v-if="testResult.data">
+        <el-alert
+          :type="testResult.data.connectable ? 'success' : 'error'"
+          :closable="false"
+          show-icon
+          :title="testResult.data.message"
+        />
+        <template v-if="testResult.data.connectable">
+          <div class="test-result-tags">
+            <el-tag v-if="testResult.data.serverName" type="primary">{{ t('business.mcp.testServerName', [testResult.data.serverName]) }}</el-tag>
+            <el-tag v-if="testResult.data.serverVersion" type="warning">{{ t('business.mcp.testServerVersion', [testResult.data.serverVersion]) }}</el-tag>
+            <el-tag type="success">{{ t('business.mcp.testToolCount', [testResult.data.toolCount]) }}</el-tag>
+            <el-tag type="info">{{ t('business.mcp.testElapsed', [testResult.data.elapsedMs]) }}</el-tag>
+          </div>
+          <el-alert
+            v-if="testResult.data.instructions"
+            type="info"
+            :closable="false"
+            :title="t('business.mcp.testInstructions')"
+            :description="testResult.data.instructions"
+            class="mt8"
+          />
+          <el-table
+            v-if="testResult.data.tools?.length"
+            :data="testResult.data.tools"
+            max-height="340"
+            class="mt8"
+          >
+            <el-table-column type="index" label="#" width="55" align="center" />
+            <el-table-column :label="t('business.mcp.testToolName')" prop="name" min-width="140" align="center" :show-overflow-tooltip="true" />
+            <el-table-column :label="t('business.mcp.testToolTitle')" prop="title" min-width="110" align="center" :show-overflow-tooltip="true" />
+            <el-table-column :label="t('business.mcp.testToolDesc')" prop="description" min-width="220" align="center" :show-overflow-tooltip="true" />
+          </el-table>
+          <el-empty v-else :description="t('business.mcp.testNoTool')" :image-size="60" />
+        </template>
       </template>
     </el-dialog>
   </div>
@@ -177,7 +212,7 @@ import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
-import type { Mcp, McpQuery } from '../types'
+import type { Mcp, McpQuery, McpConnectResult } from '../types'
 import type { FormInstance } from 'element-plus'
 import { computed, ref } from 'vue'
 
@@ -187,7 +222,14 @@ interface McpForm extends Mcp {}
 
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
-const testing = ref(false) /* 连通测试请求中状态 */
+// 连通测试请求中状态
+const testing = ref(false) /* 连通测试请求中 */
+
+// 连通测试结果弹窗状态
+const testResult = ref({
+  visible: false,
+  data: null as McpConnectResult | null
+})
 
 // 协议类型枚举选项（McpTypeEnum，来自后端）
 const { McpTypeEnum: mcpTypeOptions } = useEnumOption('McpTypeEnum')
@@ -413,19 +455,7 @@ function cancel() {
   reset()
 }
 
-/** 连通测试回调（按 connectable 区分提示） */
-function showTestResult(result: { connectable: boolean; message: string; toolCount: number; elapsedMs: number }) {
-  const message = result.connectable
-    ? t('business.mcp.testSuccess', [result.toolCount, result.elapsedMs])
-    : t('business.mcp.testFail', [result.message])
-  if (result.connectable) {
-    modal.msgSuccess(message)
-  } else {
-    modal.msgError(message)
-  }
-}
-
-/** 列表行/表头测试：直接对已落库配置发起 initialize + tools/list */
+/** 列表行/表头测试：对已落库配置发起 initialize + tools/list；成功弹窗展示可用工具 */
 function handleTest(row: any) {
   const id = row?.id ?? table.value.ids[0]
   if (id == null) {
@@ -434,21 +464,19 @@ function handleTest(row: any) {
   }
   testing.value = true
   mcpTest(id)
-    .then((response) => showTestResult(response.data))
+    .then((response) => {
+      const result = response.data
+      testResult.value.data = result
+      if (result.connectable) {
+        testResult.value.visible = true
+      } else {
+        modal.msgError(t('business.mcp.testFail', [result.message]))
+      }
+    })
     .catch(() => {})
     .finally(() => {
       testing.value = false
     })
-}
-
-/** 表单内测试：未保存配置暂不可测，提示先保存 */
-function handleTestForm() {
-  const id = formState.value.form.id
-  if (id == null) {
-    modal.msgWarning(t('business.mcp.saveBeforeTest'))
-    return
-  }
-  handleTest(id)
 }
 
 /** 列表地址展示：stdio 无 url 时回退展示启动命令 */
@@ -468,3 +496,23 @@ function displayUrl(row: Mcp) {
 // --------------------------------- page init ---------------------------------
 getList()
 </script>
+
+<style scoped>
+/* MCP配置(生成)：只读预览区，背景加深与可编辑字段区分 */
+.mcp-config-preview :deep(.el-textarea__inner) {
+  background-color: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+  resize: none;
+}
+
+/* 连通测试结果：服务信息标签行 */
+.test-result-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.mt8 {
+  margin-top: 8px;
+}
+</style>
