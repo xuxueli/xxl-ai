@@ -10,6 +10,7 @@
 		<result column="type" property="type" />
 		<result column="url" property="url" />
 		<result column="headers" property="headers" />
+		<result column="config" property="config" />
 		<result column="description" property="description" />
 		<result column="source" property="source" />
 		<result column="source_url" property="sourceUrl" />
@@ -25,6 +26,7 @@
 		t.type,
 		t.url,
 		t.headers,
+		t.config,
 		t.description,
 		t.source,
 		t.source_url,
@@ -35,9 +37,9 @@
 
 	<insert id="insert" parameterType="com.xxl.ai.api.business.mcp.model.entity.Mcp" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_mcp (
-			space_id, name, type, url, headers, description, source, source_url, status, add_time, update_time
+			space_id, name, type, url, headers, config, description, source, source_url, status, add_time, update_time
 		) VALUES (
-			 #{spaceId}, #{name}, #{type}, #{url}, #{headers}, #{description}, #{source}, #{sourceUrl}, #{status}, NOW(), NOW()
+			 #{spaceId}, #{name}, #{type}, #{url}, #{headers}, #{config}, #{description}, #{source}, #{sourceUrl}, #{status}, NOW(), NOW()
 		 );
 	</insert>
 
@@ -59,6 +61,7 @@
 			type = #{type},
 			url = #{url},
 			headers = #{headers},
+			config = #{config},
 			description = #{description},
 			source = #{source},
 			source_url = #{sourceUrl},

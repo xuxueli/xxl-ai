@@ -28,6 +28,7 @@ public class McpAdaptor {
         mcp.setType(dto.getType());
         mcp.setUrl(dto.getUrl());
         mcp.setHeaders(dto.getHeaders());
+        mcp.setConfig(dto.getConfig());
         mcp.setDescription(dto.getDescription());
         mcp.setSource(dto.getSource());
         mcp.setSourceUrl(dto.getSourceUrl());
@@ -49,6 +50,7 @@ public class McpAdaptor {
         dto.setType(mcp.getType());
         dto.setUrl(mcp.getUrl());
         dto.setHeaders(mcp.getHeaders());
+        dto.setConfig(mcp.getConfig());
         dto.setDescription(mcp.getDescription());
         dto.setSource(mcp.getSource());
         dto.setSourceUrl(mcp.getSourceUrl());

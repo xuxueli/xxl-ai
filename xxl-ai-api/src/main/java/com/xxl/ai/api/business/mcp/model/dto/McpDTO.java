@@ -10,9 +10,10 @@ public class McpDTO {
     private long id;            /* MCP ID */
     private long spaceId;       /* 空间ID */
     private String name;        /* MCP名称 */
-    private int type;           /* 协议类型：0-Streamable HTTP、1-SSE */
-    private String url;         /* 服务地址 */
+    private int type;           /* 协议类型：0-Streamable HTTP、1-SSE、2-stdio */
+    private String url;         /* 服务地址(HTTP/SSE必填, stdio可为空) */
     private String headers;     /* 请求头(JSON) */
+    private String config;      /* 完整MCP配置(JSON) */
     private String description; /* 描述 */
     private String source;      /* 来源：local-本地、community-社区 */
     private String sourceUrl;   /* 社区来源链接 */
@@ -66,6 +67,14 @@ public class McpDTO {
 
     public void setHeaders(String headers) {
         this.headers = headers;
+    }
+
+    public String getConfig() {
+        return config;
+    }
+
+    public void setConfig(String config) {
+        this.config = config;
     }
 
     public String getDescription() {

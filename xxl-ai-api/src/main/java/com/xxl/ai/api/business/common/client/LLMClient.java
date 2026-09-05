@@ -115,6 +115,81 @@ public class LLMClient {
     }
 
     /**
+     * 对话（非流式，支持工具调用 function calling）
+     *
+     * @param messages 消息列表（role/content/tool_calls/tool_call_id 等）
+     * @param tools    OpenAI tools 规格（type=function，可空）
+     * @param baseUrl  供应商BaseURL
+     * @param apiKey   API密钥（可为空）
+     * @param model    模型标识
+     * @return 对话结果（内容 + 工具调用，二选一）
+     */
+    public ChatResult chat(List<Map<String, Object>> messages, List<Map<String, Object>> tools,
+                           String baseUrl, String apiKey, String model) throws Exception {
+        JsonObject body = new JsonObject();
+        body.addProperty("model", model);
+        body.add("messages", GSON.toJsonTree(messages));
+        if (tools != null && !tools.isEmpty()) {
+            body.add("tools", GSON.toJsonTree(tools));
+        }
+        body.addProperty("stream", false);
+
+        HttpResponse<InputStream> response = doPost(baseUrl + "/chat/completions", apiKey, body);
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("模型接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
+        }
+        JsonObject root = GSON.fromJson(new InputStreamReader(response.body(), StandardCharsets.UTF_8), JsonObject.class);
+        JsonArray choices = root.getAsJsonArray("choices");
+        if (choices == null || choices.isEmpty() || !choices.get(0).isJsonObject()) {
+            throw new RuntimeException("模型返回为空");
+        }
+        JsonObject choiceObj = choices.get(0).getAsJsonObject();
+        if (choiceObj.get("message") == null) {
+            throw new RuntimeException("模型返回为空");
+        }
+        JsonObject messageObj = choiceObj.getAsJsonObject("message");
+        ChatResult result = new ChatResult();
+        JsonElement reasoningElement = messageObj.get("reasoning_content");
+        if (reasoningElement != null && reasoningElement.isJsonPrimitive()) {
+            result.reasoning = reasoningElement.getAsString();
+        }
+        JsonElement contentElement = messageObj.get("content");
+        if (contentElement != null && contentElement.isJsonPrimitive()) {
+            result.content = contentElement.getAsString();
+        }
+        JsonElement finishElement = choiceObj.get("finish_reason");
+        if (finishElement != null && finishElement.isJsonPrimitive()) {
+            result.finishReason = finishElement.getAsString();
+        }
+        JsonArray toolCallsArray = messageObj.getAsJsonArray("tool_calls");
+        if (toolCallsArray != null && !toolCallsArray.isEmpty()) {
+            List<ToolCall> toolCalls = new ArrayList<>();
+            for (JsonElement toolCallEl : toolCallsArray) {
+                JsonObject toolCallObj = toolCallEl.getAsJsonObject();
+                JsonObject functionObj = toolCallObj.getAsJsonObject("function");
+                ToolCall toolCall = new ToolCall();
+                JsonElement idEl = toolCallObj.get("id");
+                if (idEl != null && idEl.isJsonPrimitive()) {
+                    toolCall.id = idEl.getAsString();
+                }
+                if (functionObj != null) {
+                    JsonElement nameEl = functionObj.get("name");
+                    if (nameEl != null && nameEl.isJsonPrimitive()) {
+                        toolCall.name = nameEl.getAsString();
+                    }
+                    JsonElement argsEl = functionObj.get("arguments");
+                    if (argsEl != null && argsEl.isJsonPrimitive()) {
+                        toolCall.arguments = argsEl.getAsString();
+                    }
+                }
+                toolCalls.add(toolCall);
+            }
+            result.toolCalls = toolCalls;
+        }
+        return result;
+    }
+
+    /**
      * 嵌入向量化
      *
      * @param input   待向量化文本
@@ -168,6 +243,53 @@ public class LLMClient {
     private String readBody(HttpResponse<InputStream> response) throws Exception {
         byte[] bytes = response.body().readAllBytes();
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 对话结果封装（内容与工具调用二选一）
+     */
+    public static class ChatResult {
+        private String content;         /* 回复内容（无工具调用时） */
+        private String reasoning;       /* 思考过程（推理模型，可为空） */
+        private String finishReason;    /* 结束原因（tool_calls/stop） */
+        private List<ToolCall> toolCalls;       /* 工具调用（可空） */
+
+        public String getContent() {
+            return content;
+        }
+
+        public String getReasoning() {
+            return reasoning;
+        }
+
+        public String getFinishReason() {
+            return finishReason;
+        }
+
+        public List<ToolCall> getToolCalls() {
+            return toolCalls;
+        }
+    }
+
+    /**
+     * 工具调用封装
+     */
+    public static class ToolCall {
+        private String id;              /* 工具调用ID */
+        private String name;            /* 工具名称 */
+        private String arguments;       /* 参数（JSON 字符串） */
+
+        public String getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getArguments() {
+            return arguments;
+        }
     }
 
 }

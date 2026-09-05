@@ -3,7 +3,7 @@
  */
 import request from '@/utils/request'
 import type { Response, PageModel } from '@/types'
-import type { Mcp, McpListQuery, CommunityItem } from '../types'
+import type { Mcp, McpListQuery, CommunityItem, McpConnectResult } from '../types'
 
 /** 分页查询 MCP 列表 */
 export function listMcp(query: McpListQuery): Promise<Response<PageModel<Mcp>>> {
@@ -23,6 +23,11 @@ export function delMcp(ids: number[] | number): Promise<Response<string>> {
 /** 修改 MCP */
 export function updateMcp(data: Mcp): Promise<Response<string>> {
   return request({ url: '/mcp/update', method: 'post', params: data })
+}
+
+/** 连通性测试（initialize + tools/list） */
+export function mcpTest(id: number): Promise<Response<McpConnectResult>> {
+  return request({ url: '/mcp/test', method: 'post', params: { id } })
 }
 
 /** 社区检索 */

@@ -45,6 +45,8 @@
 		<spring-ai.version>2.0.1</spring-ai.version>
 		<!-- milvus -->
 		<milvus.version>3.0.8</milvus.version>
+		<!-- mcp sdk -->
+		<mcp-sdk.version>2.0.1</mcp-sdk.version>
 
 	</properties>
 
@@ -110,6 +112,12 @@
 				<groupId>io.milvus</groupId>
 				<artifactId>milvus-sdk-java</artifactId>
 				<version>${milvus.version}</version>
+			</dependency>
+			<!-- mcp：官方 Java MCP SDK（stdio/http/sse 客户端、工具调用） -->
+			<dependency>
+				<groupId>io.modelcontextprotocol.sdk</groupId>
+				<artifactId>mcp</artifactId>
+				<version>${mcp-sdk.version}</version>
 			</dependency>
 			<!-- ********************************* for plugin end ********************************* -->
 

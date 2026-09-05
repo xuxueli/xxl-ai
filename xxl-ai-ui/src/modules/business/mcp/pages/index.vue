@@ -1,6 +1,7 @@
 <!--
   Mcp（MCP管理）
-  MCP 在线配置管理 + 社区查询/安装/删除
+  MCP 在线配置管理（完整 MCP 配置格式：远程 HTTP/SSE + 本地进程 stdio）
+  社区查询/安装/删除、连通性测试
 -->
 <template>
   <div class="app-container">
@@ -61,7 +62,9 @@
             <el-tag>{{ mcpTypeTitle(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('business.mcp.url')" align="center" prop="url" min-width="220" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.mcp.url')" align="center" min-width="220" :show-overflow-tooltip="true">
+          <template #default="scope">{{ displayUrl(scope.row) || '-' }}</template>
+        </el-table-column>
         <el-table-column :label="t('business.mcp.source')" align="center" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.source === 'community' ? 'warning' : 'info'">
@@ -76,8 +79,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="200" class-name="small-padding fixed-width">
           <template #default="scope">
+            <el-button link type="primary" icon="Connection" @click="handleTest(scope.row)" v-hasPermi="['mcp:default']">{{
+              t('business.mcp.test')
+            }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['mcp:default']">{{ t('common.modify') }}</el-button>
             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['mcp:default']">{{
               t('common.delete')
@@ -97,8 +103,8 @@
     </div>
 
     <!-- 添加或修改 MCP 对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="560px" append-to-body>
-      <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
+    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body>
+      <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="110px">
         <el-form-item :label="t('business.mcp.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.mcp.name')])" maxlength="100" />
         </el-form-item>
@@ -107,19 +113,40 @@
             <el-radio v-for="item in mcpTypeOptions" :key="item.code" :value="item.code">{{ item.title }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item :label="t('business.mcp.url')" prop="url">
-          <el-input v-model="formState.form.url" :placeholder="t('business.mcp.urlPlaceholder')" maxlength="200" />
-        </el-form-item>
-        <el-form-item :label="t('business.mcp.headers')" prop="headers">
-          <el-input
-            v-model="formState.form.headers"
-            :placeholder="t('business.mcp.headersPlaceholder')"
-            type="textarea"
-            :rows="2"
-            maxlength="500"
-          />
-        </el-form-item>
-        <el-form-item :label="t('business.mcp.description')" prop="description">
+
+        <!-- 远程配置（HTTP/SSE）：url + headers -->
+        <template v-if="formState.form.type !== 2">
+          <el-form-item :label="t('business.mcp.url')" prop="url">
+            <el-input v-model="configForm.url" :placeholder="t('business.mcp.urlPlaceholder')" maxlength="200" />
+          </el-form-item>
+          <el-form-item :label="t('business.mcp.headers')">
+            <el-input
+              v-model="configForm.headers"
+              :placeholder="t('business.mcp.headersPlaceholder')"
+              type="textarea"
+              :rows="2"
+              maxlength="500"
+            />
+          </el-form-item>
+        </template>
+
+        <!-- 本地进程配置（stdio）：command + args + env + cwd -->
+        <template v-else>
+          <el-form-item :label="t('business.mcp.command')" prop="command">
+            <el-input v-model="configForm.command" :placeholder="t('business.mcp.commandPlaceholder')" maxlength="100" />
+          </el-form-item>
+          <el-form-item :label="t('business.mcp.args')">
+            <el-input v-model="configForm.argsText" type="textarea" :rows="3" :placeholder="t('business.mcp.argsTip')" />
+          </el-form-item>
+          <el-form-item :label="t('business.mcp.env')">
+            <el-input v-model="configForm.env" type="textarea" :rows="3" :placeholder="t('business.mcp.envPlaceholder')" maxlength="500" />
+          </el-form-item>
+          <el-form-item :label="t('business.mcp.cwd')">
+            <el-input v-model="configForm.cwd" :placeholder="t('business.mcp.cwdPlaceholder')" maxlength="200" />
+          </el-form-item>
+        </template>
+
+        <el-form-item :label="t('business.mcp.description')">
           <el-input v-model="formState.form.description" :placeholder="t('common.inputPlaceholder', [t('business.mcp.description')])" maxlength="500" />
         </el-form-item>
         <el-form-item :label="t('common.status')">
@@ -127,6 +154,11 @@
             <el-radio :value="0">{{ t('common.normal') }}</el-radio>
             <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="formState.form.id != null">
+          <el-button type="primary" plain icon="Connection" :loading="testing" @click="handleTestForm">
+            {{ t('business.mcp.test') }}
+          </el-button>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -180,7 +212,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'Mcp' })
 import { t } from '@/i18n'
-import { listMcp, addMcp, updateMcp, delMcp, mcpCommunitySearch, mcpInstallFromCommunity } from '../api'
+import { listMcp, addMcp, updateMcp, delMcp, mcpTest, mcpCommunitySearch, mcpInstallFromCommunity } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
@@ -197,6 +229,7 @@ interface McpForm extends Mcp {}
 
 // --------------------------------- ref data ---------------------------------
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
+const testing = ref(false) /* 连通测试请求中状态 */
 
 // 协议类型枚举选项（McpTypeEnum，来自后端）
 const { McpTypeEnum: mcpTypeOptions } = useEnumOption('McpTypeEnum')
@@ -205,13 +238,23 @@ const queryParams = ref<McpQuery>({ pageNum: 1, pageSize: 10, name: undefined, s
 
 const table = ref<TableState<Mcp>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
+// 完整 MCP 配置编辑态（按协议类型分支展示）
+const configForm = ref({
+  transport: 'http',
+  url: undefined as string | undefined,
+  headers: '',
+  command: '',
+  argsText: '',
+  env: '',
+  cwd: ''
+})
+
 const formState = ref<FormState<McpForm>>({
   visible: false,
   title: '',
   form: {},
   rules: {
-    name: [{ required: true, message: t('common.requiredMsg', [t('business.mcp.name')]), trigger: 'blur' }],
-    url: [{ required: true, message: t('common.requiredMsg', [t('business.mcp.url')]), trigger: 'blur' }]
+    name: [{ required: true, message: t('common.requiredMsg', [t('business.mcp.name')]), trigger: 'blur' }]
   }
 })
 
@@ -238,10 +281,92 @@ function getList() {
     table.value.loading = false
   })
 }
+
+/** 重置完整配置编辑态 */
+function resetConfigForm() {
+  configForm.value = { transport: 'http', url: undefined, headers: '', command: '', argsText: '', env: '', cwd: '' }
+}
+
 function reset() {
-  formState.value.form = { id: undefined, name: undefined, type: 0, url: undefined, headers: undefined, description: undefined, source: 'local', status: 0 }
+  formState.value.form = { id: undefined, name: undefined, type: 0, description: undefined, source: 'local', status: 0 }
+  resetConfigForm()
   resetForm('formRef')
 }
+
+/** 编辑回显：解析 config JSON 填充分形态配置（缺失时按平铺列兜底） */
+function parseIntoForm(current: Mcp) {
+  resetConfigForm()
+  let cfg: Record<string, any> = {}
+  if (current.config) {
+    try {
+      cfg = JSON.parse(current.config)
+    } catch {
+      cfg = {}
+    }
+  }
+  configForm.value.transport = cfg.transport ?? (current.type === 1 ? 'sse' : current.type === 2 ? 'stdio' : 'http')
+  configForm.value.url = cfg.url ?? current.url
+  configForm.value.headers = jsonValueToText(cfg.headers)
+  configForm.value.command = cfg.command ?? ''
+  configForm.value.argsText = Array.isArray(cfg.args) ? cfg.args.join('\n') : ''
+  configForm.value.env = jsonValueToText(cfg.env)
+  configForm.value.cwd = cfg.cwd ?? ''
+}
+
+/** JSON 值 → 展示文本（对象格式化，字符串原样） */
+function jsonValueToText(value: unknown): string {
+  if (value == null) return ''
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+}
+
+/** 文本 → JSON 对象（空返回 undefined；非法返回 false） */
+function parseJsonObject(text: string, errMsg: string): Record<string, any> | false | undefined {
+  if (!text.trim()) return undefined
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+    modal.msgWarning(errMsg)
+    return false
+  } catch {
+    modal.msgWarning(errMsg)
+    return false
+  }
+}
+
+/** 校验并按协议类型组装 config JSON，回填 form.config / form.url */
+function buildConfigPayload(): boolean {
+  const form = formState.value.form
+  const cfg: Record<string, any> = {}
+  if (form.type === 2) {
+    if (!configForm.value.command.trim()) {
+      modal.msgWarning(t('business.mcp.commandRequired'))
+      return false
+    }
+    cfg.transport = 'stdio'
+    cfg.command = configForm.value.command.trim()
+    const args = configForm.value.argsText.split('\n').map((s) => s.trim()).filter((s) => s.length)
+    if (args.length) cfg.args = args
+    if (configForm.value.cwd.trim()) cfg.cwd = configForm.value.cwd.trim()
+    const env = parseJsonObject(configForm.value.env, t('business.mcp.envInvalid'))
+    if (env === false) return false
+    if (env && Object.keys(env).length) cfg.env = env
+    form.url = undefined
+  } else {
+    if (!configForm.value.url?.trim()) {
+      modal.msgWarning(t('common.requiredMsg', [t('business.mcp.url')]))
+      return false
+    }
+    cfg.transport = form.type === 1 ? 'sse' : 'http'
+    cfg.url = configForm.value.url.trim()
+    const headers = parseJsonObject(configForm.value.headers, t('business.mcp.headersInvalid'))
+    if (headers === false) return false
+    if (headers && Object.keys(headers).length) cfg.headers = headers
+    form.url = cfg.url
+  }
+  form.config = JSON.stringify(cfg)
+  return true
+}
+
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
@@ -267,6 +392,7 @@ function handleUpdate(row: any) {
   const current = table.value.list.find((item) => item.id === id)
   if (!current) return
   formState.value.form = { ...current }
+  parseIntoForm(current)
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.mcp.mcp')])
 }
@@ -285,6 +411,7 @@ function handleDelete(row: any) {
 function submitForm() {
   formRef.value!.validate((valid) => {
     if (!valid) return
+    if (!buildConfigPayload()) return
     const submitData = { ...formState.value.form }
     delete submitData.addTime
     delete submitData.updateTime
@@ -299,6 +426,58 @@ function submitForm() {
 function cancel() {
   formState.value.visible = false
   reset()
+}
+
+/** 连通测试回调（按 connectable 区分提示） */
+function showTestResult(result: { connectable: boolean; message: string; toolCount: number; elapsedMs: number }) {
+  const message = result.connectable
+    ? t('business.mcp.testSuccess', [result.toolCount, result.elapsedMs])
+    : t('business.mcp.testFail', [result.message])
+  if (result.connectable) {
+    modal.msgSuccess(message)
+  } else {
+    modal.msgError(message)
+  }
+}
+
+/** 列表行/表头测试：直接对已落库配置发起 initialize + tools/list */
+function handleTest(row: any) {
+  const id = row?.id ?? table.value.ids[0]
+  if (id == null) {
+    modal.msgWarning(t('common.selectPlaceholder'))
+    return
+  }
+  testing.value = true
+  mcpTest(id)
+    .then((response) => showTestResult(response.data))
+    .catch(() => {})
+    .finally(() => {
+      testing.value = false
+    })
+}
+
+/** 表单内测试：未保存配置暂不可测，提示先保存 */
+function handleTestForm() {
+  const id = formState.value.form.id
+  if (id == null) {
+    modal.msgWarning(t('business.mcp.saveBeforeTest'))
+    return
+  }
+  handleTest(id)
+}
+
+/** 列表地址展示：stdio 无 url 时回退展示启动命令 */
+function displayUrl(row: Mcp) {
+  if (row.url) return row.url
+  if (row.type === 2 && row.config) {
+    try {
+      const cfg = JSON.parse(row.config)
+      if (cfg.command) return `${cfg.command} ${(cfg.args || []).join(' ')}`
+    } catch {
+      /* 忽略解析失败 */
+    }
+  }
+  return ''
 }
 
 // --------------------------------- 社区查询 ---------------------------------
@@ -333,20 +512,28 @@ function itemDesc(item: CommunityItem) {
 function itemUrl(item: CommunityItem) {
   return String(item.url ?? item.baseUrl ?? item.endpoint ?? item.serverUrl ?? '')
 }
-/** 从社区安装 */
+/** 从社区安装：stdio 项携带完整 config 落库，远程项按 http 组装 */
 function handleInstall(item: CommunityItem) {
-  const url = itemUrl(item)
-  if (!url) {
-    modal.msgError(t('business.mcp.communityNoUrl'))
-    return
-  }
-  const data: Mcp = {
-    name: itemName(item),
-    type: 0,
-    url,
-    description: itemDesc(item),
-    source: 'community',
-    status: 0
+  const name = itemName(item)
+  const description = itemDesc(item)
+  let data: Mcp
+  if (item.command) {
+    const cfg: Record<string, any> = {
+      transport: 'stdio',
+      command: String(item.command),
+      args: Array.isArray(item.args) ? item.args : []
+    }
+    if (item.env && typeof item.env === 'object' && !Array.isArray(item.env)) cfg.env = item.env
+    data = { name, type: 2, config: JSON.stringify(cfg), description, source: 'community', status: 0 }
+  } else {
+    const url = itemUrl(item)
+    if (!url) {
+      modal.msgError(t('business.mcp.communityNoUrl'))
+      return
+    }
+    const cfg: Record<string, any> = { transport: 'http', url, headers: {} }
+    if (item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers)) cfg.headers = item.headers
+    data = { name, type: 0, url, config: JSON.stringify(cfg), description, source: 'community', status: 0 }
   }
   if (item.url) data.sourceUrl = String(item.url)
   else if (item.homepage) data.sourceUrl = String(item.homepage)

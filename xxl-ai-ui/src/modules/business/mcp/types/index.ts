@@ -9,12 +9,14 @@ export interface Mcp {
   spaceId?: number
   /** MCP名称 */
   name?: string
-  /** 协议类型：0-Streamable HTTP、1-SSE */
+  /** 协议类型：0-Streamable HTTP、1-SSE、2-stdio */
   type?: number
-  /** 服务地址 */
+  /** 服务地址（HTTP/SSE 必填，stdio 可为空） */
   url?: string
   /** 请求头(JSON) */
   headers?: string
+  /** 完整MCP配置(JSON)：http/sse{transport,url,headers} / stdio{transport,command,args,env,cwd} */
+  config?: string
   /** 描述 */
   description?: string
   /** 来源：local-本地、community-社区 */
@@ -42,4 +44,16 @@ export type McpListQuery = ListQuery<McpQuery>
 /** 社区检索结果项（社区接口返回形态不固定，统一按可读字段解析） */
 export interface CommunityItem {
   [key: string]: unknown
+}
+
+/** 连通性测试结果 */
+export interface McpConnectResult {
+  /** 是否连通 */
+  connectable: boolean
+  /** 可用工具数量 */
+  toolCount: number
+  /** 测试耗时（毫秒） */
+  elapsedMs: number
+  /** 测试过程描述 */
+  message: string
 }

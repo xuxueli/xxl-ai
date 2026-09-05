@@ -10,7 +10,8 @@ import com.xxl.tool.core.EnumTool;
 public enum McpTypeEnum implements EnumTool.IEnum {
 
     HTTP(0, "Streamable HTTP"),
-    SSE(1, "SSE");
+    SSE(1, "SSE"),
+    STDIO(2, "stdio");
 
     private int code;       /* 类型编码 */
     private String title;   /* 类型描述 */

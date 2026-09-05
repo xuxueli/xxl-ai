@@ -1,5 +1,6 @@
 package com.xxl.ai.api.business.mcp.service;
 
+import com.xxl.ai.api.business.mcp.model.dto.McpConnectDTO;
 import com.xxl.ai.api.business.mcp.model.dto.McpDTO;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.tool.response.PageModel;
@@ -54,5 +55,10 @@ public interface McpService {
      * 按ID集合查询 MCP 列表（Agent 配置回显）
      */
     List<Mcp> listByIds(List<Long> ids);
+
+    /**
+     * 连通性测试（initialize + tools/list）
+     */
+    Response<McpConnectDTO> test(long spaceId, long mcpId);
 
 }
