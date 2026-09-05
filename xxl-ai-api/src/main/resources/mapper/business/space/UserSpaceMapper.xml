@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.ai.api.business.space.mapper.UserSpaceMapper">
+
+	<resultMap id="UserSpace" type="com.xxl.ai.api.business.space.model.entity.UserSpace" >
+		<result column="id" property="id" />
+		<result column="user_id" property="userId" />
+		<result column="space_id" property="spaceId" />
+		<result column="add_time" property="addTime" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.user_id,
+		t.space_id,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<insert id="insert" parameterType="com.xxl.ai.api.business.space.model.entity.UserSpace" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_user_space (
+			user_id, space_id, add_time, update_time
+		) VALUES (
+			 #{userId}, #{spaceId}, NOW(), NOW()
+		 );
+	</insert>
+
+	<insert id="insertBatch" parameterType="java.util.HashMap">
+		INSERT INTO xxl_ai_user_space (user_id, space_id, add_time, update_time)
+		VALUES
+		<foreach collection="list" item="item" separator="," >
+			(#{item.userId}, #{item.spaceId}, NOW(), NOW())
+		</foreach>
+	</insert>
+
+	<delete id="deleteByUserId" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_user_space WHERE user_id = #{userId}
+	</delete>
+
+	<delete id="deleteBySpaceId" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_user_space WHERE space_id = #{spaceId}
+	</delete>
+
+	<select id="loadSpaceIdsByUserId" parameterType="java.util.HashMap" resultType="long">
+		SELECT t.space_id
+		FROM xxl_ai_user_space AS t
+		WHERE t.user_id = #{userId}
+	</select>
+
+	<select id="countByUserAndSpace" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_user_space AS t
+		WHERE t.user_id = #{userId} AND t.space_id = #{spaceId}
+	</select>
+
+</mapper>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.ai.api.business.agent.mapper.AgentMapper">
+
+	<resultMap id="Agent" type="com.xxl.ai.api.business.agent.model.entity.Agent" >
+		<result column="id" property="id" />
+		<result column="space_id" property="spaceId" />
+		<result column="name" property="name" />
+		<result column="intro" property="intro" />
+		<result column="model_supplier_id" property="modelSupplierId" />
+		<result column="model_id" property="modelId" />
+		<result column="system_prompt" property="systemPrompt" />
+		<result column="kb_ids" property="kbIds" />
+		<result column="mcp_ids" property="mcpIds" />
+		<result column="skill_ids" property="skillIds" />
+		<result column="publish_status" property="publishStatus" />
+		<result column="uuid" property="uuid" />
+		<result column="status" property="status" />
+		<result column="add_time" property="addTime" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.space_id,
+		t.name,
+		t.intro,
+		t.model_supplier_id,
+		t.model_id,
+		t.system_prompt,
+		t.kb_ids,
+		t.mcp_ids,
+		t.skill_ids,
+		t.publish_status,
+		t.uuid,
+		t.status,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<insert id="insert" parameterType="com.xxl.ai.api.business.agent.model.entity.Agent" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_agent (
+			space_id, name, intro, model_supplier_id, model_id, system_prompt,
+			kb_ids, mcp_ids, skill_ids, publish_status, uuid, status, add_time, update_time
+		) VALUES (
+			 #{spaceId}, #{name}, #{intro}, #{modelSupplierId}, #{modelId}, #{systemPrompt},
+			 #{kbIds}, #{mcpIds}, #{skillIds}, #{publishStatus}, #{uuid}, #{status}, NOW(), NOW()
+		 );
+	</insert>
+
+	<delete id="delete" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_agent WHERE id = #{id}
+	</delete>
+
+	<delete id="deleteByIds" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_agent
+		WHERE id in
+		<foreach collection="ids" item="item" open="(" close=")" separator="," >
+			#{item}
+		</foreach>
+	</delete>
+
+	<update id="update" parameterType="com.xxl.ai.api.business.agent.model.entity.Agent" >
+		UPDATE xxl_ai_agent
+		SET name = #{name},
+			intro = #{intro},
+			model_supplier_id = #{modelSupplierId},
+			model_id = #{modelId},
+			system_prompt = #{systemPrompt},
+			kb_ids = #{kbIds},
+			mcp_ids = #{mcpIds},
+			skill_ids = #{skillIds},
+			publish_status = #{publishStatus},
+			uuid = #{uuid},
+			status = #{status},
+			update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
+	<select id="load" parameterType="java.util.HashMap" resultMap="Agent">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent AS t
+		WHERE t.id = #{id}
+	</select>
+
+	<select id="loadByUuid" parameterType="java.util.HashMap" resultMap="Agent">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent AS t
+		WHERE t.uuid = #{uuid}
+	</select>
+
+	<select id="listBySpace" parameterType="java.util.HashMap" resultMap="Agent">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent AS t
+		WHERE t.space_id = #{spaceId}
+		ORDER BY t.id ASC
+	</select>
+
+	<select id="pageList" parameterType="java.util.HashMap" resultMap="Agent">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent AS t
+		WHERE t.space_id = #{spaceId}
+		<if test="name != null and name != ''">
+			AND t.name like CONCAT(CONCAT('%', #{name}), '%')
+		</if>
+		<if test="publishStatus gt -1">
+			AND t.publish_status = #{publishStatus}
+		</if>
+		<if test="status gt -1">
+			AND t.status = #{status}
+		</if>
+		ORDER BY t.id ASC
+		LIMIT #{offset}, #{pagesize}
+	</select>
+
+	<select id="pageListCount" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_agent AS t
+		WHERE t.space_id = #{spaceId}
+		<if test="name != null and name != ''">
+			AND t.name like CONCAT(CONCAT('%', #{name}), '%')
+		</if>
+		<if test="publishStatus gt -1">
+			AND t.publish_status = #{publishStatus}
+		</if>
+		<if test="status gt -1">
+			AND t.status = #{status}
+		</if>
+	</select>
+
+</mapper>

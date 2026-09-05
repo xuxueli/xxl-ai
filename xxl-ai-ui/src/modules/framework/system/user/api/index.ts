@@ -71,6 +71,19 @@ export function delUser(ids: number | number[]): Promise<Response<unknown>> {
 }
 
 /**
+ * 加载用户被授权的空间ID集合（新增/编辑授权空间回显）。
+ * @param userId 用户ID。
+ * @returns 空间ID集合。
+ */
+export function loadUserSpaceIds(userId: number): Promise<Response<number[]>> {
+  return request({
+    url: '/system/user/loadSpaceIds',
+    method: 'get',
+    params: { userId }
+  })
+}
+
+/**
  * 加载个人中心信息。
  * @returns 当前登录用户信息。
  */

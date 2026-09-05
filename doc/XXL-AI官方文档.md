@@ -267,7 +267,7 @@ xxl-ai/
 │           ├── application.properties         # 主配置文件
 │           ├── mapper/
 │           │   ├── framework/                 # 核心 MyBatis 映射文件
-│           │   └── {module}/{business}/       # 【扩展点】业务扩展 MyBatis 映射文件
+│           │   └── business/{module}/           # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
 │           └── i18n/                          # 国际化资源文件
 │
 └── xxl-ai-ui/                               # 【前后端分离】前端UI服务（3000）
@@ -339,7 +339,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 
 - 统一返回结构 `Response{ code、msg、data }`（`com.xxl.tool.response.Response`），code 200 表示成功；
 - 分页统一返回 `Response<PageModel>`；分页入参统一 `offset`、`pagesize`；
-- 接口路径规范：`/{module}/{business}/pageList|load|insert|delete|update`，业务接口统一 `@RequestMapping("/{module}/{business}")` + `@XxlSso` 鉴权；
+- 接口路径规范：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`），业务接口统一 `@RequestMapping("/{module}")`（同名业务）/ `@RequestMapping("/{module}/{business}")`（多业务）+ `@XxlSso` 鉴权；
 - 前端取值约定：`response.data`（成功数据）、`response.data.data`（列表）、`response.data.total`（总数）；
 - Mapper XML 中显式配置字段映射（resultMap），`add_time` / `update_time` 写入用 `NOW()`。
 
@@ -348,17 +348,17 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 新增业务模块遵循“平台核心不动、业务可插拔”的扩展原则：
 
 - 平台核心：`framework` 包仅承载平台内置能力（登录、权限、系统管理、工具等），不承载具体业务；
-- 业务扩展：新增业务一律落位到 `business/{module}` 包（后端）、`resources/mapper/{module}/{business}/`（Mapper XML）；
-- 菜单零路由：平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化），新建页面文件后在对应角色 static 资源列表追加菜单项（`url` 配置为 `/module/business`）即可，前端 `loadView` 自动映射页面，全程无需改动路由代码；
-- 模块/业务命名：两级命名 `{module}/{business}`，`{module}` 为业务模块域（对应后端包 `business.{module}`、权限前缀 `{module}:*`，可聚合多个业务页），`{business}` 为具体业务页/实体名（对应 Controller 与菜单 url）；
+- 业务扩展：新增业务一律落位到 `business/{module}` 包（后端）、`resources/mapper/business/{module}/`（Mapper XML）；
+- 菜单零路由：平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化），新建页面文件后在对应角色 static 资源列表追加菜单项（`url` 配置为 `/module` 或 `/module/business`）即可，前端 `loadView` 自动映射页面，全程无需改动路由代码；
+- 模块/业务命名：`{module}` 一级或 `{module}/{business}` 多级。同名业务直接一级（`business/{module}`、`/module`、权限 `{module}:default`）；多业务模块在模块下再分 `{business}`（如 `supplier` 聚合供应商+模型、`agent` 聚合 `agent`+`conv`）；
 - 前后端落位对照：
 
 ```
-后端   Controller  business/{module}/{business}               （com.xxl.ai.api.business.{module}.{business}）
-后端   Mapper XML  resources/mapper/{module}/{business}/
-前端   页面        src/modules/business/{module}/{business}/pages/index.vue
-前端   接口封装    src/modules/business/{module}/{business}/api/index.ts
-前端   类型        src/modules/business/{module}/{business}/types/index.ts
+后端   Controller  business/{module}/或business/{module}/{business}  （com.xxl.ai.api.business.{module}[.{business}]）
+后端   Mapper XML  resources/mapper/business/{module}/
+前端   页面        src/modules/business/{module}/pages/index.vue（多业务页同目录聚合）
+前端   接口封装    src/modules/business/{module}/api/index.ts
+前端   类型        src/modules/business/{module}/types/index.ts
 菜单   XxlRoleEnum 角色 static 资源列表（type=0/1/2，url 驱动零路由改动）
 ```
 

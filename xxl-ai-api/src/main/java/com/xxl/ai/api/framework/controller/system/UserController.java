@@ -71,6 +71,15 @@ public class UserController {
     }
 
     /**
+     * 加载用户被授权的空间ID集合（新增/编辑授权空间回显）
+     */
+    @RequestMapping("/loadSpaceIds")
+    @XxlSso(permission = "system:user")
+    public Response<List<Integer>> loadSpaceIds(@RequestParam("userId") int userId) {
+        return userService.loadSpaceIdsByUserId(userId);
+    }
+
+    /**
      * updatePwd
      */
     @RequestMapping("/updatePwd")

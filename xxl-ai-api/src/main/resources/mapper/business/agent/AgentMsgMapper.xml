@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.ai.api.business.agent.conv.mapper.AgentMsgMapper">
+
+	<resultMap id="AgentMsg" type="com.xxl.ai.api.business.agent.conv.model.entity.AgentMsg" >
+		<result column="id" property="id" />
+		<result column="conv_id" property="convId" />
+		<result column="role" property="role" />
+		<result column="reasoning" property="reasoning" />
+		<result column="content" property="content" />
+		<result column="add_time" property="addTime" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.conv_id,
+		t.role,
+		t.reasoning,
+		t.content,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<insert id="insert" parameterType="com.xxl.ai.api.business.agent.conv.model.entity.AgentMsg" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_agent_msg (
+			conv_id, role, reasoning, content, add_time, update_time
+		) VALUES (
+			 #{convId}, #{role}, #{reasoning}, #{content}, NOW(), NOW()
+		 );
+	</insert>
+
+	<delete id="deleteByConvId" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_agent_msg WHERE conv_id = #{convId}
+	</delete>
+
+	<select id="listByConvId" parameterType="java.util.HashMap" resultMap="AgentMsg">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent_msg AS t
+		WHERE t.conv_id = #{convId}
+		ORDER BY t.id ASC
+	</select>
+
+</mapper>

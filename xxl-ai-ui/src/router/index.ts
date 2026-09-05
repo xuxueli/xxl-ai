@@ -14,7 +14,7 @@ import 'nprogress/nprogress.css'
 import { getToken } from '@/utils/auth'
 import { isHttp } from '@/utils/validate'
 import { isRelogin } from '@/utils/request'
-import { useUserStore, useRoutesStore, useSettingsStore } from '@/store'
+import { useUserStore, useRoutesStore, useSettingsStore, useSpaceStore } from '@/store'
 import defaultSettings from '@/default-settings'
 
 // ==================== 静态路由注册 ====================
@@ -73,6 +73,12 @@ export const constantRoutes = [
     path: '/:pathMatch(.*)*',
     component: () => import('@/modules/framework/common/pages/404.vue'),
     hidden: true
+  },
+  // Agent 公开对话页（免登录，按发布 URL 直接访问）
+  {
+    path: '/agent/chat/:uuid',
+    component: () => import('@/modules/business/agent/chat/index.vue'),
+    hidden: true
   }
 ]
 
@@ -94,9 +100,9 @@ const router = createRouter({
 
 NProgress.configure({ showSpinner: false })
 
-// 登录白名单
+// 登录白名单（Agent 公开对话页亦免登录，可通过发布 URL 访问）
 const whiteList = ['/login']
-const isWhiteList = (path: string) => whiteList.includes(path)
+const isWhiteList = (path: string) => whiteList.includes(path) || path.startsWith('/agent/chat')
 
 // 全局前置拦截
 router.beforeEach(async (to, from) => {
@@ -123,6 +129,9 @@ router.beforeEach(async (to, from) => {
         isRelogin.show = true
         await useUserStore().getInfo()
         isRelogin.show = false
+
+        // a2、加载当前用户可见业务空间（失败不阻断，顶部空间切换器内再尝试）
+        useSpaceStore().loadSpaces().catch(() => {})
 
         // b、初始化动态路由：初始化路由（后端菜单 → 前端路由） -> 获取拍平后数据 -> 过滤 http 链接后逐条注入
         await useRoutesStore().initRoutes()

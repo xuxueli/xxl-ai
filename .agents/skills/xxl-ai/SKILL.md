@@ -20,11 +20,11 @@ description: 在 XXL-AI 前后端分离模式（xxl-ai-api 端口 8090 + xxl-ai-
 ```
 xxl-ai-api/src/main
 ├── java/com/xxl/ai/api/framework/…        ← 平台内置（controller/service/mapper/model/constant/enums/web）
-├── java/com/xxl/ai/api/business/{module}/{business}  ← 新增业务落此（与前端双层镜像；按模板直生等价代码）
-└── resources/mapper/{module}/{business}/    ← 业务 Mapper XML（与前/后端目录镜像）
+├── java/com/xxl/ai/api/business/{module}    ← 新增业务落此（同名业务一级化 /business/{module}；多业务再按 /business/{module}/{business} 聚合，如 supplier 聚合 supplier+model）
+└── resources/mapper/business/{module}/    ← 业务 Mapper XML（按模块平铺，文件名标识业务）
 xxl-ai-ui/src
 ├── modules/framework/{domain}/{module}/     ← 平台内置模块（auth/system/dashboard/…，同目录聚合 pages+api+types）
-├── modules/business/{module}/{business}/    ← 业务模块（pages/ + api/ + types/ 三子目录，与后端双层镜像）
+├── modules/business/{module}/               ← 业务模块（pages/ + api/ + types/ 三子目录；同名业务直接一级，多业务在模块内聚合）
 └── types/index.ts                           ← 全局基础类型（Response/PageModel/PageQuery…）
 ```
 
@@ -36,7 +36,7 @@ xxl-ai-ui/src
 1. **需求确认（第一步，必须）**：接到任务先不写代码，主动向用户确认需求细节，用户确认后再执行。至少确认：模块与业务命名（`{module}/{business}`）及目录归属；核心字段、状态/枚举下拉、是否需文件上传/富文本等特殊组件；页面形态（标准 CRUD / 详情页 / 多页签，仅动后端时则不动前端）；菜单+按钮+角色授权是否一并处理；验证范围与启动端口（api 8090 / vue 3000）。确认结果即时回填到子目录 `plan.md`。
 2. **建表**：`xxl_ai_*` SQL，公共字段 `id/add_time/update_time`，TINYINT 状态，`COMMENT` 注释；SQL 脚本写入该需求子目录（如 `{business}-table.sql`、`{business}-init.sql`）。
 3. **生成或手写代码**：本 Skill 缺省策略为 AI 按模板直生等价代码落位（后端 6 件套 + 前端 vue3 文件），落位细则见下方「后端落位清单 / 前端落位清单」。
-4. **落位**：前后端双层镜像——后端 Java 落 `business/{module}/{business}`，Mapper XML 落 `resources/mapper/{module}/{business}/`；前端业务模块聚合落 `modules/business/{module}/{business}/`（pages/index.vue + api/index.ts + types/index.ts）。
+4. **落位**：业务一级化——后端 Java 落 `business/{module}`（同名业务；多业务模块在模块下再分 `{business}`），Mapper XML 落 `resources/mapper/business/{module}/`；前端业务模块聚合落 `modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts）。
 5. **菜单/权限**：在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
 6. **验证**：起 `xxl-ai-api`(8090) + `xxl-ai-ui`(3000，代理 /api→8090)，菜单可见、CRUD 可用、权限生效；验证结果回填 `plan.md`。
 
@@ -63,7 +63,7 @@ xxl-ai-ui/src
 | 项 | 结论 |
 |---|---|
 | 运行模式 | 前后端分离（xxl-ai-api 8090 + xxl-ai-ui 3000） |
-| 模块/业务命名 | `{module}/{business}`，包 `com.xxl.ai.api.business.{module}` |
+| 模块/业务命名 | `{module}`（同名业务一级化；多业务模块为 `{module}/{business}`），包 `com.xxl.ai.api.business.{module}` |
 | 核心字段与业务规则 | 字段清单 + 必填/唯一/模糊搜索规则 |
 | 状态/枚举下拉 | 无 / 枚举 `{XxxEnum}`（business/{module}/{business}/enums） |
 | 特殊组件 | 无 / Editor 富文本 / ImageUpload 图片上传 |
@@ -85,7 +85,7 @@ xxl-ai-ui/src
 SQL 脚本：`{business}-table.sql`
 
 ## 三、菜单 / 授权
-- 菜单（type=1）：`{名称}` permission=`{module}:{business}` url=`/{module}/{business}`，追加进 `XxlRoleEnum` 对应角色的 static 资源列表
+- 菜单（type=1）：`{名称}` permission=`{module}:default`（同名业务）或 `{module}:{business}`（多业务） url=`/{module}` 或 `/{module}/{business}`，追加进 `XxlRoleEnum` 对应角色的 static 资源列表
 - 按钮（type=2）：新增 `:add` / 修改 `:edit` / 删除 `:remove`，parentId 指向所属菜单
 - 授权：加入某角色静态资源列表（如 `ADMIN_RESOURCES`）即对该角色可见，无需数据库授权
 - 落盘：`{business}-init.sql`（仅建表/种子数据；菜单走枚举注册）
@@ -93,21 +93,21 @@ SQL 脚本：`{business}-table.sql`
 ## 四、后端改造
 | 文件 | 位置 | 要点 |
 |---|---|---|
-| `{Business}.java` | business/{module}/{business}/model/ | 实体驼峰；Date 字段 @JsonFormat |
-| `{Business}Mapper.java` | business/{module}/{business}/mapper/ | insert/delete/update/load/pageList/pageListCount |
-| `{Business}Mapper.xml` | resources/mapper/{module}/{business}/ | resultMap 显式映射；add/update_time 用 NOW()；查询 <if> 动态拼条件 |
-| `{Business}Service.java` | business/{module}/{business}/service/ | 方法顺序 pageList/load/insert/delete/update |
-| `{Business}ServiceImpl.java` | business/{module}/{business}/service/impl/ | StringTool 校验，失败 Response.ofFail |
-| `{Business}Controller.java` | business/{module}/{business}/controller/ | 全 @XxlSso；分页 offset/pagesize；删除 ids[] |
+| `{Business}.java` | business/{module}/model/ | 实体驼峰；Date 字段 @JsonFormat |
+| `{Business}Mapper.java` | business/{module}/mapper/ | insert/delete/update/load/pageList/pageListCount |
+| `{Business}Mapper.xml` | resources/mapper/business/{module}/ | resultMap 显式映射；add/update_time 用 NOW()；查询 <if> 动态拼条件 |
+| `{Business}Service.java` | business/{module}/service/ | 方法顺序 pageList/load/insert/delete/update |
+| `{Business}ServiceImpl.java` | business/{module}/service/impl/ | StringTool 校验，失败 Response.ofFail |
+| `{Business}Controller.java` | business/{module}/controller/ | 全 @XxlSso；分页 offset/pagesize；删除 ids[] |
 
-接口：`/{module}/{business}/pageList|load|insert|delete|update`
+接口：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`）
 
 ## 五、前端改造
 | 文件 | 位置 | 要点 |
 |---|---|---|
-| `types/index.ts` | modules/business/{module}/{business}/ | 实体+Query(pageNum/pageSize)+ListQuery |
-| `api/index.ts` | modules/business/{module}/{business}/ | list/get/add/del/update，Promise<Response<PageModel<T>>> |
-| `pages/index.vue` | modules/business/{module}/{business}/ | 三段式；usePageParams 转 offset/pagesize；按钮 v-hasPermi |
+| `types/index.ts` | modules/business/{module}/ | 实体+Query(pageNum/pageSize)+ListQuery |
+| `api/index.ts` | modules/business/{module}/ | list/get/add/del/update，Promise<Response<PageModel<T>>> |
+| `pages/index.vue` | modules/business/{module}/ | 三段式；usePageParams 转 offset/pagesize；按钮 v-hasPermi |
 
 ## 六、验证结果 / 变更记录
 - [ ] 需求结论确认并回填第一节
@@ -121,15 +121,15 @@ SQL 脚本：`{business}-table.sql`
 
 ## 后端落位清单（6 件套）
 
-以业务 `Demo`、模块 `demo` 为例，包名 `com.xxl.ai.api.business.demo.demo`（模块+业务双层镜像）：
+以业务 `Demo`、模块 `demo` 为例，包名 `com.xxl.ai.api.business.demo`（同名业务一级化）：
 
 | 文件 | 位置 | 说明 |
 |---|---|---|
-| `Demo.java` | `java/.../business/demo/demo/model/Demo.java` | 实体，字段驼峰 |
-| `DemoMapper.java` | `java/.../business/demo/demo/mapper/DemoMapper.java` | insert/delete/update/load/pageList/pageListCount |
-| `DemoMapper.xml` | `resources/mapper/demo/demo/DemoMapper.xml` | resultMap 显式映射；`add_time/update_time` 用 `NOW()` |
-| `DemoService.java` / `DemoServiceImpl.java` | `java/.../business/demo/demo/service/(impl/)` | 方法顺序 `pageList/load/insert/delete/update` |
-| `DemoController.java` | `java/.../business/demo/demo/controller/DemoController.java` | `@RestController @RequestMapping("/demo/demo")`，全 `@XxlSso` |
+| `Demo.java` | `java/.../business/demo/model/Demo.java` | 实体，字段驼峰 |
+| `DemoMapper.java` | `java/.../business/demo/mapper/DemoMapper.java` | insert/delete/update/load/pageList/pageListCount |
+| `DemoMapper.xml` | `resources/mapper/business/demo/DemoMapper.xml` | resultMap 显式映射；`add_time/update_time` 用 `NOW()` |
+| `DemoService.java` / `DemoServiceImpl.java` | `java/.../business/demo/service/(impl/)` | 方法顺序 `pageList/load/insert/delete/update` |
+| `DemoController.java` | `java/.../business/demo/controller/DemoController.java` | `@RestController @RequestMapping("/demo")`，全 `@XxlSso` |
 
 **直生入口**：按下方「后端落位清单」六文件骨架（controller/service/service_impl/mapper/mapper.xml/entity）直接产出准确等价代码与落位路径。
 
@@ -138,15 +138,15 @@ SQL 脚本：`{business}-table.sql`
 - Controller 分页方法签名：`int offset(默认0)`、`int pagesize(默认10)` + 查询参数，返回 `Response<PageModel<XxxDTO/Entity>>`。
 - 参数校验用 `StringTool/RegexTool/CollectionTool`，失败 `Response.ofFail("提示")`；唯一性校验库中查一遍再插。
 - DTO 时间展示转字符串（`DateTool.formatDateTime`），用 Adaptor 完成 entity→dto。
-- 接口路径**全小写**：`/{module}/{business}/pageList|load|insert|delete|update`；删除批量 `@RequestParam("ids[]") List<Integer>`。
+- 接口路径**全小写**：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`）；删除批量 `@RequestParam("ids[]") List<Integer>`。
 
 ## 前端落位清单（3 文件）
 
 | 文件 | 位置 | 说明 |
 |---|---|---|
-| types | `src/modules/business/{module}/{business}/types/index.ts` | `Xxx` 实体 + `XxxQuery`(pageNum/pageSize 表单形态) + `XxxListQuery = ListQuery<XxxQuery>` |
-| api | `src/modules/business/{module}/{business}/api/index.ts` | `request({url:'/{module}/{business}/pageList',params:...})` |
-| view | `src/modules/business/{module}/{business}/pages/index.vue` | 三段式列表页 |
+| types | `src/modules/business/{module}/types/index.ts` | `Xxx` 实体 + `XxxQuery`(pageNum/pageSize 表单形态) + `XxxListQuery = ListQuery<XxxQuery>` |
+| api | `src/modules/business/{module}/api/index.ts` | `request({url:'/{module}/pageList',params:...})` |
+| view | `src/modules/business/{module}/pages/index.vue` | 三段式列表页 |
 
 页面（含弹窗 XxxFormModal.vue）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/ListQuery…）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
 
@@ -223,7 +223,7 @@ ADMIN_RESOURCES.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:
 
 要点：资源 id 全局唯一、parentId 指向父目录/菜单；加入 `ADMIN_RESOURCES`/`USER_RESOURCES` 静态列表即对对应角色可见。页面由 `loadView` 按 `url` 自动映射，**无需改路由**。平台内置枚举/资源一律不动 `business` 包。
 
-页面文件 `src/modules/business/{module}/{business}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
+页面文件 `src/modules/business/{module}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
 
 ## 枚举下拉（可选）
 

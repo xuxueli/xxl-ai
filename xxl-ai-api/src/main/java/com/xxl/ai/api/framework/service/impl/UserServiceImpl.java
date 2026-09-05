@@ -8,6 +8,9 @@ import com.xxl.ai.api.framework.model.entity.User;
 import com.xxl.ai.api.framework.service.RoleService;
 import com.xxl.ai.api.framework.service.UserService;
 import com.xxl.ai.api.framework.util.I18nUtil;
+import com.xxl.ai.api.business.space.mapper.UserSpaceMapper;
+import com.xxl.ai.api.business.space.model.entity.Space;
+import com.xxl.ai.api.business.space.service.SpaceService;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.crypto.Sha256Tool;
@@ -32,6 +35,10 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
     @Resource
     private RoleService roleService;
+    @Resource
+    private SpaceService spaceService;
+    @Resource
+    private UserSpaceMapper userSpaceMapper;
 
     /**
      * 新增
@@ -80,6 +87,17 @@ public class UserServiceImpl implements UserService {
         // save user
         userMapper.insert(user);
 
+        // 保存用户的空间授权（未指定时自动授权默认空间）
+        List<Integer> spaceIds = xxlJobUser.getSpaceIds();
+        if (CollectionTool.isEmpty(spaceIds)) {
+            Space defaultSpace = spaceService.loadByCode("default");
+            if (defaultSpace != null) {
+                spaceIds = new ArrayList<>();
+                spaceIds.add((int) defaultSpace.getId());
+            }
+        }
+        spaceService.saveUserSpaces(user.getId(), spaceIds);
+
         return Response.ofSuccess();
     }
 
@@ -106,6 +124,13 @@ public class UserServiceImpl implements UserService {
         // avoid opt login seft
         if (userIds.contains(loginUserId)) {
             return Response.ofFail( I18nUtil.getString("user_update_loginuser_limit") );
+        }
+
+        // 清理各用户的"用户-空间"关联
+        for (Integer userId : userIds) {
+            if (userId != null && userId > 0) {
+                userSpaceMapper.deleteByUserId(userId);
+            }
         }
 
         int ret = userMapper.deleteByIds(userIds);
@@ -146,6 +171,11 @@ public class UserServiceImpl implements UserService {
 
         // update user
         int ret = userMapper.update(user);
+
+        // 保存用户的空间授权（updateSpaces=true 时全量覆盖，允许为空以清空授权；false 保持不变，避免重置密码/状态切换误清空）
+        if (xxlJobUser.isUpdateSpaces()) {
+            spaceService.saveUserSpaces(user.getId(), xxlJobUser.getSpaceIds());
+        }
 
         return ret>0? Response.ofSuccess() : Response.ofFail();
     }
@@ -265,6 +295,14 @@ public class UserServiceImpl implements UserService {
 
         int ret = userMapper.update(user);
         return ret>0 ? Response.ofSuccess() : Response.ofFail();
+    }
+
+    /**
+     * 加载用户被授权的空间ID集合（用户管理编辑回显）
+     */
+    @Override
+    public Response<List<Integer>> loadSpaceIdsByUserId(int userId) {
+        return spaceService.loadSpaceIdsByUserId(userId);
     }
 
 }

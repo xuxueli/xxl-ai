@@ -1,6 +1,7 @@
 package com.xxl.ai.api.framework.model.dto;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author xuxueli 2019-05-04 16:43:12
@@ -20,6 +21,8 @@ public class UserDTO {
 
 	// other
 	private String roleName;		// 角色名称（非DB字段，由枚举编码翻译）
+	private List<Integer> spaceIds;	// 授权空间ID集合（非DB字段，"业务空间-用户"关联）
+	private boolean updateSpaces;	// 是否同步空间授权（非DB字段；true=全量覆盖，false=保持不变）
 
 
 	public int getId() {
@@ -108,6 +111,22 @@ public class UserDTO {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public List<Integer> getSpaceIds() {
+		return spaceIds;
+	}
+
+	public void setSpaceIds(List<Integer> spaceIds) {
+		this.spaceIds = spaceIds;
+	}
+
+	public boolean isUpdateSpaces() {
+		return updateSpaces;
+	}
+
+	public void setUpdateSpaces(boolean updateSpaces) {
+		this.updateSpaces = updateSpaces;
 	}
 
 }

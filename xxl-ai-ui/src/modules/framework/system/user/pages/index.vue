@@ -140,6 +140,18 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="24">
+            <el-form-item :label="t('system.user.space')" prop="spaceIds">
+              <el-select v-model="formState.form.spaceIds" multiple :placeholder="t('common.selectPlaceholderText', [t('system.user.space')])" style="width: 100%">
+                <el-option
+                  v-for="item in spaceOptions"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id as number"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item :label="t('system.user.email')" prop="email">
               <el-input v-model="formState.form.email" :placeholder="t('common.inputPlaceholder', [t('system.user.email')])" maxlength="100" />
@@ -171,7 +183,9 @@
 defineOptions({ name: 'User' })
 import { t } from '@/i18n'
 import UserViewDrawer from './view.vue'
-import { listUser, addUser, updateUser, delUser, listRoleOptions } from '../api'
+import { listUser, addUser, updateUser, delUser, listRoleOptions, loadUserSpaceIds } from '../api'
+import { listSpaceByUser } from '@/modules/business/space/api'
+import type { Space } from '@/modules/business/space/types'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { useFormReset } from '@/composables/useFormReset'
 import { parseTime } from '@/utils/common'
@@ -189,6 +203,7 @@ const resetForm = useFormReset()
 interface UserFormData extends User {
   email?: string
   role?: string
+  spaceIds?: number[]
 }
 
 // --------------------------------- ref data ---------------------------------
@@ -202,6 +217,9 @@ const { UserStatuEnum: statusOptions } = useEnumOption('UserStatuEnum')
 
 // 角色选项（编辑表单角色单选，来源后端枚举 XxlRoleEnum）
 const roleOptions = ref<EnumOption[]>([])
+
+// 空间选项（授权空间多选，来源业务空间）
+const spaceOptions = ref<Space[]>([])
 
 // 搜索栏：查询参数
 const queryParams = ref<UserQuery>({
@@ -250,6 +268,13 @@ const passwordRules: FormItemRule[] = [
 function loadRoleOptions() {
   listRoleOptions().then((response) => {
     roleOptions.value = response.data
+  })
+}
+
+/** 加载空间选项（用于编辑表单授权空间多选） */
+function loadSpaceOptions() {
+  listSpaceByUser().then((response) => {
+    spaceOptions.value = response.data
   })
 }
 
@@ -304,7 +329,8 @@ function reset() {
     password: '123456',
     email: undefined,
     status: 0,
-    role: 'user'
+    role: 'user',
+    spaceIds: []
   }
   resetForm('formRef')
 }
@@ -313,6 +339,7 @@ function reset() {
 function handleAdd() {
   reset()
   loadRoleOptions()
+  loadSpaceOptions()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('common.noun.user')])
 }
@@ -321,6 +348,7 @@ function handleAdd() {
 function handleUpdate(row: any) {
   reset()
   loadRoleOptions()
+  loadSpaceOptions()
   // 顶部按钮点击传入的是事件对象而非行数据，此时取勾选 id
   const id = row?.id ?? table.value.ids[0]
   if (id == null) {
@@ -330,7 +358,11 @@ function handleUpdate(row: any) {
   if (!current) {
     return
   }
-  formState.value.form = { ...current }
+  formState.value.form = { ...current, spaceIds: [] }
+  // 回显用户被授权的空间
+  loadUserSpaceIds(id).then((response) => {
+    formState.value.form.spaceIds = response.data
+  })
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('common.noun.user')])
 }
@@ -344,6 +376,8 @@ function submitForm() {
       delete submitData.addTime
       delete submitData.updateTime
       delete submitData.roleName
+      // 显式声明同步空间授权（含清空授权场景）
+      submitData.updateSpaces = true
 
       // 已有 id 走更新，否则走新增
       if (formState.value.form.id !== undefined) {

@@ -48,6 +48,9 @@
         </el-tooltip>
       </template>
 
+      <!-- 业务空间切换 -->
+      <SpaceSelect class="right-menu-item hover-effect" />
+
       <!-- 用户头像与下拉菜单 -->
       <el-dropdown
         @command="handleCommand"
@@ -95,6 +98,7 @@ import Hamburger from './Hamburger.vue'
 import Screenfull from './Screenfull.vue'
 import SizeSelect from './SizeSelect.vue'
 import HeaderSearch from './HeaderSearch.vue'
+import SpaceSelect from './SpaceSelect.vue'
 import { useAppStore, useUserStore, useSettingsStore } from '@/store'
 import defaultSettings from '@/default-settings'
 import { nextTick } from 'vue'

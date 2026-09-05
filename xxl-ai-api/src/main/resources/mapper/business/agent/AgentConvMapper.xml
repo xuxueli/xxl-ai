@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.ai.api.business.agent.conv.mapper.AgentConvMapper">
+
+	<resultMap id="AgentConv" type="com.xxl.ai.api.business.agent.conv.model.entity.AgentConv" >
+		<result column="id" property="id" />
+		<result column="agent_uuid" property="agentUuid" />
+		<result column="visitor_id" property="visitorId" />
+		<result column="title" property="title" />
+		<result column="add_time" property="addTime" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.agent_uuid,
+		t.visitor_id,
+		t.title,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<insert id="insert" parameterType="com.xxl.ai.api.business.agent.conv.model.entity.AgentConv" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_agent_conv (
+			agent_uuid, visitor_id, title, add_time, update_time
+		) VALUES (
+			 #{agentUuid}, #{visitorId}, #{title}, NOW(), NOW()
+		 );
+	</insert>
+
+	<delete id="delete" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_agent_conv WHERE id = #{id}
+	</delete>
+
+	<delete id="deleteByAgentUuid" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_agent_conv WHERE agent_uuid = #{agentUuid}
+	</delete>
+
+	<select id="load" parameterType="java.util.HashMap" resultMap="AgentConv">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent_conv AS t
+		WHERE t.id = #{id}
+	</select>
+
+	<select id="listByVisitor" parameterType="java.util.HashMap" resultMap="AgentConv">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent_conv AS t
+		WHERE t.agent_uuid = #{agentUuid} AND t.visitor_id = #{visitorId}
+		ORDER BY t.id DESC
+	</select>
+
+</mapper>

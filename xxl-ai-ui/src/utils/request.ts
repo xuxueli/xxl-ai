@@ -16,7 +16,7 @@ import { getToken, getTokenKeyHeader } from '@/utils/auth'
 import { tansParams } from '@/utils/common'
 import cache from '@/utils/cache'
 import modal from '@/utils/modal'
-import { useUserStore } from '@/store'
+import { useUserStore, useSpaceStore } from '@/store'
 import defaultSettings from '@/default-settings'
 import { t } from '@/i18n'
 import type { Response } from '@/types'
@@ -97,7 +97,13 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     config.headers[getTokenKeyHeader()] = getToken()
   }
 
-  // 2. POST / PUT 防重复提交
+  // 2. 业务空间注入：登录态 + 已选当前空间时，为业务接口携带空间标识 header
+  const currentSpaceId = useSpaceStore().currentSpaceId
+  if (getToken() && currentSpaceId != null) {
+    config.headers['xxl-space-id'] = currentSpaceId
+  }
+
+  // POST / PUT 防重复提交
   if (!isRepeatSubmit && (config.method === 'post' || config.method === 'put')) {
     // FormData / Blob 无法序列化比对，跳过
     if (config.data instanceof FormData || config.data instanceof Blob) {

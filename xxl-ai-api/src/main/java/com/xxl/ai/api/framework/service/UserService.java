@@ -69,4 +69,9 @@ public interface UserService {
      */
     Response<String> updateProfile(String username, UserDTO userDTO);
 
+    /**
+     * 加载用户被授权的空间ID集合（用户管理编辑回显使用）
+     */
+    Response<List<Integer>> loadSpaceIdsByUserId(int userId);
+
 }

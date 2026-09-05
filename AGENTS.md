@@ -65,11 +65,12 @@ com/xxl/ai/api/framework
 ├── annotation · config · util               /* 注解、配置、工具 */
 ```
 
-**新增业务一律落 `business/{module}/{business}` 双层镜像包**（`framework` 仅属于平台内置能力，不要塞业务）：
+**新增业务一律落 `business/{module}` 模块包**（同名业务一级化，可聚合多个业务；`framework` 仅属于平台内置能力，不要塞业务）：
 
-- 前端 `src/modules/business/{module}/{business}/`（pages/api/types）与后端 `com.xxl.ai.api.business.{module}.{business}`（controller/service/mapper/model/enums 子包）**双层镜像**，业务后缀与接口路径 `/{module}/{business}` 一致；首个模块按对应 Skill 模板直生等价代码落位。
+- 后端 `com.xxl.ai.api.business.{module}`（controller/service/mapper/model/enums 子包），业务同名时直接一级目录（如 `business/skill`、接口 `/skill`），多业务模块按 `/{module}/{business}` 组织（如 `business/supplier` 聚合供应商+模型、`business/agent` + `business/agent/conv`）；`mapper/{module}/...` 遵循模块级约定。
+- 前端 `src/modules/business/{module}/`（pages/api/types 子目录聚合），与后端包名一致；接口路径 `/{module}`（同名）或 `/{module}/{business}`（多业务）。
 
-Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/{module}/{business}/`（业务，与前/后端目录镜像）。
+Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/business/{module}/`（业务 Mapper XML 按模块平铺于该目录，文件名标识业务，前缀 `business/` 与后端 `business` 根包一致）。
 
 ### 4.2 前端（xxl-ai-ui）
 
@@ -88,7 +89,7 @@ src
 ```
 
 - 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/system/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
-- 业务新增示例：`src/modules/business/{module}/{business}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}.{business}` 双层镜像。
+- 业务新增示例：`src/modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}` 对齐；多业务模块在模块内聚合（如 `supplier` 下 pages 分 index.vue 与 model.vue）。
 
 ### 4.3 菜单零路由改动约定
 
@@ -121,7 +122,7 @@ src
 
 - 分层职责清晰：Controller 参数接收与校验、Service 业务逻辑、Mapper 数据访问，不跨层越权。
 - 接口路径「模块前缀 + 动词式后缀」：`/system/log/pageList`、`/load`、`/insert`、`/delete`、`/update`。
-- 业务接口统一 `@RequestMapping("/{module}/{business}")` + `@XxlSso` 鉴权注解。
+- 业务接口统一 `@RequestMapping("/{module}")`（同名业务）/ `@RequestMapping("/{module}/{business}")`（多业务） + `@XxlSso` 鉴权注解。
 - Java set/get 方法不折叠，使用正常方法体。
 - mapper XML 中显式配置字段映射（resultMap），`add_time`/`update_time` 写入用 `NOW()`。
 - 参数校验使用工具类：`StringTool`、`RegexTool`、`CollectionTool` 等，返回 `Response.ofFail("提示")`。
@@ -151,10 +152,10 @@ src
 
 ### 6.6 权限、枚举与字典
 
-- 登录鉴权：后端 `@XxlSso`；按钮权限标识 `{module}:{business}:add / edit / remove`。
-- 前端权限：Vue `v-hasPermi="['{module}:{business}:add']"`（或 `v-hasRole="['admin']"`）。
+- 登录鉴权：后端 `@XxlSso`；按钮权限标识 `{module}:default`（多业务模块为 `{module}:{business}`）。
+- 前端权限：Vue `v-hasPermi="['{module}:default']"`（同名业务）或 `v-hasPermi="['{module}:{business}']"`（或 `v-hasRole="['admin']"`）。
 - 下拉选项来源：
-  - 业务枚举：在 `business/{module}/{business}/enums` 定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举放 `framework/constant/enums`）；前端 `useEnumOption('XxxEnum')` 经 `/system/dict/loadEnumItem` 拉取（后端动态扫描 `com.xxl.ai` 根包内实现 `IEnum` 的枚举所在包，按枚举名解析，一次扫描后缓存并复用）；
+  - 业务枚举：在 `business/{module}/enums`（多业务 `business/{module}/{business}/enums`）定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举放 `framework/constant/enums`）；前端 `useEnumOption('XxxEnum')` 经 `/system/dict/loadEnumItem` 拉取（后端动态扫描 `com.xxl.ai` 根包内实现 `IEnum` 的枚举所在包，按枚举名解析，一次扫描后缓存并复用）；
 - 菜单资源：平台菜单/按钮由 `XxlRoleEnum` 各角色 static 代码块定义（资源 `url` 充当路由 path 与组件定位 key；类型/状态/显隐沿用 `ResourceTypeEnum`/`ResourceStatuEnum`/`ResourceVisibleEnum`），登录按用户角色聚合下发。
 
 ### 6.7 国际化文案（i18n）
