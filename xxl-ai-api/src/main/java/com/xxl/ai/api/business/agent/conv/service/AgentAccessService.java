@@ -314,7 +314,7 @@ public class AgentAccessService {
                 prompt.append("\n### 可用的 MCP 能力：\n");
                 for (Mcp mcp : mcpList) {
                     prompt.append("- ").append(mcp.getName())
-                            .append(StringTool.isBlank(mcp.getDescription()) ? "" : "：" + mcp.getDescription()).append("\n");
+                            .append(StringTool.isBlank(mcp.getRemark()) ? "" : "：" + mcp.getRemark()).append("\n");
                 }
             }
         }

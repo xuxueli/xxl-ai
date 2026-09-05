@@ -17,8 +17,8 @@ export interface Mcp {
   headers?: string
   /** 完整MCP配置(JSON)：http/sse{transport,url,headers} / stdio{transport,command,args,env,cwd} */
   config?: string
-  /** 描述 */
-  description?: string
+  /** 备注 */
+  remark?: string
   /** 来源：local-本地、community-社区 */
   source?: string
   /** 社区来源链接 */

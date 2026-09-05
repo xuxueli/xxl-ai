@@ -16,7 +16,7 @@ public class Mcp {
     private String url;         /* 服务地址(HTTP/SSE必填, stdio可为空) */
     private String headers;     /* 请求头(JSON) */
     private String config;      /* 完整MCP配置(JSON)：http/sse{transport,url,headers} stdio{transport,command,args,env,cwd} */
-    private String description; /* 描述 */
+    private String remark; /* 备注 */
     private int status;         /* 状态：0-正常、1-停用 */
     private Date addTime;       /* 新增时间 */
     private Date updateTime;    /* 更新时间 */
@@ -77,12 +77,12 @@ public class Mcp {
         this.config = config;
     }
 
-    public String getDescription() {
-        return description;
+    public String getRemark() {
+        return remark;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setRemark(String remark) {
+        this.remark = remark;
     }
 
     public int getStatus() {

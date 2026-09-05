@@ -12,6 +12,10 @@ ALTER TABLE `xxl_ai_mcp`
     DROP COLUMN `source`,
     DROP COLUMN `source_url`;
 
+-- 字段更名：description -> remark（备注）
+ALTER TABLE `xxl_ai_mcp`
+    CHANGE COLUMN `description` `remark` VARCHAR(500) NULL DEFAULT NULL COMMENT '备注';
+
 ALTER TABLE `xxl_ai_mcp`
     MODIFY COLUMN `url` VARCHAR(200) NULL DEFAULT NULL COMMENT '服务地址(HTTP/SSE必填，stdio可为空)',
     MODIFY COLUMN `type` TINYINT NOT NULL DEFAULT 0 COMMENT '协议类型：0-Streamable HTTP、1-SSE、2-stdio';

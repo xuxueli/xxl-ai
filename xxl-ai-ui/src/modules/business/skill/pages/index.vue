@@ -58,10 +58,10 @@
         <el-table-column :label="t('business.skill.name')" align="center" prop="name" min-width="160" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.description')" align="center" prop="description" min-width="240" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.version')" align="center" prop="version" width="90" />
-        <el-table-column :label="t('business.mcp.source')" align="center" width="100">
+        <el-table-column :label="t('business.skill.source')" align="center" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.source === 'community' ? 'warning' : 'info'">
-              {{ scope.row.source === 'community' ? t('business.mcp.sourceCommunity') : t('business.mcp.sourceLocal') }}
+              {{ scope.row.source === 'community' ? t('business.skill.sourceCommunity') : t('business.skill.sourceLocal') }}
             </el-tag>
           </template>
         </el-table-column>

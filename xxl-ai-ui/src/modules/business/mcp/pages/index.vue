@@ -1,7 +1,6 @@
 <!--
   Mcp（MCP管理）
-  MCP 在线配置管理（完整 MCP 配置格式：远程 HTTP/SSE + 本地进程 stdio）
-  社区查询/安装/删除、连通性测试
+  MCP 在线配置管理（完整 MCP 配置格式：远程 HTTP/SSE + 本地进程 stdio）、连通性测试
 -->
 <template>
   <div class="app-container">
@@ -45,41 +44,29 @@
             {{ t('common.delete') }}
           </el-button>
         </el-col>
-        <el-col :span="1.5">
-          <el-button type="warning" plain icon="Search" @click="openCommunity" v-hasPermi="['mcp:default']">
-            {{ t('business.mcp.community') }}
-          </el-button>
-        </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
       <!-- MCP 列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.mcp.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.mcp.type')" align="center" width="130">
+        <el-table-column :label="t('business.mcp.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.mcp.type')" align="center" min-width="150">
           <template #default="scope">
             <el-tag>{{ mcpTypeTitle(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('business.mcp.url')" align="center" min-width="220" :show-overflow-tooltip="true">
+        <el-table-column :label="t('business.mcp.url')" align="center" min-width="170" :show-overflow-tooltip="true">
           <template #default="scope">{{ displayUrl(scope.row) || '-' }}</template>
         </el-table-column>
-        <el-table-column :label="t('business.mcp.source')" align="center" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.source === 'community' ? 'warning' : 'info'">
-              {{ scope.row.source === 'community' ? t('business.mcp.sourceCommunity') : t('business.mcp.sourceLocal') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('common.status')" align="center" width="90">
+        <el-table-column :label="t('common.status')" align="center" width="110">
           <template #default="scope">
             <el-tag :type="scope.row.status === 0 ? 'success' : 'danger'">
               {{ scope.row.status === 0 ? t('common.normal') : t('common.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="200" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="240" min-width="240" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="Connection" @click="handleTest(scope.row)" v-hasPermi="['mcp:default']">{{
               t('business.mcp.test')
@@ -146,14 +133,23 @@
           </el-form-item>
         </template>
 
-        <el-form-item :label="t('business.mcp.description')">
-          <el-input v-model="formState.form.description" :placeholder="t('common.inputPlaceholder', [t('business.mcp.description')])" maxlength="500" />
-        </el-form-item>
         <el-form-item :label="t('common.status')">
           <el-radio-group v-model="formState.form.status">
             <el-radio :value="0">{{ t('common.normal') }}</el-radio>
             <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item :label="t('business.mcp.remark')">
+          <el-input
+            v-model="formState.form.remark"
+            :placeholder="t('common.inputPlaceholder', [t('business.mcp.remark')])"
+            type="textarea"
+            :rows="2"
+            maxlength="500"
+          />
+        </el-form-item>
+        <el-form-item :label="t('business.mcp.mcpConfig')">
+          <el-input v-model="previewConfig" type="textarea" :rows="6" readonly :placeholder="t('business.mcp.configPlaceholder')" />
         </el-form-item>
         <el-form-item v-if="formState.form.id != null">
           <el-button type="primary" plain icon="Connection" :loading="testing" @click="handleTestForm">
@@ -168,60 +164,22 @@
         </div>
       </template>
     </el-dialog>
-
-    <!-- 社区查询对话框 -->
-    <el-dialog :title="t('business.mcp.communitySearch')" v-model="community.visible" width="860px" append-to-body>
-      <el-form :inline="true">
-        <el-form-item :label="t('business.mcp.communityKeyword')">
-          <el-input
-            v-model="community.keyword"
-            :placeholder="t('common.inputPlaceholder', [t('business.mcp.communityKeyword')])"
-            clearable
-            style="width: 220px"
-            @keyup.enter="handleCommunitySearch"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" :loading="community.loading" @click="handleCommunitySearch">{{
-            t('common.search')
-          }}</el-button>
-        </el-form-item>
-        <el-form-item>
-          <el-tag type="info">{{ t('business.mcp.communityTip') }}</el-tag>
-        </el-form-item>
-      </el-form>
-      <el-table v-loading="community.loading" :data="community.list" max-height="420">
-        <el-table-column :label="t('business.mcp.communityName')" align="center" min-width="160" :show-overflow-tooltip="true">
-          <template #default="scope">{{ itemName(scope.row) }}</template>
-        </el-table-column>
-        <el-table-column :label="t('business.mcp.communityDesc')" align="center" min-width="260" :show-overflow-tooltip="true">
-          <template #default="scope">{{ itemDesc(scope.row) }}</template>
-        </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="120" class-name="small-padding fixed-width">
-          <template #default="scope">
-            <el-button link type="primary" @click="handleInstall(scope.row)" v-hasPermi="['mcp:default']">{{
-              t('business.mcp.install')
-            }}</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Mcp' })
 import { t } from '@/i18n'
-import { listMcp, addMcp, updateMcp, delMcp, mcpTest, mcpCommunitySearch, mcpInstallFromCommunity } from '../api'
+import { listMcp, addMcp, updateMcp, delMcp, mcpTest } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
-import type { Mcp, McpQuery, CommunityItem } from '../types'
+import type { Mcp, McpQuery } from '../types'
 import type { FormInstance } from 'element-plus'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const resetForm = useFormReset()
 
@@ -258,14 +216,6 @@ const formState = ref<FormState<McpForm>>({
   }
 })
 
-// 社区查询弹窗状态
-const community = ref({
-  visible: false,
-  keyword: '',
-  list: [] as CommunityItem[],
-  loading: false
-})
-
 // --------------------------------- fun ---------------------------------
 /** 协议类型文案（按枚举选项解析，未命中回退原始值） */
 function mcpTypeTitle(type: number) {
@@ -288,7 +238,7 @@ function resetConfigForm() {
 }
 
 function reset() {
-  formState.value.form = { id: undefined, name: undefined, type: 0, description: undefined, source: 'local', status: 0 }
+  formState.value.form = { id: undefined, name: undefined, type: 0, remark: undefined, status: 0 }
   resetConfigForm()
   resetForm('formRef')
 }
@@ -332,6 +282,41 @@ function parseJsonObject(text: string, errMsg: string): Record<string, any> | fa
     return false
   }
 }
+
+/** 文本 → JSON 对象（静默解析，非法返回 undefined） */
+function tryParseJsonObject(text: string): Record<string, any> | undefined {
+  if (!text.trim()) return undefined
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+    return undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** 生成的 MCP 配置（实时预览，只读）：随上方字段联动组装 */
+const previewConfig = computed(() => {
+  const form = formState.value.form
+  const cfg: Record<string, any> = {}
+  if (form.type === 2) {
+    if (!configForm.value.command.trim()) return ''
+    cfg.transport = 'stdio'
+    cfg.command = configForm.value.command.trim()
+    const args = configForm.value.argsText.split('\n').map((s) => s.trim()).filter((s) => s.length)
+    if (args.length) cfg.args = args
+    if (configForm.value.cwd.trim()) cfg.cwd = configForm.value.cwd.trim()
+    const env = tryParseJsonObject(configForm.value.env)
+    if (env && Object.keys(env).length) cfg.env = env
+  } else {
+    if (!configForm.value.url?.trim()) return ''
+    cfg.transport = form.type === 1 ? 'sse' : 'http'
+    cfg.url = configForm.value.url.trim()
+    const headers = tryParseJsonObject(configForm.value.headers)
+    if (headers && Object.keys(headers).length) cfg.headers = headers
+  }
+  return JSON.stringify(cfg, null, 2)
+})
 
 /** 校验并按协议类型组装 config JSON，回填 form.config / form.url */
 function buildConfigPayload(): boolean {
@@ -478,70 +463,6 @@ function displayUrl(row: Mcp) {
     }
   }
   return ''
-}
-
-// --------------------------------- 社区查询 ---------------------------------
-function openCommunity() {
-  community.value.visible = true
-  community.value.list = []
-}
-function handleCommunitySearch() {
-  if (!community.value.keyword) {
-    modal.msgWarning(t('business.mcp.communityKeywordRequired'))
-    return
-  }
-  community.value.loading = true
-  mcpCommunitySearch(community.value.keyword)
-    .then((response) => {
-      community.value.list = response.data
-      community.value.loading = false
-    })
-    .catch(() => {
-      community.value.loading = false
-    })
-}
-/** 社区项名称（兼容多种字段形态） */
-function itemName(item: CommunityItem) {
-  return String(item.name ?? item.title ?? item.serverName ?? item.id ?? '-')
-}
-/** 社区项描述 */
-function itemDesc(item: CommunityItem) {
-  return String(item.description ?? item.summary ?? item.intro ?? '-')
-}
-/** 社区项地址 */
-function itemUrl(item: CommunityItem) {
-  return String(item.url ?? item.baseUrl ?? item.endpoint ?? item.serverUrl ?? '')
-}
-/** 从社区安装：stdio 项携带完整 config 落库，远程项按 http 组装 */
-function handleInstall(item: CommunityItem) {
-  const name = itemName(item)
-  const description = itemDesc(item)
-  let data: Mcp
-  if (item.command) {
-    const cfg: Record<string, any> = {
-      transport: 'stdio',
-      command: String(item.command),
-      args: Array.isArray(item.args) ? item.args : []
-    }
-    if (item.env && typeof item.env === 'object' && !Array.isArray(item.env)) cfg.env = item.env
-    data = { name, type: 2, config: JSON.stringify(cfg), description, source: 'community', status: 0 }
-  } else {
-    const url = itemUrl(item)
-    if (!url) {
-      modal.msgError(t('business.mcp.communityNoUrl'))
-      return
-    }
-    const cfg: Record<string, any> = { transport: 'http', url, headers: {} }
-    if (item.headers && typeof item.headers === 'object' && !Array.isArray(item.headers)) cfg.headers = item.headers
-    data = { name, type: 0, url, config: JSON.stringify(cfg), description, source: 'community', status: 0 }
-  }
-  if (item.url) data.sourceUrl = String(item.url)
-  else if (item.homepage) data.sourceUrl = String(item.homepage)
-  mcpInstallFromCommunity(data).then(() => {
-    modal.msgSuccess(t('business.mcp.installSuccess'))
-    community.value.visible = false
-    getList()
-  })
 }
 
 // --------------------------------- page init ---------------------------------

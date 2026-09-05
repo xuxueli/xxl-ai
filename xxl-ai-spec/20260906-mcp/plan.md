@@ -10,7 +10,7 @@
 | 核心字段与业务规则 | 配置完整兼容 MCP 官方格式：http(url+headers) / sse(url+headers) / stdio(command+args+env+cwd)；配置落 `config` JSON，平铺列(名称/类型/地址)保持列表与兼容 |
 | 状态/枚举下拉 | `McpTypeEnum` 扩容 `0=Streamable HTTP / 1=SSE / 2=stdio` |
 | 特殊组件 | MCP 表单分「远程/本地进程」双形态编辑；连通性测试 |
-| 页面形态 | 标准 CRUD 列表页 + 社区查询弹窗（沿用） |
+| 页面形态 | 标准 CRUD 列表页（备注多行；社区查询/安装已下线） |
 | 出码方式 | AI 按模板直生等价代码 |
 | 关键决策 | 官方 MCP Java SDK（io.modelcontextprotocol.sdk:mcp:2.0.1，内含 JDK HttpClient 版 http/sse/stdio transport）；Agent 绑定沿用 `mcp_ids` CSV；运行时真实工具调用（tools/list → 合并 OpenAI tools → llm tool_calls 循环 → tools/call） |
 | 验证范围 | 编译 + 联调（stdio/http 配置、test 连通、Agent 工具调用） |
@@ -44,7 +44,7 @@
 | `AgentAccessService` | business/agent/conv/service/ | 绑定 mcp_ids → `listTools` 合并 OpenAI tools（名字加 mcp 前缀防冲突）→ 工具循环（≤8 轮）：chat → tool_calls → callTool → 回填 tool 消息 → 最终答案 SSE 流出；异常降级为提示 |
 | `McpController` | business/mcp/controller/ | 增 `/mcp/test`（perm `mcp:default`） |
 
-接口：`/mcp/pageList|insert|delete|update`、`/mcp/test`、`/mcp/communitySearch|installFromCommunity|listBySpace`
+接口：`/mcp/pageList|insert|delete|update`、`/mcp/test`、`/mcp/listBySpace`
 
 ## 五、前端改造
 | 文件 | 位置 | 要点 |

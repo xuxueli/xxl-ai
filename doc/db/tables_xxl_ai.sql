@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_mcp` (
     `url` VARCHAR(200) NULL DEFAULT NULL COMMENT '服务地址(HTTP/SSE必填，stdio可为空)',
     `headers` VARCHAR(500) NULL DEFAULT NULL COMMENT '请求头(JSON)',
     `config` TEXT NULL COMMENT '完整MCP配置(JSON)：http/sse{transport,url,headers} stdio{transport,command,args,env,cwd}',
-    `description` VARCHAR(500) NULL DEFAULT NULL COMMENT '描述',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-正常、1-停用',
+    `remark` VARCHAR(500) NULL DEFAULT NULL COMMENT '备注',
     `add_time` DATETIME NOT NULL COMMENT '新增时间',
     `update_time` DATETIME NOT NULL COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -273,22 +273,22 @@ VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区�
 
 -- 7、预设 MCP 服务（覆盖 Streamable HTTP 与 stdio 本地进程两类，stdio 需宿主已安装 Node/npx 环境）
 --    注意：stdio 类以宿主进程方式运行，命令涉及本机执行请确认信任后再启用
-INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `description`, `status`, `add_time`, `update_time`)
+INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
     (1, 'Fetch 网页抓取', 0, 'https://mcp.genez.io/fetch', NULL,
      '{"transport":"http","url":"https://mcp.genez.io/fetch","headers":{}}',
-     '网页抓取与内容提取（公共托管，无需鉴权）', 0, NOW(), NOW()),
+     0, '网页抓取与内容提取（公共托管，无需鉴权）',  NOW(), NOW()),
     (1, 'GitHub 代码与仓库', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}',
-     'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', 0, NOW(), NOW()),
+     0, 'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', NOW(), NOW()),
     (1, 'Filesystem 文件系统', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}',
-     '本地文件系统读写（请按需调整授权目录参数）', 0, NOW(), NOW()),
+     0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW()),
     (1, 'Memory 知识图谱记忆', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}',
-     '跨会话知识图谱记忆', 0, NOW(), NOW()),
+     0, '跨会话知识图谱记忆', NOW(), NOW()),
     (1, 'Everything 全工具集', 2, NULL, NULL,
      '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}',
-     'MCP 全工具集（演示/联调用）', 0, NOW(), NOW());
+     0, 'MCP 全工具集（演示/联调用）', NOW(), NOW());
 
 COMMIT;
