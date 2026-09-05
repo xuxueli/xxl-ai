@@ -103,6 +103,12 @@
 		WHERE t.space_id = #{spaceId}
 	</select>
 
+	<select id="countByModelId" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_agent AS t
+		WHERE t.model_id = #{modelId}
+	</select>
+
 	<select id="pageList" parameterType="java.util.HashMap" resultMap="Agent">
 		SELECT <include refid="Base_Column_List" />
 		FROM xxl_ai_agent AS t

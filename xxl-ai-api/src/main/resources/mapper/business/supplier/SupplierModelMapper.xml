@@ -45,10 +45,6 @@
 		</foreach>
 	</delete>
 
-	<delete id="deleteBySupplierId" parameterType="java.util.HashMap">
-		DELETE FROM xxl_ai_supplier_model WHERE supplier_id = #{supplierId}
-	</delete>
-
 	<update id="update" parameterType="com.xxl.ai.api.business.supplier.model.entity.SupplierModel" >
 		UPDATE xxl_ai_supplier_model
 		SET name = #{name},

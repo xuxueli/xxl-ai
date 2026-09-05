@@ -31,6 +31,9 @@ public interface AgentMapper {
     /** 统计空间下数据量（删除空间前置校验） */
     int countBySpaceId(@Param("spaceId") long spaceId);
 
+    /** 统计引用该模型的 Agent 数量（删除模型前置校验） */
+    int countByModelId(@Param("modelId") long modelId);
+
     List<Agent> pageList(@Param("spaceId") long spaceId,
                          @Param("offset") int offset,
                          @Param("pagesize") int pagesize,

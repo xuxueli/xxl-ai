@@ -359,7 +359,7 @@
       "name": "Supplier Name",
       "id": "ID",
       "baseUrl": "Base URL",
-      "baseUrlPlaceholder": "e.g. https://api.deepseek.com",
+      "baseUrlPlaceholder": "Supports OpenAI-compatible API",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "Used for model call auth (not echoed fully)",
       "supplier": "Supplier",

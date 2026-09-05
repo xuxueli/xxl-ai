@@ -85,16 +85,17 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     /**
-     * 批量删除供应商（同时清理其模型）
+     * 批量删除供应商（其下存在模型时禁止删除）
      */
     @Override
     public Response<String> deleteByIds(List<Long> ids) {
         if (CollectionTool.isEmpty(ids)) {
             return Response.ofFail("请选择要删除的供应商");
         }
+        // 供应商下存在模型时禁止删除
         for (Long id : ids) {
-            if (id != null && id > 0) {
-                supplierModelMapper.deleteBySupplierId(id);
+            if (id != null && id > 0 && CollectionTool.isNotEmpty(supplierModelMapper.listBySupplier(id))) {
+                return Response.ofFail("供应商下存在模型，禁止删除");
             }
         }
         int ret = supplierMapper.deleteByIds(ids);

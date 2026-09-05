@@ -359,7 +359,7 @@
       "name": "供应商名称",
       "id": "序号",
       "baseUrl": "接口地址",
-      "baseUrlPlaceholder": "如 https://api.deepseek.com",
+      "baseUrlPlaceholder": "支持 OpenAI 格式的API接口",
       "apiKey": "API密钥",
       "apiKeyPlaceholder": "填写后用于模型调用鉴权（不回显完整值）",
       "supplier": "供应商",

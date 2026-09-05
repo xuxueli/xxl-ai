@@ -20,8 +20,6 @@ public interface SupplierModelMapper {
 
     int deleteByIds(@Param("ids") List<Long> ids);
 
-    int deleteBySupplierId(@Param("supplierId") long supplierId);
-
     int update(SupplierModel supplierModel);
 
     SupplierModel load(@Param("id") long id);

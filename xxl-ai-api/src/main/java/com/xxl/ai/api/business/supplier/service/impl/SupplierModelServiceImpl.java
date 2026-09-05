@@ -1,5 +1,6 @@
 package com.xxl.ai.api.business.supplier.service.impl;
 
+import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.supplier.mapper.SupplierModelMapper;
 import com.xxl.ai.api.business.supplier.model.adaptor.SupplierModelAdaptor;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierModelDTO;
@@ -24,6 +25,8 @@ public class SupplierModelServiceImpl implements SupplierModelService {
 
     @Resource
     private SupplierModelMapper supplierModelMapper;
+    @Resource
+    private AgentMapper agentMapper;
 
     /**
      * 分页查询模型列表
@@ -71,12 +74,18 @@ public class SupplierModelServiceImpl implements SupplierModelService {
     }
 
     /**
-     * 批量删除模型
+     * 批量删除模型（被 Agent 使用时禁止删除）
      */
     @Override
     public Response<String> deleteByIds(List<Long> ids) {
         if (CollectionTool.isEmpty(ids)) {
             return Response.ofFail("请选择要删除的模型");
+        }
+        // 模型被 Agent 引用时禁止删除
+        for (Long id : ids) {
+            if (id != null && id > 0 && agentMapper.countByModelId(id) > 0) {
+                return Response.ofFail("模型已被Agent使用，禁止删除");
+            }
         }
         int ret = supplierModelMapper.deleteByIds(ids);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
