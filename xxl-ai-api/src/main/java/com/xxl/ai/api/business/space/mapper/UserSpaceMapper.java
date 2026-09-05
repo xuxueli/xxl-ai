@@ -27,4 +27,7 @@ public interface UserSpaceMapper {
     /* 校验用户是否已授权该空间 */
     int countByUserAndSpace(@Param("userId") int userId, @Param("spaceId") long spaceId);
 
+    /* 查询某空间被授权的用户数（删除空间前置校验） */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
 }

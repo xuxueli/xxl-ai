@@ -28,6 +28,9 @@ public interface AgentMapper {
 
     List<Agent> listBySpace(@Param("spaceId") long spaceId);
 
+    /** 统计空间下数据量（删除空间前置校验） */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
     List<Agent> pageList(@Param("spaceId") long spaceId,
                          @Param("offset") int offset,
                          @Param("pagesize") int pagesize,

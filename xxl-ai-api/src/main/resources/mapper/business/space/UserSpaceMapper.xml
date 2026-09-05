@@ -55,4 +55,10 @@
 		WHERE t.user_id = #{userId} AND t.space_id = #{spaceId}
 	</select>
 
+	<select id="countBySpaceId" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_user_space AS t
+		WHERE t.space_id = #{spaceId}
+	</select>
+
 </mapper>

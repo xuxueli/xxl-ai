@@ -1,5 +1,9 @@
 package com.xxl.ai.api.business.space.service.impl;
 
+import com.xxl.ai.api.business.agent.mapper.AgentMapper;
+import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
+import com.xxl.ai.api.business.mcp.mapper.McpMapper;
+import com.xxl.ai.api.business.skill.mapper.SkillMapper;
 import com.xxl.ai.api.business.space.mapper.SpaceMapper;
 import com.xxl.ai.api.business.space.mapper.UserSpaceMapper;
 import com.xxl.ai.api.business.space.model.SpaceContext;
@@ -8,6 +12,7 @@ import com.xxl.ai.api.business.space.model.dto.SpaceDTO;
 import com.xxl.ai.api.business.space.model.entity.Space;
 import com.xxl.ai.api.business.space.model.entity.UserSpace;
 import com.xxl.ai.api.business.space.service.SpaceService;
+import com.xxl.ai.api.business.supplier.mapper.SupplierMapper;
 import com.xxl.sso.core.helper.XxlSsoHelper;
 import com.xxl.sso.core.model.LoginInfo;
 import com.xxl.tool.core.CollectionTool;
@@ -34,6 +39,16 @@ public class SpaceServiceImpl implements SpaceService {
     private SpaceMapper spaceMapper;
     @Resource
     private UserSpaceMapper userSpaceMapper;
+    @Resource
+    private SupplierMapper supplierMapper;
+    @Resource
+    private McpMapper mcpMapper;
+    @Resource
+    private SkillMapper skillMapper;
+    @Resource
+    private KnowledgeBaseMapper knowledgeBaseMapper;
+    @Resource
+    private AgentMapper agentMapper;
 
     /**
      * 按ID查询单条空间
@@ -114,18 +129,35 @@ public class SpaceServiceImpl implements SpaceService {
     }
 
     /**
-     * 批量删除空间（同时清理用户-空间关联）
+     * 批量删除空间（限制：至少保留一个空间；已授权给用户或存在业务资产的空间禁止删除）
      */
     @Override
     public Response<String> deleteByIds(List<Long> ids) {
         if (CollectionTool.isEmpty(ids)) {
             return Response.ofFail("请选择要删除的空间");
         }
-        for (Long id : ids) {
-            if (id == null || id <= 0) {
-                continue;
+        List<Space> existList = spaceMapper.listByIds(ids);
+        if (CollectionTool.isEmpty(existList)) {
+            return Response.ofFail("请选择要删除的空间");
+        }
+        // 限制1：至少保留一个业务空间（禁止删除最后一个/全部空间）
+        if (spaceMapper.countAll() <= existList.size()) {
+            return Response.ofFail("至少需保留一个业务空间，禁止删除");
+        }
+        for (Space space : existList) {
+            long id = space.getId();
+            // 限制2：已被授权给用户的空间禁止删除
+            if (userSpaceMapper.countBySpaceId(id) > 0) {
+                return Response.ofFail("空间[" + space.getName() + "]已授权给用户，禁止删除");
             }
-            userSpaceMapper.deleteBySpaceId(id);
+            // 限制3：空间下存在业务资产（供应商/MCP/Skill/知识库/Agent）禁止删除
+            if (supplierMapper.countBySpaceId(id) > 0
+                    || mcpMapper.countBySpaceId(id) > 0
+                    || skillMapper.countBySpaceId(id) > 0
+                    || knowledgeBaseMapper.countBySpaceId(id) > 0
+                    || agentMapper.countBySpaceId(id) > 0) {
+                return Response.ofFail("空间[" + space.getName() + "]下存在业务资产，禁止删除");
+            }
         }
         int ret = spaceMapper.deleteByIds(ids);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();

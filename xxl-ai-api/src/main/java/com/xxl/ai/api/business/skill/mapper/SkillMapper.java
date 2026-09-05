@@ -26,6 +26,9 @@ public interface SkillMapper {
 
     List<Skill> listBySpace(@Param("spaceId") long spaceId);
 
+    /** 统计空间下数据量（删除空间前置校验） */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
     List<Skill> listByIds(@Param("ids") List<Long> ids);
 
     List<Skill> pageList(@Param("spaceId") long spaceId,

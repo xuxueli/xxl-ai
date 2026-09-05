@@ -29,6 +29,9 @@ public interface SpaceMapper {
     /** 全量空间列表 */
     List<Space> listAll();
 
+    /** 全量空间数量 */
+    int countAll();
+
     /** 按ID集合查询空间列表 */
     List<Space> listByIds(@Param("ids") List<Long> ids);
 

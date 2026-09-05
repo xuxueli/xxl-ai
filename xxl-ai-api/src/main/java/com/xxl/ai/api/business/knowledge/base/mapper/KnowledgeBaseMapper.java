@@ -26,6 +26,9 @@ public interface KnowledgeBaseMapper {
 
     List<KnowledgeBase> listBySpace(@Param("spaceId") long spaceId);
 
+    /** 统计空间下数据量（删除空间前置校验） */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
     List<KnowledgeBase> listByIds(@Param("ids") List<Long> ids);
 
     List<KnowledgeBase> pageList(@Param("spaceId") long spaceId,

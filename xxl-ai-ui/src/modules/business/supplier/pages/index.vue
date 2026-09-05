@@ -49,8 +49,8 @@
 
       <!-- 供应商列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
-        <el-table-column type="index" label="#" width="55" align="center" />
         <el-table-column type="selection" width="45" align="center" />
+        <el-table-column :label="t('business.supplier.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.supplier.name')" align="center" prop="name" min-width="120" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.baseUrl')" align="center" prop="baseUrl" min-width="180" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.apiKey')" align="center" width="180">
@@ -158,7 +158,9 @@ const formState = ref<FormState<SupplierForm>>({
   title: '',
   form: {},
   rules: {
-    name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }]
+    name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }],
+    baseUrl: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.baseUrl')]), trigger: 'blur' }],
+    apiKey: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.apiKey')]), trigger: 'blur' }]
   }
 })
 

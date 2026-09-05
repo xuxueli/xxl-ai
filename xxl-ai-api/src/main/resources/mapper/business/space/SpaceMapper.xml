@@ -71,6 +71,11 @@
 		ORDER BY t.id ASC
 	</select>
 
+	<select id="countAll" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_space AS t
+	</select>
+
 	<select id="listByIds" parameterType="java.util.HashMap" resultMap="Space">
 		SELECT <include refid="Base_Column_List" />
 		FROM xxl_ai_space AS t

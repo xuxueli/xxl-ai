@@ -71,6 +71,12 @@
 		ORDER BY t.id ASC
 	</select>
 
+	<select id="countBySpaceId" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_supplier AS t
+		WHERE t.space_id = #{spaceId}
+	</select>
+
 	<select id="pageList" parameterType="java.util.HashMap" resultMap="Supplier">
 		SELECT <include refid="Base_Column_List" />
 		FROM xxl_ai_supplier AS t

@@ -26,6 +26,9 @@ public interface SupplierMapper {
 
     List<Supplier> listBySpace(@Param("spaceId") long spaceId);
 
+    /** 统计空间下数据量（删除空间前置校验） */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
     List<Supplier> pageList(@Param("spaceId") long spaceId,
                             @Param("offset") int offset,
                             @Param("pagesize") int pagesize,
