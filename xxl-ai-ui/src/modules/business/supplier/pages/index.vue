@@ -113,7 +113,13 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('common.remark')" prop="remark">
-          <el-input v-model="formState.form.remark" :placeholder="t('common.inputPlaceholder', [t('common.remark')])" maxlength="255" />
+          <el-input
+            v-model="formState.form.remark"
+            type="textarea"
+            :rows="2"
+            :placeholder="t('common.inputPlaceholder', [t('common.remark')])"
+            maxlength="255"
+          />
         </el-form-item>
       </el-form>
       <template #footer>

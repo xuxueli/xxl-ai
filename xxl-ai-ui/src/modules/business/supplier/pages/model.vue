@@ -50,21 +50,21 @@
       <!-- 模型列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.supplier.modelName')" align="center" prop="name" min-width="140" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.supplier.modelCode')" align="center" prop="model" min-width="160" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.supplier.modelType')" align="center" width="110">
+        <el-table-column :label="t('business.supplier.modelName')" align="center" prop="name" min-width="110" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.supplier.modelCode')" align="center" prop="model" min-width="120" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.supplier.modelType')" align="center" width="130">
           <template #default="scope">
             <el-tag>{{ scope.row.type === 0 ? t('business.supplier.modelChat') : t('business.supplier.modelEmbedding') }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.status')" align="center" width="90">
+        <el-table-column :label="t('common.status')" align="center" width="110">
           <template #default="scope">
             <el-tag :type="scope.row.status === 0 ? 'success' : 'danger'">
               {{ scope.row.status === 0 ? t('common.normal') : t('common.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="130" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['supplier:default']">{{
               t('common.modify')
@@ -89,34 +89,24 @@
     <!-- 添加或修改模型对话框 -->
     <el-dialog :title="formState.title" v-model="formState.visible" width="560px" append-to-body>
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
-        <el-row>
-          <el-col :span="12">
-            <el-form-item :label="t('business.supplier.modelName')" prop="name">
-              <el-input v-model="formState.form.name" maxlength="50" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('business.supplier.modelCode')" prop="model">
-              <el-input v-model="formState.form.model" maxlength="100" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('business.supplier.modelType')" prop="type">
-              <el-select v-model="formState.form.type" style="width: 100%">
-                <el-option :label="t('business.supplier.modelChat')" :value="0" />
-                <el-option :label="t('business.supplier.modelEmbedding')" :value="1" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('common.status')">
-              <el-radio-group v-model="formState.form.status">
-                <el-radio :value="0">{{ t('common.normal') }}</el-radio>
-                <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item :label="t('business.supplier.modelName')" prop="name">
+          <el-input v-model="formState.form.name" maxlength="50" />
+        </el-form-item>
+        <el-form-item :label="t('business.supplier.modelCode')" prop="model">
+          <el-input v-model="formState.form.model" maxlength="100" />
+        </el-form-item>
+        <el-form-item :label="t('business.supplier.modelType')" prop="type">
+          <el-select v-model="formState.form.type" style="width: 100%">
+            <el-option :label="t('business.supplier.modelChat')" :value="0" />
+            <el-option :label="t('business.supplier.modelEmbedding')" :value="1" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('common.status')">
+          <el-radio-group v-model="formState.form.status">
+            <el-radio :value="0">{{ t('common.normal') }}</el-radio>
+            <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
