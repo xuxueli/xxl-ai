@@ -106,7 +106,7 @@
           <el-form-item :label="t('business.mcp.url')" prop="url">
             <el-input v-model="configForm.url" :placeholder="t('business.mcp.urlPlaceholder')" maxlength="200" />
           </el-form-item>
-          <el-form-item :label="t('business.mcp.headers')">
+          <el-form-item :label="t('business.mcp.headers')" :error="headersError">
             <el-input
               v-model="configForm.headers"
               :placeholder="t('business.mcp.headersPlaceholder')"
@@ -125,7 +125,7 @@
           <el-form-item :label="t('business.mcp.args')">
             <el-input v-model="configForm.argsText" type="textarea" :rows="3" :placeholder="t('business.mcp.argsTip')" />
           </el-form-item>
-          <el-form-item :label="t('business.mcp.env')">
+          <el-form-item :label="t('business.mcp.env')" :error="envError">
             <el-input v-model="configForm.env" type="textarea" :rows="3" :placeholder="t('business.mcp.envPlaceholder')" maxlength="500" />
           </el-form-item>
           <el-form-item :label="t('business.mcp.cwd')">
@@ -341,6 +341,18 @@ function tryParseJsonObject(text: string): Record<string, any> | undefined {
     return undefined
   }
 }
+
+/** 请求头非法 JSON 校验提示（非空且非合法 JSON 对象时提示） */
+const headersError = computed(() => {
+  const text = configForm.value.headers
+  return text.trim() && !tryParseJsonObject(text) ? t('business.mcp.headersInvalid') : ''
+})
+
+/** 环境变量非法 JSON 校验提示 */
+const envError = computed(() => {
+  const text = configForm.value.env
+  return text.trim() && !tryParseJsonObject(text) ? t('business.mcp.envInvalid') : ''
+})
 
 /** 生成的 MCP 配置（实时预览，只读）：随上方字段联动组装 */
 const previewConfig = computed(() => {
