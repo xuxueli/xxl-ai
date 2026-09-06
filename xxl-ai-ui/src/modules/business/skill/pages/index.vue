@@ -92,7 +92,7 @@
           <el-input v-model="formState.form.name" :placeholder="t('business.skill.namePlaceholder')" maxlength="100" />
         </el-form-item>
         <el-form-item :label="t('business.skill.description')" prop="description">
-          <el-input v-model="formState.form.description" :placeholder="t('common.inputPlaceholder', [t('business.skill.description')])" maxlength="500" />
+          <el-input v-model="formState.form.description" type="textarea" :rows="2" :placeholder="t('common.inputPlaceholder', [t('business.skill.description')])" maxlength="500" />
         </el-form-item>
         <el-form-item :label="t('business.skill.version')" prop="version">
           <el-input v-model="formState.form.version" maxlength="20" style="width: 160px" />
