@@ -49,3 +49,8 @@ export function uploadKnowledgeDoc(baseId: number, file: File): Promise<Response
 export function vectorizeKnowledgeDoc(id: number): Promise<Response<string>> {
   return request({ url: '/knowledge/doc/vectorize', method: 'post', params: { id } })
 }
+
+/** 整个知识库批量向量化 */
+export function vectorizeKnowledgeBaseAll(baseId: number): Promise<Response<string>> {
+  return request({ url: '/knowledge/doc/vectorizeAll', method: 'post', params: { baseId } })
+}

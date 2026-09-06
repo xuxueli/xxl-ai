@@ -72,6 +72,11 @@
           </el-button>
         </el-col>
         <el-col :span="1.5">
+          <el-button type="warning" plain icon="MagicStick" @click="handleVectorizeAll" v-hasPermi="['knowledge:doc']">
+            {{ t('business.knowledge.docVectorizeAll') }}
+          </el-button>
+        </el-col>
+        <el-col :span="1.5">
           <el-button type="info" plain icon="Search" @click="openSearch" v-hasPermi="['knowledge:doc']">{{ t('business.knowledge.search') }}</el-button>
         </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
@@ -80,8 +85,8 @@
       <!-- 文档列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
-        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" min-width="3" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="70" />
+        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" min-width="2.5" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.knowledge.docStatus')" align="center" min-width="1">
           <template #default="scope">
             <el-tag :type="docStatusType(scope.row.status)">
@@ -90,12 +95,12 @@
           </template>
         </el-table-column>
         <el-table-column :label="t('business.knowledge.docChunks')" align="center" prop="chunkCount" min-width="1" />
-        <el-table-column :label="t('common.createTime')" align="center" min-width="1.5">
+        <el-table-column :label="t('common.createTime')" align="center" min-width="2">
           <template #default="scope">
             <span>{{ scope.row.addTime }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" min-width="2.2" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="260" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="MagicStick" @click="handleVectorize(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('business.knowledge.docVectorize')
@@ -164,6 +169,9 @@
       </el-form>
       <el-table v-loading="search.loading" :data="search.list" max-height="380">
         <el-table-column :label="t('common.serialNo')" align="center" type="index" width="60" />
+        <el-table-column :label="t('business.knowledge.docId')" align="center" width="80">
+          <template #default="scope">{{ scope.row.docId }}</template>
+        </el-table-column>
         <el-table-column :label="t('business.knowledge.score')" align="center" width="110">
           <template #default="scope">
             <el-tag>{{ Number(scope.row.score).toFixed(4) }}</el-tag>
@@ -180,8 +188,8 @@
 <script setup lang="ts">
 defineOptions({ name: 'KnowledgeDoc' })
 import { t } from '@/i18n'
-import { listKnowledgeDoc, addKnowledgeDoc, updateKnowledgeDoc, delKnowledgeDoc, uploadKnowledgeDoc, vectorizeKnowledgeDoc } from '@/modules/business/knowledge/doc/api'
-import { searchKnowledgeBase } from '@/modules/business/knowledge/base/api'
+import { listKnowledgeDoc, addKnowledgeDoc, updateKnowledgeDoc, delKnowledgeDoc, uploadKnowledgeDoc, vectorizeKnowledgeDoc, vectorizeKnowledgeBaseAll } from '@/modules/business/knowledge/doc/api'
+import { searchKnowledgeDoc } from '@/modules/business/knowledge/base/api'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
@@ -341,14 +349,39 @@ async function handleUpload(options: UploadRequestOptions) {
     })
 }
 
-/** 向量化：分片 → 嵌入 → 写 Milvus */
+/** 向量化：分片 → 嵌入 → 写 Milvus（支持勾选多条批量向量化） */
 function handleVectorize(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
-  const id = Array.isArray(ids) ? ids[0] : ids
+  const raw = row?.id ?? table.value.ids
+  const ids = Array.isArray(raw) ? raw : [raw]
+  if (ids.length === 0) return
   modal
     .confirm(t('business.knowledge.vectorizeConfirm'))
-    .then(() => vectorizeKnowledgeDoc(id))
+    .then(async () => {
+      let success = 0
+      let fail = 0
+      for (const id of ids) {
+        try {
+          await vectorizeKnowledgeDoc(id)
+          success++
+        } catch (e) {
+          fail++
+        }
+      }
+      return { success, fail }
+    })
+    .then(({ success, fail }) => {
+      modal.msgSuccess(t('business.knowledge.vectorizeDone', [success, fail]))
+      getList()
+    })
+    .catch(() => {})
+}
+
+/** 整个知识库批量向量化 */
+function handleVectorizeAll() {
+  if (!baseId.value) return
+  modal
+    .confirm(t('business.knowledge.vectorizeAllConfirm'))
+    .then(() => vectorizeKnowledgeBaseAll(baseId.value))
     .then((res) => {
       modal.msgSuccess(res.msg)
       getList()
@@ -374,7 +407,7 @@ function handleSearchSubmit() {
     return
   }
   search.value.loading = true
-  searchKnowledgeBase(baseId.value, search.value.query)
+  searchKnowledgeDoc(baseId.value, search.value.query)
     .then((response) => {
       search.value.list = response.data
       search.value.loading = false

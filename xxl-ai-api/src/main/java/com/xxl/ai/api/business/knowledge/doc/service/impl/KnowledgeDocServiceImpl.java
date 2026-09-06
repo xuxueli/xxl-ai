@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 知识文档 Service 实现
@@ -202,6 +203,48 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
         if (knowledgeDoc == null || knowledgeDoc.getSpaceId() != spaceId) {
             return Response.ofFail("文档不存在或不属于当前空间");
         }
+        return vectorizeDoc(spaceId, knowledgeDoc);
+    }
+
+    /**
+     * 整个知识库批量向量化：遍历库下文档逐个向量化
+     */
+    @Override
+    public Response<String> vectorizeByBase(long spaceId, long baseId) {
+        KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(baseId);
+        if (knowledgeBase == null || knowledgeBase.getSpaceId() != spaceId) {
+            return Response.ofFail("知识库不存在或不属于当前空间");
+        }
+        if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
+            return Response.ofFail("知识库未配置向量化模型，请先配置");
+        }
+        List<KnowledgeDoc> docList = knowledgeDocMapper.listByBase(baseId);
+        if (CollectionTool.isEmpty(docList)) {
+            return Response.ofFail("知识库下暂无文档");
+        }
+        int successCount = 0;
+        int failCount = 0;
+        for (KnowledgeDoc doc : docList) {
+            // 跳过空内容文档
+            if (StringTool.isBlank(doc.getContent())) {
+                continue;
+            }
+            Response<String> ret = vectorizeDoc(spaceId, doc);
+            if (ret.isSuccess()) {
+                successCount++;
+            } else {
+                failCount++;
+                logger.warn("知识库批量向量化失败, baseId={}, docId={}, err={}", baseId, doc.getId(), ret.getMsg());
+            }
+        }
+        return Response.ofSuccess("向量化完成：成功 " + successCount + " 个，失败 " + failCount + " 个");
+    }
+
+    /**
+     * 单文档向量化核心逻辑（分片 → 嵌入 → 写 Milvus）
+     */
+    private Response<String> vectorizeDoc(long spaceId, KnowledgeDoc knowledgeDoc) {
+        long docId = knowledgeDoc.getId();
         if (StringTool.isBlank(knowledgeDoc.getContent())) {
             return Response.ofFail("文档内容为空，无法向量化");
         }
@@ -266,6 +309,49 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
     @Override
     public List<KnowledgeDoc> listByBase(long baseId) {
         return knowledgeDocMapper.listByBase(baseId);
+    }
+
+    /**
+     * 向量检索：按查询文本召回知识库相关内容分片
+     */
+    @Override
+    public Response<List<Map<String, Object>>> search(long spaceId, long baseId, String query, int topK) {
+        if (StringTool.isBlank(query)) {
+            return Response.ofFail("检索内容不能为空");
+        }
+        KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(baseId);
+        if (knowledgeBase == null || knowledgeBase.getSpaceId() != spaceId) {
+            return Response.ofFail("知识库不存在或不属于当前空间");
+        }
+        if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
+            return Response.ofFail("知识库未配置向量化模型，请先配置");
+        }
+        try {
+            SupplierRuntime runtime = supplierService.loadRuntime(spaceId, knowledgeBase.getEmbedSupplierId(),
+                    knowledgeBase.getEmbedModelId()).getData();
+            if (runtime == null || runtime.getModelType() != 1) {
+                return Response.ofFail("所选模型不是嵌入向量化模型");
+            }
+            float[] queryVector = llmClient.embedding(query, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName());
+            String collection = milvusTool.collectionName(spaceId, baseId);
+            List<Map<String, Object>> hits = milvusTool.search(collection, toFloatList(queryVector),
+                    topK > 0 ? topK : knowledgeBase.getTopK());
+            return Response.ofSuccess(hits);
+        } catch (Exception e) {
+            logger.warn("知识库向量检索失败, baseId={}, err={}", baseId, e.getMessage());
+            return Response.ofFail("向量检索失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * float[] 转 List<Float>
+     */
+    private List<Float> toFloatList(float[] array) {
+        List<Float> list = new ArrayList<>(array.length);
+        for (float value : array) {
+            list.add(value);
+        }
+        return list;
     }
 
 }

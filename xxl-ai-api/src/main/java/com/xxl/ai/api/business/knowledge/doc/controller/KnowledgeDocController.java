@@ -17,9 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * 知识文档 Controller：文档管理 + 向量化
+ * 知识文档 Controller：文档管理 + 向量化 + 向量检索
  *
  * @author xxl-ai 2026-09-05
  */
@@ -126,6 +127,38 @@ public class KnowledgeDocController {
             return Response.ofFail(spaceResp.getMsg());
         }
         return knowledgeDocService.vectorize(spaceResp.getData().getSpaceId(), id);
+    }
+
+    /**
+     * 整个知识库批量向量化
+     */
+    @RequestMapping("/vectorizeAll")
+    @XxlSso(permission = "knowledge:doc")
+    public Response<String> vectorizeAll(HttpServletRequest request,
+                                         @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                         @RequestParam("baseId") long baseId) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return knowledgeDocService.vectorizeByBase(spaceResp.getData().getSpaceId(), baseId);
+    }
+
+    /**
+     * 向量检索：按查询文本召回知识库相关内容分片
+     */
+    @RequestMapping("/search")
+    @XxlSso(permission = "knowledge:doc")
+    public Response<List<Map<String, Object>>> search(HttpServletRequest request,
+                                                      @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                                      @RequestParam("baseId") long baseId,
+                                                      @RequestParam("query") String query,
+                                                      @RequestParam(required = false, defaultValue = "0") int topK) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return knowledgeDocService.search(spaceResp.getData().getSpaceId(), baseId, query, topK);
     }
 
 }

@@ -6,7 +6,6 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 知识库 Service
@@ -44,10 +43,5 @@ public interface KnowledgeBaseService {
      * 查询空间内知识库列表（Agent 绑定下拉）
      */
     List<KnowledgeBase> listBySpace(long spaceId);
-
-    /**
-     * 向量检索：按查询文本召回知识库相关内容分片
-     */
-    Response<List<Map<String, Object>>> search(long spaceId, long baseId, String query, int topK);
 
 }

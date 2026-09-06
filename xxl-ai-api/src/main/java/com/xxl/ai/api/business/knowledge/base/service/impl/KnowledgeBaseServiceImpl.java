@@ -1,17 +1,13 @@
 package com.xxl.ai.api.business.knowledge.base.service.impl;
 
-import com.xxl.ai.api.business.common.client.LLMClient;
-import com.xxl.ai.api.business.common.util.TextChunkUtil;
-import com.xxl.ai.api.business.common.vector.MilvusTool;
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
+import com.xxl.ai.api.business.common.vector.MilvusTool;
 import com.xxl.ai.api.business.knowledge.base.model.adaptor.KnowledgeBaseAdaptor;
 import com.xxl.ai.api.business.knowledge.base.model.dto.KnowledgeBaseDTO;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
 import com.xxl.ai.api.business.knowledge.base.service.KnowledgeBaseService;
 import com.xxl.ai.api.business.knowledge.doc.mapper.KnowledgeDocMapper;
 import com.xxl.ai.api.business.knowledge.doc.model.entity.KnowledgeDoc;
-import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
-import com.xxl.ai.api.business.supplier.service.SupplierService;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
@@ -21,9 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 知识库 Service 实现
@@ -39,10 +33,6 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     private KnowledgeBaseMapper knowledgeBaseMapper;
     @Resource
     private KnowledgeDocMapper knowledgeDocMapper;
-    @Resource
-    private SupplierService supplierService;
-    @Resource
-    private LLMClient llmClient;
     @Resource
     private MilvusTool milvusTool;
 
@@ -150,49 +140,6 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Override
     public List<KnowledgeBase> listBySpace(long spaceId) {
         return knowledgeBaseMapper.listBySpace(spaceId);
-    }
-
-    /**
-     * 向量检索
-     */
-    @Override
-    public Response<List<Map<String, Object>>> search(long spaceId, long baseId, String query, int topK) {
-        if (StringTool.isBlank(query)) {
-            return Response.ofFail("检索内容不能为空");
-        }
-        KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(baseId);
-        if (knowledgeBase == null || knowledgeBase.getSpaceId() != spaceId) {
-            return Response.ofFail("知识库不存在或不属于当前空间");
-        }
-        if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
-            return Response.ofFail("知识库未配置向量化模型，请先配置");
-        }
-        try {
-            SupplierRuntime runtime = supplierService.loadRuntime(spaceId, knowledgeBase.getEmbedSupplierId(),
-                    knowledgeBase.getEmbedModelId()).getData();
-            if (runtime == null || runtime.getModelType() != 1) {
-                return Response.ofFail("所选模型不是嵌入向量化模型");
-            }
-            float[] queryVector = llmClient.embedding(query, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName());
-            String collection = milvusTool.collectionName(spaceId, baseId);
-            List<Map<String, Object>> hits = milvusTool.search(collection, toFloatList(queryVector),
-                    topK > 0 ? topK : knowledgeBase.getTopK());
-            return Response.ofSuccess(hits);
-        } catch (Exception e) {
-            logger.warn("知识库向量检索失败, baseId={}, err={}", baseId, e.getMessage());
-            return Response.ofFail("向量检索失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * float[] 转 List<Float>
-     */
-    private List<Float> toFloatList(float[] array) {
-        List<Float> list = new ArrayList<>(array.length);
-        for (float value : array) {
-            list.add(value);
-        }
-        return list;
     }
 
 }

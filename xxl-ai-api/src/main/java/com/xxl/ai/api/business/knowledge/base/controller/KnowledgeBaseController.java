@@ -16,10 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * 知识库 Controller：知识库管理 + 向量检索
+ * 知识库 Controller：知识库管理
  *
  * @author xxl-ai 2026-09-05
  */
@@ -103,23 +102,6 @@ public class KnowledgeBaseController {
             return Response.ofFail(spaceResp.getMsg());
         }
         return knowledgeBaseService.update(dto);
-    }
-
-    /**
-     * 向量检索：按查询文本召回知识库相关内容分片
-     */
-    @RequestMapping("/search")
-    @XxlSso(permission = "knowledge:base")
-    public Response<List<Map<String, Object>>> search(HttpServletRequest request,
-                                                      @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                                      @RequestParam("baseId") long baseId,
-                                                      @RequestParam("query") String query,
-                                                      @RequestParam(required = false, defaultValue = "0") int topK) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return knowledgeBaseService.search(spaceResp.getData().getSpaceId(), baseId, query, topK);
     }
 
     /**

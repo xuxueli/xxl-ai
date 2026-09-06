@@ -11,7 +11,7 @@ import com.xxl.ai.api.business.common.client.LLMClient;
 import com.xxl.ai.api.business.common.client.McpClient;
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
-import com.xxl.ai.api.business.knowledge.base.service.KnowledgeBaseService;
+import com.xxl.ai.api.business.knowledge.doc.service.KnowledgeDocService;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.ai.api.business.mcp.service.McpService;
 import com.xxl.ai.api.business.skill.model.entity.Skill;
@@ -51,7 +51,7 @@ public class AgentAccessService {
     @Resource
     private SupplierService supplierService;
     @Resource
-    private KnowledgeBaseService knowledgeBaseService;
+    private KnowledgeDocService knowledgeDocService;
     @Resource
     private KnowledgeBaseMapper knowledgeBaseMapper;
     @Resource
@@ -270,7 +270,7 @@ public class AgentAccessService {
                     continue;
                 }
                 try {
-                    Response<List<Map<String, Object>>> searchResp = knowledgeBaseService.search(
+                    Response<List<Map<String, Object>>> searchResp = knowledgeDocService.search(
                             agent.getSpaceId(), kbId, content, knowledgeBase.getTopK());
                     if (searchResp.isSuccess() && CollectionTool.isNotEmpty(searchResp.getData())) {
                         for (Map<String, Object> hit : searchResp.getData()) {

@@ -465,6 +465,7 @@
       "searchQueryPlaceholder": "请输入检索内容",
       "searchRequired": "请输入检索内容",
       "score": "相似度",
+      "docId": "文档ID",
       "hitContent": "命中内容",
       "confirmDelete": "是否确认删除知识库编号为\"{0}\"的数据项？",
       "docName": "文档名称",
@@ -478,7 +479,10 @@
       "docChunks": "分片数",
       "doc": "文档",
       "confirmDeleteDoc": "是否确认删除文档编号为\"{0}\"的数据项？",
-      "vectorizeConfirm": "确认对该文档执行向量化？将按知识库分片参数处理并入向量库"
+      "vectorizeConfirm": "确认对该文档执行向量化？将按知识库分片参数处理并入向量库",
+      "vectorizeAllConfirm": "确认对该知识库下全部文档执行向量化？未向量化/失败的文档将被逐个处理并入向量库",
+      "docVectorizeAll": "全库向量化",
+      "vectorizeDone": "向量化完成：成功 {0} 个，失败 {1} 个"
     },
     "agent": {
       "name": "Agent名称",

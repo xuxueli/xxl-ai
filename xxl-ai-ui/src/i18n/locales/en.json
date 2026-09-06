@@ -465,6 +465,7 @@
       "searchQueryPlaceholder": "Enter the query text",
       "searchRequired": "Please enter the query text",
       "score": "Score",
+      "docId": "Doc ID",
       "hitContent": "Matched Content",
       "confirmDelete": "Are you sure to delete the knowledge base with ID \"{0}\"?",
       "docName": "Doc Name",
@@ -478,7 +479,10 @@
       "docChunks": "Chunks",
       "doc": "Document",
       "confirmDeleteDoc": "Are you sure to delete the document with ID \"{0}\"?",
-      "vectorizeConfirm": "Vectorize this document? It will be chunked per KB config and written into the vector store"
+      "vectorizeConfirm": "Vectorize this document? It will be chunked per KB config and written into the vector store",
+      "vectorizeAllConfirm": "Vectorize all documents in this knowledge base? Unprocessed/failed ones will be handled one by one and written into the vector store",
+      "docVectorizeAll": "Vectorize All",
+      "vectorizeDone": "Vectorization done: {0} succeeded, {1} failed"
     },
     "agent": {
       "name": "Agent Name",

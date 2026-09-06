@@ -7,6 +7,7 @@ import com.xxl.tool.response.Response;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 知识文档 Service
@@ -51,8 +52,18 @@ public interface KnowledgeDocService {
     Response<String> vectorize(long spaceId, long docId);
 
     /**
+     * 整个知识库批量向量化：遍历库下文档逐个向量化
+     */
+    Response<String> vectorizeByBase(long spaceId, long baseId);
+
+    /**
      * 查询知识库下文档列表
      */
     List<KnowledgeDoc> listByBase(long baseId);
+
+    /**
+     * 向量检索：按查询文本召回知识库相关内容分片
+     */
+    Response<List<Map<String, Object>>> search(long spaceId, long baseId, String query, int topK);
 
 }
