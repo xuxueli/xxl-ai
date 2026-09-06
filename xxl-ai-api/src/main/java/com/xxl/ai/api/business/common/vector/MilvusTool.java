@@ -126,11 +126,11 @@ public class MilvusTool {
         List<JsonObject> rows = new ArrayList<>();
         for (int i = 0; i < chunks.size(); i++) {
             JsonObject row = new JsonObject();
-            row.addProperty("id", (docId << 20) + i);
-            row.addProperty("doc_id", docId);
-            row.addProperty("chunk_index", i);
-            row.addProperty("text", chunks.get(i));
-            row.add("vector", GSON.toJsonTree(toFloatList(vectors.get(i))));
+            row.addProperty("id", (docId << 20) + i);                     // 含义：docId 左移 20 位 + chunkIndex，保证唯一性
+            row.addProperty("doc_id", docId);                                   // 文档ID
+            row.addProperty("chunk_index", i);                                  // 分片序号
+            row.addProperty("text", chunks.get(i));                             // 分片文本
+            row.add("vector", GSON.toJsonTree(toFloatList(vectors.get(i))));    // 分片向量
             rows.add(row);
         }
         milvusClient.insert(InsertReq.builder()

@@ -80,21 +80,22 @@
       <!-- 文档列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" width="180" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.knowledge.docStatus')" align="center" width="110">
+        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
+        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" min-width="3" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.knowledge.docStatus')" align="center" min-width="1">
           <template #default="scope">
             <el-tag :type="docStatusType(scope.row.status)">
               {{ docStatusTitle(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('business.knowledge.docChunks')" align="center" prop="chunkCount" width="100" />
-        <el-table-column :label="t('common.createTime')" align="center" width="170">
+        <el-table-column :label="t('business.knowledge.docChunks')" align="center" prop="chunkCount" min-width="1" />
+        <el-table-column :label="t('common.createTime')" align="center" min-width="1.5">
           <template #default="scope">
             <span>{{ scope.row.addTime }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" min-width="2.2" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="MagicStick" @click="handleVectorize(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('business.knowledge.docVectorize')

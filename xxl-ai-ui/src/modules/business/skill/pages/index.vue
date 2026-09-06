@@ -50,6 +50,7 @@
       <!-- SKILL 列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
+        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.skill.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.description')" align="center" prop="description" min-width="240" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.version')" align="center" prop="version" width="90" />

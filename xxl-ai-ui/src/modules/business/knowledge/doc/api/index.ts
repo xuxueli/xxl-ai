@@ -2,6 +2,7 @@
  * 知识文档 接口封装
  */
 import request from '@/utils/request'
+import { tansParams } from '@/utils/common'
 import type { Response, PageModel } from '@/types'
 import type { KnowledgeDoc, KnowledgeDocListQuery } from '../types'
 
@@ -10,9 +11,14 @@ export function listKnowledgeDoc(query: KnowledgeDocListQuery): Promise<Response
   return request({ url: '/knowledge/doc/pageList', method: 'get', params: query })
 }
 
-/** 新增文档（粘贴文本） */
+/** 新增文档（粘贴文本：内容大，走 form 请求体避免 URL 超长） */
 export function addKnowledgeDoc(data: KnowledgeDoc): Promise<Response<string>> {
-  return request({ url: '/knowledge/doc/insert', method: 'post', params: data })
+  return request({
+    url: '/knowledge/doc/insert',
+    method: 'post',
+    data: tansParams(data),
+    headers: { repeatSubmit: false, 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
 }
 
 /** 批量删除文档 */
@@ -20,9 +26,14 @@ export function delKnowledgeDoc(ids: number[] | number): Promise<Response<string
   return request({ url: '/knowledge/doc/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
 }
 
-/** 修改文档 */
+/** 修改文档（内容大，走 form 请求体避免 URL 超长） */
 export function updateKnowledgeDoc(data: KnowledgeDoc): Promise<Response<string>> {
-  return request({ url: '/knowledge/doc/update', method: 'post', params: data })
+  return request({
+    url: '/knowledge/doc/update',
+    method: 'post',
+    data: tansParams(data),
+    headers: { repeatSubmit: false, 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
 }
 
 /** 上传文档（txt/md 文本文件） */

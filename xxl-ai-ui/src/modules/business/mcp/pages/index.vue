@@ -50,6 +50,7 @@
       <!-- MCP 列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
+        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.mcp.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.mcp.type')" align="center" min-width="150">
           <template #default="scope">

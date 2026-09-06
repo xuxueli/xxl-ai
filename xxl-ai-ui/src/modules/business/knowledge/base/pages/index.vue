@@ -50,6 +50,7 @@
       <!-- 知识库列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
+        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.knowledge.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.knowledge.description')" align="center" prop="description" min-width="160" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.knowledge.embedSupplier')" align="center" width="140" :show-overflow-tooltip="true">
