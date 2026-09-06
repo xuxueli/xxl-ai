@@ -72,10 +72,14 @@ public class AgentAccessService {
         }
         Agent agent = agentMapper.loadByUuid(uuid);
         if (agent == null) {
-            return Response.ofFail("Agent 不存在或已下架");
+            return Response.ofFail("Agent 不存在或已删除");
         }
-        if (agent.getPublishStatus() != 1 || agent.getStatus() == 1) {
-            return Response.ofFail("Agent 已下架，暂不可访问");
+        // 差异化提示：停用 / 未发布
+        if (agent.getStatus() == 1) {
+            return Response.ofFail("Agent 已停用，暂不可访问");
+        }
+        if (agent.getPublishStatus() != 1) {
+            return Response.ofFail("Agent 未发布，暂不可访问");
         }
         return Response.ofSuccess(agent);
     }
@@ -102,6 +106,24 @@ public class AgentAccessService {
     public Response<List<AgentConv>> convList(String uuid, String visitorId) {
         List<AgentConv> convList = agentConvMapper.listByVisitor(uuid, visitorId);
         return Response.ofSuccess(convList);
+    }
+
+    /**
+     * 修改对话标题（最长50个字符）
+     */
+    public Response<String> convRename(long convId, String title) {
+        if (StringTool.isBlank(title)) {
+            return Response.ofFail("对话标题不能为空");
+        }
+        if (title.trim().length() > 50) {
+            return Response.ofFail("对话标题最长50个字符");
+        }
+        AgentConv agentConv = agentConvMapper.load(convId);
+        if (agentConv == null) {
+            return Response.ofFail("对话不存在");
+        }
+        agentConvMapper.updateTitle(convId, title.trim());
+        return Response.ofSuccess();
     }
 
     /**
@@ -152,14 +174,32 @@ public class AgentAccessService {
             return;
         }
         Agent agent = agentMapper.loadByUuid(uuid);
-        if (agent == null || agent.getPublishStatus() != 1 || agent.getStatus() == 1) {
-            safeSend(emitter, "message", "__ERROR__Agent 不存在或已下架");
+        if (agent == null) {
+            safeSend(emitter, "message", "__ERROR__Agent 不存在或已删除");
+            return;
+        }
+        // 差异化提示：停用 / 未发布
+        if (agent.getStatus() == 1) {
+            safeSend(emitter, "message", "__ERROR__Agent 已停用，暂不可访问");
+            return;
+        }
+        if (agent.getPublishStatus() != 1) {
+            safeSend(emitter, "message", "__ERROR__Agent 未发布，暂不可访问");
             return;
         }
         AgentConv agentConv = agentConvMapper.load(convId);
         if (agentConv == null || !uuid.equals(agentConv.getAgentUuid())) {
             safeSend(emitter, "message", "__ERROR__对话不存在");
             return;
+        }
+
+        // 首条消息自动生成对话标题（首次提问内容，超50字截断后补"..."）
+        List<AgentMsg> historyMsgList = agentMsgMapper.listByConvId(convId);
+        if (CollectionTool.isEmpty(historyMsgList)
+                && (StringTool.isBlank(agentConv.getTitle()) || "新对话".equals(agentConv.getTitle()))) {
+            String convContent = content.trim();
+            String convTitle = convContent.length() > 50 ? convContent.substring(0, 47) + "..." : convContent;
+            agentConvMapper.updateTitle(convId, convTitle);
         }
 
         // 模型运行时配置
@@ -199,7 +239,6 @@ public class AgentAccessService {
         // 会话消息（历史 + 当前）
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(buildMessage("system", systemPrompt));
-        List<AgentMsg> historyMsgList = agentMsgMapper.listByConvId(convId);
         if (CollectionTool.isNotEmpty(historyMsgList)) {
             for (AgentMsg historyMsg : historyMsgList) {
                 // 推理模型上下文仅注入回复内容，思考过程不进入上下文

@@ -32,6 +32,11 @@ export function agentAccessConvDelete(convId: number): Promise<Response<string>>
   return request({ url: '/agent/access/convDelete', method: 'get', params: { convId } })
 }
 
+/** 修改对话标题 */
+export function agentAccessConvRename(convId: number, title: string): Promise<Response<string>> {
+  return request({ url: '/agent/access/convRename', method: 'get', params: { convId, title } })
+}
+
 /**
  * 发送消息（SSE 流式）
  * 经原生 fetch 拉取流，返回可读流 reader 由调用方逐行解析

@@ -8,11 +8,11 @@
     <aside class="conv-panel">
       <div class="conv-header">
         <div class="agent-title">
-          <el-icon class="agent-icon"><ChatDotRound /></el-icon>
+          <img v-if="logo" :src="logo" class="agent-logo" alt="logo" />
           <span class="agent-name">{{ agent?.name || 'Agent' }}</span>
         </div>
         <div class="conv-actions">
-          <el-button type="text" icon="Plus" @click="createConv">{{ t('business.agent.newChat') }}</el-button>
+          <el-button type="text" icon="Plus" @click="handleNewChat">{{ t('business.agent.newChat') }}</el-button>
         </div>
       </div>
       <div class="conv-list" v-loading="convLoading">
@@ -23,8 +23,22 @@
           :class="{ active: conv.id === currentConvId }"
           @click="selectConv(conv.id)"
         >
-          <el-icon class="conv-icon"><Message /></el-icon>
-          <span class="conv-title">{{ conv.title }}</span>
+          <template v-if="editingConvId === conv.id">
+            <el-input
+              v-model="editingTitle"
+              class="conv-title-input"
+              size="small"
+              maxlength="50"
+              @click.stop
+              @keyup.enter="saveConvTitle(conv)"
+              @keyup.esc="cancelConvTitle"
+              @blur="saveConvTitle(conv)"
+            />
+          </template>
+          <template v-else>
+            <span class="conv-title" :title="conv.title">{{ conv.title }}</span>
+            <el-icon class="conv-edit" @click.stop="startEditConvTitle(conv)"><EditPen /></el-icon>
+          </template>
           <el-icon class="conv-del" @click.stop="deleteConv(conv)"><Delete /></el-icon>
         </div>
         <el-empty v-if="!convLoading && convList.length === 0" :description="t('business.agent.noConv')" :image-size="60" />
@@ -59,9 +73,29 @@
             </div>            
           </div>
         </template>
+        <!-- 新建对话：中间区域展示输入框，输入+发送后才生成对话 -->
+        <div v-else-if="newChat" class="chat-new">
+          <div class="chat-new-inner">
+            <el-input
+              ref="newChatInputRef"
+              v-model="inputText"
+              type="textarea"
+              :rows="6"
+              resize="none"
+              :placeholder="t('business.agent.inputPlaceholder')"
+              @keydown.enter.exact.prevent="handleSend"
+            />
+            <div class="chat-new-footer">
+              <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
+              <el-button type="primary" :loading="sending" @click="handleSend">
+                {{ t('business.agent.send') }}
+              </el-button>
+            </div>
+          </div>
+        </div>
         <el-empty v-else :description="t('business.agent.selectConv')" :image-size="80" />
       </div>
-      <div class="chat-input">
+      <div class="chat-input" v-if="currentConvId">
         <el-input
           v-model="inputText"
           type="textarea"
@@ -73,7 +107,7 @@
         />
         <div class="input-footer">
           <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
-          <el-button type="primary" :loading="sending" :disabled="!currentConvId || !inputText" @click="handleSend">
+          <el-button type="primary" :loading="sending" @click="handleSend">
             {{ t('business.agent.send') }}
           </el-button>
         </div>
@@ -84,6 +118,7 @@
 
 <script setup lang="ts">
 import { t } from '@/i18n'
+import logo from '@/assets/images/logo.png'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -92,6 +127,7 @@ import {
   agentAccessConvList,
   agentAccessMsgList,
   agentAccessConvDelete,
+  agentAccessConvRename,
   agentSendStream
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
@@ -114,6 +150,12 @@ const messages = ref<ChatMsg[]>([])
 const inputText = ref('')
 const sending = ref(false)
 const chatBodyRef = ref<HTMLElement>()
+/** 新建对话状态：未建会话，中间区域展示输入框 */
+const newChat = ref(false)
+const newChatInputRef = ref<any>()
+/** 对话标题编辑状态 */
+const editingConvId = ref<number | undefined>(undefined)
+const editingTitle = ref('')
 
 // --------------------------------- init ---------------------------------
 
@@ -159,21 +201,51 @@ async function loadConvList() {
 
 // --------------------------------- 对话操作 ---------------------------------
 
-/** 新建对话 */
-async function createConv() {
+/** 新建对话：不立即建会话，进入新建状态并聚焦输入框，输入+发送后才生成对话 */
+function handleNewChat() {
   if (sending.value) return
-  const res = await agentAccessConvCreate(uuid.value, visitorId.value)
-  await loadConvList()
-  selectConv(res.data.id)
+  currentConvId.value = undefined
+  messages.value = []
+  newChat.value = true
+  nextTick(() => newChatInputRef.value?.focus())
 }
 
 /** 选中对话：加载消息 */
 async function selectConv(convId: number) {
   currentConvId.value = convId
+  newChat.value = false
   messages.value = []
   const res = await agentAccessMsgList(convId)
   messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
   await scrollToBottom()
+}
+
+// --------------------------------- 对话标题修改 ---------------------------------
+
+/** 进入标题编辑态 */
+function startEditConvTitle(conv: AgentConv) {
+  editingConvId.value = conv.id
+  editingTitle.value = conv.title || ''
+}
+
+/** 保存标题（Enter / 失焦触发，最长50个字符） */
+function saveConvTitle(conv: AgentConv) {
+  if (editingConvId.value !== conv.id) return
+  const title = editingTitle.value.trim()
+  editingConvId.value = undefined
+  editingTitle.value = ''
+  if (!title || title === conv.title) return
+  agentAccessConvRename(conv.id, title)
+    .then(() => {
+      conv.title = title
+    })
+    .catch(() => {})
+}
+
+/** 取消标题编辑 */
+function cancelConvTitle() {
+  editingConvId.value = undefined
+  editingTitle.value = ''
 }
 
 /** 删除对话 */
@@ -196,12 +268,32 @@ function deleteConv(conv: AgentConv) {
 
 // --------------------------------- 消息发送（SSE） ---------------------------------
 
-/** 发送消息 */
+/** 发送消息（新建状态下首次发送才创建对话；空内容/纯空格提示） */
 async function handleSend() {
   const content = inputText.value.trim()
-  if (!content || !currentConvId.value || sending.value) return
+  if (!content) {
+    ElMessage.warning(t('business.agent.questionRequired'))
+    return
+  }
+  if (sending.value) return
   inputText.value = ''
   sending.value = true
+
+  // 新建状态：首次发送才创建对话（左侧新增对话，右侧展示正文）
+  if (!currentConvId.value) {
+    try {
+      const res = await agentAccessConvCreate(uuid.value, visitorId.value)
+      const convId = res.data.id
+      currentConvId.value = convId
+      newChat.value = false
+      // 新对话置顶（列表按 id 倒序）
+      convList.value.unshift(res.data)
+    } catch (e) {
+      ElMessage.error(t('business.agent.sendFail'))
+      sending.value = false
+      return
+    }
+  }
 
   // 本地追加用户消息
   const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false }
@@ -232,6 +324,14 @@ async function handleSend() {
     ElMessage.error(t('business.agent.sendFail'))
   } finally {
     sending.value = false
+    // 首条消息后后端自动生成了对话标题（首次提问内容，超50字截断补"..."），本地同步刷新左侧标题
+    if (currentConvId.value) {
+      const conv = convList.value.find((c) => c.id === currentConvId.value)
+      if (conv) {
+        const title = content.trim()
+        conv.title = title.length > 50 ? title.slice(0, 47) + '...' : title
+      }
+    }
   }
 }
 
@@ -325,9 +425,11 @@ onMounted(() => init())
   font-weight: 600;
 }
 
-.agent-icon {
-  color: var(--el-color-primary);
-  font-size: 18px;
+.agent-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .agent-name {
@@ -362,8 +464,18 @@ onMounted(() => init())
   }
 }
 
-.conv-icon {
+.conv-edit {
+  visibility: hidden;
+  cursor: pointer;
   flex-shrink: 0;
+}
+
+.conv-item:hover .conv-edit {
+  visibility: visible;
+}
+
+.conv-title-input {
+  flex: 1;
 }
 
 .conv-title {
@@ -408,6 +520,37 @@ onMounted(() => init())
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+}
+
+/* 新建对话：中央区域展示输入框 */
+.chat-new {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-new-inner {
+  width: 100%;
+  max-width: 720px;
+}
+
+/* 新建对话与底部输入框：圆角 */
+:deep(.chat-new .el-textarea__inner),
+:deep(.chat-input .el-textarea__inner) {
+  border-radius: 12px;
+}
+
+.chat-new-footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .input-tip {
+    font-size: 12px;
+    color: #909399;
+  }
 }
 
 .msg-row {

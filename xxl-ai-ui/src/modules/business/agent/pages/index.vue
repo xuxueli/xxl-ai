@@ -112,6 +112,7 @@
             <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-divider />
         <el-form-item :label="t('business.agent.systemPrompt')" prop="systemPrompt">
           <el-input
             v-model="formState.form.systemPrompt"
@@ -121,7 +122,6 @@
             maxlength="65535"
           />
         </el-form-item>
-        <el-divider />
         <el-row>
           <el-col :span="12">
             <el-form-item :label="t('business.agent.modelSupplier')" prop="modelSupplierId">

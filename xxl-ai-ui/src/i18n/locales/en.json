@@ -510,6 +510,7 @@
       "enterTip": "Enter to send, Shift+Enter for a new line",
       "send": "Send",
       "sendFail": "Send failed, please retry later",
+      "questionRequired": "Please enter your question",
       "deleteConvConfirm": "Delete conversation 「{0}」?",
       "thinking": "Deep Think",
       "hideThinking": "Hide Think",

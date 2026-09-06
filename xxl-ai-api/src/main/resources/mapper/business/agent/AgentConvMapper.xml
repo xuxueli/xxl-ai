@@ -33,6 +33,13 @@
 		DELETE FROM xxl_ai_agent_conv WHERE id = #{id}
 	</delete>
 
+	<update id="updateTitle" parameterType="java.util.HashMap">
+		UPDATE xxl_ai_agent_conv
+		SET title = #{title},
+			update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
 	<delete id="deleteByAgentUuid" parameterType="java.util.HashMap">
 		DELETE FROM xxl_ai_agent_conv WHERE agent_uuid = #{agentUuid}
 	</delete>

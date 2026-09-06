@@ -57,6 +57,16 @@ public class AgentAccessController {
     }
 
     /**
+     * 修改对话标题（公开）
+     */
+    @RequestMapping("/convRename")
+    @XxlSso(login = false)
+    public Response<String> convRename(@RequestParam("convId") long convId,
+                                       @RequestParam("title") String title) {
+        return agentAccessService.convRename(convId, title);
+    }
+
+    /**
      * 消息列表（公开）
      */
     @RequestMapping("/msgList")

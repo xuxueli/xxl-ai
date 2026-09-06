@@ -510,6 +510,7 @@
       "enterTip": "Enter 发送，Shift+Enter 换行",
       "send": "发送",
       "sendFail": "发送失败，请稍后重试",
+      "questionRequired": "请输入你的问题",
       "deleteConvConfirm": "确认删除对话「{0}」？",
       "thinking": "深度思考",
       "hideThinking": "收起思考",

@@ -129,11 +129,12 @@
         @selection-change="handleImportSelectionChange"
       >
         <el-table-column type="selection" width="45" align="center" :selectable="(row) => !row.imported" />
+        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="60" />
         <el-table-column
           :label="t('business.supplier.remoteModelId')"
           align="center"
           prop="modelId"
-          min-width="220"
+          min-width="140"
           :show-overflow-tooltip="true"
         />
         <el-table-column :label="t('common.status')" align="center" width="110">

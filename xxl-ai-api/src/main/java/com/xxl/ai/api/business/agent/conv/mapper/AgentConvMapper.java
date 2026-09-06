@@ -18,6 +18,8 @@ public interface AgentConvMapper {
 
     int delete(@Param("id") long id);
 
+    int updateTitle(@Param("id") long id, @Param("title") String title);
+
     int deleteByAgentUuid(@Param("agentUuid") String agentUuid);
 
     AgentConv load(@Param("id") long id);
