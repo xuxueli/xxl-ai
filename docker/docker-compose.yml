@@ -2,6 +2,9 @@
 version: '3.8'
 
 services:
+
+  # ==================== 核心存储 ====================
+
   mysql:
     image: mysql:8.4
     container_name: xxl-ai-mysql
@@ -103,6 +106,20 @@ services:
       - minio
     networks:
       - xxl-ai-network
+
+  attu:
+    image: zilliz/attu:v2.6
+    container_name: xxl-ai-attu
+    ports:
+      - "3000:3000"
+    environment:
+      MILVUS_ADDRESS: milvus:19530
+    depends_on:
+      - milvus
+    networks:
+      - xxl-ai-network
+
+  # ==================== API 服务 ====================
 
   xxl-ai-api:
     # 6、本地Build设置
