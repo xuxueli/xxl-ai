@@ -111,9 +111,9 @@ services:
     image: zilliz/attu:v2.6
     container_name: xxl-ai-attu
     ports:
-      - "3000:3000"
+      - "3030:3000"
     environment:
-      MILVUS_ADDRESS: milvus:19530
+      MILVUS_URL: milvus:19530
     depends_on:
       - milvus
     networks:
