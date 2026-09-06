@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_knowledge_doc` (
     `space_id` BIGINT NOT NULL COMMENT '空间ID',
     `base_id` BIGINT NOT NULL COMMENT '知识库ID',
     `name` VARCHAR(200) NOT NULL COMMENT '文档名称',
-    `content` TEXT NULL COMMENT '文档内容',
+    `content` MEDIUMTEXT NULL COMMENT '文档内容',
     `chunk_count` INT NOT NULL DEFAULT 0 COMMENT '分片数量',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-未处理、1-已向量化、2-失败',
     `add_time` DATETIME NOT NULL COMMENT '新增时间',
@@ -268,21 +268,24 @@ VALUES ('默认空间', 'default', 0, '系统默认业务空间', NOW(), NOW());
 INSERT INTO `xxl_ai_supplier` (`id`,`space_id`, `name`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
     (1, 1, 'OpenCodeGo', 'https://opencode.ai/zen/go/v1', '', 0, 'OpenCode Go模型', NOW(), NOW()),
-    (2, 1, 'Deepseek', 'https://api.deepseek.com/v1', '', 0, 'Deepseek 对话模型', NOW(), NOW()),
-    (3, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 对话+嵌入模型', NOW(), NOW()),
-    (4, 1, 'OpenAI', 'https://api.openai.com/v1', '', 0, 'OpenAI 对话模型', NOW(), NOW());
+    (2, 1, 'Ollama', 'http://127.0.0.1:11434', '', 0, 'Ollama 模型', NOW(), NOW()),
+    (3, 1, 'Deepseek', 'https://api.deepseek.com/v1', '', 0, 'Deepseek 模型', NOW(), NOW()),
+    (4, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 模型', NOW(), NOW());
 
 -- 5、预设供应商模型
 INSERT INTO `xxl_ai_supplier_model` (`supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
 VALUES
     (1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
     (1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
-    (2, 'Deepseek Chat', 'deepseek-chat', 0, 0, NOW(), NOW()),
-    (2, 'Deepseek Reasoner', 'deepseek-reasoner', 0, 0, NOW(), NOW()),
-    (3, 'GLM-4-Flash', 'glm-4-flash', 0, 0, NOW(), NOW()),
-    (3, 'GLM-4-Plus', 'glm-4-plus', 0, 0, NOW(), NOW()),
-    (3, 'GLM-4-Air', 'glm-4-air', 0, 0, NOW(), NOW()),
-    (3, 'Embedding-3', 'embedding-3', 1, 0, NOW(), NOW());
+    (2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 0, 0, NOW(), NOW()),
+    (2, 'Qwen3.5-0.8B', 'qwen3.5:0.8b', 0, 0, NOW(), NOW()),
+    (2, 'Qwen3.5-4B', 'qwen3.5:4b', 0, 0, NOW(), NOW()),
+    (3, 'Deepseek Chat', 'deepseek-chat', 0, 0, NOW(), NOW()),
+    (3, 'Deepseek Reasoner', 'deepseek-reasoner', 0, 0, NOW(), NOW()),
+    (4, 'GLM-4-Flash', 'glm-4-flash', 0, 0, NOW(), NOW()),
+    (4, 'GLM-4-Plus', 'glm-4-plus', 0, 0, NOW(), NOW()),
+    (4, 'GLM-4-Air', 'glm-4-air', 0, 0, NOW(), NOW()),
+    (4, 'Embedding-3', 'embedding-3', 1, 0, NOW(), NOW());
 
 -- 6、社区查询配置（框架配置）
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
