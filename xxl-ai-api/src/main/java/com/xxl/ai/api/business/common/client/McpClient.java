@@ -51,6 +51,21 @@ public class McpClient {
     private final Object lock = new Object();
 
     /**
+     * 移除并关闭指定 MCP 客户端（删除/停用配置时调用，释放子进程与连接线程）
+     */
+    public void evict(long mcpId) {
+        CachedClient cached = clientCache.remove(mcpId);
+        toolsCache.remove(mcpId);
+        if (cached != null && cached.sync() != null) {
+            try {
+                cached.sync().closeGracefully();
+            } catch (Exception e) {
+                logger.warn("MCP 客户端关闭失败, id={}, err={}", mcpId, e.getMessage());
+            }
+        }
+    }
+
+    /**
      * 获取 MCP 服务暴露的工具列表（带缓存，配置变化自动重建）
      */
     public List<McpToolInfo> listTools(Mcp mcp) {

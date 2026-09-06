@@ -80,7 +80,14 @@ public class McpServiceImpl implements McpService {
             return Response.ofFail("请选择要删除的 MCP");
         }
         int ret = mcpMapper.deleteByIds(ids);
-        return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+        if (ret > 0) {
+            // 释放缓存的客户端连接/子进程，避免删除后残留
+            for (Long id : ids) {
+                mcpClient.evict(id);
+            }
+            return Response.ofSuccess();
+        }
+        return Response.ofFail();
     }
 
     /**
