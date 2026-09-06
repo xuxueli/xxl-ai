@@ -4,7 +4,6 @@
 -->
 <template>
   <div class="app-container">
-    <div class="content-inner">
       <!-- 搜索栏 -->
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
         <el-form-item :label="t('common.realName')" prop="username">
@@ -55,7 +54,7 @@
             <a class="link-type" style="cursor: pointer" @click="handleViewData(scope.row)">{{ scope.row.username }}</a>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.realName')" align="center" prop="realName" width="110" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('common.realName')" align="center" prop="realName" min-width="110" :show-overflow-tooltip="true" />
         <el-table-column :label="t('common.status')" align="center" width="100">
           <template #default="scope">
             <el-switch
@@ -95,7 +94,6 @@
         v-model:limit="queryParams.pageSize"
         @pagination="getList"
       />
-    </div>
 
     <!-- 添加或修改用户对话框 -->
     <el-dialog :title="formState.title" v-model="formState.visible" width="640px" append-to-body>

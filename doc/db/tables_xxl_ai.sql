@@ -264,12 +264,16 @@ VALUES ('系统配置-登录验证码启用开关', 'system.login.captcha.enable
 INSERT INTO `xxl_ai_space` (`name`, `code`, `status`, `remark`, `add_time`, `update_time`)
 VALUES ('默认空间', 'default', 0, '系统默认业务空间', NOW(), NOW());
 
+-- 3-1、用户-空间授权（普通用户默认授权默认空间，保证顶部空间切换器可用）
+INSERT INTO `xxl_ai_user_space` (`user_id`, `space_id`, `add_time`, `update_time`)
+SELECT 2, `id`, NOW(), NOW() FROM `xxl_ai_space` WHERE `code` = 'default';
+
 -- 4、预设供应商（admin 在页面可随时修改 BaseURL/Key）
 INSERT INTO `xxl_ai_supplier` (`id`,`space_id`, `name`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
     (1, 1, 'OpenCodeGo', 'https://opencode.ai/zen/go/v1', '', 0, 'OpenCode Go模型', NOW(), NOW()),
     (2, 1, 'Ollama', 'http://127.0.0.1:11434', '', 0, 'Ollama 模型', NOW(), NOW()),
-    (3, 1, 'Deepseek', 'https://api.deepseek.com/v1', '', 0, 'Deepseek 模型', NOW(), NOW()),
+    (3, 1, 'Deepseek', 'https://api.deepseek.com', '', 0, 'Deepseek 模型', NOW(), NOW()),
     (4, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 模型', NOW(), NOW());
 
 -- 5、预设供应商模型
@@ -277,15 +281,14 @@ INSERT INTO `xxl_ai_supplier_model` (`supplier_id`, `name`, `model`, `type`, `st
 VALUES
     (1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
     (1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
-    (2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 0, 0, NOW(), NOW()),
     (2, 'Qwen3.5-0.8B', 'qwen3.5:0.8b', 0, 0, NOW(), NOW()),
     (2, 'Qwen3.5-4B', 'qwen3.5:4b', 0, 0, NOW(), NOW()),
-    (3, 'Deepseek Chat', 'deepseek-chat', 0, 0, NOW(), NOW()),
-    (3, 'Deepseek Reasoner', 'deepseek-reasoner', 0, 0, NOW(), NOW()),
-    (4, 'GLM-4-Flash', 'glm-4-flash', 0, 0, NOW(), NOW()),
-    (4, 'GLM-4-Plus', 'glm-4-plus', 0, 0, NOW(), NOW()),
-    (4, 'GLM-4-Air', 'glm-4-air', 0, 0, NOW(), NOW()),
-    (4, 'Embedding-3', 'embedding-3', 1, 0, NOW(), NOW());
+    (2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 1, 0, NOW(), NOW()),
+    (3, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
+    (3, 'DeepSeek V4 Pro', 'deepseek-v4-pro', 0, 0, NOW(), NOW()),
+    (3, 'DeepSeek V4 Flash Vision', 'deepseek-v4-flash-vision-exp', 0, 0, NOW(), NOW()),
+    (4, 'GLM-5.3-Flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
+    (4, 'GLM-5.3', 'glm-5.3', 0, 0, NOW(), NOW());
 
 -- 6、社区查询配置（框架配置）
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)

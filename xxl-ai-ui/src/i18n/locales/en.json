@@ -353,6 +353,7 @@
       "id": "Space ID",
       "space": "Workspace",
       "selectPlaceholder": "Select Workspace",
+      "noSpaceTip": "No Space Assigned",
       "confirmDelete": "Are you sure to delete the space with ID \"{0}\"?"
     },
     "supplier": {
@@ -470,6 +471,8 @@
       "docContent": "Doc Content",
       "docContentPlaceholder": "Paste text content; .txt / .md file upload is also supported",
       "docUpload": "Upload Document",
+      "docUploadTypeTip": "Only .txt / .md text files are supported",
+      "docUploadSizeTip": "File size cannot exceed 10MB",
       "docVectorize": "Vectorize",
       "docStatus": "Status",
       "docChunks": "Chunks",

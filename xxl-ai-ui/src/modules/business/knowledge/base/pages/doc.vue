@@ -47,6 +47,7 @@
           <el-upload
             :show-file-list="false"
             accept=".txt,.md"
+            :before-upload="handleBeforeUpload"
             :http-request="handleUpload"
             :disabled="uploading"
           >
@@ -79,7 +80,7 @@
       <!-- 文档列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" min-width="200" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" width="180" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.knowledge.docStatus')" align="center" width="110">
           <template #default="scope">
             <el-tag :type="docStatusType(scope.row.status)">
@@ -93,13 +94,13 @@
             <span>{{ scope.row.addTime }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['knowledge:doc']">{{
-              t('common.modify')
-            }}</el-button>
             <el-button link type="primary" icon="MagicStick" @click="handleVectorize(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('business.knowledge.docVectorize')
+            }}</el-button>
+            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['knowledge:doc']">{{
+              t('common.modify')
             }}</el-button>
             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('common.delete')
@@ -130,7 +131,7 @@
             type="textarea"
             :rows="14"
             :placeholder="t('business.knowledge.docContentPlaceholder')"
-            maxlength="65535"
+            maxlength="16777215"
           />
         </el-form-item>
       </el-form>
@@ -307,6 +308,20 @@ function cancel() {
 }
 
 // --------------------------------- 上传 / 向量化 ---------------------------------
+/** 上传前校验：仅允许 .txt/.md 且不超 10MB */
+function handleBeforeUpload(file: File): boolean {
+  const ext = (file.name.toLowerCase().match(/\.(\w+)$/) || [])[1]
+  if (ext !== 'txt' && ext !== 'md') {
+    modal.msgError(t('business.knowledge.docUploadTypeTip'))
+    return false
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    modal.msgError(t('business.knowledge.docUploadSizeTip'))
+    return false
+  }
+  return true
+}
+
 /** 文件上传（自定义 http-request，走业务接口） */
 async function handleUpload(options: UploadRequestOptions) {
   if (!baseId.value) {

@@ -179,8 +179,7 @@ const formState = ref<FormState<SupplierForm>>({
   form: {},
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }],
-    baseUrl: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.baseUrl')]), trigger: 'blur' }],
-    apiKey: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.apiKey')]), trigger: 'blur' }]
+    baseUrl: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.baseUrl')]), trigger: 'blur' }]
   }
 })
 

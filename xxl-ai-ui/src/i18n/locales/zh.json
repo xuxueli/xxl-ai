@@ -353,6 +353,7 @@
       "id": "空间编号",
       "space": "业务空间",
       "selectPlaceholder": "请选择业务空间",
+      "noSpaceTip": "未分配空间",
       "confirmDelete": "是否确认删除空间编号为\"{0}\"的数据项？"
     },
     "supplier": {
@@ -470,6 +471,8 @@
       "docContent": "文档内容",
       "docContentPlaceholder": "请输入文档内容（粘贴文本）；也支持上传 .txt/.md 文件",
       "docUpload": "上传文档",
+      "docUploadTypeTip": "仅支持 .txt / .md 文本文件",
+      "docUploadSizeTip": "文件大小不能超过 10MB",
       "docVectorize": "向量化",
       "docStatus": "处理状态",
       "docChunks": "分片数",

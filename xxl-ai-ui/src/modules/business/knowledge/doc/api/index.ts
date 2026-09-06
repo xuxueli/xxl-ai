@@ -30,7 +30,8 @@ export function uploadKnowledgeDoc(baseId: number, file: File): Promise<Response
   const formData = new FormData()
   formData.append('baseId', String(baseId))
   formData.append('file', file)
-  return request({ url: '/knowledge/doc/upload', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data', repeatSubmit: false } })
+  // 不手动设置 Content-Type，交由浏览器自动携带 multipart boundary，避免服务端解析失败
+  return request({ url: '/knowledge/doc/upload', method: 'post', data: formData, headers: { repeatSubmit: false } })
 }
 
 /** 文档向量化 */

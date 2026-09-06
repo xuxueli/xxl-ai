@@ -3,6 +3,7 @@
   功能：展示当前业务空间，支持切换当前空间；切换后刷新页面以全局应用新的空间上下文
 -->
 <template>
+  <!-- 有可用空间：展示空间切换下拉 -->
   <el-dropdown
     v-if="spaceStore.spaces.length > 0"
     class="right-menu-item hover-effect space-select-wrapper"
@@ -28,6 +29,13 @@
       </el-dropdown-menu>
     </template>
   </el-dropdown>
+  <!-- 无分配空间：仍展示空间入口占位，提示需管理员分配空间 -->
+  <div v-else class="right-menu-item hover-effect space-select-wrapper" :title="noSpaceTip">
+    <div class="space-wrapper no-space">
+      <el-icon class="space-icon"><Folder /></el-icon>
+      <span class="space-name">{{ noSpaceTip }}</span>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -39,6 +47,9 @@ const spaceStore = useSpaceStore()
 
 /** 当前空间名称 */
 const currentSpaceName = computed(() => spaceStore.currentSpace?.name || t('business.space.selectPlaceholder'))
+
+/** 未分配空间提示（无空间时占位展示） */
+const noSpaceTip = computed(() => t('business.space.noSpaceTip'))
 
 /**
  * 切换当前空间：持久化后刷新页面，使所有业务模块重新按新空间加载数据
@@ -84,6 +95,15 @@ function handleCommand(command: string | number | object) {
   .caret-icon {
     font-size: 12px;
     margin-left: 4px;
+  }
+
+  /* 未分配空间占位：弱化样式，提示需管理员授权 */
+  &.no-space {
+    cursor: not-allowed;
+
+    .space-name {
+      color: #a8abb2;
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.xxl.tool.core.StringTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -60,7 +61,7 @@ public class LLMClient {
         body.add("messages", GSON.toJsonTree(messages));
         body.addProperty("stream", true);
 
-        HttpResponse<InputStream> response = doPost(baseUrl + "/chat/completions", apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("模型接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -134,7 +135,7 @@ public class LLMClient {
         }
         body.addProperty("stream", false);
 
-        HttpResponse<InputStream> response = doPost(baseUrl + "/chat/completions", apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("模型接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -203,7 +204,7 @@ public class LLMClient {
         body.addProperty("model", model);
         body.addProperty("input", input);
 
-        HttpResponse<InputStream> response = doPost(baseUrl + "/embeddings", apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/embeddings"), apiKey, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("嵌入接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -221,6 +222,29 @@ public class LLMClient {
             vector[i] = embedding.get(i).getAsFloat();
         }
         return vector;
+    }
+
+    /**
+     * 拼接 OpenAI 兼容接口路径
+     *
+     * 供应商 BaseURL 通常是含版本前缀的完整地址（如 https://xxx/v1），但 Ollama 等可能只配置裸地址（如 http://host:11434），
+     * 此处自动补全 /v1 前缀，保证 /chat/completions、/embeddings 均能正确解析
+     *
+     * @param baseUrl 供应商BaseURL
+     * @param suffix  接口路径后缀，如 "/chat/completions"、"/embeddings"
+     * @return 完整接口URL
+     */
+    private String buildParallelUrl(String baseUrl, String suffix) {
+        String url = baseUrl == null ? "" : baseUrl.trim();
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        // 裸地址（无路径前缀，如 Ollama http://host:11434）自动补 /v1 OpenAI 兼容版本前缀
+        String path = URI.create(url).getPath();
+        if (StringTool.isBlank(path) || "/".equals(path)) {
+            url = url + "/v1";
+        }
+        return url + suffix;
     }
 
     /**
