@@ -278,11 +278,11 @@ public class AgentAccessService {
         }
 
         // 落库助手消息（含思考过程）
-        if (fullText.length() > 0 || thinkText.length() > 0) {
+        if (!fullText.isEmpty() || !thinkText.isEmpty()) {
             AgentMsg assistantMsg = new AgentMsg();
             assistantMsg.setConvId(convId);
             assistantMsg.setRole("assistant");
-            assistantMsg.setReasoning(thinkText.length() > 0 ? thinkText.toString() : null);
+            assistantMsg.setReasoning(!thinkText.isEmpty() ? thinkText.toString() : null);
             assistantMsg.setContent(fullText.toString());
             agentMsgMapper.insert(assistantMsg);
         }

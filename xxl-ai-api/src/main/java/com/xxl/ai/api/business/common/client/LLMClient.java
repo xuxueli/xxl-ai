@@ -71,7 +71,7 @@ public class LLMClient {
         String line;
         String originData = "";
         while ((line = reader.readLine()) != null) {
-            originData += File.separator + line;
+            originData += line + File.separator;
             if (!line.startsWith("data:")) {
                 continue;
             }
@@ -111,7 +111,7 @@ public class LLMClient {
                 }
             }
         }
-        logger.debug("LLMClient.chatStream originData: {}", originData);
+        logger.info("LLMClient.chatStream, input:{} output: {}", messages, originData);
         return fullText.toString();
     }
 
