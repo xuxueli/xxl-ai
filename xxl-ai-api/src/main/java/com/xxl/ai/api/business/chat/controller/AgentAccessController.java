@@ -1,9 +1,9 @@
-package com.xxl.ai.api.business.agent.conv.controller;
+package com.xxl.ai.api.business.chat.controller;
 
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.agent.conv.model.entity.AgentConv;
-import com.xxl.ai.api.business.agent.conv.model.entity.AgentMsg;
-import com.xxl.ai.api.business.agent.conv.service.AgentAccessService;
+import com.xxl.ai.api.business.chat.model.entity.AgentConv;
+import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
+import com.xxl.ai.api.business.chat.service.AgentAccessService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
@@ -20,7 +20,7 @@ import java.util.List;
  * @author xxl-ai 2026-09-05
  */
 @RestController
-@RequestMapping("/agent/access")
+@RequestMapping("/chat")
 public class AgentAccessController {
 
     @Resource

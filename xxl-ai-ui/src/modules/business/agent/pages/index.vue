@@ -354,7 +354,7 @@ function cancel() {
 
 // --------------------------------- 发布 / 访问 URL ---------------------------------
 function agentUrl(uuid: string) {
-  return `${origin.value}/agent/chat/${uuid}`
+  return `${origin.value}/chat/${uuid}`
 }
 /** 发布状态快速切换：开启发布 / 关闭取消发布（失败回滚开关状态） */
 function handlePublishChange(row: Agent) {

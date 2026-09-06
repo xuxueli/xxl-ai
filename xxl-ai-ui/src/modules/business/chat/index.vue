@@ -7,7 +7,7 @@
     <!-- 左侧：对话列表 -->
     <aside class="conv-panel">
       <div class="conv-header">
-        <div class="agent-title">
+        <div class="agent-title" @click="handleRefresh" :title="t('business.agent.refresh')">
           <img v-if="logo" :src="logo" class="agent-logo" alt="logo" />
           <span class="agent-name">{{ agent?.name || 'Agent' }}</span>
         </div>
@@ -49,6 +49,20 @@
     <main class="chat-panel">
       <div class="chat-header">
         <span class="chat-intro">{{ agent?.intro || '' }}</span>
+        <el-dropdown trigger="click" @command="handleVisitorCommand">
+          <span class="visitor-trigger">
+            <el-icon class="visitor-icon"><User /></el-icon>
+            <span class="visitor-label">{{ t('business.agent.visitor') }}</span>
+            <el-icon class="visitor-arrow"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="'copyVisitor'" :disabled="!visitorId">
+                {{ t('business.agent.visitorInfo') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
       <div class="chat-body" ref="chatBodyRef">
         <template v-if="currentConvId">
@@ -57,25 +71,31 @@
               <el-icon v-if="msg.role === 'assistant'"><ChatDotRound /></el-icon>
               <el-icon v-else><User /></el-icon>
             </div>
-            <div class="msg-bubble">
-              <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
-              <div v-if="msg.reasoning" class="msg-reasoning">
-                <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
-                  <el-icon class="reasoning-icon"><MagicStick /></el-icon>
-                  <span class="reasoning-label">{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
-                  <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
+            <div class="msg-body">
+              <div class="msg-bubble">
+                <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
+                <div v-if="msg.reasoning" class="msg-reasoning">
+                  <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
+                    <el-icon class="reasoning-icon"><MagicStick /></el-icon>
+                    <span class="reasoning-label">{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
+                    <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
+                  </div>
+                  <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
                 </div>
-                <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
+                <!-- 回复内容 -->
+                <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
+                <span class="msg-content">{{ msg.content }}</span>
               </div>
-              <!-- 回复内容 -->
-              <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
-              <span class="msg-content">{{ msg.content }}</span>
-            </div>            
+              <!-- 发送时间：鼠标悬浮展示 -->
+              <div class="msg-time">{{ timeText(msg) }}</div>
+            </div>
           </div>
         </template>
         <!-- 新建对话：中间区域展示输入框，输入+发送后才生成对话 -->
         <div v-else-if="newChat" class="chat-new">
           <div class="chat-new-inner">
+            <div class="chat-new-title">{{ agent?.name || 'Agent' }}</div>
+            <div v-if="agent?.intro" class="chat-new-sub">{{ agent.intro }}</div>
             <el-input
               ref="newChatInputRef"
               v-model="inputText"
@@ -119,7 +139,7 @@
 <script setup lang="ts">
 import { t } from '@/i18n'
 import logo from '@/assets/images/logo.png'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   agentAccessLoad,
@@ -131,9 +151,11 @@ import {
   agentSendStream
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
+import { parseTime } from '@/utils/common'
 import { nextTick, onMounted, ref } from 'vue'
 
 const route = useRoute()
+const router = useRouter()
 
 const uuid = ref<string>(String(route.params.uuid || ''))
 const visitorId = ref<string>('')
@@ -171,7 +193,7 @@ function ensureVisitorId() {
   visitorId.value = id
 }
 
-/** 初始化：加载 Agent 元信息 + 对话列表 */
+/** 初始化：加载 Agent 元信息 + 对话列表；带对话参数则定位单个对话，否则默认展示新建对话内容 */
 async function init() {
   try {
     const res = await agentAccessLoad(uuid.value)
@@ -182,7 +204,16 @@ async function init() {
     return
   }
   ensureVisitorId()
-  loadConvList()
+  await loadConvList()
+  // 定位指定对话：优先路径参数 /chat/:uuid/:conv，其次查询参数 /chat/:uuid?convId=；合法则自动切换，否则默认进入新建对话内容
+  const convParam = Array.isArray(route.params.conv) ? route.params.conv[0] : (route.params.conv as string | undefined)
+  const queryParam = Array.isArray(route.query.convId) ? route.query.convId[0] : (route.query.convId as string | undefined)
+  const targetConvId = Number(convParam ?? queryParam)
+  if (Number.isInteger(targetConvId) && targetConvId > 0 && convList.value.some((c) => c.id === targetConvId)) {
+    selectConv(targetConvId)
+  } else {
+    newChat.value = true
+  }
 }
 
 /** 加载对话列表 */
@@ -191,9 +222,6 @@ async function loadConvList() {
   try {
     const res = await agentAccessConvList(uuid.value, visitorId.value)
     convList.value = res.data
-    if (convList.value.length > 0) {
-      selectConv(convList.value[0].id)
-    }
   } finally {
     convLoading.value = false
   }
@@ -204,16 +232,34 @@ async function loadConvList() {
 /** 新建对话：不立即建会话，进入新建状态并聚焦输入框，输入+发送后才生成对话 */
 function handleNewChat() {
   if (sending.value) return
+  // 已在新建对话状态：提示并聚焦，不重复进入
+  if (newChat.value && !currentConvId.value) {
+    ElMessage.info(t('business.agent.newChatAlready'))
+    newChatInputRef.value?.focus()
+    return
+  }
   currentConvId.value = undefined
   messages.value = []
   newChat.value = true
+  syncUrlConvId()
   nextTick(() => newChatInputRef.value?.focus())
+}
+
+/** 右上角 Agent 名称区域点击：整体刷新页面 */
+function handleRefresh() {
+  window.location.reload()
+}
+
+/** 同步 URL 中的 convId 查询参数（点击对话/新建对话/发送时体现当前会话） */
+function syncUrlConvId(convId?: number) {
+  router.replace({ path: `/chat/${uuid.value}`, query: convId ? { convId: String(convId) } : {} })
 }
 
 /** 选中对话：加载消息 */
 async function selectConv(convId: number) {
   currentConvId.value = convId
   newChat.value = false
+  syncUrlConvId(convId)
   messages.value = []
   const res = await agentAccessMsgList(convId)
   messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
@@ -286,6 +332,7 @@ async function handleSend() {
       const convId = res.data.id
       currentConvId.value = convId
       newChat.value = false
+      syncUrlConvId(convId)
       // 新对话置顶（列表按 id 倒序）
       convList.value.unshift(res.data)
     } catch (e) {
@@ -296,9 +343,10 @@ async function handleSend() {
   }
 
   // 本地追加用户消息
-  const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false }
+  const now = new Date().toISOString()
+  const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false, addTime: now }
   messages.value.push(userMsg)
-  const assistantMsg: ChatMsg = { convId: currentConvId.value, role: 'assistant', content: '', reasoning: '', showThinking: true }
+  const assistantMsg: ChatMsg = { convId: currentConvId.value, role: 'assistant', content: '', reasoning: '', showThinking: true, addTime: now }
   messages.value.push(assistantMsg)
   await scrollToBottom()
 
@@ -379,6 +427,39 @@ function toggleThinking(index: number) {
   if (msg) msg.showThinking = !msg.showThinking
 }
 
+// --------------------------------- 访客信息 ---------------------------------
+
+/** 访客下拉：复制访客信息并提示 */
+async function handleVisitorCommand() {
+  if (!visitorId.value) return
+  const tip = t('business.agent.visitorIdTip', [visitorId.value])
+  await copyText(tip)
+  ElMessage.success(t('business.agent.copySuccess'))
+}
+
+/** 复制文本：优先 navigator.clipboard，降级 textarea 方案 */
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch (e) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
+}
+
+// --------------------------------- 会话消息 ---------------------------------
+
+/** 消息发送时间（无值时返回空，悬浮时展示） */
+function timeText(msg: ChatMsg) {
+  return msg.addTime ? (parseTime(msg.addTime) || '') : ''
+}
+
 // --------------------------------- 滚动 ---------------------------------
 
 async function scrollToBottom() {
@@ -423,6 +504,7 @@ onMounted(() => init())
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .agent-logo {
@@ -508,12 +590,38 @@ onMounted(() => init())
   border-bottom: 1px solid #e4e7ed;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
   color: #909399;
   font-size: 13px;
   overflow: hidden;
+}
+
+.chat-intro {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-right: 16px;
+}
+
+.visitor-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #606266;
+  font-size: 13px;
+  outline: none;
+
+  .visitor-icon {
+    font-size: 14px;
+  }
+
+  .visitor-arrow {
+    font-size: 11px;
+  }
 }
 
 .chat-body {
@@ -522,10 +630,11 @@ onMounted(() => init())
   padding: 20px;
 }
 
-/* 新建对话：中央区域展示输入框 */
+/* 新建对话：中央区域展示输入框（整体居中，向上微调） */
 .chat-new {
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
@@ -533,6 +642,30 @@ onMounted(() => init())
 .chat-new-inner {
   width: 100%;
   max-width: 720px;
+  /* 向上挪动：居中基础上通过下边距上移 */
+  margin-bottom: 20vh;
+}
+
+/* 新建对话：Agent名称（大） + 介绍（中） */
+.chat-new-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-new-sub {
+  text-align: center;
+  font-size: 17px;
+  color: #909399;
+  margin-bottom: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 新建对话与底部输入框：圆角 */
@@ -584,8 +717,14 @@ onMounted(() => init())
     color: #5591e8;
   }
 
-  .msg-bubble {
+  .msg-body {
+    display: flex;
+    flex-direction: column;
     max-width: 76%;
+  }
+
+  .msg-bubble {
+    max-width: 100%;
     padding: 10px 14px;
     border-radius: 8px;
     font-size: 14px;
@@ -603,6 +742,24 @@ onMounted(() => init())
   &.user .msg-bubble {
     background: var(--el-color-primary);
     color: #fff;
+  }
+
+  /* 发送时间：默认隐藏，鼠标悬浮展示 */
+  .msg-time {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #c0c4cc;
+    line-height: 1.4;
+    text-align: left;
+    visibility: hidden;
+  }
+
+  &.user .msg-time {
+    text-align: right;
+  }
+
+  &:hover .msg-time {
+    visibility: visible;
   }
 }
 

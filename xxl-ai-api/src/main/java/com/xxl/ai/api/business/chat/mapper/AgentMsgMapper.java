@@ -1,6 +1,6 @@
-package com.xxl.ai.api.business.agent.conv.mapper;
+package com.xxl.ai.api.business.chat.mapper;
 
-import com.xxl.ai.api.business.agent.conv.model.entity.AgentMsg;
+import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

@@ -1,12 +1,12 @@
-package com.xxl.ai.api.business.agent.conv.service;
+package com.xxl.ai.api.business.chat.service;
 
 import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.agent.conv.mapper.AgentConvMapper;
-import com.xxl.ai.api.business.agent.conv.mapper.AgentMsgMapper;
-import com.xxl.ai.api.business.agent.conv.model.entity.AgentConv;
-import com.xxl.ai.api.business.agent.conv.model.entity.AgentMsg;
-import com.xxl.ai.api.business.agent.conv.model.AgentMcpTool;
+import com.xxl.ai.api.business.chat.mapper.AgentConvMapper;
+import com.xxl.ai.api.business.chat.mapper.AgentMsgMapper;
+import com.xxl.ai.api.business.chat.model.entity.AgentConv;
+import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
+import com.xxl.ai.api.business.chat.model.AgentMcpTool;
 import com.xxl.ai.api.business.common.client.LLMClient;
 import com.xxl.ai.api.business.common.client.McpClient;
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;

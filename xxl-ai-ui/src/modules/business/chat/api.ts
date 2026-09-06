@@ -9,32 +9,32 @@ const BASE = import.meta.env.VITE_APP_BASE_API || '/api'
 
 /** Load Agent 基础信息 */
 export function agentAccessLoad(uuid: string): Promise<Response<AgentChatInfo>> {
-  return request({ url: '/agent/access/load', method: 'get', params: { uuid } })
+  return request({ url: '/chat/load', method: 'get', params: { uuid } })
 }
 
 /** 创建对话 */
 export function agentAccessConvCreate(uuid: string, visitorId: string): Promise<Response<AgentConv>> {
-  return request({ url: '/agent/access/convCreate', method: 'get', params: { uuid, visitorId } })
+  return request({ url: '/chat/convCreate', method: 'get', params: { uuid, visitorId } })
 }
 
 /** 对话列表 */
 export function agentAccessConvList(uuid: string, visitorId: string): Promise<Response<AgentConv[]>> {
-  return request({ url: '/agent/access/convList', method: 'get', params: { uuid, visitorId } })
+  return request({ url: '/chat/convList', method: 'get', params: { uuid, visitorId } })
 }
 
 /** 消息列表 */
 export function agentAccessMsgList(convId: number): Promise<Response<AgentMsg[]>> {
-  return request({ url: '/agent/access/msgList', method: 'get', params: { convId } })
+  return request({ url: '/chat/msgList', method: 'get', params: { convId } })
 }
 
 /** 删除对话 */
 export function agentAccessConvDelete(convId: number): Promise<Response<string>> {
-  return request({ url: '/agent/access/convDelete', method: 'get', params: { convId } })
+  return request({ url: '/chat/convDelete', method: 'get', params: { convId } })
 }
 
 /** 修改对话标题 */
 export function agentAccessConvRename(convId: number, title: string): Promise<Response<string>> {
-  return request({ url: '/agent/access/convRename', method: 'get', params: { convId, title } })
+  return request({ url: '/chat/convRename', method: 'get', params: { convId, title } })
 }
 
 /**
@@ -47,7 +47,7 @@ export async function agentSendStream(
   convId: number,
   content: string
 ): Promise<ReadableStreamDefaultReader<Uint8Array> | null> {
-  const url = `${BASE}/agent/access/send?uuid=${encodeURIComponent(uuid)}&visitorId=${encodeURIComponent(visitorId)}&convId=${convId}&content=${encodeURIComponent(content)}`
+  const url = `${BASE}/chat/send?uuid=${encodeURIComponent(uuid)}&visitorId=${encodeURIComponent(visitorId)}&convId=${convId}&content=${encodeURIComponent(content)}`
   const response = await fetch(url, { method: 'POST' })
   if (!response.ok || !response.body) {
     throw new Error(`请求失败，HTTP ${response.status}`)

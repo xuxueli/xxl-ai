@@ -76,8 +76,8 @@ export const constantRoutes = [
   },
   // Agent 公开对话页（免登录，按发布 URL 直接访问）
   {
-    path: '/agent/chat/:uuid',
-    component: () => import('@/modules/business/agent/chat/index.vue'),
+    path: '/chat/:uuid',
+    component: () => import('@/modules/business/chat/index.vue'),
     hidden: true
   }
 ]
@@ -102,7 +102,7 @@ NProgress.configure({ showSpinner: false })
 
 // 登录白名单（Agent 公开对话页亦免登录，可通过发布 URL 访问）
 const whiteList = ['/login']
-const isWhiteList = (path: string) => whiteList.includes(path) || path.startsWith('/agent/chat')
+const isWhiteList = (path: string) => whiteList.includes(path) || path.startsWith('/chat')
 
 // 全局前置拦截
 router.beforeEach(async (to, from) => {

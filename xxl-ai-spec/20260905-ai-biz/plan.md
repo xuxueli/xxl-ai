@@ -58,7 +58,7 @@
 | knowledge | business/knowledge/base/ + doc/ | base CRUD + 向量参数；doc CRUD + vectorize + base/search(检索) |
 | agent | business/agent/ + conv/ | 管理 CRUD + publish/unpublish；公开 `@XxlSso(login=false)` 免鉴权 conv(load/create/list/send SSE) |
 | 用户管理 | framework/controller/service/mapper | UserDTO.spaceIds + user_space 关联读写，XxxSso under `/system/user` |
-| 框架配置 | application.properties, pom.xml | excluded.paths += /agent/access/**；milvus 连接；milvus-sdk-java 依赖 |
+| 框架配置 | application.properties, pom.xml | excluded.paths += /chat/**；milvus 连接；milvus-sdk-java 依赖 |
 | docker | docker-compose.yml / .env | 新增 milvus+etcd+minio；api PARAMS 注入 milvus uri；挂载业务初始化 SQL |
 
 接口一览：
@@ -97,7 +97,7 @@
   - 供应商页/模型接口正常，种子供应商（deepseek/glm/opencodego）+ 模型可见
   - MCP 社区查询外部不可达时友好降级；Skill 社区未配置时友好提示
   - 知识库/文档 CRUD 正常；向量化流程触发真实嵌入接口（无 Key 时 401 友好失败、文档置失败态，配 Key 后即可入 Milvus）
-  - Agent 发布生成 UUID → 公开 `/agent/access/load` 免登录可访问；convCreate/convList/msgList 正常（visitorId 隔离）；SSE send 流式返回、错误路径友好且用户消息已落库
+  - Agent 发布生成 UUID → 公开 `/chat/load` 免登录可访问；convCreate/convList/msgList 正常（visitorId 隔离）；SSE send 流式返回、错误路径友好且用户消息已落库
   - 用户管理新增/编辑授权空间接口连通（loadSpaceIds 正常）
 - [ ] 真实模型/嵌入 Key 配置后的端到端向量化 + Agent 对话（供应商 BaseURL/Key 由管理员在页面配置）
 - 变更记录：2026-09-05 方案落盘；同日完成建表、后端 6 模块 + 公共支撑、前端 6 模块 + 平台改造（空间切换器/公开对话页/用户多空间授权）、i18n、docker(milvus 栈)、编译与联调验证。

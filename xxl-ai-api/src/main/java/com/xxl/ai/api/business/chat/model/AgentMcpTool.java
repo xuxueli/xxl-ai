@@ -1,4 +1,4 @@
-package com.xxl.ai.api.business.agent.conv.model;
+package com.xxl.ai.api.business.chat.model;
 
 import com.xxl.ai.api.business.common.client.McpClient;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;

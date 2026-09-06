@@ -1,4 +1,4 @@
-package com.xxl.ai.api.business.agent.conv.model.entity;
+package com.xxl.ai.api.business.chat.model.entity;
 
 import java.util.Date;
 
