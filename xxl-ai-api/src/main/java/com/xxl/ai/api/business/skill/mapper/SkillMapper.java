@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Skill Mapper
  *
- * @author xxl-ai 2026-09-05
+ * @author xxl-ai 2026-09-06
  */
 @Mapper
 public interface SkillMapper {
@@ -30,6 +30,11 @@ public interface SkillMapper {
     int countBySpaceId(@Param("spaceId") long spaceId);
 
     List<Skill> listByIds(@Param("ids") List<Long> ids);
+
+    /** 名称唯一性校验（排除自身） */
+    int countByName(@Param("spaceId") long spaceId,
+                    @Param("name") String name,
+                    @Param("excludeId") long excludeId);
 
     List<Skill> pageList(@Param("spaceId") long spaceId,
                          @Param("offset") int offset,

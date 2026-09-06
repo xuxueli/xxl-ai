@@ -78,22 +78,39 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_mcp` (
     KEY `i_space_id` (`space_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MCP服务表';
 
--- 6、Skill 表
+-- 6、SKILL 表（重设计：移除 content/source/source_url；名称空间内唯一）
 CREATE TABLE IF NOT EXISTS `xxl_ai_skill` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `space_id` BIGINT NOT NULL COMMENT '空间ID',
-    `name` VARCHAR(100) NOT NULL COMMENT 'Skill名称',
-    `description` VARCHAR(500) NULL DEFAULT NULL COMMENT '描述',
-    `content` TEXT NULL COMMENT 'Skill内容(指令/流程)',
+    `name` VARCHAR(100) NOT NULL COMMENT 'SKILL名称(目录名，空间内唯一)',
+    `description` VARCHAR(500) NULL DEFAULT NULL COMMENT 'SKILL描述',
     `version` VARCHAR(20) NOT NULL DEFAULT '1.0' COMMENT '版本',
-    `source` VARCHAR(20) NOT NULL DEFAULT 'local' COMMENT '来源：local-本地、community-社区',
-    `source_url` VARCHAR(200) NULL DEFAULT NULL COMMENT '社区来源链接',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-正常、1-停用',
     `add_time` DATETIME NOT NULL COMMENT '新增时间',
     `update_time` DATETIME NOT NULL COMMENT '更新时间',
     PRIMARY KEY (`id`),
+    UNIQUE KEY `i_space_id_name` (`space_id`, `name`),
     KEY `i_space_id` (`space_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Skill表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SKILL表';
+
+-- 6-1、SKILL 内容文件表（文件树，parent_id 父子层级；locked 固定文件仅 SKILL.md 与约定目录）
+CREATE TABLE IF NOT EXISTS `xxl_ai_skill_file` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `skill_id` BIGINT NOT NULL COMMENT 'SKILL ID',
+    `parent_id` BIGINT NOT NULL DEFAULT 0 COMMENT '父目录ID(0为根级)',
+    `name` VARCHAR(200) NOT NULL COMMENT '文件/目录名称',
+    `type` TINYINT NOT NULL DEFAULT 1 COMMENT '类型：0-目录、1-文件',
+    `file_type` VARCHAR(20) NULL DEFAULT NULL COMMENT '文件类型(扩展名，目录为空)',
+    `content` MEDIUMTEXT NULL COMMENT '文件内容(目录为空)',
+    `locked` TINYINT NOT NULL DEFAULT 0 COMMENT '是否固定：0-否、1-是(不可删除/改名/移动)',
+    `sort` INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `add_time` DATETIME NOT NULL COMMENT '新增时间',
+    `update_time` DATETIME NOT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `i_skill_parent_name` (`skill_id`, `parent_id`, `name`),
+    KEY `i_skill_id` (`skill_id`),
+    KEY `i_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='SKILL内容文件表';
 
 -- 7、知识库表
 CREATE TABLE IF NOT EXISTS `xxl_ai_knowledge_base` (
@@ -271,15 +288,23 @@ VALUES
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
 VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区检索接口地址，可配置为空则禁用社区查询', NOW(), NOW());
 
--- 7、预设 MCP 服务（覆盖 Streamable HTTP 与 stdio 本地进程两类，stdio 需宿主已安装 Node/npx 环境）
---    注意：stdio 类以宿主进程方式运行，命令涉及本机执行请确认信任后再启用
+-- 7、预设 MCP 服务（覆盖 Streamable HTTP / SSE / stdio 三类，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    (1, 'Fetch 网页抓取', 0, 'https://mcp.genez.io/fetch', null, '{"transport":"http","url":"https://mcp.genez.io/fetch","headers":{}}', 0, '网页抓取与内容提取（公共托管，无需鉴权）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
-    (1, 'GitHub 代码与仓库', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}', 0, 'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
-    (1, 'Filesystem 文件系统', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
-    (1, 'Memory 知识图谱记忆', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}', 0, '跨会话知识图谱记忆', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
-    (1, 'Everything 全工具集', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}', 0, 'MCP 全工具集（演示/联调用）', '2026-09-06 03:41:15', '2026-09-06 03:41:15');
+    -- 远程 MCP（本地mock）
+    (1, '本地时钟服务', 0, 'http://127.0.0.1:19001/mcp', null, '{"transport":"http","url":"http://127.0.0.1:19001/mcp","headers":{}}', 0, '内置测试：get_current_time', NOW(), NOW()),
+    (1, '计算器服务', 0, 'http://127.0.0.1:19003/mcp', null, '{"transport":"http","url":"http://127.0.0.1:19003/mcp","headers":{}}', 0, '内置测试：calculator', NOW(), NOW()),
+    (1, '天气查询服务', 1, 'http://127.0.0.1:19002/mcp', null, '{"transport":"sse","url":"http://127.0.0.1:19002/mcp","headers":{}}', 0, '内置测试：get_weather', NOW(), NOW()),
+    (1, '日志信息查询', 1, 'http://127.0.0.1:19004/mcp', null, '{"transport":"sse","url":"http://127.0.0.1:19004/mcp","headers":{}}', 0, '内置测试：query_logs', NOW(), NOW()),
+    -- 本地 MCP（本地mock）
+    (1, '系统信息查询', 2, null, null, '{"transport":"stdio","command":"node","args":["/Users/admin/program/git-space/github/xxl-ai/xxl-ai-spec/20260906-mcp/mock-server/mcp-stdio-mock.mjs","system"],"env":{}}', 0, '内置测试：get_system_info（本地stdio mock）', NOW(), NOW()),
+    (1, '随机数生成', 2, null, null, '{"transport":"stdio","command":"node","args":["/Users/admin/program/git-space/github/xxl-ai/xxl-ai-spec/20260906-mcp/mock-server/mcp-stdio-mock.mjs","random"],"env":{}}', 0, '内置测试：random_number（本地stdio mock）', NOW(), NOW()),
+    -- 社区流行MCP（stdio 本地进程）
+    (1, 'GitHub 代码与仓库', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}', 0, 'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', NOW(), NOW()),
+    (1, 'Fetch 网页抓取', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-fetch"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),
+    (1, 'Filesystem 文件系统', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW()),
+    (1, 'Memory 知识图谱记忆', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}', 0, '跨会话知识图谱记忆', NOW(), NOW()),
+    (1, 'Everything 全工具集', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}', 0, 'MCP 全工具集（演示/联调用）', NOW(), NOW());
 
 
 COMMIT;

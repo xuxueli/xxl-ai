@@ -23,7 +23,9 @@
 | url | VARCHAR(200) | 服务地址 | 改为可空（stdio 无 url） |
 | type | TINYINT | 0=HTTP、1=SSE、2=stdio | 存量 0/1 兼容 |
 
-存量迁移：按 `type/url/headers` 回填 `config`。SQL 脚本：`mcp-table.sql`（增量）；新库已同步进 `doc/db/tables_xxl_ai.sql`（含 5 条预设 MCP 种子：Fetch-HTTP、GitHub/Filesystem/Memory/Everything-stdio）。
+存量迁移：按 `type/url/headers` 回填 `config`。SQL 脚本：`mcp-table.sql`（增量）；新库已同步进 `doc/db/tables_xxl_ai.sql`（预设 11 条 MCP 种子：本地时钟/天气查询/计算器/日志信息查询 4 条远程用例（http/sse）、系统信息查询/随机数生成 2 条 stdio 本地 mock、社区流行 Top5 MCP（stdio））。
+
+联调辅助：`mock-server/mcp-mock-server.mjs` 零依赖模拟 Streamable HTTP / SSE 服务（19001-19004 端口，启动 `node mock-server/mcp-mock-server.mjs`）；`mock-server/mcp-stdio-mock.mjs` 模拟 stdio 子进程（用例 system/random）。均用于保证「连接测试」与 Agent 工具调用本机可跑通；http/sse/stdio 协议细节对齐官方 Java MCP SDK 2.0.1。
 
 ## 三、菜单 / 授权
 - MCP 菜单（`/mcp`、perm `mcp:default`）与既有按钮已注册（`XxlRoleEnum` ADMIN/USER），无需新增；测试按钮复用 `mcp:default`。

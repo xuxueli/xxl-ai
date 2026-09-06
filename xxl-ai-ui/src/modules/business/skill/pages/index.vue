@@ -1,6 +1,6 @@
 <!--
   Skill（SKILL管理）
-  Skill 在线管理 + 社区查询/保存/删除
+  SKILL 自身管理：新增/修改/删除；内容文件树跳转独立页面管理
 -->
 <template>
   <div class="app-container">
@@ -44,27 +44,15 @@
             {{ t('common.delete') }}
           </el-button>
         </el-col>
-        <el-col :span="1.5">
-          <el-button type="warning" plain icon="Search" @click="openCommunity" v-hasPermi="['skill:default']">
-            {{ t('business.skill.community') }}
-          </el-button>
-        </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
-      <!-- Skill 列表 -->
+      <!-- SKILL 列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.skill.name')" align="center" prop="name" min-width="160" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.skill.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.description')" align="center" prop="description" min-width="240" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.version')" align="center" prop="version" width="90" />
-        <el-table-column :label="t('business.skill.source')" align="center" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.source === 'community' ? 'warning' : 'info'">
-              {{ scope.row.source === 'community' ? t('business.skill.sourceCommunity') : t('business.skill.sourceLocal') }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column :label="t('common.status')" align="center" width="90">
           <template #default="scope">
             <el-tag :type="scope.row.status === 0 ? 'success' : 'danger'">
@@ -72,8 +60,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
           <template #default="scope">
+            <el-button link type="primary" icon="FolderOpened" @click="goContent(scope.row)" v-hasPermi="['skill:default']">{{
+              t('business.skill.contentManage')
+            }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['skill:default']">{{
               t('common.modify')
             }}</el-button>
@@ -94,23 +85,14 @@
       />
     </div>
 
-    <!-- 添加或修改 Skill 对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="680px" append-to-body>
+    <!-- 添加或修改 SKILL 对话框 -->
+    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body>
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.skill.name')" prop="name">
-          <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.skill.name')])" maxlength="100" />
+          <el-input v-model="formState.form.name" :placeholder="t('business.skill.namePlaceholder')" maxlength="100" />
         </el-form-item>
         <el-form-item :label="t('business.skill.description')" prop="description">
           <el-input v-model="formState.form.description" :placeholder="t('common.inputPlaceholder', [t('business.skill.description')])" maxlength="500" />
-        </el-form-item>
-        <el-form-item :label="t('business.skill.content')" prop="content">
-          <el-input
-            v-model="formState.form.content"
-            :placeholder="t('business.skill.contentPlaceholder')"
-            type="textarea"
-            :rows="10"
-            maxlength="65535"
-          />
         </el-form-item>
         <el-form-item :label="t('business.skill.version')" prop="version">
           <el-input v-model="formState.form.version" maxlength="20" style="width: 160px" />
@@ -129,61 +111,25 @@
         </div>
       </template>
     </el-dialog>
-
-    <!-- 社区查询对话框 -->
-    <el-dialog :title="t('business.skill.communitySearch')" v-model="community.visible" width="860px" append-to-body>
-      <el-form :inline="true">
-        <el-form-item :label="t('business.skill.communityKeyword')">
-          <el-input
-            v-model="community.keyword"
-            :placeholder="t('common.inputPlaceholder', [t('business.skill.communityKeyword')])"
-            clearable
-            style="width: 220px"
-            @keyup.enter="handleCommunitySearch"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" :loading="community.loading" @click="handleCommunitySearch">{{
-            t('common.search')
-          }}</el-button>
-        </el-form-item>
-        <el-form-item>
-          <el-tag type="info">{{ t('business.skill.communityTip') }}</el-tag>
-        </el-form-item>
-      </el-form>
-      <el-table v-loading="community.loading" :data="community.list" max-height="420">
-        <el-table-column :label="t('business.skill.communityName')" align="center" min-width="160" :show-overflow-tooltip="true">
-          <template #default="scope">{{ itemName(scope.row) }}</template>
-        </el-table-column>
-        <el-table-column :label="t('business.skill.communityDesc')" align="center" min-width="280" :show-overflow-tooltip="true">
-          <template #default="scope">{{ itemDesc(scope.row) }}</template>
-        </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="120" class-name="small-padding fixed-width">
-          <template #default="scope">
-            <el-button link type="primary" @click="handleSave(scope.row)" v-hasPermi="['skill:default']">{{
-              t('business.skill.save')
-            }}</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'Skill' })
+import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 import { t } from '@/i18n'
-import { listSkill, addSkill, updateSkill, delSkill, skillCommunitySearch, skillSaveFromCommunity } from '../api'
+import { listSkill, addSkill, updateSkill, delSkill } from '../api'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
-import type { Skill, SkillQuery, CommunitySkillItem } from '../types'
+import type { Skill, SkillQuery } from '../types'
 import type { FormInstance } from 'element-plus'
-import { ref } from 'vue'
 
 const resetForm = useFormReset()
+const router = useRouter()
 
 interface SkillForm extends Skill {}
 
@@ -199,16 +145,8 @@ const formState = ref<FormState<SkillForm>>({
   title: '',
   form: {},
   rules: {
-    name: [{ required: true, message: t('common.requiredMsg', [t('business.skill.name')]), trigger: 'blur' }],
-    content: [{ required: true, message: t('common.requiredMsg', [t('business.skill.content')]), trigger: 'blur' }]
+    name: [{ required: true, message: t('common.requiredMsg', [t('business.skill.name')]), trigger: 'blur' }]
   }
-})
-
-const community = ref({
-  visible: false,
-  keyword: '',
-  list: [] as CommunitySkillItem[],
-  loading: false
 })
 
 // --------------------------------- fun ---------------------------------
@@ -222,7 +160,7 @@ function getList() {
   })
 }
 function reset() {
-  formState.value.form = { id: undefined, name: undefined, description: undefined, content: undefined, version: '1.0', source: 'local', status: 0 }
+  formState.value.form = { id: undefined, name: undefined, description: undefined, version: '1.0', status: 0 }
   resetForm('formRef')
 }
 function handleQuery() {
@@ -284,56 +222,10 @@ function cancel() {
   reset()
 }
 
-// --------------------------------- 社区查询 ---------------------------------
-function openCommunity() {
-  community.value.visible = true
-  community.value.list = []
-}
-function handleCommunitySearch() {
-  if (!community.value.keyword) {
-    modal.msgWarning(t('business.skill.communityKeywordRequired'))
-    return
-  }
-  community.value.loading = true
-  skillCommunitySearch(community.value.keyword)
-    .then((response) => {
-      community.value.list = response.data
-      community.value.loading = false
-    })
-    .catch(() => {
-      community.value.loading = false
-    })
-}
-function itemName(item: CommunitySkillItem) {
-  return String(item.name ?? item.title ?? item.skillName ?? item.id ?? '-')
-}
-function itemDesc(item: CommunitySkillItem) {
-  return String(item.description ?? item.summary ?? item.intro ?? '-')
-}
-function itemContent(item: CommunitySkillItem) {
-  return String(item.content ?? item.instruction ?? item.instructions ?? item.prompt ?? '')
-}
-function handleSave(item: CommunitySkillItem) {
-  const content = itemContent(item)
-  if (!content) {
-    modal.msgError(t('business.skill.communityNoContent'))
-    return
-  }
-  const data: Skill = {
-    name: itemName(item),
-    description: itemDesc(item),
-    content,
-    version: String(item.version ?? '1.0'),
-    source: 'community',
-    status: 0
-  }
-  if (item.url) data.sourceUrl = String(item.url)
-  else if (item.homepage) data.sourceUrl = String(item.homepage)
-  skillSaveFromCommunity(data).then(() => {
-    modal.msgSuccess(t('business.skill.saveSuccess'))
-    community.value.visible = false
-    getList()
-  })
+// --------------------------------- 内容管理 ---------------------------------
+/** 跳转内容管理页（隐藏路由，按 loadView 映射 skill/pages/content.vue，仅需 skillId） */
+function goContent(row: any) {
+  router.push({ path: '/skill/content', query: { skillId: String(row.id) } })
 }
 
 // --------------------------------- page init ---------------------------------

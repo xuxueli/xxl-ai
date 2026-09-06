@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Skill 适配器（实体 ↔ DTO 互转）
+ * SKILL 适配器（实体 ↔ DTO 互转）
  *
- * @author xxl-ai 2026-09-05
+ * @author xxl-ai 2026-09-06
  */
 public class SkillAdaptor {
 
@@ -26,10 +26,7 @@ public class SkillAdaptor {
         skill.setSpaceId(dto.getSpaceId());
         skill.setName(dto.getName());
         skill.setDescription(dto.getDescription());
-        skill.setContent(dto.getContent());
         skill.setVersion(dto.getVersion());
-        skill.setSource(dto.getSource());
-        skill.setSourceUrl(dto.getSourceUrl());
         skill.setStatus(dto.getStatus());
         return skill;
     }
@@ -46,10 +43,7 @@ public class SkillAdaptor {
         dto.setSpaceId(skill.getSpaceId());
         dto.setName(skill.getName());
         dto.setDescription(skill.getDescription());
-        dto.setContent(skill.getContent());
         dto.setVersion(skill.getVersion());
-        dto.setSource(skill.getSource());
-        dto.setSourceUrl(skill.getSourceUrl());
         dto.setStatus(skill.getStatus());
         dto.setAddTime(DateTool.formatDateTime(skill.getAddTime()));
         dto.setUpdateTime(DateTool.formatDateTime(skill.getUpdateTime()));

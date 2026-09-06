@@ -16,12 +16,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * SKILL管理 Controller：Skill 在线管理 + 社区查询/保存
+ * SKILL管理 Controller：SKILL 自身管理
  *
- * @author xxl-ai 2026-09-05
+ * @author xxl-ai 2026-09-06
  */
 @RestController
 @RequestMapping("/skill")
@@ -33,7 +32,7 @@ public class SkillController {
     private SpaceService spaceService;
 
     /**
-     * 分页查询 Skill 列表
+     * 分页查询 SKILL 列表
      */
     @RequestMapping("/pageList")
     @XxlSso(permission = "skill:default")
@@ -52,7 +51,7 @@ public class SkillController {
     }
 
     /**
-     * 新增 Skill
+     * 新增 SKILL（自动播种固定文件 SKILL.md + scripts/ + reference/）
      */
     @RequestMapping("/insert")
     @XxlSso(permission = "skill:default")
@@ -67,7 +66,7 @@ public class SkillController {
     }
 
     /**
-     * 批量删除 Skill
+     * 批量删除 SKILL（级联删除内容文件树）
      */
     @RequestMapping("/delete")
     @XxlSso(permission = "skill:default")
@@ -82,7 +81,7 @@ public class SkillController {
     }
 
     /**
-     * 更新 Skill
+     * 更新 SKILL
      */
     @RequestMapping("/update")
     @XxlSso(permission = "skill:default")
@@ -97,31 +96,7 @@ public class SkillController {
     }
 
     /**
-     * 社区检索
-     */
-    @RequestMapping("/communitySearch")
-    @XxlSso(permission = "skill:default")
-    public Response<List<Map<String, Object>>> communitySearch(String keyword) {
-        return skillService.communitySearch(keyword);
-    }
-
-    /**
-     * 从社区保存（落库到当前空间）
-     */
-    @RequestMapping("/saveFromCommunity")
-    @XxlSso(permission = "skill:default")
-    public Response<String> saveFromCommunity(HttpServletRequest request,
-                                              @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                              SkillDTO dto) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return skillService.saveFromCommunity(spaceResp.getData().getSpaceId(), dto);
-    }
-
-    /**
-     * 查询空间内 Skill 列表（Agent 绑定下拉）
+     * 查询空间内 SKILL 列表（Agent 绑定下拉）
      */
     @RequestMapping("/listBySpace")
     @XxlSso

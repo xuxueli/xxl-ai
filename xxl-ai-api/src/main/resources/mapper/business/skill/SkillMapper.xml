@@ -8,10 +8,7 @@
 		<result column="space_id" property="spaceId" />
 		<result column="name" property="name" />
 		<result column="description" property="description" />
-		<result column="content" property="content" />
 		<result column="version" property="version" />
-		<result column="source" property="source" />
-		<result column="source_url" property="sourceUrl" />
 		<result column="status" property="status" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
@@ -22,10 +19,7 @@
 		t.space_id,
 		t.name,
 		t.description,
-		t.content,
 		t.version,
-		t.source,
-		t.source_url,
 		t.status,
 		t.add_time,
 		t.update_time
@@ -33,9 +27,9 @@
 
 	<insert id="insert" parameterType="com.xxl.ai.api.business.skill.model.entity.Skill" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_skill (
-			space_id, name, description, content, version, source, source_url, status, add_time, update_time
+			space_id, name, description, version, status, add_time, update_time
 		) VALUES (
-			 #{spaceId}, #{name}, #{description}, #{content}, #{version}, #{source}, #{sourceUrl}, #{status}, NOW(), NOW()
+			 #{spaceId}, #{name}, #{description}, #{version}, #{status}, NOW(), NOW()
 		 );
 	</insert>
 
@@ -55,10 +49,7 @@
 		UPDATE xxl_ai_skill
 		SET name = #{name},
 			description = #{description},
-			content = #{content},
 			version = #{version},
-			source = #{source},
-			source_url = #{sourceUrl},
 			status = #{status},
 			update_time = NOW()
 		WHERE id = #{id}
@@ -90,6 +81,16 @@
 		<foreach collection="ids" item="item" open="(" close=")" separator="," >
 			#{item}
 		</foreach>
+	</select>
+
+	<select id="countByName" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_skill AS t
+		WHERE t.space_id = #{spaceId}
+			AND t.name = #{name}
+		<if test="excludeId gt 0">
+			AND t.id != #{excludeId}
+		</if>
 	</select>
 
 	<select id="pageList" parameterType="java.util.HashMap" resultMap="Skill">

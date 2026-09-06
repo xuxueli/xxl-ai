@@ -54,6 +54,8 @@ public enum XxlRoleEnum {
         // 知识文档（隐藏菜单，承载知识库文档管理页路由）
         ADMIN_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
         ADMIN_RESOURCES.add(res(4, 0, "SKILL管理", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
+        // SKILL内容（隐藏菜单，承载 SKILL 内容管理页路由）
+        ADMIN_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
         ADMIN_RESOURCES.add(res(5, 0, "MCP管理", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
         ADMIN_RESOURCES.add(res(6, 0, "供应商管理", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
         // 供应商模型（隐藏菜单，承载供应商模型管理页路由）
@@ -81,6 +83,8 @@ public enum XxlRoleEnum {
         // 知识文档（隐藏菜单）
         USER_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
         USER_RESOURCES.add(res(4, 0, "SKILL管理", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
+        // SKILL内容（隐藏菜单，承载 SKILL 内容管理页路由）
+        USER_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
         USER_RESOURCES.add(res(5, 0, "MCP管理", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
         USER_RESOURCES.add(res(6, 0, "供应商管理", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
         // 供应商模型（隐藏菜单，承载供应商模型管理页路由）

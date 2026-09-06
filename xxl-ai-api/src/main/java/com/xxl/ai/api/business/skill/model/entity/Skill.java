@@ -3,20 +3,17 @@ package com.xxl.ai.api.business.skill.model.entity;
 import java.util.Date;
 
 /**
- * Skill 实体
+ * SKILL 实体
  *
- * @author xxl-ai 2026-09-05
+ * @author xxl-ai 2026-09-06
  */
 public class Skill {
 
-    private long id;            /* Skill ID */
+    private long id;            /* SKILL ID */
     private long spaceId;       /* 空间ID */
-    private String name;        /* Skill名称 */
-    private String description; /* 描述 */
-    private String content;     /* Skill内容（指令/流程） */
+    private String name;        /* SKILL名称（目录名，空间内唯一） */
+    private String description; /* SKILL描述 */
     private String version;     /* 版本 */
-    private String source;      /* 来源：local-本地、community-社区 */
-    private String sourceUrl;   /* 社区来源链接 */
     private int status;         /* 状态：0-正常、1-停用 */
     private Date addTime;       /* 新增时间 */
     private Date updateTime;    /* 更新时间 */
@@ -53,36 +50,12 @@ public class Skill {
         this.description = description;
     }
 
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
     public String getVersion() {
         return version;
     }
 
     public void setVersion(String version) {
         this.version = version;
-    }
-
-    public String getSource() {
-        return source;
-    }
-
-    public void setSource(String source) {
-        this.source = source;
-    }
-
-    public String getSourceUrl() {
-        return sourceUrl;
-    }
-
-    public void setSourceUrl(String sourceUrl) {
-        this.sourceUrl = sourceUrl;
     }
 
     public int getStatus() {

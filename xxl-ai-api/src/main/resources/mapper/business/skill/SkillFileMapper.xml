@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xxl.ai.api.business.skill.mapper.SkillFileMapper">
+
+	<resultMap id="SkillFile" type="com.xxl.ai.api.business.skill.model.entity.SkillFile" >
+		<result column="id" property="id" />
+		<result column="skill_id" property="skillId" />
+		<result column="parent_id" property="parentId" />
+		<result column="name" property="name" />
+		<result column="type" property="type" />
+		<result column="file_type" property="fileType" />
+		<result column="content" property="content" />
+		<result column="locked" property="locked" />
+		<result column="sort" property="sort" />
+		<result column="add_time" property="addTime" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		t.id,
+		t.skill_id,
+		t.parent_id,
+		t.name,
+		t.type,
+		t.file_type,
+		t.content,
+		t.locked,
+		t.sort,
+		t.add_time,
+		t.update_time
+	</sql>
+
+	<insert id="insert" parameterType="com.xxl.ai.api.business.skill.model.entity.SkillFile" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_skill_file (
+			skill_id, parent_id, name, type, file_type, content, locked, sort, add_time, update_time
+		) VALUES (
+			 #{skillId}, #{parentId}, #{name}, #{type}, #{fileType}, #{content}, #{locked}, #{sort}, NOW(), NOW()
+		 );
+	</insert>
+
+	<update id="update" parameterType="com.xxl.ai.api.business.skill.model.entity.SkillFile" >
+		UPDATE xxl_ai_skill_file
+		SET name = #{name},
+			file_type = #{fileType},
+			content = #{content},
+			sort = #{sort},
+			update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
+	<update id="updateParent" parameterType="java.util.HashMap" >
+		UPDATE xxl_ai_skill_file
+		SET parent_id = #{parentId},
+			update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
+	<delete id="deleteByIds" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_skill_file
+		WHERE id in
+		<foreach collection="ids" item="item" open="(" close=")" separator="," >
+			#{item}
+		</foreach>
+	</delete>
+
+	<delete id="deleteBySkillIds" parameterType="java.util.HashMap">
+		DELETE FROM xxl_ai_skill_file
+		WHERE skill_id in
+		<foreach collection="skillIds" item="item" open="(" close=")" separator="," >
+			#{item}
+		</foreach>
+	</delete>
+
+	<select id="load" parameterType="java.util.HashMap" resultMap="SkillFile">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_skill_file AS t
+		WHERE t.id = #{id}
+	</select>
+
+	<select id="listBySkill" parameterType="java.util.HashMap" resultMap="SkillFile">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_skill_file AS t
+		WHERE t.skill_id = #{skillId}
+		ORDER BY t.type ASC, t.sort ASC, t.id ASC
+	</select>
+
+	<select id="listByParent" parameterType="java.util.HashMap" resultMap="SkillFile">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_skill_file AS t
+		WHERE t.skill_id = #{skillId}
+			AND t.parent_id = #{parentId}
+		ORDER BY t.type ASC, t.sort ASC, t.id ASC
+	</select>
+
+	<select id="countByName" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_skill_file AS t
+		WHERE t.skill_id = #{skillId}
+			AND t.parent_id = #{parentId}
+			AND t.name = #{name}
+		<if test="excludeId gt 0">
+			AND t.id != #{excludeId}
+		</if>
+	</select>
+
+	<select id="countBySkillId" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_skill_file AS t
+		WHERE t.skill_id = #{skillId}
+	</select>
+
+</mapper>
