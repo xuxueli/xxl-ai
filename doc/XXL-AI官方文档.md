@@ -389,6 +389,11 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 - 3、【能力】内置 安全登录（XXL-SSO）、权限管控、系统管理、端到端代码生成、AI + SKILL 加速开发 等平台能力；
 - 4、【部署】随带 Docker Compose 一键部署栈（mysql + redis + api + ui）；
 - 5、【扩展】预留 AI 插件扩展：AI 模型管理、Chat 对话、知识库 等（`doc/db/plugin` 插件 SQL，依赖 spring-ai）。
+- 6、【功能】新增：供应商管理、知识库管理、MCP管理、SKILL管理、Agent管理；
+- 7、【TODO】
+  - 代码重构：Loop切换 Spring-AI，当前自己简单实现；
+  - 重构集成：知识库（对接云端API、本地ollama）、MCP（支持http、stdio模式）、SKILL（支持脚本、沙箱）；
+
 
 ### 版本 v0.0.2 Release Notes[ING]
 - 待续。

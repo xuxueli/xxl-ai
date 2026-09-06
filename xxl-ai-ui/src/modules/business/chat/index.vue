@@ -84,7 +84,9 @@
                 </div>
                 <!-- 回复内容 -->
                 <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
-                <span class="msg-content">{{ msg.content }}</span>
+                <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
+                <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
+                <span v-else class="msg-content">{{ msg.content }}</span>
               </div>
               <!-- 发送时间：鼠标悬浮展示 -->
               <div class="msg-time">{{ timeText(msg) }}</div>
@@ -152,6 +154,8 @@ import {
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
 import { parseTime } from '@/utils/common'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { nextTick, onMounted, ref } from 'vue'
 
 const route = useRoute()
@@ -347,7 +351,7 @@ async function handleSend() {
   const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false, addTime: now }
   messages.value.push(userMsg)
   const assistantMsg: ChatMsg = { convId: currentConvId.value, role: 'assistant', content: '', reasoning: '', showThinking: true, addTime: now }
-  messages.value.push(assistantMsg)
+  const assistantIdx = messages.value.push(assistantMsg) - 1
   await scrollToBottom()
 
   try {
@@ -360,14 +364,21 @@ async function handleSend() {
     await readStream(
       reader,
       (chunk) => {
-        assistantMsg.reasoning += chunk
+        // 经响应式代理累加思考过程，触发视图逐段更新
+        const msg = messages.value[assistantIdx]
+        if (msg) msg.reasoning += chunk
         scrollToBottom()
       },
       (chunk) => {
-        assistantMsg.content += chunk
+        // 经响应式代理累加回复内容，触发视图逐段更新并按 Markdown 渲染
+        const msg = messages.value[assistantIdx]
+        if (msg) msg.content += chunk
         scrollToBottom()
       }
     )
+    // 流结束后再次滚到底：Markdown 块（代码/表格等）渲染完成后高度变化
+    await scrollToBottom()
+    requestAnimationFrame(() => scrollToBottom())
   } catch (e) {
     ElMessage.error(t('business.agent.sendFail'))
   } finally {
@@ -454,6 +465,12 @@ async function copyText(text: string) {
 }
 
 // --------------------------------- 会话消息 ---------------------------------
+
+/** Markdown 渲染（净化防 XSS） */
+function renderMarkdown(text: string): string {
+  const html = marked.parse(text ?? '') as string
+  return DOMPurify.sanitize(html)
+}
 
 /** 消息发送时间（无值时返回空，悬浮时展示） */
 function timeText(msg: ChatMsg) {
