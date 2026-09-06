@@ -275,20 +275,11 @@ VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区�
 --    注意：stdio 类以宿主进程方式运行，命令涉及本机执行请确认信任后再启用
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    (1, 'Fetch 网页抓取', 0, 'https://mcp.genez.io/fetch', NULL,
-     '{"transport":"http","url":"https://mcp.genez.io/fetch","headers":{}}',
-     0, '网页抓取与内容提取（公共托管，无需鉴权）',  NOW(), NOW()),
-    (1, 'GitHub 代码与仓库', 2, NULL, NULL,
-     '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}',
-     0, 'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', NOW(), NOW()),
-    (1, 'Filesystem 文件系统', 2, NULL, NULL,
-     '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}',
-     0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW()),
-    (1, 'Memory 知识图谱记忆', 2, NULL, NULL,
-     '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}',
-     0, '跨会话知识图谱记忆', NOW(), NOW()),
-    (1, 'Everything 全工具集', 2, NULL, NULL,
-     '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}',
-     0, 'MCP 全工具集（演示/联调用）', NOW(), NOW());
+    (1, 'Fetch 网页抓取', 0, 'https://mcp.genez.io/fetch', null, '{"transport":"http","url":"https://mcp.genez.io/fetch","headers":{}}', 0, '网页抓取与内容提取（公共托管，无需鉴权）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
+    (1, 'GitHub 代码与仓库', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-github"],"env":{}}', 0, 'GitHub 仓库/PR/Issue 管理（需在 env 配置 GITHUB_TOKEN 后可使用）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
+    (1, 'Filesystem 文件系统', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
+    (1, 'Memory 知识图谱记忆', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{}}', 0, '跨会话知识图谱记忆', '2026-09-06 03:41:15', '2026-09-06 03:41:15'),
+    (1, 'Everything 全工具集', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-everything"],"env":{}}', 0, 'MCP 全工具集（演示/联调用）', '2026-09-06 03:41:15', '2026-09-06 03:41:15');
+
 
 COMMIT;
