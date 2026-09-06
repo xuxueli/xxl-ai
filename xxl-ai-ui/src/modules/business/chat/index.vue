@@ -398,7 +398,7 @@ async function handleSend() {
  * 流式读取：按 SSE 事件解析（thinking=思考过程，message=回复内容），逐事件回调
  *
  * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
- * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
+ * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致 markdown 实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
  */
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
