@@ -64,58 +64,69 @@
           </template>
         </el-dropdown>
       </div>
-      <div class="chat-body" ref="chatBodyRef">
-        <template v-if="currentConvId">
-          <div v-for="(msg, index) in messages" :key="index" class="msg-row" :class="msg.role">
-            <div class="msg-avatar">
-              <el-icon v-if="msg.role === 'assistant'"><ChatDotRound /></el-icon>
-              <el-icon v-else><User /></el-icon>
-            </div>
-            <div class="msg-body">
-              <div class="msg-bubble">
-                <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
-                <div v-if="msg.reasoning" class="msg-reasoning">
-                  <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
-                    <el-icon class="reasoning-icon"><MagicStick /></el-icon>
-                    <span class="reasoning-label">{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
-                    <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
-                  </div>
-                  <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
-                </div>
-                <!-- 回复内容 -->
-                <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
-                <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
-                <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
-                <span v-else class="msg-content">{{ msg.content }}</span>
+      <div class="chat-main">
+        <div class="chat-body" ref="chatBodyRef" @scroll="handleScroll">
+          <template v-if="currentConvId">
+            <div v-for="(msg, index) in messages" :key="index" class="msg-row" :class="msg.role">
+              <div class="msg-avatar">
+                <el-icon v-if="msg.role === 'assistant'"><ChatDotRound /></el-icon>
+                <el-icon v-else><User /></el-icon>
               </div>
-              <!-- 发送时间：鼠标悬浮展示 -->
-              <div class="msg-time">{{ timeText(msg) }}</div>
+              <div class="msg-body">
+                <div class="msg-bubble">
+                  <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
+                  <div v-if="msg.reasoning" class="msg-reasoning">
+                    <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
+                      <el-icon class="reasoning-icon"><MagicStick /></el-icon>
+                      <span class="reasoning-label">{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
+                      <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
+                    </div>
+                    <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
+                  </div>
+                  <!-- 回复内容 -->
+                  <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
+                  <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
+                  <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
+                  <span v-else class="msg-content">{{ msg.content }}</span>
+                </div>
+                <!-- 发送时间：鼠标悬浮展示 -->
+                <div class="msg-time">{{ timeText(msg) }}</div>
+              </div>
+            </div>
+          </template>
+          <!-- 新建对话：中间区域展示输入框，输入+发送后才生成对话 -->
+          <div v-else-if="newChat" class="chat-new">
+            <div class="chat-new-inner">
+              <div class="chat-new-title">{{ agent?.name || 'Agent' }}</div>
+              <div v-if="agent?.intro" class="chat-new-sub">{{ agent.intro }}</div>
+              <el-input
+                ref="newChatInputRef"
+                v-model="inputText"
+                type="textarea"
+                :rows="6"
+                resize="none"
+                :placeholder="t('business.agent.inputPlaceholder')"
+                @keydown.enter.exact.prevent="handleSend"
+              />
+              <div class="chat-new-footer">
+                <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
+                <el-button type="primary" :loading="sending" @click="handleSend">
+                  {{ t('business.agent.send') }}
+                </el-button>
+              </div>
             </div>
           </div>
-        </template>
-        <!-- 新建对话：中间区域展示输入框，输入+发送后才生成对话 -->
-        <div v-else-if="newChat" class="chat-new">
-          <div class="chat-new-inner">
-            <div class="chat-new-title">{{ agent?.name || 'Agent' }}</div>
-            <div v-if="agent?.intro" class="chat-new-sub">{{ agent.intro }}</div>
-            <el-input
-              ref="newChatInputRef"
-              v-model="inputText"
-              type="textarea"
-              :rows="6"
-              resize="none"
-              :placeholder="t('business.agent.inputPlaceholder')"
-              @keydown.enter.exact.prevent="handleSend"
-            />
-            <div class="chat-new-footer">
-              <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
-              <el-button type="primary" :loading="sending" @click="handleSend">
-                {{ t('business.agent.send') }}
-              </el-button>
-            </div>
-          </div>
+          <el-empty v-else :description="t('business.agent.selectConv')" :image-size="80" />
         </div>
-        <el-empty v-else :description="t('business.agent.selectConv')" :image-size="80" />
+        <!-- 回到底部按钮：用户上翻阅读时显示，点击平滑吸底并恢复自动跟随 -->
+        <button
+          v-if="currentConvId && !nearBottom"
+          class="scroll-to-bottom"
+          :title="t('business.agent.scrollToBottom')"
+          @click="goBottom"
+        >
+          <el-icon><ArrowDown /></el-icon>
+        </button>
       </div>
       <div class="chat-input" v-if="currentConvId">
         <el-input
@@ -154,7 +165,7 @@ import {
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
 import { parseTime } from '@/utils/common'
-import { marked } from 'marked'
+import { Renderer, marked, type Tokens } from 'marked'
 import DOMPurify from 'dompurify'
 import { nextTick, onMounted, ref } from 'vue'
 
@@ -176,6 +187,8 @@ const messages = ref<ChatMsg[]>([])
 const inputText = ref('')
 const sending = ref(false)
 const chatBodyRef = ref<HTMLElement>()
+/** 是否贴近对话底部（控制「回到底部」按钮显隐与流式自动跟随） */
+const nearBottom = ref(true)
 /** 新建对话状态：未建会话，中间区域展示输入框 */
 const newChat = ref(false)
 const newChatInputRef = ref<any>()
@@ -238,7 +251,7 @@ function handleNewChat() {
   if (sending.value) return
   // 已在新建对话状态：提示并聚焦，不重复进入
   if (newChat.value && !currentConvId.value) {
-    ElMessage.info(t('business.agent.newChatAlready'))
+    ElMessage.warning(t('business.agent.newChatAlready'))
     newChatInputRef.value?.focus()
     return
   }
@@ -496,10 +509,36 @@ async function copyText(text: string) {
 
 // --------------------------------- 会话消息 ---------------------------------
 
-/** Markdown 渲染（净化防 XSS） */
+/** 转义 HTML 特殊字符（代码块内容/语言标签注入 HTML 前，防止被解释为标签） */
+function escapeHtml(text: string): string {
+  return (text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+/**
+ * Markdown 渲染（净化防 XSS）
+ *   - 代码块：浅色主题 + 「语言标签 / 复制按钮」头部，贴合业界常见观感；
+ *   - 代码块内容经 HTML 转义后注入，避免非法标签内容被 DOMPurify 误删。
+ */
 function renderMarkdown(text: string): string {
-  const html = marked.parse(text ?? '') as string
+  const renderer = new Renderer()
+  renderer.code = ({ text: body, lang }: Tokens.Code) => {
+    const language = escapeHtml(lang || '')
+    const label = language || 'code'
+    const codeHtml = escapeHtml(body)
+    return `<div class="code-block"><div class="code-header"><span class="code-lang">${label}</span><span class="code-copy">${t('business.agent.copyCode')}</span></div><pre><code class="language-${language}">${codeHtml}</code></pre></div>`
+  }
+  const html = marked.parse(text ?? '', { renderer, gfm: true }) as string
   return DOMPurify.sanitize(html)
+}
+
+/** 复制代码块：v-html 注入的复制按钮无法绑定 Vue 事件，用事件委托处理 */
+async function handleCopyCode(event: MouseEvent) {
+  const target = (event.target as HTMLElement | null)?.closest?.('.code-copy')
+  if (!target) return
+  const codeEl = (target as HTMLElement).closest('.code-block')?.querySelector('code')
+  if (!codeEl) return
+  await copyText(codeEl.textContent ?? '')
+  ElMessage.success(t('business.agent.copySuccess'))
 }
 
 /** 消息发送时间（无值时返回空，悬浮时展示） */
@@ -509,21 +548,78 @@ function timeText(msg: ChatMsg) {
 
 // --------------------------------- 滚动 ---------------------------------
 
-async function scrollToBottom() {
-  await nextTick()
-  if (chatBodyRef.value) {
-    chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight
+/**
+ * 对话区域滚动：计算是否贴近底部
+ *   - 非底部（用户上翻阅读中）时显示「回到底部」按钮，流式期间不再强制吸底；
+ *   - 贴近底部时保持自动跟随最新内容。
+ */
+function handleScroll() {
+  const el = chatBodyRef.value
+  if (!el) return
+  const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+  nearBottom.value = distance < 80
+}
+
+/** 回到对话底部（用户点击按钮，快速平滑吸底并恢复自动跟随） */
+function goBottom() {
+  scrollToBottom(true)
+}
+
+/**
+ * 自定义快速平滑滚动到底部（约 260ms）
+ *   - 浏览器默认 smooth 在长距离下偏慢，改用 requestAnimationFrame 控制时长与缓动，快而顺滑；
+ *   - easeOutCubic 缓动：先快后慢，观感接近主流聊天工具。
+ */
+function smoothScrollBottom(el: HTMLElement) {
+  const targetTop = el.scrollHeight
+  const startTop = el.scrollTop
+  const distance = targetTop - startTop
+  if (distance <= 0) return
+  const duration = 260
+  const startTime = performance.now()
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+  function tick(now: number) {
+    const progress = Math.min((now - startTime) / duration, 1)
+    el.scrollTop = startTop + distance * easeOutCubic(progress)
+    if (progress < 1) {
+      requestAnimationFrame(tick)
+    }
   }
+  requestAnimationFrame(tick)
+}
+
+/**
+ * 滚动到底部
+ *   - force=true（按钮点击）：忽略当前滚动位置，快速平滑吸底；
+ *   - force=false（流式自动跟随）：仅当前贴近底部时瞬时吸底，逐 chunk 保持贴底且不打断用户上翻阅读。
+ */
+async function scrollToBottom(force = false) {
+  await nextTick()
+  const el = chatBodyRef.value
+  if (!el) return
+  if (!force && !nearBottom.value) return
+  if (force) {
+    smoothScrollBottom(el)
+  } else {
+    el.scrollTop = el.scrollHeight
+  }
+  nearBottom.value = true
 }
 
 // --------------------------------- page init ---------------------------------
-onMounted(() => init())
+onMounted(() => {
+  init()
+  // 代码块复制按钮：v-html 注入内容无法直接绑定事件，挂载后统一走事件委托
+  chatBodyRef.value?.addEventListener('click', handleCopyCode)
+})
 </script>
 
 <style scoped>
 .agent-chat-page {
   display: flex;
   height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   width: 100%;
   background: #f5f6fa;
 }
@@ -531,6 +627,7 @@ onMounted(() => init())
 .conv-panel {
   width: 260px;
   flex-shrink: 0;
+  height: 100%;
   background: #fff;
   border-right: 1px solid #e4e7ed;
   display: flex;
@@ -569,6 +666,7 @@ onMounted(() => init())
 
 .conv-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px;
 }
@@ -671,10 +769,65 @@ onMounted(() => init())
   }
 }
 
+/* 对话正文容器：包裹滚动区与「回到底部」悬浮按钮 */
+.chat-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .chat-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px;
+}
+
+/* 回到底部按钮（右下角悬浮，圆胶囊提升点击区域与观感） */
+.scroll-to-bottom {
+  position: absolute;
+  right: 26px;
+  bottom: 26px;
+  z-index: 10;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--el-text-color-regular);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s;
+  animation: scroll-bottom-in 0.25s ease;
+
+  &:hover {
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 4px 14px rgba(64, 158, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scroll-bottom-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 新建对话：中央区域展示输入框（整体居中，向上微调） */
@@ -861,6 +1014,151 @@ onMounted(() => init())
 .msg-streaming {
   color: #b0b3b8;
   font-style: italic;
+}
+
+/* Markdown 渲染内容样式（助手气泡内） */
+.assistant .msg-bubble .msg-content :deep(p) {
+  margin: 4px 0;
+}
+
+.assistant .msg-bubble .msg-content :deep(h1),
+.assistant .msg-bubble .msg-content :deep(h2),
+.assistant .msg-bubble .msg-content :deep(h3),
+.assistant .msg-bubble .msg-content :deep(h4),
+.assistant .msg-bubble .msg-content :deep(h5),
+.assistant .msg-bubble .msg-content :deep(h6) {
+  margin: 10px 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
+}
+
+.assistant .msg-bubble .msg-content :deep(h1) {
+  font-size: 20px;
+}
+
+.assistant .msg-bubble .msg-content :deep(h2) {
+  font-size: 18px;
+}
+
+.assistant .msg-bubble .msg-content :deep(h3) {
+  font-size: 16px;
+}
+
+.assistant .msg-bubble .msg-content :deep(h4),
+.assistant .msg-bubble .msg-content :deep(h5),
+.assistant .msg-bubble .msg-content :deep(h6) {
+  font-size: 14.5px;
+}
+
+.assistant .msg-bubble .msg-content :deep(ul),
+.assistant .msg-bubble .msg-content :deep(ol) {
+  padding-left: 22px;
+  margin: 4px 0;
+}
+
+.assistant .msg-bubble .msg-content :deep(blockquote) {
+  margin: 6px 0;
+  padding: 2px 12px;
+  border-left: 3px solid var(--el-border-color);
+  border-radius: 0 4px 4px 0;
+  background: var(--el-fill-color-lighter);
+  color: var(--el-text-color-secondary);
+}
+
+.assistant .msg-bubble .msg-content :deep(code) {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: var(--el-fill-color-light);
+  font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+}
+
+/* 代码块：浅色主题 + 语言/复制头部（renderMarkdown 注入 .code-block 结构） */
+.assistant .msg-bubble .msg-content :deep(.code-block) {
+  margin: 8px 0;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f6f8fa;
+}
+
+.assistant .msg-bubble .msg-content :deep(.code-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  border-bottom: 1px solid #e4e7ed;
+  background: #f6f8fa;
+  font-size: 12px;
+  color: #57606a;
+}
+
+.assistant .msg-bubble .msg-content :deep(.code-lang) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+  text-transform: lowercase;
+}
+
+.assistant .msg-bubble .msg-content :deep(.code-copy) {
+  cursor: pointer;
+  user-select: none;
+  color: #57606a;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--el-color-primary);
+  }
+}
+
+.assistant .msg-bubble .msg-content :deep(pre) {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: transparent;
+  color: #24292f;
+  white-space: pre;
+  word-break: normal;
+  line-height: 1.55;
+}
+
+.assistant .msg-bubble .msg-content :deep(pre code) {
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: inherit;
+}
+
+.assistant .msg-bubble .msg-content :deep(a) {
+  color: var(--el-color-primary);
+}
+
+.assistant .msg-bubble .msg-content :deep(table) {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.assistant .msg-bubble .msg-content :deep(th),
+.assistant .msg-bubble .msg-content :deep(td) {
+  padding: 6px 10px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.assistant .msg-bubble .msg-content :deep(th) {
+  background-color: var(--el-fill-color-lighter);
+  font-weight: 600;
+}
+
+.assistant .msg-bubble .msg-content :deep(hr) {
+  margin: 10px 0;
+  border: none;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.assistant .msg-bubble .msg-content :deep(img) {
+  max-width: 100%;
+  border-radius: 4px;
 }
 
 .chat-input {

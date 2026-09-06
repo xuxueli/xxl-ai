@@ -106,16 +106,6 @@
       "logout": "Log Out",
       "logoutConfirm": "Are you sure you want to log out and exit the system?"
     },
-    "search": {
-      "placeholder": "Search menu, fuzzy match by title and URL",
-      "found": "Found",
-      "results": "results",
-      "notFound": "No menu related to",
-      "relatedMenu": "was found",
-      "emptyTip": "Try other keywords or paths",
-      "switch": "Switch",
-      "select": "Select"
-    },
     "size": {
       "large": "Large",
       "default": "Default",
@@ -519,7 +509,9 @@
       "deleteConvConfirm": "Delete conversation 「{0}」?",
       "thinking": "Deep Think",
       "hideThinking": "Hide Think",
-      "thinkingStreaming": "Thinking..."
+      "thinkingStreaming": "Thinking...",
+      "scrollToBottom": "Back to bottom",
+      "copyCode": "Copy code"
     }
   }
 }

@@ -2,11 +2,11 @@
  * 菜单领域工具模块（menu.ts）
  *
  * 职责：
- *   - 提供"后端路由树 → UI 菜单渲染"所需的工具，供 Sidebar、TopBar、TopBarMix、HeaderSearch 等组件复用；
+ *   - 提供"后端路由树 → UI 菜单渲染"所需的工具，供 Sidebar、TopBar、TopBarMix 等组件复用；
  *   - 收敛"菜单/目录"判断、包裹节点提升、子路由拍平、路径解析、递归查找、可见菜单数量计算等重复逻辑；
  *   - 包含纯函数（无状态、无副作用）与组合式函数 useVisibleMenuCount（顶部可见菜单数量计算）。
  */
-import { isExternal, isHttp } from '@/utils/validate'
+import { isExternal } from '@/utils/validate'
 import { getNormalPath } from '@/utils/common'
 import type { RouteData } from '@/store/modules/routes'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
@@ -158,65 +158,6 @@ export function resolveMenuPath(
     return { path: getNormalPath(basePath + '/' + routePath), query: JSON.parse(routeQuery) as Record<string, unknown> }
   }
   return getNormalPath(basePath + '/' + (routePath || ''))
-}
-
-/**
- * 菜单搜索项：可搜索菜单节点
- */
-export interface MenuSearchItem {
-  path: string
-  title: string[]
-  icon: string
-  query?: string
-}
-
-/**
- * 递归遍历路由树生成可搜索菜单列表
- *   - 每项含 path / title（路径层级串联）/ icon / query；
- *   - 叶节点（无 children 或 children 为空）才加入结果，非叶节点作为前缀聚合；
- *   - 供 HeaderSearch 菜单搜索复用。
- */
-export function resolveMenuSearchItems(routes: RouteData[], basePath = '', prefixTitle: string[] = []): MenuSearchItem[] {
-  let res: MenuSearchItem[] = []
-  for (const r of routes) {
-    /* 跳过隐藏路由 */
-    if (r.hidden) {
-      continue
-    }
-
-    /* 节点初始化：无 path 的纯目录节点以空串占位，仅作子路由前缀 */
-    const p = r.path ? (r.path.length > 0 && r.path[0] === '/' ? r.path : '/' + r.path) : ''
-    const data: MenuSearchItem = {
-      path: !isHttp(r.path as string) ? getNormalPath(p) : (r.path as string),
-      title: [...prefixTitle],
-      icon: ''
-    }
-
-    /* 有 meta.title 时追加到标题链中 */
-    if (r.meta && r.meta.title) {
-      data.title = [...data.title, r.meta.title]
-      data.icon = r.meta.icon as string
-
-      /* 叶节点：加入搜索结果 */
-      if (!r.children || r.children.length === 0) {
-        res.push(data)
-      }
-    }
-
-    /* 携带 query 参数 */
-    if (r.query) {
-      data.query = r.query as string
-    }
-
-    /* 递归子路由 */
-    if (r.children) {
-      const tempRoutes = resolveMenuSearchItems(r.children, data.path, data.title)
-      if (tempRoutes.length >= 1) {
-        res = [...res, ...tempRoutes]
-      }
-    }
-  }
-  return res
 }
 
 /**

@@ -271,18 +271,18 @@ VALUES
     (4, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 模型', NOW(), NOW());
 
 -- 5、预设供应商模型
-INSERT INTO `xxl_ai_supplier_model` (`supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
+INSERT INTO `xxl_ai_supplier_model` (`id`, `supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
 VALUES
-    (1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
-    (1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
-    (2, 'Qwen3.5-0.8B', 'qwen3.5:0.8b', 0, 0, NOW(), NOW()),
-    (2, 'Qwen3.5-4B', 'qwen3.5:4b', 0, 0, NOW(), NOW()),
-    (2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 1, 0, NOW(), NOW()),
-    (3, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
-    (3, 'DeepSeek V4 Pro', 'deepseek-v4-pro', 0, 0, NOW(), NOW()),
-    (3, 'DeepSeek V4 Flash Vision', 'deepseek-v4-flash-vision-exp', 0, 0, NOW(), NOW()),
-    (4, 'GLM-5.3-Flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
-    (4, 'GLM-5.3', 'glm-5.3', 0, 0, NOW(), NOW());
+    (1, 1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
+    (2, 1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
+    (3, 2, 'Qwen3.5-0.8B', 'qwen3.5:0.8b', 0, 0, NOW(), NOW()),
+    (4, 2, 'Qwen3.5-4B', 'qwen3.5:4b', 0, 0, NOW(), NOW()),
+    (5, 2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 1, 0, NOW(), NOW()),
+    (6, 3, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
+    (7, 3, 'DeepSeek V4 Pro', 'deepseek-v4-pro', 0, 0, NOW(), NOW()),
+    (8, 3, 'DeepSeek V4 Flash Vision', 'deepseek-v4-flash-vision-exp', 0, 0, NOW(), NOW()),
+    (9, 4, 'GLM-5.3-Flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
+    (10, 4, 'GLM-5.3', 'glm-5.3', 0, 0, NOW(), NOW());
 
 -- 6、社区查询配置（框架配置）
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
@@ -331,6 +331,13 @@ VALUES
     ( 2, 8, 'docx.py', 1, 'py', CONCAT('"""python-docx 文档生成封装：标题/段落/表格统一样式。"""\n', 'from docx import Document\n', '\n', 'def build(title, paragraphs, table=None):\n', '    doc = Document()\n', '    doc.add_heading(title, level=0)\n', '    for para in paragraphs:\n', '        p = doc.add_paragraph(para["text"])\n', '        if para.get("bold"):\n', '            p.runs[0].bold = True\n', '    if table:\n', '        t = doc.add_table(rows=len(table), cols=len(table[0]))\n', '        for i, row in enumerate(table):\n', '            for j, cell in enumerate(row):\n', '                t.cell(i, j).text = str(cell)\n', '    return doc\n', '\n', 'def save(doc, path):\n', '    doc.save(path)'), 0, 1, NOW(), NOW()),
     ( 2, 8, 'requirements.txt', 1, 'txt', 'python-docx>=1.1.0', 0, 2, NOW(), NOW()),
     ( 2, 9, 'style-guide.md', 1, 'md', CONCAT('# 排版规范参考\n', '\n', '- 一级标题使用 Heading 0/1，正文 12pt 宋体\n', '- 表格使用简洁网格样式，表头加粗\n', '- 长文档使用分页符控制章节边界\n', '- 文件命名：{主题}-{yyyyMMdd}.docx'), 0, 1, NOW(), NOW());
+
+
+-- 9、预设 Agent（开箱即用：Hi Agent）
+
+INSERT INTO `xxl_ai_agent` (id, space_id, name, intro, model_supplier_id, model_id, system_prompt, kb_ids, mcp_ids, skill_ids, publish_status, uuid, status, add_time, update_time)
+VALUES
+    (1, 1, 'Hi Agent', 'OpenCode Go驱动的定制Agent', 1, 1, '你叫Jason', null, null, null, 0, '', 0, NOW(), NOW());
 
 
 COMMIT;

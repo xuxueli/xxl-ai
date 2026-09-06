@@ -106,16 +106,6 @@
       "logout": "退出登录",
       "logoutConfirm": "确定注销并退出系统吗？"
     },
-    "search": {
-      "placeholder": "菜单搜索，支持标题、URL模糊查询",
-      "found": "找到",
-      "results": "个结果",
-      "notFound": "未找到",
-      "relatedMenu": "相关菜单",
-      "emptyTip": "试试其他关键词或路径",
-      "switch": "切换",
-      "select": "选择"
-    },
     "size": {
       "large": "较大",
       "default": "默认",
@@ -519,7 +509,9 @@
       "deleteConvConfirm": "确认删除对话「{0}」？",
       "thinking": "深度思考",
       "hideThinking": "收起思考",
-      "thinkingStreaming": "思考中…"
+      "thinkingStreaming": "思考中…",
+      "scrollToBottom": "回到底部",
+      "copyCode": "复制代码"
     }
   }
 }

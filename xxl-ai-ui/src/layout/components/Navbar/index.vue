@@ -31,8 +31,6 @@
     <!-- 右侧操作区 -->
     <div class="right-menu">
       <template v-if="appStore.device !== 'mobile'">
-        <!-- 搜索 -->
-        <HeaderSearch id="header-search" class="right-menu-item" />
         <!-- 全屏 -->
         <Screenfull id="screenfull" class="right-menu-item hover-effect" />
         <!-- 主题 -->
@@ -97,7 +95,6 @@ import SidebarLogo from '../Sidebar/SidebarLogo.vue'
 import Hamburger from './Hamburger.vue'
 import Screenfull from './Screenfull.vue'
 import SizeSelect from './SizeSelect.vue'
-import HeaderSearch from './HeaderSearch.vue'
 import SpaceSelect from './SpaceSelect.vue'
 import { useAppStore, useUserStore, useSettingsStore } from '@/store'
 import defaultSettings from '@/default-settings'
