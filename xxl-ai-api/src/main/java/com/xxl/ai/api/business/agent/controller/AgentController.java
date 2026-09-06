@@ -10,12 +10,14 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Agent管理 Controller：Agent 在线配置 + 发布/取消发布
@@ -67,7 +69,7 @@ public class AgentController {
     @XxlSso(permission = "agent:default")
     public Response<String> insert(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   AgentDTO dto) {
+                                   @RequestBody AgentDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -82,7 +84,7 @@ public class AgentController {
     @XxlSso(permission = "agent:default")
     public Response<String> delete(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   @RequestParam("ids[]") List<Long> ids) {
+                                   @RequestBody List<Long> ids) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -97,7 +99,7 @@ public class AgentController {
     @XxlSso(permission = "agent:default")
     public Response<String> update(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   AgentDTO dto) {
+                                   @RequestBody AgentDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -112,11 +114,12 @@ public class AgentController {
     @XxlSso(permission = "agent:default")
     public Response<String> publish(HttpServletRequest request,
                                     @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                    @RequestParam("id") long id) {
+                                    @RequestBody Map<String, Long> body) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
         }
+        long id = body.get("id") != null ? body.get("id") : 0;
         return agentService.publish(id);
     }
 
@@ -127,11 +130,12 @@ public class AgentController {
     @XxlSso(permission = "agent:default")
     public Response<String> unpublish(HttpServletRequest request,
                                       @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                      @RequestParam("id") long id) {
+                                      @RequestBody Map<String, Long> body) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
         }
+        long id = body.get("id") != null ? body.get("id") : 0;
         return agentService.unpublish(id);
     }
 

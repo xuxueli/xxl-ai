@@ -13,6 +13,8 @@ export interface Agent {
   intro?: string
   /** 模型供应商ID */
   modelSupplierId?: number
+  /** 模型供应商名称 */
+  modelSupplierName?: string
   /** 模型ID */
   modelId?: number
   /** 系统指令 */

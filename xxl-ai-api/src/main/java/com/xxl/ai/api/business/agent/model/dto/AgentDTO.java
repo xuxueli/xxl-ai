@@ -14,6 +14,7 @@ public class AgentDTO {
     private String name;            /* Agent名称 */
     private String intro;           /* Agent介绍 */
     private long modelSupplierId;   /* 模型供应商ID */
+    private String modelSupplierName;   /* 模型供应商名称 */
     private long modelId;           /* 模型ID */
     private String systemPrompt;    /* 系统指令 */
     private List<Long> kbIds;       /* 知识库ID集合 */
@@ -63,6 +64,14 @@ public class AgentDTO {
 
     public void setModelSupplierId(long modelSupplierId) {
         this.modelSupplierId = modelSupplierId;
+    }
+
+    public String getModelSupplierName() {
+        return modelSupplierName;
+    }
+
+    public void setModelSupplierName(String modelSupplierName) {
+        this.modelSupplierName = modelSupplierName;
     }
 
     public long getModelId() {

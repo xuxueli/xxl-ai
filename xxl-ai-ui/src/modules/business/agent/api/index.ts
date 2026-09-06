@@ -12,25 +12,25 @@ export function listAgent(query: AgentListQuery): Promise<Response<PageModel<Age
 
 /** 新增 Agent */
 export function addAgent(data: Agent): Promise<Response<string>> {
-  return request({ url: '/agent/insert', method: 'post', params: data })
+  return request({ url: '/agent/insert', method: 'post', data: data })
 }
 
 /** 批量删除 Agent */
 export function delAgent(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/agent/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/agent/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改 Agent */
 export function updateAgent(data: Agent): Promise<Response<string>> {
-  return request({ url: '/agent/update', method: 'post', params: data })
+  return request({ url: '/agent/update', method: 'post', data: data })
 }
 
 /** 发布 Agent：返回访问 UUID */
 export function publishAgent(id: number): Promise<Response<string>> {
-  return request({ url: '/agent/publish', method: 'post', params: { id } })
+  return request({ url: '/agent/publish', method: 'post', data: { id } })
 }
 
 /** 取消发布 Agent */
 export function unpublishAgent(id: number): Promise<Response<string>> {
-  return request({ url: '/agent/unpublish', method: 'post', params: { id } })
+  return request({ url: '/agent/unpublish', method: 'post', data: { id } })
 }

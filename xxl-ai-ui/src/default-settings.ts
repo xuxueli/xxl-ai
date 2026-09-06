@@ -59,7 +59,7 @@ export default {
   /**
    * 主题颜色
    */
-  theme: '#3c8dbc',
+  theme: '#778289',
 
   /**
    * 页签/tagsView：是否启用

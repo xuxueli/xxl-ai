@@ -55,6 +55,7 @@ public class AgentAdaptor {
         dto.setName(agent.getName());
         dto.setIntro(agent.getIntro());
         dto.setModelSupplierId(agent.getModelSupplierId());
+        dto.setModelSupplierName(agent.getModelSupplierName());
         dto.setModelId(agent.getModelId());
         dto.setSystemPrompt(agent.getSystemPrompt());
         dto.setKbIds(splitIds(agent.getKbIds()));

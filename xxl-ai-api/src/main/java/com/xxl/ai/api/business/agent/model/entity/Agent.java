@@ -14,6 +14,7 @@ public class Agent {
     private String name;            /* Agent名称 */
     private String intro;           /* Agent介绍 */
     private long modelSupplierId;   /* 模型供应商ID */
+    private String modelSupplierName;   /* 模型供应商名称 */
     private long modelId;           /* 模型ID */
     private String systemPrompt;    /* 系统指令 */
     private String kbIds;           /* 知识库ID集合(逗号分隔) */
@@ -63,6 +64,14 @@ public class Agent {
 
     public void setModelSupplierId(long modelSupplierId) {
         this.modelSupplierId = modelSupplierId;
+    }
+
+    public String getModelSupplierName() {
+        return modelSupplierName;
+    }
+
+    public void setModelSupplierName(String modelSupplierName) {
+        this.modelSupplierName = modelSupplierName;
     }
 
     public long getModelId() {

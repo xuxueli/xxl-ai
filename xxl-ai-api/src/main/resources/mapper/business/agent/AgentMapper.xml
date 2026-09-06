@@ -9,6 +9,7 @@
 		<result column="name" property="name" />
 		<result column="intro" property="intro" />
 		<result column="model_supplier_id" property="modelSupplierId" />
+		<result column="model_supplier_name" property="modelSupplierName" />
 		<result column="model_id" property="modelId" />
 		<result column="system_prompt" property="systemPrompt" />
 		<result column="kb_ids" property="kbIds" />
@@ -110,8 +111,9 @@
 	</select>
 
 	<select id="pageList" parameterType="java.util.HashMap" resultMap="Agent">
-		SELECT <include refid="Base_Column_List" />
+		SELECT <include refid="Base_Column_List" />, s.name AS model_supplier_name
 		FROM xxl_ai_agent AS t
+		LEFT JOIN xxl_ai_supplier AS s ON t.model_supplier_id = s.id
 		WHERE t.space_id = #{spaceId}
 		<if test="name != null and name != ''">
 			AND t.name like CONCAT(CONCAT('%', #{name}), '%')

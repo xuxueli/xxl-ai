@@ -49,26 +49,30 @@
       <!-- Agent 列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
+        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="70" />
         <el-table-column :label="t('business.agent.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.agent.intro')" align="center" prop="intro" min-width="200" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.agent.publishStatus')" align="center" width="110">
-          <template #default="scope">
-            <el-tag :type="scope.row.publishStatus === 1 ? 'success' : 'info'">
-              {{ publishStatusTitle(scope.row.publishStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('business.agent.accessUrl')" align="center" min-width="220" :show-overflow-tooltip="true">
-          <template #default="scope">
-            <span v-if="scope.row.publishStatus === 1 && scope.row.uuid">{{ agentUrl(scope.row.uuid) }}</span>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
         <el-table-column :label="t('common.status')" align="center" width="90">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 0 ? 'success' : 'danger'">
-              {{ scope.row.status === 0 ? t('common.normal') : t('common.disabled') }}
-            </el-tag>
+            <el-switch v-model="scope.row.status" :active-value="0" :inactive-value="1" @change="handleStatusChange(scope.row)" />
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('business.agent.modelSupplier')" align="center" prop="modelSupplierName" min-width="140" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.agent.publishStatus')" align="center" width="90">
+          <template #default="scope">
+            <el-switch v-model="scope.row.publishStatus" :active-value="1" :inactive-value="0" @change="handlePublishChange(scope.row)" />
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('business.agent.accessUrl')" align="center" width="110" :show-overflow-tooltip="true">
+          <template #default="scope">
+            <el-link
+              v-if="scope.row.publishStatus === 1 && scope.row.uuid"
+              type="primary"
+              :underline="false"
+              @click="openAgentUrl(scope.row.uuid)"
+              >{{ t('business.agent.gotoAgent') }}</el-link
+            >
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
@@ -76,32 +80,6 @@
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['agent:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button
-              v-if="scope.row.publishStatus === 1"
-              link
-              type="warning"
-              icon="CircleClose"
-              @click="handleUnpublish(scope.row)"
-              v-hasPermi="['agent:default']"
-              >{{ t('business.agent.unpublish') }}</el-button
-            >
-            <el-button
-              v-else
-              link
-              type="success"
-              icon="Position"
-              @click="handlePublish(scope.row)"
-              v-hasPermi="['agent:default']"
-              >{{ t('business.agent.publish') }}</el-button
-            >
-            <el-button
-              v-if="scope.row.publishStatus === 1 && scope.row.uuid"
-              link
-              type="primary"
-              icon="CopyDocument"
-              @click="copyUrl(scope.row.uuid)"
-              >{{ t('business.agent.copyUrl') }}</el-button
-            >
             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['agent:default']">{{
               t('common.delete')
             }}</el-button>
@@ -128,7 +106,22 @@
         <el-form-item :label="t('business.agent.intro')" prop="intro">
           <el-input v-model="formState.form.intro" type="textarea" :rows="2" maxlength="500" />
         </el-form-item>
-        <el-divider content-position="left">{{ t('business.agent.coreConfig') }}</el-divider>
+        <el-form-item :label="t('common.status')">
+          <el-radio-group v-model="formState.form.status">
+            <el-radio :value="0">{{ t('common.normal') }}</el-radio>
+            <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item :label="t('business.agent.systemPrompt')" prop="systemPrompt">
+          <el-input
+            v-model="formState.form.systemPrompt"
+            type="textarea"
+            :rows="6"
+            :placeholder="t('business.agent.systemPromptPlaceholder')"
+            maxlength="65535"
+          />
+        </el-form-item>
+        <el-divider />
         <el-row>
           <el-col :span="12">
             <el-form-item :label="t('business.agent.modelSupplier')" prop="modelSupplierId">
@@ -159,15 +152,6 @@
           <el-select v-model="formState.form.skillIds" multiple filterable style="width: 100%">
             <el-option v-for="item in skillOptions" :key="item.id" :label="item.name" :value="item.id as number" />
           </el-select>
-        </el-form-item>
-        <el-form-item :label="t('business.agent.systemPrompt')" prop="systemPrompt">
-          <el-input v-model="formState.form.systemPrompt" type="textarea" :rows="6" :placeholder="t('business.agent.systemPromptPlaceholder')" maxlength="65535" />
-        </el-form-item>
-        <el-form-item :label="t('common.status')">
-          <el-radio-group v-model="formState.form.status">
-            <el-radio :value="0">{{ t('common.normal') }}</el-radio>
-            <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
-          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -237,11 +221,6 @@ const formState = ref<FormState<AgentForm>>({
 })
 
 // --------------------------------- fun ---------------------------------
-/** 发布状态文案（按枚举选项解析，未命中回退原始值） */
-function publishStatusTitle(status: number) {
-  return publishStatusOptions.value.find((i) => i.code === status)?.title ?? String(status)
-}
-
 function getList() {
   table.value.loading = true
   const params = usePageParams(queryParams)()
@@ -339,6 +318,21 @@ function handleDelete(row: any) {
     })
     .catch(() => {})
 }
+/** 状态快速切换（通过 update 接口传递完整行数据，避免其余字段被覆盖） */
+function handleStatusChange(row: Agent) {
+  const submitData = { ...row }
+  delete submitData.addTime
+  delete submitData.updateTime
+  delete submitData.modelSupplierName
+  updateAgent(submitData)
+    .then(() => {
+      modal.msgSuccess(t('common.updateSuccess'))
+    })
+    .catch(() => {
+      // 失败时回滚开关状态
+      row.status = Number(row.status) === 0 ? 1 : 0
+    })
+}
 function submitForm() {
   formRef.value!.validate((valid) => {
     if (!valid) return
@@ -362,47 +356,24 @@ function cancel() {
 function agentUrl(uuid: string) {
   return `${origin.value}/agent/chat/${uuid}`
 }
-function handlePublish(row: any) {
-  publishAgent(row.id)
+/** 发布状态快速切换：开启发布 / 关闭取消发布（失败回滚开关状态） */
+function handlePublishChange(row: Agent) {
+  const target = Number(row.publishStatus)
+  const req = target === 1 ? publishAgent(row.id as number) : unpublishAgent(row.id as number)
+  req
     .then((res) => {
-      modal.msgSuccess(t('business.agent.publishSuccess'))
-      getList()
-      clipboardCopy(agentUrl(res.data))
-    })
-    .catch(() => {})
-}
-function handleUnpublish(row: any) {
-  modal
-    .confirm(t('business.agent.unpublishConfirm'))
-    .then(() => unpublishAgent(row.id))
-    .then(() => {
-      modal.msgSuccess(t('business.agent.unpublishSuccess'))
+      // 发布接口返回访问 UUID，立即回填以便展示访问URL
+      if (target === 1 && res.data) row.uuid = res.data
+      modal.msgSuccess(target === 1 ? t('business.agent.publishSuccess') : t('business.agent.unpublishSuccess'))
       getList()
     })
-    .catch(() => {})
+    .catch(() => {
+      row.publishStatus = target === 1 ? 0 : 1
+    })
 }
-function copyUrl(uuid: string) {
-  clipboardCopy(agentUrl(uuid))
-}
-/** 复制文本：优先 navigator.clipboard，降级 textarea 方案 */
-async function clipboardCopy(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-    modal.msgSuccess(t('business.agent.copySuccess'))
-  } catch (e) {
-    clampCopyFallback(text)
-  }
-}
-function clampCopyFallback(text: string) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
-  modal.msgSuccess(t('business.agent.copySuccess'))
+/** 打开 Agent 发布页面（新窗口跳转） */
+function openAgentUrl(uuid: string) {
+  window.open(agentUrl(uuid), '_blank')
 }
 
 // --------------------------------- page init ---------------------------------
