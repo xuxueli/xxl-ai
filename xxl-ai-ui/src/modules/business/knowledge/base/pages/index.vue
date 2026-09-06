@@ -1,6 +1,6 @@
 <!--
   KnowledgeBase（知识库）
-  知识库管理 + 向量操作参数配置 + 向量检索 + 文档管理入口
+  知识库管理 + 向量操作参数配置 + 文档管理入口
 -->
 <template>
   <div class="app-container">
@@ -50,10 +50,13 @@
       <!-- 知识库列表 -->
       <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.knowledge.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.knowledge.description')" align="center" prop="description" min-width="200" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.knowledge.chunkSize')" align="center" prop="chunkSize" width="100" />
-        <el-table-column :label="t('business.knowledge.topK')" align="center" prop="topK" width="80" />
+        <el-table-column :label="t('business.knowledge.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.knowledge.description')" align="center" prop="description" min-width="160" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.knowledge.embedSupplier')" align="center" width="140" :show-overflow-tooltip="true">
+          <template #default="scope">
+            <span>{{ supplierName(scope.row.embedSupplierId) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column :label="t('common.status')" align="center" width="90">
           <template #default="scope">
             <el-tag :type="scope.row.status === 0 ? 'success' : 'danger'">
@@ -61,13 +64,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="230" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="250" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="Document" @click="goDoc(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('business.knowledge.docManage')
-            }}</el-button>
-            <el-button link type="primary" icon="Search" @click="openSearch(scope.row)" v-hasPermi="['knowledge:base']">{{
-              t('business.knowledge.search')
             }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['knowledge:base']">{{
               t('common.modify')
@@ -92,25 +92,19 @@
     <!-- 添加或修改知识库对话框 -->
     <el-dialog :title="formState.title" v-model="formState.visible" width="640px" append-to-body>
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="120px">
-        <el-row>
-          <el-col :span="12">
-            <el-form-item :label="t('business.knowledge.name')" prop="name">
-              <el-input v-model="formState.form.name" maxlength="100" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('common.status')">
-              <el-radio-group v-model="formState.form.status">
-                <el-radio :value="0">{{ t('common.normal') }}</el-radio>
-                <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item :label="t('business.knowledge.name')" prop="name">
+          <el-input v-model="formState.form.name" maxlength="100" />
+        </el-form-item>
+        <el-form-item :label="t('common.status')">
+          <el-radio-group v-model="formState.form.status">
+            <el-radio :value="0">{{ t('common.normal') }}</el-radio>
+            <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="t('business.knowledge.description')" prop="description">
           <el-input v-model="formState.form.description" type="textarea" :rows="2" maxlength="500" />
         </el-form-item>
-        <el-divider content-position="left">{{ t('business.knowledge.vectorConfig') }}</el-divider>
+        <el-divider />
         <el-row>
           <el-col :span="12">
             <el-form-item :label="t('business.knowledge.embedSupplier')" prop="embedSupplierId">
@@ -150,44 +144,13 @@
         </div>
       </template>
     </el-dialog>
-
-    <!-- 向量检索对话框 -->
-    <el-dialog :title="t('business.knowledge.search') + '：' + search.name" v-model="search.visible" width="760px" append-to-body>
-      <el-form :inline="true">
-        <el-form-item :label="t('business.knowledge.searchQuery')" style="width: 100%">
-          <el-input
-            v-model="search.query"
-            :placeholder="t('business.knowledge.searchQueryPlaceholder')"
-            clearable
-            class="search-query-input"
-            @keyup.enter="handleSearchSubmit"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" :loading="search.loading" @click="handleSearchSubmit">{{
-            t('business.knowledge.search')
-          }}</el-button>
-        </el-form-item>
-      </el-form>
-      <el-table v-loading="search.loading" :data="search.list" max-height="380">
-        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="60" />
-        <el-table-column :label="t('business.knowledge.score')" align="center" width="110">
-          <template #default="scope">
-            <el-tag>{{ Number(scope.row.score).toFixed(4) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('business.knowledge.hitContent')" align="left" :show-overflow-tooltip="true">
-          <template #default="scope">{{ scope.row.text }}</template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 defineOptions({ name: 'KnowledgeBase' })
 import { t } from '@/i18n'
-import { listKnowledgeBase, addKnowledgeBase, updateKnowledgeBase, delKnowledgeBase, searchKnowledgeBase } from '../api'
+import { listKnowledgeBase, addKnowledgeBase, updateKnowledgeBase, delKnowledgeBase } from '../api'
 import { listSupplierBySpace } from '@/modules/business/supplier/api'
 import { listModelBySupplier } from '@/modules/business/supplier/api'
 import { useFormReset } from '@/composables/useFormReset'
@@ -195,7 +158,7 @@ import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
-import type { KnowledgeBase, KnowledgeBaseQuery, KnowledgeHit } from '../types'
+import type { KnowledgeBase, KnowledgeBaseQuery } from '../types'
 import type { Supplier } from '@/modules/business/supplier/types'
 import type { SupplierModel } from '@/modules/business/supplier/types'
 import { useRouter } from 'vue-router'
@@ -225,15 +188,6 @@ const formState = ref<FormState<KnowledgeBaseForm>>({
     embedSupplierId: [{ required: true, message: t('common.requiredMsg', [t('business.knowledge.embedSupplier')]), trigger: 'change' }],
     embedModelId: [{ required: true, message: t('common.requiredMsg', [t('business.knowledge.embedModel')]), trigger: 'change' }]
   }
-})
-
-const search = ref({
-  visible: false,
-  name: '',
-  baseId: 0,
-  query: '',
-  list: [] as KnowledgeHit[],
-  loading: false
 })
 
 // --------------------------------- fun ---------------------------------
@@ -341,41 +295,18 @@ function cancel() {
   formState.value.visible = false
   reset()
 }
+/** 供应商名称回显（表格「向量化供应商」列） */
+function supplierName(id?: number) {
+  return supplierOptions.value.find((item) => item.id === id)?.name ?? '-'
+}
 
-// --------------------------------- 文档管理 / 向量检索 ---------------------------------
+// --------------------------------- 文档管理 ---------------------------------
 /** 跳转文档管理页（隐藏路由，按 loadView 映射 modules/business/knowledge/base/pages/doc.vue） */
 function goDoc(row: any) {
-  router.push({ path: '/knowledge/base/doc', query: { baseId: String(row.id) } })
-}
-function openSearch(row: any) {
-  search.value.visible = true
-  search.value.name = row.name
-  search.value.baseId = row.id
-  search.value.query = ''
-  search.value.list = []
-}
-function handleSearchSubmit() {
-  if (!search.value.query) {
-    modal.msgWarning(t('business.knowledge.searchRequired'))
-    return
-  }
-  search.value.loading = true
-  searchKnowledgeBase(search.value.baseId, search.value.query)
-    .then((response) => {
-      search.value.list = response.data
-      search.value.loading = false
-    })
-    .catch(() => {
-      search.value.loading = false
-    })
+  router.push({ path: '/knowledge/base/doc', query: { baseId: String(row.id), baseName: row.name } })
 }
 
 // --------------------------------- page init ---------------------------------
+loadSupplierOptions()
 getList()
 </script>
-
-<style scoped>
-.search-query-input {
-  width: 420px;
-}
-</style>

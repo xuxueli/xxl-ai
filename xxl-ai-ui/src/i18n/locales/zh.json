@@ -455,7 +455,6 @@
       "chunkOverlap": "分片重叠",
       "topK": "检索数量(topK)",
       "kb": "知识库",
-      "vectorConfig": "向量操作配置",
       "embedSupplier": "向量化供应商",
       "embedModel": "向量化模型",
       "docManage": "文档管理",

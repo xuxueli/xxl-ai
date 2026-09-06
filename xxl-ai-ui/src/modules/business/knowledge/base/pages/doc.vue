@@ -1,6 +1,6 @@
 <!--
   KnowledgeDoc（知识文档）
-  知识库文档管理：粘贴文本 / 上传 txt·md / 向量化 / 删除
+  知识库文档管理：粘贴文本 / 上传 txt·md / 向量化 / 向量检索 / 删除
 -->
 <template>
   <div class="app-container">
@@ -70,6 +70,9 @@
             {{ t('business.knowledge.docVectorize') }}
           </el-button>
         </el-col>
+        <el-col :span="1.5">
+          <el-button type="info" plain icon="Search" @click="openSearch" v-hasPermi="['knowledge:doc']">{{ t('business.knowledge.search') }}</el-button>
+        </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
@@ -138,6 +141,37 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 向量检索对话框 -->
+    <el-dialog :title="t('business.knowledge.search') + '：' + baseName" v-model="search.visible" width="760px" append-to-body>
+      <el-form :inline="true">
+        <el-form-item :label="t('business.knowledge.searchQuery')" style="width: 100%">
+          <el-input
+            v-model="search.query"
+            :placeholder="t('business.knowledge.searchQueryPlaceholder')"
+            clearable
+            class="search-query-input"
+            @keyup.enter="handleSearchSubmit"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" icon="Search" :loading="search.loading" @click="handleSearchSubmit">{{
+            t('business.knowledge.search')
+          }}</el-button>
+        </el-form-item>
+      </el-form>
+      <el-table v-loading="search.loading" :data="search.list" max-height="380">
+        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="60" />
+        <el-table-column :label="t('business.knowledge.score')" align="center" width="110">
+          <template #default="scope">
+            <el-tag>{{ Number(scope.row.score).toFixed(4) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('business.knowledge.hitContent')" align="left" :show-overflow-tooltip="true">
+          <template #default="scope">{{ scope.row.text }}</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
@@ -145,6 +179,7 @@
 defineOptions({ name: 'KnowledgeDoc' })
 import { t } from '@/i18n'
 import { listKnowledgeDoc, addKnowledgeDoc, updateKnowledgeDoc, delKnowledgeDoc, uploadKnowledgeDoc, vectorizeKnowledgeDoc } from '@/modules/business/knowledge/doc/api'
+import { searchKnowledgeBase } from '@/modules/business/knowledge/base/api'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
@@ -153,6 +188,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
 import type { KnowledgeDoc, KnowledgeDocQuery } from '@/modules/business/knowledge/doc/types'
+import type { KnowledgeHit } from '@/modules/business/knowledge/base/types'
 import type { FormInstance, UploadRequestOptions } from 'element-plus'
 import { ref } from 'vue'
 
@@ -172,6 +208,13 @@ const { DocStatusEnum: docStatusOptions } = useEnumOption('DocStatusEnum')
 const queryParams = ref<KnowledgeDocQuery>({ pageNum: 1, pageSize: 10, baseId: baseId.value, name: undefined, status: -1 })
 
 const table = ref<TableState<KnowledgeDoc>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
+
+const search = ref({
+  visible: false,
+  query: '',
+  list: [] as KnowledgeHit[],
+  loading: false
+})
 
 const formState = ref<FormState<KnowledgeDocForm>>({
   visible: false,
@@ -302,6 +345,29 @@ function goBack() {
   router.push({ path: '/knowledge/base' })
 }
 
+// --------------------------------- 向量检索 ---------------------------------
+/** 打开向量检索弹窗（检索当前知识库全量文档） */
+function openSearch() {
+  search.value.visible = true
+  search.value.query = ''
+  search.value.list = []
+}
+function handleSearchSubmit() {
+  if (!search.value.query) {
+    modal.msgWarning(t('business.knowledge.searchRequired'))
+    return
+  }
+  search.value.loading = true
+  searchKnowledgeBase(baseId.value, search.value.query)
+    .then((response) => {
+      search.value.list = response.data
+      search.value.loading = false
+    })
+    .catch(() => {
+      search.value.loading = false
+    })
+}
+
 // --------------------------------- page init ---------------------------------
 getList()
 </script>
@@ -310,5 +376,8 @@ getList()
 .doc-header-title {
   font-size: 15px;
   font-weight: 600;
+}
+.search-query-input {
+  width: 420px;
 }
 </style>

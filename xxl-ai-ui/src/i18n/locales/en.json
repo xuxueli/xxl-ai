@@ -455,7 +455,6 @@
       "chunkOverlap": "Chunk Overlap",
       "topK": "Retrieval topK",
       "kb": "Knowledge Base",
-      "vectorConfig": "Vectorization Config",
       "embedSupplier": "Embedding Supplier",
       "embedModel": "Embedding Model",
       "docManage": "Documents",
