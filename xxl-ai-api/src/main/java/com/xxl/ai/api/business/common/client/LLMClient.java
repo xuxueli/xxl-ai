@@ -111,7 +111,7 @@ public class LLMClient {
                 }
             }
         }
-        logger.info("LLMClient.chatStream, input:{} output: {}", messages, originData);
+        logger.debug("LLMClient.chatStream, input:{} output: {}", messages, originData);
         return fullText.toString();
     }
 

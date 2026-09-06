@@ -394,7 +394,12 @@ async function handleSend() {
   }
 }
 
-/** 流式读取：按 SSE 事件名分流（thinking=思考过程，message=回复内容），逐事件解析 data */
+/**
+ * 流式读取：按 SSE 事件解析（thinking=思考过程，message=回复内容），逐事件回调
+ *
+ * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
+ * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
+ */
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onThinking: (text: string) => void,
@@ -403,32 +408,57 @@ async function readStream(
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
   let eventName = 'message'
+  // 待拼装的事件数据（同一事件内的多条 data: 行）
+  let dataLines: string[] = []
+
+  /** 派发单个事件：命中结束/错误标志返回 true，终止读取 */
+  const dispatch = (data: string): boolean => {
+    if (!data) return false
+    if (data === '[DONE]') return true
+    if (data.startsWith('__ERROR__')) {
+      ElMessage.error(data.slice(9))
+      return true
+    }
+    if (eventName === 'thinking') {
+      onThinking(data)
+    } else {
+      onContent(data)
+    }
+    return false
+  }
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
-    // 按 SSE 换行切分
-    const lines = buffer.split('\n')
+    // 按 SSE 行切分（兼容 \r\n / \r / \n），末尾不完整行留在 buffer 下次拼接
+    const lines = buffer.split(/\r\n|\r|\n/)
     buffer = lines.pop() || ''
     for (const line of lines) {
+      // 空行为事件结束标志：拼装完整内容后统一派发
+      if (line === '') {
+        if (dataLines.length > 0) {
+          const data = dataLines.join('\n')
+          dataLines = []
+          if (dispatch(data)) return
+        }
+        continue
+      }
       if (line.startsWith('event:')) {
         eventName = line.substring(6).trim()
         continue
       }
-      if (!line.startsWith('data:')) continue
-      const data = line.substring(5).trim()
-      if (!data) continue
-      if (data === '[DONE]') return
-      if (data.startsWith('__ERROR__')) {
-        ElMessage.error(data.slice(9))
-        return
+      if (line.startsWith('data:')) {
+        // 保留原始内容：不做 trim，避免丢失 Markdown 空行/缩进（多行内容由 join('\n') 还原）
+        dataLines.push(line.substring(5))
+        continue
       }
-      if (eventName === 'thinking') {
-        onThinking(data)
-      } else {
-        onContent(data)
-      }
+      // 忽略其它字段（id / retry / 注释行等）
     }
+  }
+  // 流结束兜底：派发未以空行收尾的残留数据（如最后一个事件未换行结尾）
+  if (dataLines.length > 0) {
+    dispatch(dataLines.join('\n'))
   }
 }
 
