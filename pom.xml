@@ -124,6 +124,12 @@
 				<artifactId>spring-ai-agent-utils</artifactId>
 				<version>0.12.0</version>
 			</dependency>
+			<!-- spring-ai：MCP Server（注解式 @McpTool，Streamable HTTP，供 xxl-ai-api-sample 使用） -->
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+				<version>${spring-ai.version}</version>
+			</dependency>
 			<!-- milvus -->
 			<dependency>
 				<groupId>io.milvus</groupId>

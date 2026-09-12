@@ -1,97 +1,55 @@
 package com.xxl.ai.api.sample.mcp;
 
-import io.modelcontextprotocol.server.McpServerFeatures;
-import io.modelcontextprotocol.spec.McpSchema;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 
 /**
- * 示例 MCP 工具集（独立应用内嵌 Streamable HTTP MCP 服务，端口 8091）
+ * 示例 MCP 工具集（spring-ai 注解式 MCP Server，Streamable HTTP，端点 /sample/mcp）
  *
  * 内置示例工具，作为平台 MCP「连接测试」与 Agent 工具调用的开箱即用联调用例：
- *  - get_current_time  本地时钟服务
- *  - calculator        计算器服务
+ *  - get_current_time  本地时钟
+ *  - calculator        四则运算计算器
  *
  * @author xxl-ai 2026-09-13
  */
-public final class SampleMcpTool {
+@Component
+public class SampleMcpTool {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private SampleMcpTool() {
+    /**
+     * 本地时钟：获取服务器当前时间
+     *
+     * @return 服务器当前时间文本
+     */
+    @McpTool(name = "get_current_time", description = "获取服务器当前时间")
+    public String getCurrentTime() {
+        return "当前时间: " + LocalDateTime.now().format(FMT);
     }
 
     /**
-     * 本地时钟服务：获取服务器当前时间
+     * 四则运算计算器：表达式求值（安全解析，不执行任意代码）
+     *
+     * @param expression 算术表达式，如 1+2*3
+     * @return 计算结果文本
      */
-    public static McpServerFeatures.SyncToolSpecification currentTime() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-        schema.put("properties", new LinkedHashMap<>());
-        return build("get_current_time", "获取服务器当前时间", schema, args ->
-                "当前时间: " + LocalDateTime.now().format(FMT));
-    }
-
-    /**
-     * 计算器服务：四则运算表达式求值（安全解析，不执行任意代码）
-     */
-    public static McpServerFeatures.SyncToolSpecification calculator() {
-        Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("expression", Map.of("type", "string", "description", "算术表达式，如 1+2*3"));
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-        schema.put("properties", properties);
-        schema.put("required", List.of("expression"));
-        return build("calculator", "四则运算计算器", schema, args -> {
-            String expr = str(args.get("expression"), "").trim();
-            if (!expr.matches("[0-9+\\-*/().\\s]+")) {
-                return "表达式不合法（仅支持数字与 + - * / ( )）";
-            }
-            try {
-                return "计算结果: " + expr + " = " + new ExprParser(expr).parse().toPlainString();
-            } catch (Exception e) {
-                return "表达式计算失败: " + expr + "（" + e.getMessage() + "）";
-            }
-        });
-    }
-
-    /**
-     * 构建工具规格：入参透传 + 执行器结果回写为文本内容（异常兜底为错误文本）
-     */
-    private static McpServerFeatures.SyncToolSpecification build(String name, String title,
-                                                                 Map<String, Object> inputSchema,
-                                                                 Function<Map<String, Object>, String> executor) {
-        McpSchema.Tool tool = McpSchema.Tool.builder(name, inputSchema).title(title).build();
-        return McpServerFeatures.SyncToolSpecification.builder()
-                .tool(tool)
-                .callHandler((exchange, request) -> {
-                    String text;
-                    try {
-                        Map<String, Object> arguments =
-                                request.arguments() == null ? Map.of() : request.arguments();
-                        text = executor.apply(arguments);
-                    } catch (Exception e) {
-                        text = "工具执行失败: " + e.getMessage();
-                    }
-                    return McpSchema.CallToolResult.builder(List.of(McpSchema.TextContent.builder(text).build()))
-                            .isError(false)
-                            .build();
-                })
-                .build();
-    }
-
-    /**
-     * 参数取值兜底
-     */
-    private static String str(Object value, String defaultValue) {
-        return value == null ? defaultValue : String.valueOf(value);
+    @McpTool(name = "calculator", description = "四则运算计算器")
+    public String calculator(@McpToolParam(description = "算术表达式，如 1+2*3") String expression) {
+        String expr = String.valueOf(expression).trim();
+        if (!expr.matches("[0-9+\\-*/().\\s]+")) {
+            return "表达式不合法（仅支持数字与 + - * / ( )）";
+        }
+        try {
+            return "计算结果: " + expr + " = " + new ExprParser(expr).parse().toPlainString();
+        } catch (IllegalArgumentException e) {
+            return "表达式计算失败: " + expr + "（" + e.getMessage() + "）";
+        }
     }
 
     /**

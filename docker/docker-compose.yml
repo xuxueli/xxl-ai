@@ -150,7 +150,7 @@ services:
     networks:
       - xxl-ai-network
 
-  # ==================== 示例 MCP 服务（仅作为「连接测试」联调用例，端口 8091） ====================
+  # ==================== 示例 MCP 服务 ====================
 
   xxl-ai-api-sample:
     image: xuxueli/xxl-ai-api-sample:local

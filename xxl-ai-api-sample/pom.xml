@@ -31,10 +31,10 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- mcp：官方 Java MCP SDK（服务端 Streamable HTTP 挂载与工具注册） -->
+		<!-- mcp：spring-ai 注解式 MCP Server（@McpTool，自动装配 Streamable HTTP，端点 /sample/mcp），版本由父 pom dependencyManagement 统一维护 -->
 		<dependency>
-			<groupId>io.modelcontextprotocol.sdk</groupId>
-			<artifactId>mcp</artifactId>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
 		</dependency>
 
 	</dependencies>
