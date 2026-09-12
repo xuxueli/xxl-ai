@@ -1,8 +1,5 @@
 package com.xxl.ai.api.business.knowledge.doc.service.impl;
 
-import com.xxl.ai.api.business.common.client.LLMClient;
-import com.xxl.ai.api.business.common.util.TextChunkUtil;
-import com.xxl.ai.api.business.common.vector.MilvusTool;
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
 import com.xxl.ai.api.business.knowledge.doc.enums.DocStatusEnum;
@@ -11,8 +8,7 @@ import com.xxl.ai.api.business.knowledge.doc.model.adaptor.KnowledgeDocAdaptor;
 import com.xxl.ai.api.business.knowledge.doc.model.dto.KnowledgeDocDTO;
 import com.xxl.ai.api.business.knowledge.doc.model.entity.KnowledgeDoc;
 import com.xxl.ai.api.business.knowledge.doc.service.KnowledgeDocService;
-import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
-import com.xxl.ai.api.business.supplier.service.SupplierService;
+import com.xxl.ai.api.business.llm.rag.RagService;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
@@ -26,12 +22,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 知识文档 Service 实现
+ *
+ * 文档元数据 CRUD / 上传保留；向量化、向量检索与向量清理移交 {@link RagService}（spring-ai）
  *
  * @author xxl-ai 2026-09-05
  */
@@ -45,11 +42,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
     @Resource
     private KnowledgeBaseMapper knowledgeBaseMapper;
     @Resource
-    private SupplierService supplierService;
-    @Resource
-    private LLMClient llmClient;
-    @Resource
-    private MilvusTool milvusTool;
+    private RagService ragService;
 
     /**
      * 分页查询文档列表
@@ -113,10 +106,9 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
             if (knowledgeDoc == null) {
                 continue;
             }
-            try {
-                milvusTool.deleteByDoc(milvusTool.collectionName(knowledgeDoc.getSpaceId(), knowledgeDoc.getBaseId()), id);
-            } catch (Exception e) {
-                logger.warn("清理文档向量失败, docId={}, err={}", id, e.getMessage());
+            KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(knowledgeDoc.getBaseId());
+            if (knowledgeBase != null && knowledgeBase.getSpaceId() == spaceId) {
+                ragService.deleteByDoc(knowledgeBase, id);
             }
         }
         int ret = knowledgeDocMapper.deleteByIds(ids);
@@ -141,11 +133,9 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
         if (contentChanged) {
             knowledgeDoc.setStatus(DocStatusEnum.UNPROCESSED.getCode());
             knowledgeDoc.setChunkCount(0);
-            try {
-                milvusTool.deleteByDoc(milvusTool.collectionName(existDoc.getSpaceId(), existDoc.getBaseId()),
-                        existDoc.getId());
-            } catch (Exception e) {
-                logger.warn("重置文档向量失败, docId={}, err={}", existDoc.getId(), e.getMessage());
+            KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(existDoc.getBaseId());
+            if (knowledgeBase != null && knowledgeBase.getSpaceId() == existDoc.getSpaceId()) {
+                ragService.deleteByDoc(knowledgeBase, existDoc.getId());
             }
         }
         int ret = knowledgeDocMapper.update(knowledgeDoc);
@@ -195,7 +185,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
     }
 
     /**
-     * 向量化：分片 → 嵌入 → 写入 Milvus
+     * 向量化：分片 → 嵌入 → 写 Milvus（spring-ai）
      */
     @Override
     public Response<String> vectorize(long spaceId, long docId) {
@@ -241,7 +231,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
     }
 
     /**
-     * 单文档向量化核心逻辑（分片 → 嵌入 → 写 Milvus）
+     * 单文档向量化核心逻辑（分片 → 嵌入 → 写 Milvus，spring-ai RAG）
      */
     private Response<String> vectorizeDoc(long spaceId, KnowledgeDoc knowledgeDoc) {
         long docId = knowledgeDoc.getId();
@@ -253,48 +243,21 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
             return Response.ofFail("知识库不存在或不属于当前空间");
         }
         if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
+            knowledgeDoc.setStatus(DocStatusEnum.FAILED.getCode());
+            knowledgeDocMapper.update(knowledgeDoc);
             return Response.ofFail("知识库未配置向量化模型，请先配置");
         }
-        SupplierRuntime runtime = null;
         try {
-            Response<SupplierRuntime> runtimeResp = supplierService.loadRuntime(spaceId,
-                    knowledgeBase.getEmbedSupplierId(), knowledgeBase.getEmbedModelId());
-            if (!runtimeResp.isSuccess()) {
-                return Response.ofFail(runtimeResp.getMsg());
+            Response<Integer> ret = ragService.vectorize(knowledgeBase, docId, knowledgeDoc.getContent());
+            if (!ret.isSuccess()) {
+                knowledgeDoc.setStatus(DocStatusEnum.FAILED.getCode());
+                knowledgeDocMapper.update(knowledgeDoc);
+                return Response.ofFail(ret.getMsg());
             }
-            runtime = runtimeResp.getData();
-            if (runtime.getModelType() != 1) {
-                return Response.ofFail("所选模型不是嵌入向量化模型");
-            }
-        } catch (Exception e) {
-            return Response.ofFail("向量化模型配置异常：" + e.getMessage());
-        }
-
-        // 分片
-        List<String> chunks = TextChunkUtil.split(knowledgeDoc.getContent(), knowledgeBase.getChunkSize(),
-                knowledgeBase.getChunkOverlap());
-        if (CollectionTool.isEmpty(chunks)) {
-            return Response.ofFail("文档无可分片内容");
-        }
-
-        try {
-            // 逐片嵌入
-            List<float[]> vectors = new ArrayList<>();
-            for (String chunk : chunks) {
-                float[] vector = llmClient.embedding(chunk, runtime.getBaseUrl(), runtime.getApiKey(),
-                        runtime.getModelName(), runtime.getHeaders());
-                vectors.add(vector);
-            }
-            // 写入 Milvus（先清理旧向量再写入，支持重复向量化）
-            String collection = milvusTool.collectionName(spaceId, knowledgeBase.getId());
-            milvusTool.ensureCollection(collection, vectors.get(0).length);
-            milvusTool.deleteByDoc(collection, docId);
-            milvusTool.insertChunks(collection, docId, chunks, vectors);
-
-            knowledgeDoc.setChunkCount(chunks.size());
+            knowledgeDoc.setChunkCount(ret.getData());
             knowledgeDoc.setStatus(DocStatusEnum.VECTORIZED.getCode());
             knowledgeDocMapper.update(knowledgeDoc);
-            return Response.ofSuccess("向量化成功，共 " + chunks.size() + " 个分片");
+            return Response.ofSuccess("向量化成功，共 " + ret.getData() + " 个分片");
         } catch (Exception e) {
             logger.warn("文档向量化失败, docId={}, err={}", docId, e.getMessage());
             knowledgeDoc.setStatus(DocStatusEnum.FAILED.getCode());
@@ -312,7 +275,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
     }
 
     /**
-     * 向量检索：按查询文本召回知识库相关内容分片
+     * 向量检索：按查询文本召回知识库相关内容分片（spring-ai）
      */
     @Override
     public Response<List<Map<String, Object>>> search(long spaceId, long baseId, String query, int topK) {
@@ -323,36 +286,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
         if (knowledgeBase == null || knowledgeBase.getSpaceId() != spaceId) {
             return Response.ofFail("知识库不存在或不属于当前空间");
         }
-        if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
-            return Response.ofFail("知识库未配置向量化模型，请先配置");
-        }
-        try {
-            SupplierRuntime runtime = supplierService.loadRuntime(spaceId, knowledgeBase.getEmbedSupplierId(),
-                    knowledgeBase.getEmbedModelId()).getData();
-            if (runtime == null || runtime.getModelType() != 1) {
-                return Response.ofFail("所选模型不是嵌入向量化模型");
-            }
-            float[] queryVector = llmClient.embedding(query, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName(),
-                    runtime.getHeaders());
-            String collection = milvusTool.collectionName(spaceId, baseId);
-            List<Map<String, Object>> hits = milvusTool.search(collection, toFloatList(queryVector),
-                    topK > 0 ? topK : knowledgeBase.getTopK());
-            return Response.ofSuccess(hits);
-        } catch (Exception e) {
-            logger.warn("知识库向量检索失败, baseId={}, err={}", baseId, e.getMessage());
-            return Response.ofFail("向量检索失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * float[] 转 List<Float>
-     */
-    private List<Float> toFloatList(float[] array) {
-        List<Float> list = new ArrayList<>(array.length);
-        for (float value : array) {
-            list.add(value);
-        }
-        return list;
+        return ragService.search(knowledgeBase, query, topK);
     }
 
 }

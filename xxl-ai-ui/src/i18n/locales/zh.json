@@ -512,7 +512,7 @@
       "deleteConvConfirm": "确认删除对话「{0}」？",
       "thinking": "深度思考",
       "hideThinking": "收起思考",
-      "thinkingStreaming": "思考中…",
+      "thinkingStreaming": "思考中",
       "scrollToBottom": "回到底部",
       "copyCode": "复制代码"
     }

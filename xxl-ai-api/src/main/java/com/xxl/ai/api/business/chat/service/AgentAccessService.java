@@ -6,16 +6,8 @@ import com.xxl.ai.api.business.chat.mapper.AgentConvMapper;
 import com.xxl.ai.api.business.chat.mapper.AgentMsgMapper;
 import com.xxl.ai.api.business.chat.model.entity.AgentConv;
 import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
-import com.xxl.ai.api.business.chat.model.AgentMcpTool;
-import com.xxl.ai.api.business.common.client.LLMClient;
-import com.xxl.ai.api.business.common.client.McpClient;
-import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
-import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
-import com.xxl.ai.api.business.knowledge.doc.service.KnowledgeDocService;
-import com.xxl.ai.api.business.mcp.model.entity.Mcp;
-import com.xxl.ai.api.business.mcp.service.McpService;
-import com.xxl.ai.api.business.skill.model.entity.Skill;
-import com.xxl.ai.api.business.skill.service.SkillService;
+import com.xxl.ai.api.business.llm.model.ChatText;
+import com.xxl.ai.api.business.llm.service.LlmAgentChatService;
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.ai.api.business.supplier.service.SupplierService;
 import com.xxl.tool.core.CollectionTool;
@@ -27,13 +19,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agent 公开访问 Service（不校验管理端登录态，按 uuid + visitorId 隔离会话）
+ *
+ * 仅维护会议与消息元数据（创建/列表/改名/删除/消息列表），LLM 运行时编排移交
+ * {@link LlmAgentChatService}（spring-ai）
  *
  * @author xxl-ai 2026-09-05
  */
@@ -51,17 +43,7 @@ public class AgentAccessService {
     @Resource
     private SupplierService supplierService;
     @Resource
-    private KnowledgeDocService knowledgeDocService;
-    @Resource
-    private KnowledgeBaseMapper knowledgeBaseMapper;
-    @Resource
-    private SkillService skillService;
-    @Resource
-    private McpService mcpService;
-    @Resource
-    private McpClient mcpClient;
-    @Resource
-    private LLMClient llmClient;
+    private LlmAgentChatService llmAgentChatService;
 
     /**
      * Load Agent 基础信息（仅已发布、正常的 Agent）
@@ -144,7 +126,7 @@ public class AgentAccessService {
     }
 
     /**
-     * 异步对话：装配上下文（系统指令 + 知识库RAG + Skill + MCP能力），SSE 流式返回
+     * 异步对话：校验会话与模型 → 落库用户消息 → spring-ai 流式对话 → 落库助手消息
      *
      * @param uuid     Agent 访问UUID
      * @param visitorId 访客标识
@@ -166,7 +148,7 @@ public class AgentAccessService {
     }
 
     /**
-     * 对话主流程
+     * 对话主流程（会话/模型校验 + 消息落库 + 移交 spring-ai LLM 编排）
      */
     private void doSend(String uuid, String visitorId, long convId, String content, SseEmitter emitter) throws Exception {
         if (StringTool.isBlank(content)) {
@@ -193,7 +175,7 @@ public class AgentAccessService {
             return;
         }
 
-        // 首条消息自动生成对话标题（首次提问内容，超50字截断后补"..."）
+        // 历史消息 + 首条消息自动生成对话标题（首次提问内容，超50字截断后补"..."）
         List<AgentMsg> historyMsgList = agentMsgMapper.listByConvId(convId);
         if (CollectionTool.isEmpty(historyMsgList)
                 && (StringTool.isBlank(agentConv.getTitle()) || "新对话".equals(agentConv.getTitle()))) {
@@ -214,39 +196,6 @@ public class AgentAccessService {
             safeSend(emitter, "message", "__ERROR__所选模型不是对话模型");
             return;
         }
-        String sessionId = "xxl-ai-conv-" + convId;
-
-        // 装配系统指令（含 RAG / Skill / MCP 能力）
-        String systemPrompt = buildSystemPrompt(agent, content);
-
-        // 装配工具集合：绑定 MCP 服务的工具（tools/list）汇总为 OpenAI function 形态
-        AgentMcpTool agentMcpTool = new AgentMcpTool();
-        List<Long> mcpIdList = splitIds(agent.getMcpIds());
-        if (CollectionTool.isNotEmpty(mcpIdList)) {
-            List<Mcp> mcpList = mcpService.listByIds(mcpIdList);
-            if (CollectionTool.isNotEmpty(mcpList)) {
-                for (Mcp mcp : mcpList) {
-                    try {
-                        for (McpClient.McpToolInfo toolInfo : mcpClient.listTools(mcp)) {
-                            agentMcpTool.add(mcp, toolInfo);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("Agent 加载 MCP 工具失败, mcp={}, err={}", mcp.getName(), e.getMessage());
-                    }
-                }
-            }
-        }
-
-        // 会话消息（历史 + 当前）
-        List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(buildMessage("system", systemPrompt));
-        if (CollectionTool.isNotEmpty(historyMsgList)) {
-            for (AgentMsg historyMsg : historyMsgList) {
-                // 推理模型上下文仅注入回复内容，思考过程不进入上下文
-                messages.add(buildMessage(historyMsg.getRole(), historyMsg.getContent()));
-            }
-        }
-        messages.add(buildMessage("user", content));
 
         // 落库用户消息
         AgentMsg userMsg = new AgentMsg();
@@ -255,240 +204,23 @@ public class AgentAccessService {
         userMsg.setContent(content);
         agentMsgMapper.insert(userMsg);
 
-        // 对话调用：无工具时走流式；有工具时走「工具调用循环（非流式）」
-        StringBuilder thinkText = new StringBuilder();
-        StringBuilder fullText = new StringBuilder();
-        if (agentMcpTool.isEmpty()) {
-            List<Map<String, String>> strMessages = stringifyMessages(messages);
-            llmClient.chatStream(strMessages, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName(),
-                    runtime.getHeaders(), sessionId,
-                    think -> {
-                        thinkText.append(think);
-                        safeSend(emitter, "thinking", think);
-                    },
-                    chunk -> {
-                        fullText.append(chunk);
-                        safeSend(emitter, "message", chunk);
-                    });
-        } else {
-            String answer = runToolLoop(messages, new ArrayList<>(agentMcpTool.getToolSpecs()), agentMcpTool,
-                    runtime, sessionId, thinkText, emitter);
-            if (StringTool.isNotBlank(answer)) {
-                fullText.append(answer);
-                safeSend(emitter, "message", answer);
-            }
-        }
+        // spring-ai 流式对话（统一装配 工具/RAG/Skill，SSE 下发 thinking/message）
+        String sessionId = "xxl-ai-conv-" + convId;
+        ChatText chatText = llmAgentChatService.chat(agent, runtime, historyMsgList, content, sessionId, emitter);
 
         // 落库助手消息（含思考过程）
-        if (!fullText.isEmpty() || !thinkText.isEmpty()) {
+        if (StringTool.isNotBlank(chatText.getContent()) || StringTool.isNotBlank(chatText.getThinking())) {
             AgentMsg assistantMsg = new AgentMsg();
             assistantMsg.setConvId(convId);
             assistantMsg.setRole("assistant");
-            assistantMsg.setReasoning(!thinkText.isEmpty() ? thinkText.toString() : null);
-            assistantMsg.setContent(fullText.toString());
+            assistantMsg.setReasoning(StringTool.isNotBlank(chatText.getThinking()) ? chatText.getThinking() : null);
+            assistantMsg.setContent(chatText.getContent());
             agentMsgMapper.insert(assistantMsg);
         }
-
-        safeSend(emitter, "message", "[DONE]");
-    }
-
-    /**
-     * 装配系统指令：系统提示 + 知识库检索参考 + Skill + MCP 能力
-     */
-    private String buildSystemPrompt(Agent agent, String content) {
-        StringBuilder prompt = new StringBuilder();
-        if (StringTool.isNotBlank(agent.getSystemPrompt())) {
-            prompt.append(agent.getSystemPrompt().trim()).append("\n");
-        }
-
-        // 知识库 RAG 检索
-        List<Long> kbIdList = splitIds(agent.getKbIds());
-        if (CollectionTool.isNotEmpty(kbIdList)) {
-            List<String> refList = new ArrayList<>();
-            for (Long kbId : kbIdList) {
-                KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(kbId);
-                if (knowledgeBase == null || knowledgeBase.getSpaceId() != agent.getSpaceId()) {
-                    continue;
-                }
-                try {
-                    Response<List<Map<String, Object>>> searchResp = knowledgeDocService.search(
-                            agent.getSpaceId(), kbId, content, knowledgeBase.getTopK());
-                    if (searchResp.isSuccess() && CollectionTool.isNotEmpty(searchResp.getData())) {
-                        for (Map<String, Object> hit : searchResp.getData()) {
-                            Object text = hit.get("text");
-                            if (text != null && StringTool.isNotBlank(String.valueOf(text))) {
-                                refList.add(String.valueOf(text));
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Agent RAG 检索失败, kbId={}, err={}", kbId, e.getMessage());
-                }
-            }
-            if (CollectionTool.isNotEmpty(refList)) {
-                prompt.append("\n### 参考资料（来自知识库，请结合资料回答问题）：\n");
-                int index = 1;
-                for (String ref : refList) {
-                    prompt.append(index++).append(". ").append(ref).append("\n");
-                }
-            }
-        }
-
-        // Skill 内容
-        List<Long> skillIdList = splitIds(agent.getSkillIds());
-        if (CollectionTool.isNotEmpty(skillIdList)) {
-            List<Skill> skillList = skillService.listByIds(skillIdList);
-            if (CollectionTool.isNotEmpty(skillList)) {
-                prompt.append("\n### 可用的 Skill：\n");
-                for (Skill skill : skillList) {
-                    prompt.append("- ").append(skill.getName()).append("：")
-                            .append(StringTool.isBlank(skill.getDescription()) ? "" : skill.getDescription()).append("\n");
-                }
-            }
-        }
-
-        // MCP 能力（信息性提示）
-        List<Long> mcpIdList = splitIds(agent.getMcpIds());
-        if (CollectionTool.isNotEmpty(mcpIdList)) {
-            List<Mcp> mcpList = mcpService.listByIds(mcpIdList);
-            if (CollectionTool.isNotEmpty(mcpList)) {
-                prompt.append("\n### 可用的 MCP 能力：\n");
-                for (Mcp mcp : mcpList) {
-                    prompt.append("- ").append(mcp.getName())
-                            .append(StringTool.isBlank(mcp.getRemark()) ? "" : "：" + mcp.getRemark()).append("\n");
-                }
-            }
-        }
-
-        return prompt.toString();
-    }
-
-    /**
-     * 构建 OpenAI 消息
-     */
-    private Map<String, Object> buildMessage(String role, String content) {
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", role);
-        message.put("content", content);
-        return message;
-    }
-
-    /**
-     * 消息转换为字符串值形式（供无工具流式路径使用）
-     */
-    private List<Map<String, String>> stringifyMessages(List<Map<String, Object>> messages) {
-        List<Map<String, String>> list = new ArrayList<>();
-        for (Map<String, Object> message : messages) {
-            Map<String, String> map = new HashMap<>();
-            for (Map.Entry<String, Object> entry : message.entrySet()) {
-                map.put(entry.getKey(), entry.getValue() == null ? null : String.valueOf(entry.getValue()));
-            }
-            list.add(map);
-        }
-        return list;
-    }
-
-    /**
-     * 工具调用循环（非流式）：LLM 请求 → tool_calls → 执行 MCP 工具 → 回填结果，直至无工具调用
-     *
-     * @return 最终回答文本
-     */
-    private String runToolLoop(List<Map<String, Object>> messages, List<Map<String, Object>> toolSpecs,
-                               AgentMcpTool agentMcpTool, SupplierRuntime runtime, String sessionId,
-                               StringBuilder thinkText, SseEmitter emitter) throws Exception {
-        int maxRounds = 8;
-        StringBuilder answer = new StringBuilder();
-        for (int round = 0; round < maxRounds; round++) {
-            LLMClient.ChatResult result = llmClient.chat(messages, toolSpecs, runtime.getBaseUrl(),
-                    runtime.getApiKey(), runtime.getModelName(), runtime.getHeaders(), sessionId);
-            if (StringTool.isNotBlank(result.getReasoning())) {
-                thinkText.append(result.getReasoning());
-                safeSend(emitter, "thinking", result.getReasoning());
-            }
-            List<LLMClient.ToolCall> toolCalls = result.getToolCalls();
-            if (toolCalls == null || toolCalls.isEmpty()) {
-                if (StringTool.isNotBlank(result.getContent())) {
-                    answer.append(result.getContent());
-                }
-                break;
-            }
-            // 推送工具调用提示（作为思考过程事件）
-            StringBuilder toolNames = new StringBuilder();
-            for (LLMClient.ToolCall toolCall : toolCalls) {
-                if (toolNames.length() > 0) {
-                    toolNames.append(", ");
-                }
-                toolNames.append(toolCall.getName());
-            }
-            String tip = "\n[调用工具] " + toolNames + "\n";
-            thinkText.append(tip);
-            safeSend(emitter, "thinking", tip);
-
-            // 回填 assistant 工具调用消息
-            Map<String, Object> assistantMsg = new HashMap<>();
-            assistantMsg.put("role", "assistant");
-            assistantMsg.put("content", result.getContent());
-            List<Map<String, Object>> toolCallsPayload = new ArrayList<>();
-            for (LLMClient.ToolCall toolCall : toolCalls) {
-                Map<String, Object> callMap = new HashMap<>();
-                callMap.put("id", toolCall.getId());
-                callMap.put("type", "function");
-                Map<String, Object> functionMap = new HashMap<>();
-                functionMap.put("name", toolCall.getName());
-                functionMap.put("arguments", toolCall.getArguments());
-                callMap.put("function", functionMap);
-                toolCallsPayload.add(callMap);
-            }
-            assistantMsg.put("tool_calls", toolCallsPayload);
-            messages.add(assistantMsg);
-
-            // 执行工具调用并回填结果
-            for (LLMClient.ToolCall toolCall : toolCalls) {
-                String resultText;
-                AgentMcpTool.Target target = agentMcpTool.get(toolCall.getName());
-                if (target == null) {
-                    resultText = "工具不存在：" + toolCall.getName();
-                } else {
-                    try {
-                        resultText = mcpClient.callTool(target.mcp(), target.originalName(), toolCall.getArguments());
-                    } catch (Exception e) {
-                        logger.warn("MCP 工具调用失败, tool={}, err={}", toolCall.getName(), e.getMessage());
-                        resultText = "工具调用失败：" + e.getMessage();
-                    }
-                }
-                Map<String, Object> toolMsg = new HashMap<>();
-                toolMsg.put("role", "tool");
-                toolMsg.put("tool_call_id", toolCall.getId());
-                toolMsg.put("content", resultText);
-                messages.add(toolMsg);
-            }
-        }
-        return answer.toString();
-    }
-
-    /**
-     * 逗号分隔字符串转 ID 集合
-     */
-    private List<Long> splitIds(String ids) {
-        List<Long> list = new ArrayList<>();
-        if (StringTool.isBlank(ids)) {
-            return list;
-        }
-        for (String id : ids.split(",")) {
-            if (StringTool.isNotBlank(id)) {
-                try {
-                    list.add(Long.parseLong(id.trim()));
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-        return list;
     }
 
     /**
      * SSE 安全发送（失败忽略）
-     *
-     * 使用 SseEmitter 事件构建器：自动输出标准 SSE 帧（event/data 分段），避免手动拼前缀导致重复 data:
      *
      * @param emitter   SseEmitter
      * @param eventName 事件名：thinking-思考过程、message-回复内容

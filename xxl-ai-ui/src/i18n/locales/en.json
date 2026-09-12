@@ -512,7 +512,7 @@
       "deleteConvConfirm": "Delete conversation 「{0}」?",
       "thinking": "Deep Think",
       "hideThinking": "Hide Think",
-      "thinkingStreaming": "Thinking...",
+      "thinkingStreaming": "Thinking",
       "scrollToBottom": "Back to bottom",
       "copyCode": "Copy code"
     }

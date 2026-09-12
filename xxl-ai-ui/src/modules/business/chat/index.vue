@@ -84,7 +84,7 @@
                     <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
                   </div>
                   <!-- 回复内容 -->
-                  <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}</span>
+                  <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span></span>
                   <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
                   <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
                   <span v-else class="msg-content">{{ msg.content }}</span>
@@ -1012,8 +1012,47 @@ onMounted(() => {
 }
 
 .msg-streaming {
+  display: inline-flex;
+  align-items: center;
   color: #b0b3b8;
   font-style: italic;
+}
+
+/* 思考中：省略号逐点跳动，呈现滚动加载效果 */
+.streaming-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 3px;
+}
+
+.streaming-dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: streaming-scroll 1.2s infinite ease-in-out;
+}
+
+.streaming-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.streaming-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes streaming-scroll {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.25;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 /* Markdown 渲染内容样式（助手气泡内） */

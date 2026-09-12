@@ -1,7 +1,7 @@
 package com.xxl.ai.api.business.knowledge.base.service.impl;
 
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
-import com.xxl.ai.api.business.common.vector.MilvusTool;
+import com.xxl.ai.api.business.llm.rag.RagService;
 import com.xxl.ai.api.business.knowledge.base.model.adaptor.KnowledgeBaseAdaptor;
 import com.xxl.ai.api.business.knowledge.base.model.dto.KnowledgeBaseDTO;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
@@ -13,8 +13,6 @@ import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,14 +25,12 @@ import java.util.List;
 @Service
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
-    private static final Logger logger = LoggerFactory.getLogger(KnowledgeBaseServiceImpl.class);
-
     @Resource
     private KnowledgeBaseMapper knowledgeBaseMapper;
     @Resource
     private KnowledgeDocMapper knowledgeDocMapper;
     @Resource
-    private MilvusTool milvusTool;
+    private RagService ragService;
 
     /**
      * 分页查询知识库列表
@@ -105,11 +101,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             List<KnowledgeDoc> docList = knowledgeDocMapper.listByBase(baseId);
             if (CollectionTool.isNotEmpty(docList)) {
                 for (KnowledgeDoc doc : docList) {
-                    try {
-                        milvusTool.deleteByDoc(milvusTool.collectionName(spaceId, baseId), doc.getId());
-                    } catch (Exception e) {
-                        logger.warn("清理文档向量失败, docId={}, err={}", doc.getId(), e.getMessage());
-                    }
+                    ragService.deleteByDoc(knowledgeBase, doc.getId());
                 }
             }
             knowledgeDocMapper.deleteByBaseId(baseId);
