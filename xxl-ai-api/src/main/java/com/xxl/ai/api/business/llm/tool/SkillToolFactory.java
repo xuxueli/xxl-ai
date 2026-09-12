@@ -112,6 +112,7 @@ public class SkillToolFactory {
         Path spaceRoot = skillsRoot.resolve(String.valueOf(agent.getSpaceId()));
         try {
             Files.createDirectories(spaceRoot);
+            logger.info("执行工具工作目录创建成功, agentId={}, path={}", agent.getId(), spaceRoot.toString());
         } catch (IOException e) {
             logger.warn("执行工具工作目录创建失败, agentId={}, err={}", agent.getId(), e.getMessage());
             return new ArrayList<>();
