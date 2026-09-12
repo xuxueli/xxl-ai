@@ -150,6 +150,24 @@ services:
     networks:
       - xxl-ai-network
 
+  # ==================== 示例 MCP 服务（仅作为「连接测试」联调用例，端口 8091） ====================
+
+  xxl-ai-api-sample:
+    image: xuxueli/xxl-ai-api-sample:local
+    build:
+      context: ../../xxl-ai-api-sample
+      dockerfile: Dockerfile
+    container_name: xxl-ai-api-sample
+    environment:
+      PARAMS: >-
+        --server.port=${XXL_AI_API_SAMPLE_PORT}
+    ports:
+      - "${XXL_AI_API_SAMPLE_PORT}:${XXL_AI_API_SAMPLE_PORT}"
+    networks:
+      - xxl-ai-network
+
+  # ==================== 前端服务 ====================
+
   xxl-ai-ui-vue:
     # 8、本地Build设置
     image: xuxueli/xxl-ai-ui-vue:local

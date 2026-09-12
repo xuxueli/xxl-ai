@@ -27,7 +27,7 @@ import java.util.Map;
  * 向量存储工厂（spring-ai MilvusVectorStore）
  *
  * 按「知识库」构建独立向量存储实例：
- *  - 集合名：kb_space_{spaceId}_base_{baseId}（空间+知识库隔离）
+ *  - 集合名：kb_base_{baseId}（知识库 ID 全局唯一，可直接隔离）
  *  - 嵌入模型：知识库配置的嵌入供应商/模型
  * 实例按（空间+知识库+嵌入模型）指纹缓存复用，配置变化自动重建
  *
@@ -64,8 +64,8 @@ public class VectorStoreFactory {
     /**
      * 集合名称：按 空间 + 知识库 隔离
      */
-    public String collectionName(long spaceId, long baseId) {
-        return "kb_space_" + spaceId + "_base_" + baseId;
+    public String collectionName(long baseId) {
+        return "kb_base_" + baseId;
     }
 
     /**
@@ -106,7 +106,7 @@ public class VectorStoreFactory {
         }
         MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), embeddingModel)
                 .databaseName(database)
-                .collectionName(collectionName(knowledgeBase.getSpaceId(), baseId))
+                .collectionName(collectionName(baseId))
                 .metricType(MetricType.COSINE)
                 .indexType(IndexType.FLAT)
                 .initializeSchema(true)
@@ -116,7 +116,7 @@ public class VectorStoreFactory {
             store.afterPropertiesSet();
         } catch (Exception e) {
             vectorStoreCache.remove(key);
-            throw new IllegalStateException("向量集合初始化失败, collection=" + collectionName(knowledgeBase.getSpaceId(), baseId), e);
+            throw new IllegalStateException("向量集合初始化失败, collection=" + collectionName(baseId), e);
         }
         vectorStoreCache.put(key, store);
         logger.debug("向量存储构建完成, baseId={}", baseId);

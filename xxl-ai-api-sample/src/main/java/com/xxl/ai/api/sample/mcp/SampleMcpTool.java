@@ -1,4 +1,4 @@
-package com.xxl.ai.api.business.sample.mcp;
+package com.xxl.ai.api.sample.mcp;
 
 import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -13,13 +13,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 示例 MCP 工具集（应用内嵌 Streamable HTTP MCP 服务）
+ * 示例 MCP 工具集（独立应用内嵌 Streamable HTTP MCP 服务，端口 8091）
  *
  * 内置示例工具，作为平台 MCP「连接测试」与 Agent 工具调用的开箱即用联调用例：
  *  - get_current_time  本地时钟服务
  *  - calculator        计算器服务
  *
- * @author xxl-ai 2026-09-12
+ * @author xxl-ai 2026-09-13
  */
 public final class SampleMcpTool {
 

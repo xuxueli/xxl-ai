@@ -13,6 +13,7 @@
 
 	<modules>
 		<module>xxl-ai-api</module>
+		<module>xxl-ai-api-sample</module>
 	</modules>
 
 	<properties>

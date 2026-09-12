@@ -292,9 +292,9 @@ VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区�
 -- 7、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    -- 远程 Streamable HTTP：示例MCP
-    (1, '本地时钟服务', 0, 'http://127.0.0.1:8090/sample/clock/mcp', null, '{"transport":"http","url":"http://127.0.0.1:8090/sample/clock/mcp","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 get_current_time', NOW(), NOW()),
-    (1, '计算器服务', 0, 'http://127.0.0.1:8090/sample/calc/mcp', null, '{"transport":"http","url":"http://127.0.0.1:8090/sample/calc/mcp","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 calculator', NOW(), NOW()),
+    -- 远程 Streamable HTTP：示例MCP（由独立应用 xxl-ai-api-sample 提供）
+    (1, '本地时钟服务', 0, 'http://127.0.0.1:8091/sample/clock/mcp', null, '{"transport":"http","url":"http://127.0.0.1:8091/sample/clock/mcp","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 get_current_time', NOW(), NOW()),
+    (1, '计算器服务', 0, 'http://127.0.0.1:8091/sample/calc/mcp', null, '{"transport":"http","url":"http://127.0.0.1:8091/sample/calc/mcp","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 calculator', NOW(), NOW()),
     -- 本地 stdio 进程：：示例MCP
     (1, 'Fetch 网页抓取', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-fetch"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),
     (1, 'Filesystem 文件系统', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW());
