@@ -10,6 +10,8 @@ import com.xxl.tool.core.StringTool;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springaicommunity.agent.common.workspace.Workspace;
+import org.springaicommunity.agent.tools.ShellTools;
 import org.springaicommunity.agent.tools.SkillsTool;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 把「Agent 绑定的 Skill」（DB 文件树）物化为 SKILL.md 知识模块目录，构建 SkillsTool：
  *  - SkillsTool 以单个 Skill 工具注册进 ChatClient，模型按语义匹配触发，注入完整技能内容
  *  - 按（Agent + 技能指纹）缓存复用，技能内容变更自动重建
+ * 同时提供配套的 Shell 执行工具（buildShellTool）：技能内容中的 bash 指令依赖
+ * 终端执行能力，工作目录取空间技能物化根，按空间隔离沙箱
  *
  * @author xxl-ai 2026-09-12
  */
@@ -86,6 +90,31 @@ public class SkillToolFactory {
             logger.warn("Agent Skill 工具构建失败, agentId={}, err={}", agent.getId(), e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 构建 Agent 装配的 Shell 执行工具（无技能时返回 null 表示不注册）
+     *
+     * 与 buildTool 配套：SkillsTool 注入 SKILL.md 内容（含 bash 指令），ShellTools 提供
+     * bash / bash_output / kill_shell 终端执行能力；工作目录取空间技能物化根，按空间隔离
+     */
+    public ShellTools buildShellTool(Agent agent) {
+        List<Long> skillIdList = splitIds(agent.getSkillIds());
+        if (CollectionTool.isEmpty(skillIdList)) {
+            return null;
+        }
+        Path spaceRoot = skillsRoot.resolve(String.valueOf(agent.getSpaceId()));
+        try {
+            logger.info("Creating Shell working directory, agentId={}, path={}", agent.getId(), spaceRoot);
+            Files.createDirectories(spaceRoot);
+        } catch (IOException e) {
+            logger.warn("Shell 工作目录创建失败, agentId={}, err={}", agent.getId(), e.getMessage());
+            return null;
+        }
+        return ShellTools.builder()
+                .workingDirectory(spaceRoot)
+                .workspace(Workspace.local(spaceRoot))
+                .build();
     }
 
     /**

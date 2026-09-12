@@ -26,9 +26,11 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springaicommunity.agent.tools.ShellTools;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -91,9 +93,10 @@ public class LlmAgentChatService {
         }
         messages.add(new UserMessage(content));
 
-        // 工具装配：MCP 工具 + Skill 工具（无技能时不注册）
+        // 工具装配：MCP 工具 + Skill 工具（无技能时不注册）+ Shell 执行工具（技能 bash 指令需终端执行）
         ToolCallback[] mcpTools = mcpToolFactory.buildTools(agent);
         ToolCallback skillTool = skillToolFactory.buildTool(agent);
+        ShellTools shellTool = skillToolFactory.buildShellTool(agent);
         List<ToolCallback> toolList = new ArrayList<>();
         if (mcpTools.length > 0) {
             java.util.Collections.addAll(toolList, mcpTools);
@@ -117,8 +120,9 @@ public class LlmAgentChatService {
 
         // 流式对话
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(messages);
-        if (CollectionTool.isNotEmpty(toolList)) {
-            spec = spec.tools(toolList.toArray());
+        Object[] runtimeTools = mergeTools(toolList, shellTool);
+        if (runtimeTools.length > 0) {
+            spec = spec.tools(runtimeTools);
         }
         if (CollectionTool.isNotEmpty(advisorList)) {
             spec = spec.advisors(advisorList);
@@ -160,6 +164,22 @@ public class LlmAgentChatService {
         }
         safeSend(emitter, "message", "[DONE]");
         return new ChatText(fullText.toString(), thinkText.toString());
+    }
+
+    /**
+     * 合并工具回调与附加工具对象后装配
+     *
+     * ShellTools 为 @Tool 注解对象（非 ToolCallback），随 tools 一起传入 spring-ai
+     * 即可自动解析注册其 bash / bash_output / kill_shell 方法
+     */
+    private Object[] mergeTools(List<ToolCallback> toolList, ShellTools shellTool) {
+        Object[] tools = toolList.toArray();
+        if (shellTool == null) {
+            return tools;
+        }
+        Object[] merged = Arrays.copyOf(tools, tools.length + 1);
+        merged[tools.length] = shellTool;
+        return merged;
     }
 
     /**
