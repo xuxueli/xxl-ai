@@ -7,6 +7,7 @@ import com.xxl.ai.api.business.chat.service.AgentAccessService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,12 @@ public class AgentAccessController {
 
     @Resource
     private AgentAccessService agentAccessService;
+
+    /**
+     * SSE 流式超时时间（毫秒），默认 120s
+     */
+    @Value("${xxl-ai.agent.stream.timeout:120000}")
+    private long streamTimeout;
 
     /**
      * Load Agent 基础信息（公开）
@@ -93,7 +100,7 @@ public class AgentAccessController {
                            @RequestParam("visitorId") String visitorId,
                            @RequestParam("convId") long convId,
                            @RequestParam("content") String content) {
-        SseEmitter emitter = new SseEmitter(120_000L);
+        SseEmitter emitter = new SseEmitter(streamTimeout);
         agentAccessService.sendAsync(uuid, visitorId, convId, content, emitter);
         return emitter;
     }
