@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
@@ -31,8 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * MCP 客户端统一封装（官方 Java MCP SDK）
  *
  * 按 MCP 完整配置格式构建传输层：
- *  - http  ：Streamable HTTP（HttpClientStreamableHttpTransport，JDK HttpClient）
- *  - sse   ：SSE（HttpClientSseClientTransport）
+ *  - http  ：远程 Streamable HTTP（HttpClientStreamableHttpTransport，JDK HttpClient）
  *  - stdio ：本地进程（StdioClientTransport，ProcessBuilder 子进程）
  * 客户端与服务端连接按「mcpId + config 指纹」缓存复用；tools/list 单独缓存，工具变化推出重建
  *
@@ -186,20 +184,16 @@ public class McpClient {
     }
 
     /**
-     * 构建传输层：按 config 配置格式（http/sse/stdio）解析
+     * 构建传输层：按 config 配置格式（http/stdio）解析；遵循类型映射（0=远程/1=本地）兜底
      */
     private McpClientTransport buildTransport(Mcp mcp) {
         McpConfig config = parseConfig(mcp);
         String transport = config.transport;
         try {
-            switch (transport) {
-                case "stdio":
-                    return buildStdioTransport(config);
-                case "sse":
-                    return buildSseTransport(config);
-                default:
-                    return buildHttpTransport(config);
+            if ("stdio".equals(transport)) {
+                return buildStdioTransport(config);
             }
+            return buildHttpTransport(config);
         } catch (Exception e) {
             logger.warn("MCP 传输层构建失败, id={}, err={}", mcp.getId(), e.getMessage());
             return null;
@@ -214,21 +208,6 @@ public class McpClient {
             return null;
         }
         HttpClientStreamableHttpTransport.Builder builder = HttpClientStreamableHttpTransport.builder(config.url)
-                .customizeClient(clientBuilder -> clientBuilder.connectTimeout(Duration.ofSeconds(10)));
-        if (config.headers != null && !config.headers.isEmpty()) {
-            builder.httpRequestCustomizer(headerCustomizer(config.headers));
-        }
-        return builder.build();
-    }
-
-    /**
-     * SSE 传输：url + headers
-     */
-    private McpClientTransport buildSseTransport(McpConfig config) {
-        if (config.url == null || config.url.isEmpty()) {
-            return null;
-        }
-        HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(config.url)
                 .customizeClient(clientBuilder -> clientBuilder.connectTimeout(Duration.ofSeconds(10)));
         if (config.headers != null && !config.headers.isEmpty()) {
             builder.httpRequestCustomizer(headerCustomizer(config.headers));
@@ -255,7 +234,7 @@ public class McpClient {
     }
 
     /**
-     * 请求头自定义器：为 MCP HTTP/SSE 请求统一追加 headers
+     * 请求头自定义器：为 MCP HTTP 请求统一追加 headers
      */
     private io.modelcontextprotocol.client.transport.customizer.McpSyncHttpClientRequestCustomizer headerCustomizer(Map<String, String> headers) {
         return (builder, method, uri, protocolVersion, context) -> {
@@ -268,52 +247,42 @@ public class McpClient {
     }
 
     /**
-     * 解析 MCP 完整配置：优先 config JSON，缺失时按平铺列兼容推导
+     * 解析 MCP 完整配置（config JSON 为唯一权威配置，新增/更新时已保证回填）
      */
     private McpConfig parseConfig(Mcp mcp) {
         McpConfig config = new McpConfig();
-        if (mcp.getConfig() != null && !mcp.getConfig().isEmpty()) {
-            try {
-                JsonObject obj = GSON.fromJson(mcp.getConfig(), JsonObject.class);
-                if (obj != null) {
-                    JsonElement transportEl = obj.get("transport");
-                    config.transport = (transportEl != null && transportEl.isJsonPrimitive())
-                            ? transportEl.getAsString() : null;
-                    JsonElement urlEl = obj.get("url");
-                    config.url = (urlEl != null && urlEl.isJsonPrimitive()) ? urlEl.getAsString() : null;
-                    config.headers = parseStringMap(obj.get("headers"));
-                    JsonElement commandEl = obj.get("command");
-                    config.command = (commandEl != null && commandEl.isJsonPrimitive()) ? commandEl.getAsString() : null;
-                    config.args = parseStringList(obj.get("args"));
-                    config.env = parseStringMap(obj.get("env"));
-                    JsonElement cwdEl = obj.get("cwd");
-                    config.cwd = (cwdEl != null && cwdEl.isJsonPrimitive()) ? cwdEl.getAsString() : null;
-                }
-            } catch (Exception e) {
-                logger.warn("MCP config 解析失败, id={}, err={}", mcp.getId(), e.getMessage());
-            }
+        if (mcp.getConfig() == null || mcp.getConfig().isEmpty()) {
+            return config;
         }
-        // 平铺列兜底（存量 / 未回填 config）
+        try {
+            JsonObject obj = GSON.fromJson(mcp.getConfig(), JsonObject.class);
+            if (obj == null) {
+                return config;
+            }
+            JsonElement transportEl = obj.get("transport");
+            config.transport = (transportEl != null && transportEl.isJsonPrimitive())
+                    ? transportEl.getAsString() : null;
+            JsonElement urlEl = obj.get("url");
+            config.url = (urlEl != null && urlEl.isJsonPrimitive()) ? urlEl.getAsString() : null;
+            config.headers = parseStringMap(obj.get("headers"));
+            JsonElement commandEl = obj.get("command");
+            config.command = (commandEl != null && commandEl.isJsonPrimitive()) ? commandEl.getAsString() : null;
+            config.args = parseStringList(obj.get("args"));
+            config.env = parseStringMap(obj.get("env"));
+            JsonElement cwdEl = obj.get("cwd");
+            config.cwd = (cwdEl != null && cwdEl.isJsonPrimitive()) ? cwdEl.getAsString() : null;
+} catch (Exception e) {
+            logger.warn("MCP config 解析失败, id={}, err={}", mcp.getId(), e.getMessage());
+        }
+        // 兜底：config 缺 transport 时按类型映射（0=远程http、1=本地stdio）
         if (config.transport == null) {
-            if (mcp.getType() == McpConfig.TYPE_STDIO) {
-                config.transport = "stdio";
-            } else if (mcp.getType() == McpConfig.TYPE_SSE) {
-                config.transport = "sse";
-            } else {
-                config.transport = "http";
-            }
-        }
-        if (config.url == null) {
-            config.url = mcp.getUrl();
-        }
-        if (config.headers == null) {
-            config.headers = parseHeadersString(mcp.getHeaders());
+            config.transport = mcp.getType() == McpConfig.TYPE_LOCAL ? "stdio" : "http";
         }
         return config;
     }
 
     /**
-     * headers 解析：兼容「JSON 对象」与「对象字符串」两种形态
+     * 请求头自定义器：为 MCP HTTP 请求统一追加 headers
      */
     private Map<String, String> parseStringMap(JsonElement element) {
         if (element == null) {
@@ -351,7 +320,7 @@ public class McpClient {
     }
 
     /**
-     * 平铺 headers 字段解析（历史 JSON 字符串列）
+     * 平铺 headers 字段解析（config JSON 内 headers 为字符串形态时）
      */
     private Map<String, String> parseHeadersString(String headers) {
         if (headers == null || headers.isEmpty()) {
@@ -430,11 +399,10 @@ public class McpClient {
      * 解析后的 MCP server 配置模型
      */
     private static class McpConfig {
-        private static final int TYPE_HTTP = 0;
-        private static final int TYPE_SSE = 1;
-        private static final int TYPE_STDIO = 2;
+        private static final int TYPE_REMOTE = 0;
+        private static final int TYPE_LOCAL = 1;
 
-        private String transport;       /* http/sse/stdio */
+        private String transport;       /* http/stdio */
         private String url;             /* 服务地址 */
         private Map<String, String> headers;    /* 请求头 */
         private String command;         /* stdio 命令 */

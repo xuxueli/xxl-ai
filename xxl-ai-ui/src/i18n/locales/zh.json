@@ -400,7 +400,7 @@
       "remoteConfig": "远程配置",
       "stdioConfig": "本地进程",
       "command": "启动命令",
-      "commandRequired": "stdio 类型必须填写启动命令（如 npx）",
+      "commandRequired": "本地类型必须填写启动命令（如 npx）",
       "commandPlaceholder": "如 npx",
       "args": "参数",
       "argsTip": "每行一个参数，如 -y\n@modelcontextprotocol/server-everything",

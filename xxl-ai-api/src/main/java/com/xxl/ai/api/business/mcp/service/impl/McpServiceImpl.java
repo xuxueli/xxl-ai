@@ -162,15 +162,15 @@ public class McpServiceImpl implements McpService {
      * 校验并归一 MCP 配置：保证 type / config / 平铺列 一致性与必填项
      *
      * 校验规则：
-     *  - type 0=HTTP、1=SSE、2=stdio；
-     *  - HTTP/SSE 必须提供 url（config 或平铺列）；config 缺失时按平铺列自动生成；
-     *  - stdio 必须在 config 中提供 command，且无 url；
+     *  - type 0=远程(Streamable HTTP)、1=本地(stdio)；
+     *  - 远程必须提供 url（config 或平铺列）；config 缺失时按平铺列自动生成；
+     *  - 本地必须在 config 中提供 command，且无 url；
      *  - config 提供时以其 transport 为准同步 type。
      */
     private Response<String> normalizeConfig(McpDTO dto) {
         int type = dto.getType();
-        if (type != McpTypeEnum.HTTP.getCode() && type != McpTypeEnum.SSE.getCode() && type != McpTypeEnum.STDIO.getCode()) {
-            return Response.ofFail("MCP 协议类型不合法");
+        if (type != McpTypeEnum.REMOTE.getCode() && type != McpTypeEnum.LOCAL.getCode()) {
+            return Response.ofFail("MCP 服务类型不合法");
         }
         JsonObject configObj = null;
         if (StringTool.isNotBlank(dto.getConfig())) {
@@ -186,11 +186,9 @@ public class McpServiceImpl implements McpService {
             if (transportEl != null && transportEl.isJsonPrimitive()) {
                 String transport = transportEl.getAsString();
                 if ("stdio".equals(transport)) {
-                    type = McpTypeEnum.STDIO.getCode();
-                } else if ("sse".equals(transport)) {
-                    type = McpTypeEnum.SSE.getCode();
+                    type = McpTypeEnum.LOCAL.getCode();
                 } else if ("http".equals(transport)) {
-                    type = McpTypeEnum.HTTP.getCode();
+                    type = McpTypeEnum.REMOTE.getCode();
                 }
             }
         }
@@ -201,8 +199,8 @@ public class McpServiceImpl implements McpService {
                 url = urlEl.getAsString();
             }
         }
-        if (type == McpTypeEnum.STDIO.getCode()) {
-            // stdio：必须提供 command，无需 url
+        if (type == McpTypeEnum.LOCAL.getCode()) {
+            // 本地：必须提供 command，无需 url
             String command = null;
             if (configObj != null) {
                 JsonElement commandEl = configObj.get("command");
@@ -211,7 +209,7 @@ public class McpServiceImpl implements McpService {
                 }
             }
             if (StringTool.isBlank(command)) {
-                return Response.ofFail("stdio 类型必须配置 command 命令");
+                return Response.ofFail("本地类型必须配置 command 命令");
             }
             dto.setUrl(null);
         } else {
@@ -220,10 +218,10 @@ public class McpServiceImpl implements McpService {
             }
             dto.setUrl(url);
         }
-        // config 缺失时按平铺列生成（HTTP/SSE），保证权威配置完整
+        // config 缺失时按平铺列生成（远程），保证权威配置完整
         if (StringTool.isBlank(dto.getConfig())) {
             JsonObject config = new JsonObject();
-            config.addProperty("transport", type == McpTypeEnum.SSE.getCode() ? "sse" : "http");
+            config.addProperty("transport", type == McpTypeEnum.LOCAL.getCode() ? "stdio" : "http");
             config.addProperty("url", url);
             if (StringTool.isNotBlank(dto.getHeaders())) {
                 try {

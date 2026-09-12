@@ -12,10 +12,10 @@ public class Mcp {
     private long id;            /* MCP ID */
     private long spaceId;       /* 空间ID */
     private String name;        /* MCP名称 */
-    private int type;           /* 协议类型：0-Streamable HTTP、1-SSE、2-stdio */
-    private String url;         /* 服务地址(HTTP/SSE必填, stdio可为空) */
+    private int type;           /* 服务类型：0-远程(Streamable HTTP)、1-本地(stdio) */
+    private String url;         /* 服务地址(远程必填, 本地可为空) */
     private String headers;     /* 请求头(JSON) */
-    private String config;      /* 完整MCP配置(JSON)：http/sse{transport,url,headers} stdio{transport,command,args,env,cwd} */
+    private String config;      /* 完整MCP配置(JSON)：远程{transport,url,headers} 本地{transport,command,args,env,cwd} */
     private String remark; /* 备注 */
     private int status;         /* 状态：0-正常、1-停用 */
     private Date addTime;       /* 新增时间 */

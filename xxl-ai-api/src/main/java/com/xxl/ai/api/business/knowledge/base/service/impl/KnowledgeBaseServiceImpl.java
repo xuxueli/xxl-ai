@@ -105,6 +105,8 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
                 }
             }
             knowledgeDocMapper.deleteByBaseId(baseId);
+            // 失效向量存储缓存，避免数据库删除后残留实例
+            ragService.evictVectorStore(baseId);
         }
         int ret = knowledgeBaseMapper.deleteByIds(ids);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
@@ -122,8 +124,17 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         if (knowledgeBase.getEmbedSupplierId() == 0 || knowledgeBase.getEmbedModelId() == 0) {
             return Response.ofFail("请配置向量化供应商与模型");
         }
+        KnowledgeBase oldDb = knowledgeBaseMapper.load(knowledgeBase.getId());
         int ret = knowledgeBaseMapper.update(knowledgeBase);
-        return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+        if (ret > 0) {
+            // 嵌入供应商/模型变更时失效缓存，保证下次向量化按新模型重建
+            if (oldDb != null && (oldDb.getEmbedSupplierId() != knowledgeBase.getEmbedSupplierId()
+                    || oldDb.getEmbedModelId() != knowledgeBase.getEmbedModelId())) {
+                ragService.evictVectorStore(knowledgeBase.getId());
+            }
+            return Response.ofSuccess();
+        }
+        return Response.ofFail();
     }
 
     /**

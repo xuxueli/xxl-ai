@@ -137,6 +137,13 @@ public class RagService {
     }
 
     /**
+     * 失效知识库向量存储缓存（知识库删除或嵌入模型配置变更时调用，避免旧模型被复用）
+     */
+    public void evictVectorStore(long baseId) {
+        vectorStoreFactory.evict(baseId);
+    }
+
+    /**
      * 为知识库构建 RAG Advisor（QuestionAnswerAdvisor，检索上下文自动注入系统提示）
      *
      * @param kb 知识库

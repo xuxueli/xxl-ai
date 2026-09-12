@@ -400,7 +400,7 @@
       "remoteConfig": "Remote",
       "stdioConfig": "Local Process",
       "command": "Command",
-      "commandRequired": "stdio type requires a launch command (e.g. npx)",
+      "commandRequired": "Local type requires a launch command (e.g. npx)",
       "commandPlaceholder": "e.g. npx",
       "args": "Args",
       "argsTip": "One arg per line",

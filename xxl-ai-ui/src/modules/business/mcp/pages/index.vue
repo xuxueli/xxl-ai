@@ -1,6 +1,6 @@
 <!--
   Mcp（MCP管理）
-  MCP 在线配置管理（完整 MCP 配置格式：远程 HTTP/SSE + 本地进程 stdio）、连通性测试
+  MCP 在线配置管理（完整 MCP 配置格式：远程 Streamable HTTP + 本地进程 stdio）、连通性测试
 -->
 <template>
   <div class="app-container">
@@ -102,8 +102,8 @@
           </el-radio-group>
         </el-form-item>
 
-        <!-- 远程配置（HTTP/SSE）：url + headers -->
-        <template v-if="formState.form.type !== 2">
+        <!-- 远程配置（Streamable HTTP）：url + headers -->
+        <template v-if="formState.form.type === 0">
           <el-form-item :label="t('business.mcp.url')" prop="url">
             <el-input v-model="configForm.url" :placeholder="t('business.mcp.urlPlaceholder')" maxlength="200" />
           </el-form-item>
@@ -302,7 +302,7 @@ function parseIntoForm(current: Mcp) {
       cfg = {}
     }
   }
-  configForm.value.transport = cfg.transport ?? (current.type === 1 ? 'sse' : current.type === 2 ? 'stdio' : 'http')
+  configForm.value.transport = cfg.transport ?? (current.type === 1 ? 'stdio' : 'http')
   configForm.value.url = cfg.url ?? current.url
   configForm.value.headers = jsonValueToText(cfg.headers)
   configForm.value.command = cfg.command ?? ''
@@ -359,7 +359,7 @@ const envError = computed(() => {
 const previewConfig = computed(() => {
   const form = formState.value.form
   const cfg: Record<string, any> = {}
-  if (form.type === 2) {
+  if (form.type === 1) {
     if (!configForm.value.command.trim()) return ''
     cfg.transport = 'stdio'
     cfg.command = configForm.value.command.trim()
@@ -370,7 +370,7 @@ const previewConfig = computed(() => {
     if (env && Object.keys(env).length) cfg.env = env
   } else {
     if (!configForm.value.url?.trim()) return ''
-    cfg.transport = form.type === 1 ? 'sse' : 'http'
+    cfg.transport = 'http'
     cfg.url = configForm.value.url.trim()
     const headers = tryParseJsonObject(configForm.value.headers)
     if (headers && Object.keys(headers).length) cfg.headers = headers
@@ -382,7 +382,7 @@ const previewConfig = computed(() => {
 function buildConfigPayload(): boolean {
   const form = formState.value.form
   const cfg: Record<string, any> = {}
-  if (form.type === 2) {
+  if (form.type === 1) {
     if (!configForm.value.command.trim()) {
       modal.msgWarning(t('business.mcp.commandRequired'))
       return false
@@ -401,7 +401,7 @@ function buildConfigPayload(): boolean {
       modal.msgWarning(t('common.requiredMsg', [t('business.mcp.url')]))
       return false
     }
-    cfg.transport = form.type === 1 ? 'sse' : 'http'
+    cfg.transport = 'http'
     cfg.url = configForm.value.url.trim()
     const headers = parseJsonObject(configForm.value.headers, t('business.mcp.headersInvalid'))
     if (headers === false) return false
@@ -500,7 +500,7 @@ function handleTest(row: any) {
 /** 列表地址展示：stdio 无 url 时回退展示启动命令 */
 function displayUrl(row: Mcp) {
   if (row.url) return row.url
-  if (row.type === 2 && row.config) {
+  if (row.type === 1 && row.config) {
     try {
       const cfg = JSON.parse(row.config)
       if (cfg.command) return `${cfg.command} ${(cfg.args || []).join(' ')}`

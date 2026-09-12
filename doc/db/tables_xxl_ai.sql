@@ -67,10 +67,10 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_mcp` (
     `id`            BIGINT          NOT NULL            AUTO_INCREMENT,
     `space_id`      BIGINT          NOT NULL            COMMENT '空间ID',
     `name`          VARCHAR(100)    NOT NULL            COMMENT 'MCP名称',
-    `type`          TINYINT         NOT NULL DEFAULT 0  COMMENT '协议类型：0-Streamable HTTP、1-SSE、2-stdio',
-    `url`           VARCHAR(200)    NULL DEFAULT NULL   COMMENT '服务地址(HTTP/SSE必填，stdio可为空)',
+    `type`          TINYINT         NOT NULL DEFAULT 0  COMMENT '服务类型：0-远程(Streamable HTTP)、1-本地(stdio)',
+    `url`           VARCHAR(200)    NULL DEFAULT NULL   COMMENT '服务地址(远程必填，本地可为空)',
     `headers`       VARCHAR(500)    NULL DEFAULT NULL   COMMENT '请求头(JSON)',
-    `config`        TEXT            NULL DEFAULT NULL   COMMENT '完整MCP配置(JSON)：http/sse{transport,url,headers} stdio{transport,command,args,env,cwd}',
+    `config`        TEXT            NULL DEFAULT NULL   COMMENT '完整MCP配置(JSON)：远程{transport,url,headers} 本地{transport,command,args,env,cwd}',
     `status`        TINYINT         NOT NULL DEFAULT 0  COMMENT '状态：0-正常、1-停用',
     `remark`        VARCHAR(500)    NULL DEFAULT NULL   COMMENT '备注',
     `add_time`      DATETIME        NOT NULL            COMMENT '新增时间',
@@ -289,17 +289,15 @@ VALUES
 INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
 VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区检索接口地址，可配置为空则禁用社区查询', NOW(), NOW());
 
--- 7、预设 MCP 服务（覆盖 Streamable HTTP / SSE / stdio 三类，作为「连接测试」联调用例）
+-- 7、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    -- 远程 MCP（本地mock）
-    (1, '本地时钟服务', 0, 'http://127.0.0.1:19001/mcp', null, '{"transport":"http","url":"http://127.0.0.1:19001/mcp","headers":{}}', 0, '内置测试：get_current_time', NOW(), NOW()),
-    (1, '计算器服务', 0, 'http://127.0.0.1:19003/mcp', null, '{"transport":"http","url":"http://127.0.0.1:19003/mcp","headers":{}}', 0, '内置测试：calculator', NOW(), NOW()),
-    (1, '天气查询服务', 1, 'http://127.0.0.1:19002/mcp', null, '{"transport":"sse","url":"http://127.0.0.1:19002/mcp","headers":{}}', 0, '内置测试：get_weather', NOW(), NOW()),
-    (1, '日志信息查询', 1, 'http://127.0.0.1:19004/mcp', null, '{"transport":"sse","url":"http://127.0.0.1:19004/mcp","headers":{}}', 0, '内置测试：query_logs', NOW(), NOW()),
-    -- 社区流行MCP（stdio 本地进程）
-    (1, 'Fetch 网页抓取', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-fetch"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),
-    (1, 'Filesystem 文件系统', 2, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW());
+    -- 远程 Streamable HTTP：示例MCP
+    (1, '本地时钟服务', 0, 'http://127.0.0.1:8090/sample/mcp/clock', null, '{"transport":"http","url":"http://127.0.0.1:8090/sample/mcp/clock","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 get_current_time', NOW(), NOW()),
+    (1, '计算器服务', 0, 'http://127.0.0.1:8090/sample/mcp/calc', null, '{"transport":"http","url":"http://127.0.0.1:8090/sample/mcp/calc","headers":{}}', 0, '内置示例：应用内嵌 MCP 服务（远程），工具 calculator', NOW(), NOW()),
+    -- 本地 stdio 进程：：示例MCP
+    (1, 'Fetch 网页抓取', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-fetch"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),
+    (1, 'Filesystem 文件系统', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW());
 
 -- 8、预设 SKILL（开箱即用：sql-optimizer 慢SQL优化、ppt 演示文稿生成）
 INSERT INTO `xxl_ai_skill` (`id`, `space_id`, `name`, `description`, `version`, `status`, `add_time`, `update_time`)

@@ -7,17 +7,9 @@ import com.xxl.ai.api.business.supplier.service.SupplierService;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
 import io.milvus.client.MilvusServiceClient;
-import io.milvus.grpc.CollectionSchema;
-import io.milvus.grpc.DescribeCollectionResponse;
-import io.milvus.grpc.FieldSchema;
 import io.milvus.param.ConnectParam;
 import io.milvus.param.IndexType;
 import io.milvus.param.MetricType;
-import io.milvus.param.R;
-import io.milvus.param.collection.DescribeCollectionParam;
-import io.milvus.param.collection.DropCollectionParam;
-import io.milvus.param.collection.HasCollectionParam;
-import io.milvus.param.collection.ReleaseCollectionParam;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,10 +55,7 @@ public class VectorStoreFactory {
     private static final int CACHE_MAX = 128;
     private static final int DEFAULT_TOP_K = 5;
 
-    /** spring-ai MilvusVectorStore 默认向量字段名（schema 兼容性检查用） */
-    private static final String EMBEDDING_FIELD = "embedding";
-
-    /** 向量存储缓存（spaceId:baseId:embedSupplierId:embedModelId → MilvusVectorStore） */
+    /** 向量存储缓存（baseId → MilvusVectorStore，模型配置变更/删除时主动失效） */
     private final Map<String, MilvusVectorStore> vectorStoreCache = Collections.synchronizedMap(new LRUCache<>());
 
     /** Milvus 客户端（懒加载单例） */
@@ -109,26 +98,36 @@ public class VectorStoreFactory {
      * 获取（或构建）知识库向量存储实例
      */
     public MilvusVectorStore vectorStore(KnowledgeBase knowledgeBase, EmbeddingModel embeddingModel) {
-        long spaceId = knowledgeBase.getSpaceId();
         long baseId = knowledgeBase.getId();
-        String key = spaceId + ":" + baseId + ":" + knowledgeBase.getEmbedSupplierId() + ":" + knowledgeBase.getEmbedModelId();
+        String key = String.valueOf(baseId);
         MilvusVectorStore cached = vectorStoreCache.get(key);
         if (cached != null) {
             return cached;
         }
-        // 兼容性检查：spring-ai 升级后 schema 与旧版（手写 MilvusTool 的 vector 字段）不兼容，
-        // 旧 schema 集合存在时先删除，交由 spring-ai 按新 schema 重建
-        ensureCollectionSchema(spaceId, baseId);
         MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), embeddingModel)
-                .collectionName(collectionName(spaceId, baseId))
                 .databaseName(database)
+                .collectionName(collectionName(knowledgeBase.getSpaceId(), baseId))
                 .metricType(MetricType.COSINE)
                 .indexType(IndexType.FLAT)
                 .initializeSchema(true)
                 .build();
+        // 手动构建的实例不会触发 Spring 生命周期回调，需主动初始化（建集合 + 建索引 + 加载）
+        try {
+            store.afterPropertiesSet();
+        } catch (Exception e) {
+            vectorStoreCache.remove(key);
+            throw new IllegalStateException("向量集合初始化失败, collection=" + collectionName(knowledgeBase.getSpaceId(), baseId), e);
+        }
         vectorStoreCache.put(key, store);
-        logger.debug("向量存储构建完成, spaceId={}, baseId={}", spaceId, baseId);
+        logger.debug("向量存储构建完成, baseId={}", baseId);
         return store;
+    }
+
+    /**
+     * 失效知识库向量存储缓存（知识库删除或嵌入模型配置变更时调用）
+     */
+    public void evict(long baseId) {
+        vectorStoreCache.remove(String.valueOf(baseId));
     }
 
     /**
@@ -146,55 +145,6 @@ public class VectorStoreFactory {
         metadata.put("docId", docId);
         metadata.put("chunkIndex", chunkIndex);
         return new Document(text, metadata);
-    }
-
-    /**
-     * 兼容性检查：旧版手写 MilvusTool 建立的集合 schema（vector 字段）与 spring-ai 不兼容，
-     * 存在则先卸载再删除，spring-ai 构建时按新 schema（embedding 字段）自动重建
-     */
-    private void ensureCollectionSchema(long spaceId, long baseId) {
-        MilvusServiceClient client = getMilvusClient();
-        String name = collectionName(spaceId, baseId);
-        try {
-            R<Boolean> hasResp = client.hasCollection(HasCollectionParam.newBuilder()
-                    .withDatabaseName(database)
-                    .withCollectionName(name)
-                    .build());
-            if (hasResp == null || !Boolean.TRUE.equals(hasResp.getData())) {
-                return;
-            }
-            R<DescribeCollectionResponse> descResp = client.describeCollection(DescribeCollectionParam.newBuilder()
-                    .withDatabaseName(database)
-                    .withCollectionName(name)
-                    .build());
-            if (descResp == null || descResp.getData() == null) {
-                return;
-            }
-            CollectionSchema schema = descResp.getData().getSchema();
-            boolean hasEmbeddingField = false;
-            if (schema != null) {
-                for (FieldSchema field : schema.getFieldsList()) {
-                    if (EMBEDDING_FIELD.equals(field.getName())) {
-                        hasEmbeddingField = true;
-                        break;
-                    }
-                }
-            }
-            if (hasEmbeddingField) {
-                return;
-            }
-            client.releaseCollection(ReleaseCollectionParam.newBuilder()
-                    .withDatabaseName(database)
-                    .withCollectionName(name)
-                    .build());
-            client.dropCollection(DropCollectionParam.newBuilder()
-                    .withDatabaseName(database)
-                    .withCollectionName(name)
-                    .build());
-            logger.warn("检测到旧版不兼容向量集合, 已删除待重建, collection={}", name);
-        } catch (Exception e) {
-            logger.warn("向量集合 schema 兼容检查失败, collection={}, err={}", name, e.getMessage());
-        }
     }
 
     /**

@@ -9,13 +9,13 @@ export interface Mcp {
   spaceId?: number
   /** MCP名称 */
   name?: string
-  /** 协议类型：0-Streamable HTTP、1-SSE、2-stdio */
+  /** 服务类型：0-远程(Streamable HTTP)、1-本地(stdio) */
   type?: number
-  /** 服务地址（HTTP/SSE 必填，stdio 可为空） */
+  /** 服务地址（远程必填，本地可为空） */
   url?: string
   /** 请求头(JSON) */
   headers?: string
-  /** 完整MCP配置(JSON)：http/sse{transport,url,headers} / stdio{transport,command,args,env,cwd} */
+  /** 完整MCP配置(JSON)：远程{transport,url,headers} / 本地{transport,command,args,env,cwd} */
   config?: string
   /** 备注 */
   remark?: string
