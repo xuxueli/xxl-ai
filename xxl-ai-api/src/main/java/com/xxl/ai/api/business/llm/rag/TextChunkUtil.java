@@ -1,4 +1,4 @@
-package com.xxl.ai.api.business.common.util;
+package com.xxl.ai.api.business.llm.rag;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -3,7 +3,7 @@ package com.xxl.ai.api.business.mcp.service.impl;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xxl.ai.api.business.common.client.McpClient;
+import com.xxl.ai.api.business.mcp.client.McpClient;
 import com.xxl.ai.api.business.mcp.enums.McpTypeEnum;
 import com.xxl.ai.api.business.mcp.mapper.McpMapper;
 import com.xxl.ai.api.business.mcp.model.adaptor.McpAdaptor;

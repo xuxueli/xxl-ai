@@ -2,7 +2,7 @@ package com.xxl.ai.api.business.llm.tool;
 
 import com.google.gson.Gson;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.common.client.McpClient;
+import com.xxl.ai.api.business.mcp.client.McpClient;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.ai.api.business.mcp.service.McpService;
 import com.xxl.tool.core.CollectionTool;

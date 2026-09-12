@@ -65,3 +65,4 @@
 - [ ] 变更记录（2026-09-06 实施 MCP 配置完整格式兼容 + Agent 运行时工具调用）
 - [x] 变更记录（2026-09-12 内置 Java 示例 MCP：`business/sample/mcp` 用官方 MCP SDK 在 API 内嵌 4 个 Streamable HTTP 服务 `/sample/mcp/{clock|weather|calc|logs}`（get_current_time/get_weather/calculator/query_logs），替换本地 Node mock 19001-19004；doc/db 预设 4 条 MCP 种子改为指向 `http://127.0.0.1:8090/sample/mcp/*`；8089/8091 起服 curl 逐端点验证 initialize/tools/list/tools/call 通过）
 - [x] 变更记录（2026-09-12 MCP 类型收敛：废弃 SSE；`McpTypeEnum` 改为 0=远程（Streamable HTTP）、1=本地（stdio），后端校验/McpClient 传输构建/前端表单与 i18n 同步；内置示例仅保留远程 本地时钟/计算器 2 个，doc/db 预设 4 条远程种子收敛为 2 条）
+- [x] 变更记录（2026-09-12 修复 SDK 客户端 URL 解析：baseUri.resolve("/mcp") 会覆盖路径导致请求打到根 `/mcp`，改为按 url.path 精确作为消息端点；示例服务路径收敛为 `/sample/clock/mcp`、`/sample/calc/mcp`，DB 种子 url 同步）

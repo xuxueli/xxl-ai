@@ -1,4 +1,4 @@
-package com.xxl.ai.api.business.common.client;
+package com.xxl.ai.api.business.mcp.client;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -201,13 +201,29 @@ public class McpClient {
     }
 
     /**
-     * Streamable HTTP 传输：url + headers
+     * Streamable HTTP 传输：url（完整消息端点） + headers
+     *
+     * SDK 传输层按 「base = scheme://host:port、endpoint = url.path」构建，
+     * 保证配置的服务地址精确作为 MCP 消息端点使用（避免 resolve("/mcp") 覆盖路径导致的 404）
      */
     private McpClientTransport buildHttpTransport(McpConfig config) {
         if (config.url == null || config.url.isEmpty()) {
             return null;
         }
-        HttpClientStreamableHttpTransport.Builder builder = HttpClientStreamableHttpTransport.builder(config.url)
+        String baseUri = config.url;
+        String endpoint = "/mcp";
+        try {
+            URI uri = URI.create(config.url);
+            if (uri.getScheme() != null && uri.getAuthority() != null) {
+                baseUri = uri.getScheme() + "://" + uri.getAuthority();
+                String path = uri.getPath();
+                endpoint = (path == null || path.isEmpty()) ? "/mcp" : path;
+            }
+        } catch (IllegalArgumentException e) {
+            logger.warn("MCP 服务地址解析失败, 使用原样地址, err={}", e.getMessage());
+        }
+        HttpClientStreamableHttpTransport.Builder builder = HttpClientStreamableHttpTransport.builder(baseUri)
+                .endpoint(endpoint)
                 .customizeClient(clientBuilder -> clientBuilder.connectTimeout(Duration.ofSeconds(10)));
         if (config.headers != null && !config.headers.isEmpty()) {
             builder.httpRequestCustomizer(headerCustomizer(config.headers));

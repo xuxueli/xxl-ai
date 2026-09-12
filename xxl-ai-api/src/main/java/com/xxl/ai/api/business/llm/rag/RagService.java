@@ -1,6 +1,6 @@
 package com.xxl.ai.api.business.llm.rag;
 
-import com.xxl.ai.api.business.common.util.TextChunkUtil;
+import com.xxl.ai.api.business.llm.rag.TextChunkUtil;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
