@@ -14,6 +14,7 @@ public class Supplier {
     private String name;        /* 供应商名称 */
     private String baseUrl;     /* 接口地址 */
     private String apiKey;      /* API密钥 */
+    private String headers;     /* 请求附属Header（JSON数组，value可含{session}占位符） */
     private int status;         /* 状态：0-正常、1-停用 */
     private String remark;      /* 备注 */
     private Date addTime;       /* 新增时间 */
@@ -57,6 +58,14 @@ public class Supplier {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(String headers) {
+        this.headers = headers;
     }
 
     public int getStatus() {

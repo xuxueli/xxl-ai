@@ -121,10 +121,18 @@
 
     <!-- 自动导入模型对话框 -->
     <el-dialog :title="importState.title" v-model="importState.visible" width="640px" append-to-body>
+      <div style="padding-bottom: 10px">
+        <el-input
+          v-model="importSearch"
+          :placeholder="t('common.inputPlaceholder', [t('business.supplier.remoteModelId')])"
+          clearable
+          style="width: 220px"
+        />
+      </div>
       <el-table
         ref="importTableRef"
         v-loading="importState.loading"
-        :data="importState.list"
+        :data="importFilteredList"
         height="400"
         @selection-change="handleImportSelectionChange"
       >
@@ -168,7 +176,7 @@ import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
 import type { RemoteModel, SupplierModel, SupplierModelQuery } from '../types'
 import type { FormInstance, TableInstance } from 'element-plus'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const resetForm = useFormReset()
@@ -208,6 +216,16 @@ const importState = ref<{ visible: boolean; title: string; loading: boolean; lis
   ids: []
 })
 const importTableRef = ref<TableInstance>() /* 导入弹框表格 ref */
+const importSearch = ref('') /* 导入弹框搜索关键词（按模型标识过滤） */
+
+/** 导入弹框列表（客户端按模型标识过滤） */
+const importFilteredList = computed(() => {
+  const keyword = importSearch.value.trim().toLowerCase()
+  if (!keyword) {
+    return importState.value.list
+  }
+  return importState.value.list.filter((item) => (item.modelId ?? '').toLowerCase().includes(keyword))
+})
 
 // --------------------------------- fun ---------------------------------
 /** 模型类型文案（按枚举选项解析，未命中回退原始值） */
@@ -293,6 +311,7 @@ function handleAutoImport() {
   importState.value.loading = true
   importState.value.list = []
   importState.value.ids = []
+  importSearch.value = ''
   importTableRef.value?.clearSelection()
   loadRemoteModels(supplierId)
     .then((response) => {

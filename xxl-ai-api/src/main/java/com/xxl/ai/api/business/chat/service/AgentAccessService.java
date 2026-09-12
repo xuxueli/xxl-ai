@@ -214,6 +214,7 @@ public class AgentAccessService {
             safeSend(emitter, "message", "__ERROR__所选模型不是对话模型");
             return;
         }
+        String sessionId = "xxl-ai-conv-" + convId;
 
         // 装配系统指令（含 RAG / Skill / MCP 能力）
         String systemPrompt = buildSystemPrompt(agent, content);
@@ -260,6 +261,7 @@ public class AgentAccessService {
         if (agentMcpTool.isEmpty()) {
             List<Map<String, String>> strMessages = stringifyMessages(messages);
             llmClient.chatStream(strMessages, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName(),
+                    runtime.getHeaders(), sessionId,
                     think -> {
                         thinkText.append(think);
                         safeSend(emitter, "thinking", think);
@@ -270,7 +272,7 @@ public class AgentAccessService {
                     });
         } else {
             String answer = runToolLoop(messages, new ArrayList<>(agentMcpTool.getToolSpecs()), agentMcpTool,
-                    runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName(), thinkText, emitter);
+                    runtime, sessionId, thinkText, emitter);
             if (StringTool.isNotBlank(answer)) {
                 fullText.append(answer);
                 safeSend(emitter, "message", answer);
@@ -392,12 +394,13 @@ public class AgentAccessService {
      * @return 最终回答文本
      */
     private String runToolLoop(List<Map<String, Object>> messages, List<Map<String, Object>> toolSpecs,
-                               AgentMcpTool agentMcpTool, String baseUrl, String apiKey, String model,
+                               AgentMcpTool agentMcpTool, SupplierRuntime runtime, String sessionId,
                                StringBuilder thinkText, SseEmitter emitter) throws Exception {
         int maxRounds = 8;
         StringBuilder answer = new StringBuilder();
         for (int round = 0; round < maxRounds; round++) {
-            LLMClient.ChatResult result = llmClient.chat(messages, toolSpecs, baseUrl, apiKey, model);
+            LLMClient.ChatResult result = llmClient.chat(messages, toolSpecs, runtime.getBaseUrl(),
+                    runtime.getApiKey(), runtime.getModelName(), runtime.getHeaders(), sessionId);
             if (StringTool.isNotBlank(result.getReasoning())) {
                 thinkText.append(result.getReasoning());
                 safeSend(emitter, "thinking", result.getReasoning());

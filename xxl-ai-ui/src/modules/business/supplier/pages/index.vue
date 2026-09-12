@@ -119,6 +119,14 @@
             maxlength="200"
           />
         </el-form-item>
+        <el-form-item :label="t('business.supplier.headers')" prop="headers">
+          <el-input
+            v-model="formState.form.headers"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('business.supplier.headersPlaceholder')"
+          />
+        </el-form-item>
         <el-form-item :label="t('common.status')">
           <el-radio-group v-model="formState.form.status">
             <el-radio :value="0">{{ t('common.normal') }}</el-radio>
@@ -194,7 +202,7 @@ function getList() {
   })
 }
 function reset() {
-  formState.value.form = { id: undefined, name: undefined, baseUrl: undefined, apiKey: undefined, status: 0, remark: undefined }
+  formState.value.form = { id: undefined, name: undefined, baseUrl: undefined, apiKey: undefined, headers: undefined, status: 0, remark: undefined }
   resetForm('formRef')
 }
 function handleQuery() {
@@ -243,6 +251,18 @@ function submitForm() {
     const submitData = { ...formState.value.form }
     delete submitData.addTime
     delete submitData.updateTime
+    if (submitData.headers) {
+      try {
+        const parsed = JSON.parse(submitData.headers)
+        if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item.key !== 'string' || !item.key)) {
+          throw new Error('invalid')
+        }
+        submitData.headers = JSON.stringify(parsed)
+      } catch (e) {
+        modal.msgError(t('business.supplier.headersFormat'))
+        return
+      }
+    }
     const req = submitData.id != null ? updateSupplier(submitData) : addSupplier(submitData)
     req.then(() => {
       modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))

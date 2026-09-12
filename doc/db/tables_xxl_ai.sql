@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_supplier` (
     `name`          VARCHAR(50)     NOT NULL            COMMENT '供应商名称',
     `base_url`      VARCHAR(200)    NOT NULL            COMMENT '接口地址',
     `api_key`       VARCHAR(200)    NULL DEFAULT NULL   COMMENT 'API密钥',
+    `headers`       VARCHAR(2000)   NULL DEFAULT NULL   COMMENT '请求附属Header',
     `status`        TINYINT         NOT NULL DEFAULT 0  COMMENT '状态：0-正常、1-停用',
     `remark`        VARCHAR(255)    NULL DEFAULT NULL   COMMENT '备注',
     `add_time`      DATETIME        NOT NULL            COMMENT '新增时间',
@@ -262,13 +263,13 @@ VALUES ('默认空间', 'default', 0, '系统默认业务空间', NOW(), NOW());
 INSERT INTO `xxl_ai_user_space` (`user_id`, `space_id`, `add_time`, `update_time`)
 SELECT 2, `id`, NOW(), NOW() FROM `xxl_ai_space` WHERE `code` = 'default';
 
--- 4、预设供应商（admin 在页面可随时修改 BaseURL/Key）
-INSERT INTO `xxl_ai_supplier` (`id`,`space_id`, `name`, `base_url`, `api_key`, `status`, `remark`, `add_time`, `update_time`)
+-- 4、预设供应商（admin 在页面可随时修改 BaseURL/Key；OpenCodeGo 配置请求附属Header：x-opencode-session 会话头 {session} 占位替换）
+INSERT INTO `xxl_ai_supplier` (`id`,`space_id`, `name`, `base_url`, `api_key`, `headers`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    (1, 1, 'OpenCodeGo', 'https://opencode.ai/zen/go/v1', '', 0, 'OpenCode Go模型', NOW(), NOW()),
-    (2, 1, 'Ollama', 'http://127.0.0.1:11434', '', 0, 'Ollama 模型', NOW(), NOW()),
-    (3, 1, 'Deepseek', 'https://api.deepseek.com', '', 0, 'Deepseek 模型', NOW(), NOW()),
-    (4, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', 0, '智谱 模型', NOW(), NOW());
+    (1, 1, 'OpenCodeGo', 'https://opencode.ai/zen/go/v1', '', '[{"key":"x-opencode-session","value":"{session}"}]', 0, 'OpenCode Go模型', NOW(), NOW()),
+    (2, 1, 'Ollama', 'http://127.0.0.1:11434', '', null, 0, 'Ollama 模型', NOW(), NOW()),
+    (3, 1, 'Deepseek', 'https://api.deepseek.com', '', null,0, 'Deepseek 模型', NOW(), NOW()),
+    (4, 1, '智谱GLM', 'https://open.bigmodel.cn/api/paas/v4', '', null, 0, '智谱 模型', NOW(), NOW());
 
 -- 5、预设供应商模型
 INSERT INTO `xxl_ai_supplier_model` (`id`, `supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)

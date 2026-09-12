@@ -13,6 +13,8 @@ export interface Supplier {
   baseUrl?: string
   /** API密钥 */
   apiKey?: string
+  /** 请求附属Header（JSON数组：[{"key","value"}]，value可含{session}占位符） */
+  headers?: string
   /** 状态：0-正常、1-停用 */
   status?: number
   remark?: string

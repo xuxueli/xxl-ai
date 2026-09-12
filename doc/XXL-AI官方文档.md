@@ -393,6 +393,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 - 7、【TODO】
   - 代码重构：Loop切换 Spring-AI，当前自己简单实现；
   - 重构集成：知识库（对接云端API、本地ollama）、MCP（支持http、stdio模式）、SKILL（支持脚本、沙箱）；
+  - 知识库：docker拆分 无RAG、完整版本；
 
 
 ### 版本 v0.0.2 Release Notes[ING]

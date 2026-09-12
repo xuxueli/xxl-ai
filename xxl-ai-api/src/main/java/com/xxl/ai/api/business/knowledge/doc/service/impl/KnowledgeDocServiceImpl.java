@@ -282,7 +282,7 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
             List<float[]> vectors = new ArrayList<>();
             for (String chunk : chunks) {
                 float[] vector = llmClient.embedding(chunk, runtime.getBaseUrl(), runtime.getApiKey(),
-                        runtime.getModelName());
+                        runtime.getModelName(), runtime.getHeaders());
                 vectors.add(vector);
             }
             // 写入 Milvus（先清理旧向量再写入，支持重复向量化）
@@ -332,7 +332,8 @@ public class KnowledgeDocServiceImpl implements KnowledgeDocService {
             if (runtime == null || runtime.getModelType() != 1) {
                 return Response.ofFail("所选模型不是嵌入向量化模型");
             }
-            float[] queryVector = llmClient.embedding(query, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName());
+            float[] queryVector = llmClient.embedding(query, runtime.getBaseUrl(), runtime.getApiKey(), runtime.getModelName(),
+                    runtime.getHeaders());
             String collection = milvusTool.collectionName(spaceId, baseId);
             List<Map<String, Object>> hits = milvusTool.search(collection, toFloatList(queryVector),
                     topK > 0 ? topK : knowledgeBase.getTopK());

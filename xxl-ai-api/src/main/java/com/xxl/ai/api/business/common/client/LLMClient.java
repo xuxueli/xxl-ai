@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,9 @@ public class LLMClient {
 
     private static final Gson GSON = new Gson();
 
+    /** 附属Header会话占位符：请求时按当前会话ID动态替换 */
+    private static final String SESSION_PLACEHOLDER = "{session}";
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -50,18 +54,21 @@ public class LLMClient {
      * @param baseUrl     供应商BaseURL
      * @param apiKey      API密钥（可为空）
      * @param model       模型标识
+     * @param headers     请求附属Header（key/value 列表，value可含{session}占位符，可空）
+     * @param sessionId   会话标识（用于替换headers中{session}占位符，可为空）
      * @param onThinking  思考过程片段回调（推理模型 delta.reasoning_content，可为空）
      * @param onChunk     回复内容片段回调（可为空）
      * @return 完整回复文本（不含思考过程）
      */
     public String chatStream(List<Map<String, String>> messages, String baseUrl, String apiKey, String model,
+                             List<Map<String, String>> headers, String sessionId,
                              Consumer<String> onThinking, Consumer<String> onChunk) throws Exception {
         JsonObject body = new JsonObject();
         body.addProperty("model", model);
         body.add("messages", GSON.toJsonTree(messages));
         body.addProperty("stream", true);
 
-        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, headers, sessionId, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("模型接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -123,10 +130,13 @@ public class LLMClient {
      * @param baseUrl  供应商BaseURL
      * @param apiKey   API密钥（可为空）
      * @param model    模型标识
+     * @param headers  请求附属Header（key/value 列表，value可含{session}占位符，可空）
+     * @param sessionId 会话标识（用于替换headers中{session}占位符，可为空）
      * @return 对话结果（内容 + 工具调用，二选一）
      */
     public ChatResult chat(List<Map<String, Object>> messages, List<Map<String, Object>> tools,
-                           String baseUrl, String apiKey, String model) throws Exception {
+                           String baseUrl, String apiKey, String model,
+                           List<Map<String, String>> headers, String sessionId) throws Exception {
         JsonObject body = new JsonObject();
         body.addProperty("model", model);
         body.add("messages", GSON.toJsonTree(messages));
@@ -135,7 +145,7 @@ public class LLMClient {
         }
         body.addProperty("stream", false);
 
-        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/chat/completions"), apiKey, headers, sessionId, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("模型接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -197,14 +207,16 @@ public class LLMClient {
      * @param baseUrl 供应商BaseURL
      * @param apiKey  API密钥（可为空）
      * @param model   嵌入模型标识
+     * @param headers 请求附属Header（key/value 列表，{session}占位头在此场景自动跳过，可空）
      * @return 向量（float[]）
      */
-    public float[] embedding(String input, String baseUrl, String apiKey, String model) throws Exception {
+    public float[] embedding(String input, String baseUrl, String apiKey, String model,
+                             List<Map<String, String>> headers) throws Exception {
         JsonObject body = new JsonObject();
         body.addProperty("model", model);
         body.addProperty("input", input);
 
-        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/embeddings"), apiKey, body);
+        HttpResponse<InputStream> response = doPost(buildParallelUrl(baseUrl, "/embeddings"), apiKey, headers, null, body);
         if (response.statusCode() != 200) {
             throw new RuntimeException("嵌入接口异常，HTTP " + response.statusCode() + "：" + readBody(response));
         }
@@ -248,15 +260,33 @@ public class LLMClient {
     }
 
     /**
-     * POST JSON 请求（Authorization Bearer，密钥为空时不携带）
+     * POST JSON 请求（Authorization Bearer，密钥为空时不携带；附加供应商配置的附属Header，
+     * {session} 占位符按会话ID替换，会话ID为空时跳过带占位符的Header）
      */
-    private HttpResponse<InputStream> doPost(String url, String apiKey, JsonElement body) throws Exception {
+    private HttpResponse<InputStream> doPost(String url, String apiKey, List<Map<String, String>> headers,
+                                             String sessionId, JsonElement body) throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(120))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
         if (apiKey != null && !apiKey.isEmpty()) {
             builder.header("Authorization", "Bearer " + apiKey);
+        }
+        if (CollectionTool.isNotEmpty(headers)) {
+            for (Map<String, String> header : headers) {
+                String key = header.get("key");
+                String value = header.get("value");
+                if (StringTool.isBlank(key)) {
+                    continue;
+                }
+                if (value != null && value.contains(SESSION_PLACEHOLDER)) {
+                    if (StringTool.isBlank(sessionId)) {
+                        continue;
+                    }
+                    value = value.replace(SESSION_PLACEHOLDER, sessionId);
+                }
+                builder.header(key.trim(), value == null ? "" : value);
+            }
         }
         return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
     }

@@ -27,6 +27,7 @@ public class SupplierAdaptor {
         supplier.setName(dto.getName());
         supplier.setBaseUrl(dto.getBaseUrl());
         supplier.setApiKey(dto.getApiKey());
+        supplier.setHeaders(dto.getHeaders());
         supplier.setStatus(dto.getStatus());
         supplier.setRemark(dto.getRemark());
         return supplier;
@@ -45,6 +46,7 @@ public class SupplierAdaptor {
         dto.setName(supplier.getName());
         dto.setBaseUrl(supplier.getBaseUrl());
         dto.setApiKey(supplier.getApiKey());
+        dto.setHeaders(supplier.getHeaders());
         dto.setStatus(supplier.getStatus());
         dto.setRemark(supplier.getRemark());
         dto.setAddTime(DateTool.formatDateTime(supplier.getAddTime()));

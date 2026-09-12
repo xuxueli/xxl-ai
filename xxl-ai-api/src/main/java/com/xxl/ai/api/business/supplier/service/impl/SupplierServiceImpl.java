@@ -27,8 +27,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,9 @@ public class SupplierServiceImpl implements SupplierService {
 
     /** JSON 解析器（自动导入模型解析用） */
     private static final Gson GSON = new Gson();
+
+    /** 附属Header会话占位符：请求时按当前会话ID动态替换 */
+    private static final String SESSION_PLACEHOLDER = "{session}";
 
     /** 连通探测 HTTP 客户端（连接超时 5s，请求超时 8s） */
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -92,6 +97,9 @@ public class SupplierServiceImpl implements SupplierService {
         if (supplier == null || StringTool.isBlank(supplier.getName())) {
             return Response.ofFail("供应商名称不能为空");
         }
+        if (StringTool.isNotBlank(supplier.getHeaders()) && parseHeaders(supplier.getHeaders()) == null) {
+            return Response.ofFail("请求附属Header格式不正确，应为JSON数组：[{\"key\":\"...\",\"value\":\"...\"}]");
+        }
         supplier.setSpaceId(spaceId);
         supplierMapper.insert(supplier);
         return Response.ofSuccess();
@@ -124,6 +132,9 @@ public class SupplierServiceImpl implements SupplierService {
         if (supplier == null || StringTool.isBlank(supplier.getName())) {
             return Response.ofFail("供应商名称不能为空");
         }
+        if (StringTool.isNotBlank(supplier.getHeaders()) && parseHeaders(supplier.getHeaders()) == null) {
+            return Response.ofFail("请求附属Header格式不正确，应为JSON数组：[{\"key\":\"...\",\"value\":\"...\"}]");
+        }
         int ret = supplierMapper.update(supplier);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
     }
@@ -151,9 +162,10 @@ public class SupplierServiceImpl implements SupplierService {
         long start = System.currentTimeMillis();
         String baseUrl = supplier.getBaseUrl().trim();
         String apiKey = supplier.getApiKey() == null ? "" : supplier.getApiKey().trim();
+        List<Map<String, String>> headers = parseHeaders(supplier.getHeaders());
 
         // 主校验：GET /models（标准 OpenAI 兼容接口）
-        ConnectOutcome models = requestTest(baseUrl + "/models", apiKey, "GET", null);
+        ConnectOutcome models = requestTest(baseUrl + "/models", apiKey, headers, "GET", null);
         if (models.httpCode == 200) {
             return buildResult(true, 200, start, "连通正常：GET /models 返回 HTTP 200");
         }
@@ -161,7 +173,7 @@ public class SupplierServiceImpl implements SupplierService {
             return buildResult(false, models.httpCode, start, "认证失败：GET /models 返回 HTTP " + models.httpCode + "，请检查 API 密钥");
         }
         // 回退：POST /chat/completions 最小请求（仅探测服务可达与鉴权，不做真实对话）
-        ConnectOutcome chat = requestTest(baseUrl + "/chat/completions", apiKey, "POST",
+        ConnectOutcome chat = requestTest(baseUrl + "/chat/completions", apiKey, headers, "POST",
                 "{\"model\":\"test\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}");
         if (chat.httpCode == 200) {
             return buildResult(true, chat.httpCode, start,
@@ -181,9 +193,9 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     /**
-     * 发起连通探测请求（GET/POST），网络异常时记录原因
+     * 发起连通探测请求（GET/POST），网络异常时记录原因（携带配置的静态附属Header，{session}占位头跳过）
      */
-    private ConnectOutcome requestTest(String url, String apiKey, String method, String body) {
+    private ConnectOutcome requestTest(String url, String apiKey, List<Map<String, String>> headers, String method, String body) {
         ConnectOutcome outcome = new ConnectOutcome();
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
@@ -191,6 +203,16 @@ public class SupplierServiceImpl implements SupplierService {
                     .header("Accept", "application/json");
             if (StringTool.isNotBlank(apiKey)) {
                 builder.header("Authorization", "Bearer " + apiKey);
+            }
+            if (CollectionTool.isNotEmpty(headers)) {
+                for (Map<String, String> header : headers) {
+                    String key = header.get("key");
+                    String value = header.get("value");
+                    if (StringTool.isBlank(key) || (value != null && value.contains(SESSION_PLACEHOLDER))) {
+                        continue;
+                    }
+                    builder.header(key.trim(), value == null ? "" : value);
+                }
             }
             if ("POST".equals(method)) {
                 builder.header("Content-Type", "application/json")
@@ -253,6 +275,7 @@ public class SupplierServiceImpl implements SupplierService {
         runtime.setBaseUrl(supplier.getBaseUrl());
         runtime.setApiKey(supplier.getApiKey());
         runtime.setModelType(supplierModel.getType());
+        runtime.setHeaders(parseHeaders(supplier.getHeaders()));
         return Response.ofSuccess(runtime);
     }
 
@@ -271,7 +294,7 @@ public class SupplierServiceImpl implements SupplierService {
         String baseUrl = supplier.getBaseUrl().trim();
         String apiKey = supplier.getApiKey() == null ? "" : supplier.getApiKey().trim();
         // 拉取远程模型列表
-        ConnectOutcome outcome = requestTest(baseUrl + "/models", apiKey, "GET", null);
+        ConnectOutcome outcome = requestTest(baseUrl + "/models", apiKey, parseHeaders(supplier.getHeaders()), "GET", null);
         if (outcome.httpCode != 200) {
             if (isAuthFail(outcome.httpCode)) {
                 return Response.ofFail("模型拉取失败：HTTP " + outcome.httpCode + "，请检查 API 密钥");
@@ -314,6 +337,38 @@ public class SupplierServiceImpl implements SupplierService {
             return Response.ofFail("远程未返回可用模型");
         }
         return Response.ofSuccess(modelList);
+    }
+
+    /**
+     * 解析请求附属Header配置（JSON数组：[{"key","value"}]），为空或格式错误时返回 null
+     */
+    private List<Map<String, String>> parseHeaders(String headersJson) {
+        if (StringTool.isBlank(headersJson)) {
+            return null;
+        }
+        try {
+            JsonArray array = GSON.fromJson(headersJson, JsonArray.class);
+            if (array == null) {
+                return null;
+            }
+            List<Map<String, String>> headers = new ArrayList<>();
+            for (JsonElement item : array) {
+                if (item == null || !item.isJsonObject()) {
+                    return null;
+                }
+                JsonObject obj = item.getAsJsonObject();
+                if (!obj.has("key") || !obj.get("key").isJsonPrimitive()) {
+                    return null;
+                }
+                Map<String, String> header = new HashMap<>();
+                header.put("key", obj.get("key").getAsString());
+                header.put("value", obj.has("value") && obj.get("value").isJsonPrimitive() ? obj.get("value").getAsString() : "");
+                headers.add(header);
+            }
+            return headers;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }
