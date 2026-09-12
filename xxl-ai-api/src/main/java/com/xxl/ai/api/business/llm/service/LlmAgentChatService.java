@@ -29,13 +29,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Agent 对话编排服务（spring-ai）
  *
- * 统一装配「模型 + 系统指令 + 历史消息 + 工具（MCP/Skill）+ RAG Advisor」，经 ChatClient
+ * 统一装配「模型 + 系统指令 + 历史消息 + 工具（MCP/Skill/执行）+ RAG Advisor」，经 ChatClient
  * 流式对话，SSE 下发 thinking（思考过程）/ message（回复内容）/ [DONE]
  *
  * @author xxl-ai 2026-09-12
@@ -73,13 +72,33 @@ public class LlmAgentChatService {
     public ChatText chat(Agent agent, SupplierRuntime runtime, List<AgentMsg> historyList, String content,
                          String sessionId, SseEmitter emitter) throws Exception {
         ChatClient chatClient = llmModelFactory.chatClient(runtime, sessionId);
+        ChatClient.ChatClientRequestSpec spec = buildRequestSpec(chatClient, agent, historyList, content);
+        return stream(spec, emitter);
+    }
 
-        // 消息装配：系统指令（+默认引导） + 历史 + 当前用户消息
+    /**
+     * 装配对话请求：消息（系统指令+历史+当前）+ 工具 + RAG Advisor
+     */
+    private ChatClient.ChatClientRequestSpec buildRequestSpec(ChatClient chatClient, Agent agent,
+                                                              List<AgentMsg> historyList, String content) {
+        ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(buildMessages(agent, historyList, content));
+        Object[] tools = buildTools(agent);
+        if (tools.length > 0) {
+            spec = spec.tools(tools);
+        }
+        List<Advisor> advisorList = buildAdvisors(agent);
+        if (CollectionTool.isNotEmpty(advisorList)) {
+            spec = spec.advisors(advisorList);
+        }
+        return spec;
+    }
+
+    /**
+     * 消息装配：系统指令（无配置时默认引导）+ 历史 + 当前用户消息
+     */
+    private List<Message> buildMessages(Agent agent, List<AgentMsg> historyList, String content) {
         List<Message> messages = new ArrayList<>();
-        String systemPrompt = StringTool.isBlank(agent.getSystemPrompt())
-                ? "你是 " + (StringTool.isBlank(agent.getName()) ? "AI 助手" : agent.getName()) + " 的智能助手。"
-                : agent.getSystemPrompt().trim();
-        messages.add(new SystemMessage(systemPrompt));
+        messages.add(new SystemMessage(buildSystemPrompt(agent)));
         if (CollectionTool.isNotEmpty(historyList)) {
             for (AgentMsg historyMsg : historyList) {
                 if ("user".equals(historyMsg.getRole())) {
@@ -91,20 +110,44 @@ public class LlmAgentChatService {
             }
         }
         messages.add(new UserMessage(content));
+        return messages;
+    }
 
-        // 工具装配：MCP 工具 + Skill 工具（无技能时不注册）+ 终端/文件执行工具（技能 bash 指令的执行依赖）
+    /**
+     * 系统指令：Agent 配置的非空则用，否则按名称默认引导
+     */
+    private String buildSystemPrompt(Agent agent) {
+        if (StringTool.isNotBlank(agent.getSystemPrompt())) {
+            return agent.getSystemPrompt().trim();
+        }
+        String name = StringTool.isBlank(agent.getName()) ? "AI 助手" : agent.getName();
+        return "你是 " + name + " 的智能助手。";
+    }
+
+    /**
+     * 工具装配：MCP 工具 + Skill 工具（无技能时不注册）+ 终端/文件执行工具（技能 bash 指令的执行依赖）
+     *
+     * MCP/Skill 为 ToolCallback，执行工具为 @Tool 注解对象，统一以 Object 列表随 tools 传入，
+     * spring-ai 自动解析注册（bash/Read/Write/Edit/Glob/Grep 等）
+     */
+    private Object[] buildTools(Agent agent) {
         ToolCallback[] mcpTools = mcpToolFactory.buildTools(agent);
         ToolCallback skillTool = skillToolFactory.buildTool(agent);
-        List<Object> executorTools = skillToolFactory.buildExecutorTools(agent);
-        List<ToolCallback> toolList = new ArrayList<>();
+        List<Object> tools = new ArrayList<>();
         if (mcpTools.length > 0) {
-            java.util.Collections.addAll(toolList, mcpTools);
+            java.util.Collections.addAll(tools, mcpTools);
         }
         if (skillTool != null) {
-            toolList.add(skillTool);
+            tools.add(skillTool);
         }
+        tools.addAll(skillToolFactory.buildExecutorTools(agent));
+        return tools.toArray();
+    }
 
-        // RAG Advisor：按 Agent 绑定的知识库逐个装配（检索上下文自动注入系统提示）
+    /**
+     * RAG Advisor：按 Agent 绑定的知识库逐个装配（检索上下文自动注入系统提示）
+     */
+    private List<Advisor> buildAdvisors(Agent agent) {
         List<Advisor> advisorList = new ArrayList<>();
         for (Long kbId : splitIds(agent.getKbIds())) {
             KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(kbId);
@@ -116,18 +159,14 @@ public class LlmAgentChatService {
                 advisorList.add(advisor);
             }
         }
+        return advisorList;
+    }
 
-        // 流式对话
-        ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(messages);
-        Object[] runtimeTools = mergeTools(toolList, executorTools);
-        if (runtimeTools.length > 0) {
-            spec = spec.tools(runtimeTools);
-        }
-        if (CollectionTool.isNotEmpty(advisorList)) {
-            spec = spec.advisors(advisorList);
-        }
+    /**
+     * 流式对话并转发：thinking（思考过程增量）/ message（回复内容）/ [DONE]
+     */
+    private ChatText stream(ChatClient.ChatClientRequestSpec spec, SseEmitter emitter) {
         Flux<ChatResponse> chatResponses = spec.stream().chatResponse();
-
         StringBuilder fullText = new StringBuilder();
         StringBuilder thinkText = new StringBuilder();
         String prevReasoning = "";
@@ -137,22 +176,14 @@ public class LlmAgentChatService {
                 continue;
             }
             Message output = generation.getOutput();
-            // 思考过程（推理模型 reason_content 按流累积下发，取变化增量下发，重复值去重）
+            // 思考过程：推理模型 reason_content 按流累积下发，取变化增量转发，重复值去重
             Object reasoningObj = output.getMetadata().get(KEY_REASONING);
-            if (reasoningObj instanceof String reasoning && StringTool.isNotBlank(reasoning)) {
-                String delta = null;
-                if (!reasoning.equals(prevReasoning)) {
-                    if (reasoning.startsWith(prevReasoning)) {
-                        delta = reasoning.substring(prevReasoning.length());
-                    } else {
-                        delta = reasoning;
-                    }
-                    prevReasoning = reasoning;
-                }
-                if (StringTool.isNotBlank(delta)) {
-                    thinkText.append(delta);
-                    safeSend(emitter, "thinking", delta);
-                }
+            String reasoning = reasoningObj instanceof String value ? value : null;
+            String delta = computeReasoningDelta(prevReasoning, reasoning);
+            if (StringTool.isNotBlank(delta)) {
+                prevReasoning = reasoning;
+                thinkText.append(delta);
+                safeSend(emitter, "thinking", delta);
             }
             // 回复内容
             String chunk = output.getText();
@@ -166,17 +197,16 @@ public class LlmAgentChatService {
     }
 
     /**
-     * 合并工具回调与附加工具对象后装配
-     *
-     * MCP/Skill 为 ToolCallback；终端/文件执行工具为 @Tool 注解对象（非 ToolCallback），
-     * 随 tools 一起传入 spring-ai 即可自动解析注册其方法（bash/Read/Write/Edit/Glob/Grep 等）
+     * 推理内容增量计算：与上轮累积内容比较，取首现差异子串；无变化返回 null
      */
-    private Object[] mergeTools(List<ToolCallback> toolList, List<Object> executorTools) {
-        Object[] merged = Arrays.copyOf(toolList.toArray(), toolList.size() + executorTools.size());
-        for (int i = 0; i < executorTools.size(); i++) {
-            merged[toolList.size() + i] = executorTools.get(i);
+    private String computeReasoningDelta(String prevReasoning, String reasoning) {
+        if (StringTool.isBlank(reasoning) || reasoning.equals(prevReasoning)) {
+            return null;
         }
-        return merged;
+        if (reasoning.startsWith(prevReasoning)) {
+            return reasoning.substring(prevReasoning.length());
+        }
+        return reasoning;
     }
 
     /**
