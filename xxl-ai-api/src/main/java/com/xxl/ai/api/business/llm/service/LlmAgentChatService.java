@@ -26,7 +26,6 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springaicommunity.agent.tools.ShellTools;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -93,10 +92,10 @@ public class LlmAgentChatService {
         }
         messages.add(new UserMessage(content));
 
-        // 工具装配：MCP 工具 + Skill 工具（无技能时不注册）+ Shell 执行工具（技能 bash 指令需终端执行）
+        // 工具装配：MCP 工具 + Skill 工具（无技能时不注册）+ 终端/文件执行工具（技能 bash 指令的执行依赖）
         ToolCallback[] mcpTools = mcpToolFactory.buildTools(agent);
         ToolCallback skillTool = skillToolFactory.buildTool(agent);
-        ShellTools shellTool = skillToolFactory.buildShellTool(agent);
+        List<Object> executorTools = skillToolFactory.buildExecutorTools(agent);
         List<ToolCallback> toolList = new ArrayList<>();
         if (mcpTools.length > 0) {
             java.util.Collections.addAll(toolList, mcpTools);
@@ -120,7 +119,7 @@ public class LlmAgentChatService {
 
         // 流式对话
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(messages);
-        Object[] runtimeTools = mergeTools(toolList, shellTool);
+        Object[] runtimeTools = mergeTools(toolList, executorTools);
         if (runtimeTools.length > 0) {
             spec = spec.tools(runtimeTools);
         }
@@ -169,16 +168,14 @@ public class LlmAgentChatService {
     /**
      * 合并工具回调与附加工具对象后装配
      *
-     * ShellTools 为 @Tool 注解对象（非 ToolCallback），随 tools 一起传入 spring-ai
-     * 即可自动解析注册其 bash / bash_output / kill_shell 方法
+     * MCP/Skill 为 ToolCallback；终端/文件执行工具为 @Tool 注解对象（非 ToolCallback），
+     * 随 tools 一起传入 spring-ai 即可自动解析注册其方法（bash/Read/Write/Edit/Glob/Grep 等）
      */
-    private Object[] mergeTools(List<ToolCallback> toolList, ShellTools shellTool) {
-        Object[] tools = toolList.toArray();
-        if (shellTool == null) {
-            return tools;
+    private Object[] mergeTools(List<ToolCallback> toolList, List<Object> executorTools) {
+        Object[] merged = Arrays.copyOf(toolList.toArray(), toolList.size() + executorTools.size());
+        for (int i = 0; i < executorTools.size(); i++) {
+            merged[toolList.size() + i] = executorTools.get(i);
         }
-        Object[] merged = Arrays.copyOf(tools, tools.length + 1);
-        merged[tools.length] = shellTool;
         return merged;
     }
 
