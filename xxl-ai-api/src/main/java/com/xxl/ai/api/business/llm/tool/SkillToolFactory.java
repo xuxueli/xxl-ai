@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  * Skill 工具工厂（spring-ai-agent-utils SkillsTool）
  *
  * 把「Agent 绑定的 Skill」（DB 文件树）物化为本地技能目录，构建 SkillsTool：
- *  - 目录结构：{skill.root}/{spaceId}/{agentId}/{skillName}/SKILL.md（每技能独立子目录，Agent 级沙箱隔离）
+ *  - 目录结构：{skill.root}/agent_{agentId}/{skillName}/SKILL.md（agentId 全局唯一，每技能独立子目录，Agent 级沙箱隔离）
  *  - 变更检测：Skill 内容变更由写侧刷新 xxl_ai_skill.update_time，此处按「技能ID:更新时间」指纹比对，
  *    指纹不一致时整目录重建（清空再物化，杜绝换绑/删除后的残留文件）
  *  - 缓存：按 agentId 缓存快照（指纹 + 根目录 + SkillsTool），指纹不变直接复用
@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  *
  * ${xxl-ai.skill.root}/
  * └── {spaceId}/
- *     └── {agentId}/
+ *     └── agent_{agentId}/
  *         ├── .fingerprint          # 单行指纹，仅缓存校验用
  *         ├── {skillName}/          # 每个技能一个子目录（name 空间内唯一，且仅字母数字中划线）
  *         │   ├── SKILL.md
@@ -258,10 +258,10 @@ public class SkillToolFactory {
     }
 
     /**
-     * Agent 物化根目录：{skill.root}/{spaceId}/{agentId}
+     * Agent 物化根目录：{skill.root}/agent_{agentId}（agentId 全局唯一，无需再按空间分层）
      */
     private Path agentRoot(Agent agent) {
-        return skillsRoot().resolve(String.valueOf(agent.getSpaceId())).resolve(String.valueOf(agent.getId()));
+        return skillsRoot().resolve("agent_" + agent.getId());
     }
 
     /**
