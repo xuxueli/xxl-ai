@@ -1,6 +1,6 @@
 package com.xxl.ai.api.framework.util;
 
-import com.xxl.ai.api.XxlAiApiApplication;
+import com.xxl.ai.api.XxlAIApiApplication;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration test for RedisCacheUtil, requires Redis running on localhost:6379
  */
-@SpringBootTest(classes = XxlAiApiApplication.class)
+@SpringBootTest(classes = XxlAIApiApplication.class)
 public class RedisCacheUtilTest {
 
     @Resource
