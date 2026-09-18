@@ -12,10 +12,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author xxl-ai 2026-09-13
  */
 @SpringBootApplication
-public class XxlAiApiSampleApplication {
+public class XxlAISampleMcpApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(XxlAiApiSampleApplication.class, args);
+        SpringApplication.run(XxlAISampleMcpApplication.class, args);
     }
 
 }
