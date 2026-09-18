@@ -1,6 +1,6 @@
 package com.xxl.ai.api.framework.service.impl;
 
-import com.xxl.ai.api.framework.mapper.system.LogMapper;
+import com.xxl.ai.api.framework.mapper.LogMapper;
 import com.xxl.ai.api.framework.model.adaptor.LogAdaptor;
 import com.xxl.ai.api.framework.model.dto.LogDTO;
 import com.xxl.ai.api.framework.model.entity.Log;

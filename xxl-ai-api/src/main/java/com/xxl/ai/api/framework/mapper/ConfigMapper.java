@@ -1,4 +1,4 @@
-package com.xxl.ai.api.framework.mapper.system;
+package com.xxl.ai.api.framework.mapper;
 
 import com.xxl.ai.api.framework.model.entity.Config;
 import org.apache.ibatis.annotations.Mapper;

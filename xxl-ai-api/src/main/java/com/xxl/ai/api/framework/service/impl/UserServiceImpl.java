@@ -1,7 +1,7 @@
 package com.xxl.ai.api.framework.service.impl;
 
 import com.xxl.ai.api.framework.constant.enums.XxlRoleEnum;
-import com.xxl.ai.api.framework.mapper.system.UserMapper;
+import com.xxl.ai.api.framework.mapper.UserMapper;
 import com.xxl.ai.api.framework.model.adaptor.UserAdaptor;
 import com.xxl.ai.api.framework.model.dto.UserDTO;
 import com.xxl.ai.api.framework.model.entity.User;

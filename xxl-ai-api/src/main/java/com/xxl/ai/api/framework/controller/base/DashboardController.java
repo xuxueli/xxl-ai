@@ -1,8 +1,8 @@
 package com.xxl.ai.api.framework.controller.base;
 
 import com.xxl.ai.api.framework.constant.enums.XxlRoleEnum;
-import com.xxl.ai.api.framework.mapper.system.LogMapper;
-import com.xxl.ai.api.framework.mapper.system.UserMapper;
+import com.xxl.ai.api.framework.mapper.LogMapper;
+import com.xxl.ai.api.framework.mapper.UserMapper;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;

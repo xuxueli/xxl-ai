@@ -664,7 +664,7 @@ onMounted(() => {
   border-bottom: 1px solid #f0f0f0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .agent-title {
@@ -698,15 +698,15 @@ onMounted(() => {
 .conv-actions .new-chat-btn {
   width: 100%;
   font-weight: 500;
-  /* 淡色主题：常态/悬浮/按下均取浅色调，观感柔和 */
+  /* 淡色主题：常态/悬浮/按下均取浅色调，观感柔和；不描边 */
   --el-button-bg-color: var(--el-color-primary-light-9);
-  --el-button-border-color: var(--el-color-primary-light-7);
+  --el-button-border-color: transparent;
   --el-button-text-color: var(--el-color-primary-light-3);
   --el-button-hover-bg-color: var(--el-color-primary-light-8);
-  --el-button-hover-border-color: var(--el-color-primary-light-5);
+  --el-button-hover-border-color: transparent;
   --el-button-hover-text-color: var(--el-color-primary-light-3);
   --el-button-active-bg-color: var(--el-color-primary-light-8);
-  --el-button-active-border-color: var(--el-color-primary-light-7);
+  --el-button-active-border-color: transparent;
   --el-button-active-text-color: var(--el-color-primary-light-3);
 }
 
@@ -1116,6 +1116,12 @@ onMounted(() => {
 }
 
 /* Markdown 渲染内容样式（助手气泡内） */
+/* marked 已输出标准块级结构（p/h/ul…），重置气泡继承的 pre-wrap，
+   否则源码中块标签之间的换行会被当作空白行渲染，导致行距异常变大 */
+.assistant .msg-bubble .msg-content {
+  white-space: normal;
+}
+
 .assistant .msg-bubble .msg-content :deep(p) {
   margin: 4px 0;
 }

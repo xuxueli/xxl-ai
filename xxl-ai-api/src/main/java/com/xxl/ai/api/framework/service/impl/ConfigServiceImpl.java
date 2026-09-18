@@ -1,6 +1,6 @@
 package com.xxl.ai.api.framework.service.impl;
 
-import com.xxl.ai.api.framework.mapper.system.ConfigMapper;
+import com.xxl.ai.api.framework.mapper.ConfigMapper;
 import com.xxl.ai.api.framework.model.adaptor.ConfigAdaptor;
 import com.xxl.ai.api.framework.model.dto.ConfigDTO;
 import com.xxl.ai.api.framework.model.entity.Config;
