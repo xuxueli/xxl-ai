@@ -4,8 +4,8 @@
 -->
 <template>
   <div class="agent-chat-page">
-    <!-- 左侧：对话列表 -->
-    <aside class="conv-panel">
+    <!-- 左侧：对话列表（支持折叠/展开） -->
+    <aside class="conv-panel" :class="{ collapsed }">
       <div class="conv-header">
         <div class="agent-title" @click="handleRefresh" :title="t('business.agent.refresh')">
           <img v-if="logo" :src="logo" class="agent-logo" alt="logo" />
@@ -50,6 +50,14 @@
     <!-- 右侧：对话正文 -->
     <main class="chat-panel">
       <div class="chat-header">
+        <el-icon
+          class="panel-toggle"
+          :title="collapsed ? t('business.agent.expandMenu') : t('business.agent.collapseMenu')"
+          @click="togglePanel"
+        >
+          <Expand v-if="collapsed" />
+          <Fold v-else />
+        </el-icon>
         <span class="chat-intro">{{ agent?.intro || '' }}</span>
         <el-dropdown trigger="click" @command="handleVisitorCommand">
           <span class="visitor-trigger">
@@ -194,6 +202,8 @@ const nearBottom = ref(true)
 /** 新建对话状态：未建会话，中间区域展示输入框 */
 const newChat = ref(false)
 const newChatInputRef = ref<any>()
+/** 左侧对话面板折叠状态 */
+const collapsed = ref(false)
 /** 对话标题编辑状态 */
 const editingConvId = ref<number | undefined>(undefined)
 const editingTitle = ref('')
@@ -267,6 +277,11 @@ function handleNewChat() {
 /** 右上角 Agent 名称区域点击：整体刷新页面 */
 function handleRefresh() {
   window.location.reload()
+}
+
+/** 折叠/展开左侧对话面板 */
+function togglePanel() {
+  collapsed.value = !collapsed.value
 }
 
 /** 同步 URL 中的 convId 查询参数（点击对话/新建对话/发送时体现当前会话） */
@@ -627,13 +642,21 @@ onMounted(() => {
 }
 
 .conv-panel {
-  width: 260px;
+  width: 220px;
   flex-shrink: 0;
   height: 100%;
   background: #fff;
   border-right: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  transition: width 0.25s ease, border-right-color 0.25s ease;
+
+  /* 折叠：面板收窄至 0，内容随之隐藏 */
+  &.collapsed {
+    width: 0;
+    border-right-color: transparent;
+  }
 }
 
 .conv-header {
@@ -759,10 +782,24 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 0 20px;
   color: #909399;
   font-size: 13px;
   overflow: hidden;
+}
+
+/* 左侧面板折叠/展开按钮 */
+.panel-toggle {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: #606266;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 
 .chat-intro {

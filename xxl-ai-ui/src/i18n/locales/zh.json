@@ -514,6 +514,8 @@
       "hideThinking": "收起思考",
       "thinkingStreaming": "思考中",
       "scrollToBottom": "回到底部",
+      "collapseMenu": "收起侧栏",
+      "expandMenu": "展开侧栏",
       "copyCode": "复制代码"
     }
   }

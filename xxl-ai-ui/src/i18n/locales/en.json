@@ -514,6 +514,8 @@
       "hideThinking": "Hide Think",
       "thinkingStreaming": "Thinking",
       "scrollToBottom": "Back to bottom",
+      "collapseMenu": "Collapse sidebar",
+      "expandMenu": "Expand sidebar",
       "copyCode": "Copy code"
     }
   }
