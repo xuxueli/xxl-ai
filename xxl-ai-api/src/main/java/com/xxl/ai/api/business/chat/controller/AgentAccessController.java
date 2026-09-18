@@ -96,7 +96,7 @@ public class AgentAccessController {
                            @RequestParam("visitorId") String visitorId,
                            @RequestParam("convId") long convId,
                            @RequestParam("content") String content) {
-        return chatStreamService.sendAsync(uuid, visitorId, convId, content);
+        return chatStreamService.send(uuid, visitorId, convId, content);
     }
 
     /**
@@ -108,7 +108,7 @@ public class AgentAccessController {
     @XxlSso(login = false)
     public SseEmitter resume(@RequestParam("msgId") long msgId,
                              @RequestParam(value = "lastEventId", required = false) String lastEventId) {
-        return chatStreamService.resumeAsync(msgId, lastEventId);
+        return chatStreamService.resume(msgId, lastEventId);
     }
 
 }

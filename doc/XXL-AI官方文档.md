@@ -18,8 +18,14 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 
 ### 1.2 特性
 
-- 1、XX
-- 2、XX
+- 1、多模型供应商：统一接入 OpenAI 兼容协议（Deepseek、智谱GLM、Ollama、OpenCode 等），支持供应商与模型两级管理、连通性测试与远程模型导入；
+- 2、RAG 知识库：知识库 + 文档管理，文档分片向量化入库（Milvus），对话时检索上下文自动注入；
+- 3、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent；
+- 4、SKILL 技能：以 `SKILL.md` + 文件树沉淀领域知识与脚本，自动物化为 Agent 可执行的技能目录；
+- 5、Agent 编排：模型 + 系统指令 + 知识库 + MCP + SKILL 组合为 Agent，一键发布为免登录公开访问地址；
+- 6、流式对话：SSE 流式输出（思考过程 / 回复内容），基于 Redis Stream 无状态化，支持集群部署与断线 / 刷新续传；
+- 7、空间隔离：多业务空间（Tenant）隔离数据，用户按空间授权，管理端与公开端共享权限体系；
+- 8、平台底座：安全登录（XXL-SSO）、RBAC 菜单 / 按钮权限、系统管理（用户 / 配置 / 日志）、Docker Compose 一键部署。
 
 ### 1.3 下载
 
@@ -61,8 +67,10 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 
 ```
 /doc/db/
-    - tables_xxl_ai.sql      ：建库 + 全量框架表 + 种子数据【必须】
+    - tables_xxl_ai.sql      ：建库 + 全量框架表 + 业务表 + 种子数据【必须】
 ```
+
+说明：脚本首行包含 `SET NAMES utf8mb4;`，请以支持 utf8mb4 的客户端执行，避免中文注释与种子数据乱码（MySQL CLI 默认连接字符集为 latin1）。
 
 ### 2.3 源码编译
 
@@ -216,11 +224,52 @@ docker compose down
 
 ## 三、操作指南
 
-（内容整理中……）
+启动后端（8090）与前端（3000）后，访问 `http://localhost:3000`，使用默认账号 `admin/123456` 登录。以下按“从零搭建一个可对话 Agent”的顺序说明。
 
-## 四、XX
+### 3.1 登录与空间切换
 
-（内容整理中……）
+- 登录页输入账号 / 密码与验证码（验证码开关由系统配置 `system.login.captcha.enabled` 控制）；
+- 登录态基于 XXL-SSO 存于 Redis，支持集群部署共享；登录后默认进入仪表盘；
+- 顶部导航提供**空间切换器**：管理员可见全部空间，普通用户仅见已授权空间；切换后请求自动携带 `xxl-space-id` 请求头，业务数据按空间隔离。
+
+### 3.2 配置供应商与模型
+
+- 「供应商管理」新增供应商：填写名称、接口地址（OpenAI 兼容 `base_url`）、API Key，可选请求 Header（value 支持 `{session}` 占位，用于按会话透传）；
+- 保存后可执行「连通性测试」；进入「模型管理」可拉取远程模型列表批量导入，或手工新增；模型类型区分 **对话 / 嵌入**；
+- 对话模型用于 Agent 对话，嵌入模型用于知识库向量化。
+
+### 3.3 创建知识库并向量化
+
+- 「知识库管理」新增知识库：选择向量化供应商与嵌入模型，设置分片大小 / 重叠 / 检索数量；
+- 进入知识库的「文档管理」，粘贴或上传（txt / md）文档，执行「向量化」写入 Milvus，状态变为「已向量化」；
+- 支持文档检索测试；向量化后的知识库可在 Agent 中绑定，对话时自动检索并注入上下文。
+
+### 3.4 配置 MCP 服务
+
+- 「MCP管理」新增服务：远程选择 Streamable HTTP 并填写 URL / Headers；本地选择 stdio 并填写 `command / args / env / cwd`；
+- 保存后可「测试」连通性并查看工具列表；MCP 工具可在 Agent 中绑定启用。
+
+### 3.5 编写 SKILL
+
+- 「SKILL管理」新增技能：自动播种固定骨架 `SKILL.md` + `scripts/` + `reference/`（`SKILL.md` 与两个目录为固定节点，禁止删除 / 改名 / 移动）；
+- 在「内容」页以文件树 + Markdown 编辑维护技能内容，支持新增目录 / 文件、重命名、移动；
+- 技能内容变更会刷新 SKILL 更新时间，Agent 下次使用时自动重新物化到本地技能目录。
+
+### 3.6 创建并发布 Agent
+
+- 「Agent管理」新增 Agent：选择对话模型、编写系统指令，绑定知识库 / MCP / SKILL（均支持多选）；
+- 保存后「发布」，系统生成访问 UUID（未发布 / 停用的 Agent 不可公开访问）；
+- 管理端可查看该 Agent 的访客对话与消息记录。
+
+### 3.7 访问对话（公开端）
+
+- 发布后通过公开地址 `/chat/{uuid}` 访问（免登录），页面自动创建 / 切换会话，输入问题即时流式返回；
+- 支持思考过程折叠展示、Markdown 实时渲染；
+- 生成中刷新页面或网络中断会自动断点续传，不丢失已生成内容（原理见 5.5）。
+
+## 四、功能模块
+
+略
 
 ## 五、总体设计
 
@@ -245,9 +294,8 @@ xxl-ai/
 │   └── xxl-ai/SKILL.md                        # 开发 Skill（name: xxl-ai）
 │
 ├── doc/                                       # 文档目录
-│   ├── db/                                    # 数据库初始化SQL脚本目录
-│   │   ├── tables_xxl_ai.sql                  # 建库 + 框架表 + 种子数据（含菜单图标）【必须】
-│   │   └── plugin/                            # 扩展插件 SQL 脚本（AI 模型/对话 等）
+│   ├── db/                                    # 数据库脚本目录
+│   │   ├── tables_xxl_ai.sql                  # 建库 + 框架表 + 业务表 + 种子数据【必须】
 │   └── XXL-AI官方文档.md                      # 官方文档
 │
 ├── docker/                                    # Docker Compose 编排目录（mysql + redis + api + ui）
@@ -261,14 +309,14 @@ xxl-ai/
 │   └── src/main/
 │       ├── java/com/xxl/ai/api/
 │       │   ├── XxlAiApiApplication.java       # 启动类
-│       │   ├── framework/                     # 核心包：项目配置、系统管理、工具组件等
-│       │   └── business/                      # 【扩展点】业务扩展包（可插拔）
+│       │   ├── framework/                     # 平台内置：系统管理、登录鉴权、审计日志、工具组件等
+│       │   └── business/                      # 业务扩展包：space/supplier/knowledge/mcp/skill/agent/chat/llm
 │       └── resources/
 │           ├── application.properties         # 主配置文件
 │           ├── mapper/
 │           │   ├── framework/                 # 核心 MyBatis 映射文件
 │           │   └── business/{module}/           # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
-│           └── i18n/                          # 国际化资源文件
+│           └── i18n/                          # 后端国际化资源（message_{zh_CN,zh_TC,en}.properties）
 │
 └── xxl-ai-ui/                               # 【前后端分离】前端UI服务（3000）
     ├── package.json                           # 前端依赖配置
@@ -277,8 +325,8 @@ xxl-ai/
     └── src/
         ├── main.ts                            # 入口文件
         ├── modules/                           # 模块自包含目录（页面/接口/类型聚合）
-        │   ├── framework/                     # 平台内置模块（authz/system/tool/dashboard…）
-        │   └── business/                      # 【扩展点】业务模块
+        │   ├── framework/                     # 平台内置模块（auth/system/dashboard/help/common）
+        │   └── business/                      # 业务模块（space/supplier/knowledge/mcp/skill/agent/chat）
         ├── composables/                       # 组合式函数（usePageParams/useEnumOption 等）
         ├── components/                        # 通用组件（RightToolbar/Pagination/Editor 等）
         ├── directive/                         # 自定义指令（v-hasPermi/v-hasRole）
@@ -313,11 +361,11 @@ XXL-AI 采用 前后端分离：后端 API 与前端 UI 独立部署、独立运
 └───────────────────────────────────────────────┘
 ```
 
-- 后端：`xxl-ai-api`（8090），承载 登录鉴权、RBAC 权限、系统管理、代码生成 等全部后端能力；
-- 前端：`xxl-ai-ui`（3000），基于 Vue3 + Element Plus + TypeScript，DB 菜单 url 驱动、零路由改动；
+- 后端：`xxl-ai-api`（8090），承载 登录鉴权、RBAC 权限、系统管理、AI 运行时（模型 / RAG / MCP / SKILL）等全部后端能力；
+- 前端：`xxl-ai-ui`（3000），基于 Vue3 + Element Plus + TypeScript，菜单由后端下发、`loadView` 自动映射页面、零路由改动；
 - 协作形态：前后端独立迭代、可独立部署（Docker 或 Nginx + Jar），团队分工协作最顺滑。
 
-前后端共享：数据库表结构、RBAC 权限模型、登录鉴权（XXL-SSO）、系统管理能力、代码生成器与开发 SKILL 规范。
+前后端共享：数据库表结构、空间与 RBAC 权限模型、登录鉴权（XXL-SSO）、系统管理能力、统一响应规范与开发 SKILL 规范。
 
 ### 5.3、安全登录验证
 
@@ -333,7 +381,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 登录态说明：
 - 登录后登录态（token）存于 Redis（`xxl_sso_user:` keyprefix），支持集群部署共享；
 - 未登录访问受保护接口时，XXL-SSO 拦截并返回统一登录失效提示；
-- 需要强权限校验（RBAC 按钮级）的接口，配合业务权限标识二次校验（见 5.3）。
+- 需要强权限校验（RBAC 按钮级）的接口，配合业务权限标识二次校验（前端 `v-hasPermi`）；
 
 ### 5.4、AI + Skill 辅助开发设计
 
@@ -344,15 +392,15 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 └── xxl-ai/SKILL.md            # 开发 Skill（name: xxl-ai）
 ```
 
-每个 SKILL 均内置如下内容，保证 AI 产物与人工/生成器产物等价：
+每个 SKILL 均内置如下内容，保证 AI 产物符合平台规范：
 
 - 工程结构速览与通用规范引用；
 - 后端落位清单（实体 / Mapper / Service / Controller 件套、包路径、方法顺序、分页与校验约定）；
 - 前端落位清单（types/api/pages）与列表页代码骨架；
-- 菜单权限 SQL 模板与「校验清单」；
+- 菜单 / 按钮权限注册模板（`XxlRoleEnum` 枚举资源）与「校验清单」；
 - 参考样例文件绝对路径。
 
-工作原理：AI 编程助手检测到任务时自动加载 SKILL，按 “建表 → 后端 → 前端 → 菜单权限 → 验证” 标准流程直生代码并落位，最后按校验清单自检交付。SKILL 缺省策略为按内置代码生成模板直生等价代码，同时提示用户可到后台走生成器，两种产出完全一致、可无缝切换。详见 “4.1 方式一：AI + SKILL 驱动开发”。
+工作原理：AI 编程助手检测到任务时自动加载 SKILL，按 “建表 → 后端 → 前端 → 菜单权限 → 验证” 标准流程直生代码并落位，最后按校验清单自检交付。（平台内置代码生成器已下线，统一以 SKILL 直生等价代码。）
 
 ### 5.5、流式对话（SSE）技术方案
 
@@ -386,9 +434,9 @@ POST /chat/send
 
 ```
 前端 handleSend
-  └─ agentSendStream → AgentAccessController.send → ChatStreamService.sendAsync
-       ├─ prepareAndEnqueue：校验 + 落用户消息(status=1) + 助手占位(status=0) → XADD 任务
-       └─ forwardAsync(emitter, msgId) → XREAD 结果流 → SSE(stream/thinking/message/ping/[DONE])
+  └─ agentSendStream → AgentAccessController.send → ChatStreamService.send
+       ├─ submit：校验 + 落用户消息(status=1) + 助手占位(status=0) → XADD 任务
+       └─ forward(emitter, msgId) → XREAD 结果流 → SSE(stream/thinking/message/ping/[DONE])
 
 内置 worker 线程（消费组）
   └─ XREADGROUP 任务 → generate → LlmAgentChatService.chat(agent, runtime, history, content, onThinking, onContent)
@@ -401,8 +449,8 @@ POST /chat/send
 ```
 前端 selectConv → 发现 assistant.status=0
   └─ resumeGenerating(msg.id)
-       └─ AgentAccessController.resume → ChatStreamService.resumeAsync(msgId, lastEventId)
-            └─ forwardAsync → 从断点 XREAD 结果流继续 → SSE
+       └─ AgentAccessController.resume → ChatStreamService.resume(msgId, lastEventId)
+            └─ forward → 从断点 XREAD 结果流继续 → SSE
 ```
 
 组件依赖关系：
@@ -459,31 +507,65 @@ xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
 
 > 注意：阻塞窗口固定 5s，`spring.data.redis.timeout`（默认 10s）须大于它，否则阻塞读会抛 `RedisCommandTimeoutException`。
 
+### 5.6、业务数据模型与空间隔离
+
+数据库 `xxl_ai`，统一约定：表名前缀 `xxl_ai_`、字段下划线命名、`id` 主键自增、`add_time` / `update_time` 公共字段、状态字段 `TINYINT`（0-正常 / 1-停用）、全表 `utf8mb4`、唯一索引 `i_` 前缀、所有字段带 `COMMENT`；初始脚本 `doc/db/tables_xxl_ai.sql`（建库 + 全量表 + 种子数据，`SET NAMES utf8mb4`）。
+
+表按域分组：
+
+| 域 | 表 | 说明 |
+|---|---|---|
+| 平台 | `xxl_ai_user`、`xxl_ai_config`、`xxl_ai_log` | 用户、系统配置、审计日志 |
+| 空间 | `xxl_ai_space`、`xxl_ai_user_space` | 业务空间、用户-空间授权 |
+| 供应商 | `xxl_ai_supplier`、`xxl_ai_supplier_model` | 供应商、模型（对话 / 嵌入） |
+| 知识库 | `xxl_ai_knowledge_base`、`xxl_ai_knowledge_doc` | 知识库、文档（向量化状态） |
+| MCP | `xxl_ai_mcp` | MCP 服务配置 |
+| SKILL | `xxl_ai_skill`、`xxl_ai_skill_file` | 技能、技能文件树 |
+| Agent | `xxl_ai_agent`、`xxl_ai_agent_conv`、`xxl_ai_agent_msg` | Agent、对话、消息 |
+
+**空间隔离**：除平台表外，业务表均带 `space_id`；管理端当前空间由请求头 `xxl-space-id` 传入，后端按空间过滤；管理员可见全部空间，普通用户按 `xxl_ai_user_space` 授权。公开对话端以 Agent 的 `uuid` + 访客 `visitorId` 隔离会话。所有关联均为应用层维护（无数据库外键）。
+
+**权限模型**：平台菜单 / 按钮由枚举 `XxlRoleEnum` 各角色 static 资源列表定义（已下线资源 / 角色关联表），角色 `admin` / `user`；新增页面在对应角色资源列表追加即可、无需改路由与数据库，浏览器按钮权限用 `v-hasPermi`。
+
+### 5.7、AI 运行时与工具装配
+
+- **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型 + 会话」LRU 缓存，Header value 支持 `{session}` 占位；
+- **对话编排 `LlmAgentChatService`**：装配「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
+- **RAG `RagService` / `VectorStoreFactory`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入，检索经 `QuestionAnswerAdvisor` 自动注入上下文；
+- **MCP `McpToolFactory`**：`McpClient` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；
+- **SKILL `SkillToolFactory`**：将 DB 技能文件树物化为 `{skill.root}/agent_{agentId}/{skillName}/`，构建 `SkillsTool` 及配套 shell / 文件执行工具（bash、Read/Write/Edit、Glob、Grep、List），技能内容变更按更新时间指纹自动重建；
+- **工具装配顺序**：`buildTools` 依次装配 MCP 工具 + Skill 工具 + 执行工具，统一以 `Object` 列表随请求传入，spring-ai 自动解析注册。
+
 ## 六、版本更新日志
 
-### 版本 v0.0.1 Release Notes[2026-09-04]
+### 版本 v1.0.0 Release Notes[ING]
 - 1、【初始化】XXL-AI 基于 XXL-Boot v2.1.1（前后端分离 Vue 模式）初始化成立，项目更名为 XXL-AI；
 - 2、【工程】构建 后端 `xxl-ai-api`（8090）与 前端 `xxl-ai-ui`（3000）双工程，数据库统一托管 `xxl_ai`；
-- 3、【能力】内置 安全登录（XXL-SSO）、权限管控、系统管理、端到端代码生成、AI + SKILL 加速开发 等平台能力；
+- 3、【能力】内置 安全登录（XXL-SSO）、RBAC 权限管控、空间隔离、系统管理、AI + SKILL 加速开发 等平台能力；
 - 4、【部署】随带 Docker Compose 一键部署栈（mysql + redis + api + ui）；
-- 5、【扩展】预留 AI 插件扩展：AI 模型管理、Chat 对话、知识库 等（`doc/db/plugin` 插件 SQL，依赖 spring-ai）。
-- 6、【功能】新增：供应商管理、知识库管理、MCP管理、SKILL管理、Agent管理；
-- 7、【功能】Chat 流式对话 SSE 无状态化改造：Redis Stream 任务队列解耦生成与下发，支持集群部署、断线/刷新续传（详见 5.7）；
+- 5、【AI 底座】基于 spring-ai 2.0.1：OpenAI 兼容模型工厂、Milvus 向量库（RAG）、官方 MCP SDK、Skill 工具；全部表随 `doc/db/tables_xxl_ai.sql` 初始化。
+- 6、【功能】新增：空间管理、供应商/模型管理、知识库/文档管理、MCP管理、SKILL管理、Agent管理；
+- 7、【功能】Chat 流式对话 SSE 无状态化改造：Redis Stream 任务队列解耦生成与下发，支持集群部署、断线/刷新续传（详见 5.5）；
+- 8、【功能】Agent 消息占位与生成状态：助手消息落占位（生成中/完成/失败），消息ID复用为结果流标识，支持刷新页面自动续传；
+- 9、【设计】Skill 本地文件简化：目录按 `agent_{agentId}/{skillName}` 物化，变更指纹简化为 `技能ID:更新时间`，变更时整目录重建；
 
 ### TODO LIST
-- 1、AI项目独立：
-  - 模块：
-    - Model配置：Model配置管理，支持多Model类型，包括：基础模型、文本模型、视觉模型...等；支持多模型供应商，包括：Ollama、OpenAI...等。
-    - Chat对话：Chat对话管理，支持自定义Prompt、Model参数；支持历史对话消息持久化，保留历史对话记忆；可基于此支持多场景，包括：智能客服、聊天助手...等；
-    - 知识库：知识库管理，支持知识库管理、索引、检索等；支持多知识库类型，包括：Text、Word、PDF、图片...等；
-    - WorkFlow定义：WorkFlow定义管理，支持工作流及Agent/模型的编排定义；工作流执行及日志记录，支持分布式工作流执行以及执行日志记录；
-    - Agent生图：文生图、图生图；生图流程设计，支持集成多模型供应商；
-    - Agent生视频：文生视频、图生视频；支持集成多模型供应商；
-  - Chat对话增强；
-    - 前端SSE交互；
-    - 对话记忆控制；
-    - 代码重构，多模块可扩展设计；
-  - 生图Agent：生图流程设计，集成本地Vision模型；
+
+- 1、AI 能力增强：
+  - WorkFlow 定义：工作流及 Agent/模型编排定义、执行与日志、分布式执行；
+  - 知识库：多类型文档（Word / PDF / 图片）解析与向量化；
+  - Agent 生图：文生图 / 图生图，支持集成多模型供应商；
+  - Agent 生视频：文生视频 / 图生视频，支持集成多模型供应商；
+  - 生图 Agent：生图流程设计，集成本地 Vision 模型；
+  - Chat 对话增强：对话记忆控制、多模态输入；
+- 2、已完成（v0.0.1）：
+  - 多模型供应商与模型管理（连通性测试、远程模型导入）；
+  - 知识库 + 文档向量化（Milvus RAG，检索注入）；
+  - MCP 接入（远程 Streamable HTTP / 本地 stdio）与工具装配；
+  - SKILL 技能文件树与本地物化（SkillsTool + 执行工具）；
+  - Agent 编排（模型 + 指令 + 知识库 + MCP + SKILL）与一键发布公开访问；
+  - 前端 SSE 交互（流式、思考过程折叠、Markdown 渲染、断线 / 刷新续传）；
+  - 空间隔离与用户授权；
 
 
 ## 七、其他
