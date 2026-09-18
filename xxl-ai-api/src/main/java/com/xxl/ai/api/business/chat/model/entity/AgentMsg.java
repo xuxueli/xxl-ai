@@ -14,6 +14,7 @@ public class AgentMsg {
     private String role;        /* 角色：user-用户、assistant-助手 */
     private String reasoning;   /* 思考过程（推理模型 reasoning_content） */
     private String content;     /* 消息内容 */
+    private int status;         /* 状态：0-生成中、1-完成、2-失败 */
     private Date addTime;       /* 新增时间 */
     private Date updateTime;    /* 更新时间 */
 
@@ -55,6 +56,14 @@ public class AgentMsg {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     public Date getAddTime() {

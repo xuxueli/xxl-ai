@@ -381,6 +381,111 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 
 工作原理：AI 编程助手检测到任务时自动加载 SKILL，按 “建表 → 后端 → 前端 → 菜单权限 → 验证” 标准流程直生代码并落位，最后按校验清单自检交付。SKILL 缺省策略为按内置代码生成模板直生等价代码，同时提示用户可到后台走生成器，两种产出完全一致、可无缝切换。详见 “4.1 方式一：AI + SKILL 驱动开发”。
 
+### 5.7、流式对话（SSE）技术方案
+
+Agent 公开对话（`/chat/**`）采用 SSE 流式交互。为支持多节点集群部署与断线续传，生成与下发完全解耦：**web 节点只负责“接收请求 + 转发结果”，LLM 生成由 worker 消费 Redis Stream 任务异步完成**，任一节点均可服务任一连接，无需粘性会话。
+
+整体链路：
+
+```
+POST /chat/send
+  └─ 请求节点：校验会话 → 落库用户消息 + 助手占位 → XADD 任务 → XREAD 结果流转发 SSE
+                                   │
+                        Redis Stream 任务队列（消费组）
+                                   ▼
+                 worker（任意节点，可独立扩容）：执行 LLM → XADD 结果流
+                                   │
+                                   ▼
+           SSE 转发（任意节点）XREAD → 事件带 id → 客户端；断线走 /chat/resume 续传
+```
+
+组件划分（按层）：
+
+| 层 | 组件 | 职责 |
+|---|---|---|
+| 接入 | `AgentAccessController` | 仅路由透传：元数据接口走 `AgentAccessService`，`/chat/send`、`/chat/resume` 走 `ChatStreamService` |
+| 应用 | `AgentAccessService` | 会话元数据 CRUD + 会话校验（Agent 就绪/对话归属，单一校验源） |
+| 流式 | `ChatStreamService` | **单类承载全部流式逻辑**：发送准备（落库用户消息+助手占位）→ 任务队列（消费组/超时认领）→ 生成 worker（LLM→结果流→回填消息）→ SSE 转发（心跳/容错）→ 有界转发线程池；`SmartLifecycle` 托管 worker 线程 |
+| 生成 | `LlmAgentChatService` | 模型编排：装配上下文/工具/RAG，流式增量经回调输出（与传输层解耦） |
+| 存储 | Redis Stream + MySQL | 任务队列 `xxl:ai:chat:tasks`、结果流 `xxl:ai:chat:result:{msgId}`、消息表 `xxl_ai_agent_msg` |
+
+组件流转关系（正向发送）：
+
+```
+前端 handleSend
+  └─ agentSendStream → AgentAccessController.send → ChatStreamService.sendAsync
+       ├─ prepareAndEnqueue：校验 + 落用户消息(status=1) + 助手占位(status=0) → XADD 任务
+       └─ forwardAsync(emitter, msgId) → XREAD 结果流 → SSE(stream/thinking/message/ping/[DONE])
+
+内置 worker 线程（消费组）
+  └─ XREADGROUP 任务 → generate → LlmAgentChatService.chat(agent, runtime, history, content, onThinking, onContent)
+       └─ 增量回调 → appendResult(msgId, ...)（并本地累积，供失败回填）
+       └─ finally：updateAssistant(msgId, 内容, status=1) + appendResult([DONE]) + ack
+```
+
+组件流转关系（断线 / 刷新续传）：
+
+```
+前端 selectConv → 发现 assistant.status=0
+  └─ resumeGenerating(msg.id)
+       └─ AgentAccessController.resume → ChatStreamService.resumeAsync(msgId, lastEventId)
+            └─ forwardAsync → 从断点 XREAD 结果流继续 → SSE
+```
+
+组件依赖关系：
+
+```
+Controller ──> AgentAccessService（元数据 / 校验）
+           └─> ChatStreamService（发送 / 续传 / 生成 / 转发）
+ChatStreamService ──> AgentAccessService（Agent/对话校验）+ AgentMsg/ConvMapper + SupplierService
+                   └─> LlmAgentChatService ──> 增量回调（写入结果流）
+                   └─> Redis Stream（任务队列 / 结果流）
+```
+
+> 一句话：**`ChatStreamService` 单类承载“发送准备 → 任务队列 → 生成 worker → 结果流 → SSE 转发”全链路**；`AgentAccessService` 只管会话元数据与校验，`LlmAgentChatService` 经回调输出增量、与传输层解耦，`msgId`（助手占位主键）同时标识消息与结果流。
+
+SSE 事件协议：
+
+| 事件 | 数据 | 说明 |
+|---|---|---|
+| `stream` | `msgId` | 连接建立即下发（助手消息ID，即结果流标识），客户端据此断线续传 |
+| `thinking` | 思考过程增量 | 推理模型 `reasoning_content`，多行内容由前端按 SSE 规范还原 |
+| `message` | 回复内容增量 | Markdown 文本增量 |
+| `ping` | `ping` | 空闲心跳，防止网关/浏览器空闲断开 |
+| `message` | `[DONE]` | 结束标志 |
+| `message` | `__ERROR__xxx` | 错误提示，随后结束 |
+
+接口与续传：
+
+- `POST /chat/send?uuid&visitorId&convId&content`：落库用户消息 + 助手占位后投递任务并转发；
+- `POST /chat/resume?msgId&lastEventId`：从结果流 `lastEventId` 之后继续转发，不重新生成；
+- `xxl_ai_agent_msg` 增加 `status`（0-生成中、1-完成、2-失败）：发送即落助手占位，**其主键 `id` 复用为结果流标识**（1:1，无需额外 stream 字段），worker 结束时回填内容与状态。刷新页面后，前端发现 `status=0` 的助手消息即据消息ID自动续传并展开思考区，生成结果不丢失。
+
+集群与可靠性要点：
+
+- **无状态转发**：结果流存于 Redis，任意节点可转发，节点重启/扩缩容不影响在途生成；
+- **至少一次消费**：消费组保证任务不重复消费；worker 宕机后，超时未确认任务由其他节点在启动时认领（认领空闲阈值须大于单次生成最长耗时，避免误抢在途任务）；
+- **连接容错**：转发线程池满时回退“服务繁忙”；单个 Redis 读取抖动退避重试，连续失败才中断，客户端可再续传；
+- **保留窗口**：结果流按 TTL（默认 600s，每追加片段续期）保留，供断线/刷新续传；
+- **生成不受连接影响**：客户端断开后 worker 仍会完成生成并落库，重新进入对话可直接读取。
+
+相关配置（`application.properties`）：
+
+```
+xxl-ai.agent.stream.timeout=180000   # 单连接/单次生成最长时长(ms)
+xxl-ai.chat.stream.ttl=600           # 结果流保留时长(s)，即断线/刷新可续传的时间窗
+xxl-ai.chat.worker.count=2           # 单节点生成并发数
+xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
+```
+
+其余为内部实现细节，已写死/派生、不再暴露配置，避免误配：
+
+- XREAD 阻塞窗口固定 `5000ms`、单次批量 `50` 条；
+- SSE 线程池核心数 = `sse.max / 8`、队列容量 = `sse.max * 4`；
+- 宕机任务认领阈值 = `agent.stream.timeout + 60s`（确保大于单次生成最长耗时，不误抢在途任务）。
+
+> 注意：阻塞窗口固定 5s，`spring.data.redis.timeout`（默认 10s）须大于它，否则阻塞读会抛 `RedisCommandTimeoutException`。
+
 ## 六、版本更新日志
 
 ### 版本 v0.0.1 Release Notes[2026-09-04]
@@ -390,9 +495,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 - 4、【部署】随带 Docker Compose 一键部署栈（mysql + redis + api + ui）；
 - 5、【扩展】预留 AI 插件扩展：AI 模型管理、Chat 对话、知识库 等（`doc/db/plugin` 插件 SQL，依赖 spring-ai）。
 - 6、【功能】新增：供应商管理、知识库管理、MCP管理、SKILL管理、Agent管理；
-- 7、【TODO】
-  - 知识库：docker拆分 无RAG、完整版本；
-
+- 7、【功能】Chat 流式对话 SSE 无状态化改造：Redis Stream 任务队列解耦生成与下发，支持集群部署、断线/刷新续传（详见 5.7）；
 
 ### TODO LIST
 - 1、AI项目独立：

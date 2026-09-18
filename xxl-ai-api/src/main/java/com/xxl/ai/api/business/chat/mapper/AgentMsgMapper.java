@@ -16,6 +16,12 @@ public interface AgentMsgMapper {
 
     int insert(AgentMsg agentMsg);
 
+    /** 回填助手消息生成结果（内容/思考/状态） */
+    int updateAssistant(@Param("id") long id,
+                        @Param("content") String content,
+                        @Param("reasoning") String reasoning,
+                        @Param("status") int status);
+
     int deleteByConvId(@Param("convId") long convId);
 
     List<AgentMsg> listByConvId(@Param("convId") long convId);

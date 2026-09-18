@@ -13,8 +13,6 @@ import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -25,24 +23,22 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Agent 对话编排服务（spring-ai）
  *
  * 统一装配「模型 + 系统指令 + 历史消息 + 工具（MCP/Skill/执行）+ RAG Advisor」，经 ChatClient
- * 流式对话，SSE 下发 thinking（思考过程）/ message（回复内容）/ [DONE]
+ * 流式对话，增量通过回调输出（传输层由调用方决定：SSE / Redis Stream）
  *
  * @author xxl-ai 2026-09-12
  */
 @Service
 public class LlmAgentChatService {
-
-    private static final Logger logger = LoggerFactory.getLogger(LlmAgentChatService.class);
 
     /** 思考过程元数据键（spring-ai OpenAI 推理模型 reason_content） */
     private static final String KEY_REASONING = "reasoningContent";
@@ -59,28 +55,21 @@ public class LlmAgentChatService {
     private KnowledgeBaseMapper knowledgeBaseMapper;
 
     /**
-     * Agent 对话：装配上下文 → spring-ai 流式对话 → SSE 下发
+     * Agent 对话：装配上下文 → spring-ai 流式对话 → 增量输出至 sink
      *
      * @param agent        Agent 实体（含系统指令、知识库/MCP/Skill 绑定）
      * @param runtime      模型运行时配置（需为对话模型）
      * @param historyList  历史消息（不含当前用户消息）
      * @param content      用户消息
-     * @param sessionId    会话标识（Header {session} 占位替换）
-     * @param emitter      SseEmitter（thinking=思考过程，message=回复内容）
+     * @param sessionId      会话标识（Header {session} 占位替换）
+     * @param onThinking     思考过程增量回调（推理模型，可为空）
+     * @param onContent      回复内容增量回调
      * @return 完整回复（内容 + 思考过程）
      */
     public ChatText chat(Agent agent, SupplierRuntime runtime, List<AgentMsg> historyList, String content,
-                         String sessionId, SseEmitter emitter) throws Exception {
+                         String sessionId, Consumer<String> onThinking, Consumer<String> onContent) throws Exception {
+        // 装配对话请求：消息（系统指令+历史+当前）+ 工具 + RAG Advisor
         ChatClient chatClient = llmModelFactory.chatClient(runtime, sessionId);
-        ChatClient.ChatClientRequestSpec spec = buildRequestSpec(chatClient, agent, historyList, content);
-        return stream(spec, emitter);
-    }
-
-    /**
-     * 装配对话请求：消息（系统指令+历史+当前）+ 工具 + RAG Advisor
-     */
-    private ChatClient.ChatClientRequestSpec buildRequestSpec(ChatClient chatClient, Agent agent,
-                                                              List<AgentMsg> historyList, String content) {
         ChatClient.ChatClientRequestSpec spec = chatClient.prompt().messages(buildMessages(agent, historyList, content));
         Object[] tools = buildTools(agent);
         if (tools.length > 0) {
@@ -90,7 +79,7 @@ public class LlmAgentChatService {
         if (CollectionTool.isNotEmpty(advisorList)) {
             spec = spec.advisors(advisorList);
         }
-        return spec;
+        return stream(spec, onThinking, onContent);
     }
 
     /**
@@ -163,9 +152,10 @@ public class LlmAgentChatService {
     }
 
     /**
-     * 流式对话并转发：thinking（思考过程增量）/ message（回复内容）/ [DONE]
+     * 流式对话并经回调输出：思考过程增量 / 回复内容增量
      */
-    private ChatText stream(ChatClient.ChatClientRequestSpec spec, SseEmitter emitter) {
+    private ChatText stream(ChatClient.ChatClientRequestSpec spec,
+                            Consumer<String> onThinking, Consumer<String> onContent) {
         Flux<ChatResponse> chatResponses = spec.stream().chatResponse();
         StringBuilder fullText = new StringBuilder();
         StringBuilder thinkText = new StringBuilder();
@@ -183,16 +173,15 @@ public class LlmAgentChatService {
             if (StringTool.isNotBlank(delta)) {
                 prevReasoning = reasoning;
                 thinkText.append(delta);
-                safeSend(emitter, "thinking", delta);
+                onThinking.accept(delta);
             }
             // 回复内容
             String chunk = output.getText();
             if (StringTool.isNotBlank(chunk)) {
                 fullText.append(chunk);
-                safeSend(emitter, "message", chunk);
+                onContent.accept(chunk);
             }
         }
-        safeSend(emitter, "message", "[DONE]");
         return new ChatText(fullText.toString(), thinkText.toString());
     }
 
@@ -207,17 +196,6 @@ public class LlmAgentChatService {
             return reasoning.substring(prevReasoning.length());
         }
         return reasoning;
-    }
-
-    /**
-     * SSE 安全发送（失败忽略）
-     */
-    private void safeSend(SseEmitter emitter, String eventName, String data) {
-        try {
-            emitter.send(SseEmitter.event().name(eventName).data(data));
-        } catch (Exception e) {
-            logger.warn("SSE 发送失败, err={}", e.getMessage());
-        }
     }
 
     /**

@@ -4,10 +4,10 @@ import com.xxl.ai.api.business.agent.model.entity.Agent;
 import com.xxl.ai.api.business.chat.model.entity.AgentConv;
 import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
 import com.xxl.ai.api.business.chat.service.AgentAccessService;
+import com.xxl.ai.api.business.chat.stream.ChatStreamService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,12 +26,8 @@ public class AgentAccessController {
 
     @Resource
     private AgentAccessService agentAccessService;
-
-    /**
-     * SSE 流式超时时间（毫秒），默认 120s
-     */
-    @Value("${xxl-ai.agent.stream.timeout:120000}")
-    private long streamTimeout;
+    @Resource
+    private ChatStreamService chatStreamService;
 
     /**
      * Load Agent 基础信息（公开）
@@ -100,9 +96,19 @@ public class AgentAccessController {
                            @RequestParam("visitorId") String visitorId,
                            @RequestParam("convId") long convId,
                            @RequestParam("content") String content) {
-        SseEmitter emitter = new SseEmitter(streamTimeout);
-        agentAccessService.sendAsync(uuid, visitorId, convId, content, emitter);
-        return emitter;
+        return chatStreamService.sendAsync(uuid, visitorId, convId, content);
+    }
+
+    /**
+     * 对话断线续传（公开，SSE 流式返回）
+     *
+     * 从结果流的 lastEventId 之后继续转发，不重新生成；msgId 为助手消息ID（即结果流标识）
+     */
+    @RequestMapping("/resume")
+    @XxlSso(login = false)
+    public SseEmitter resume(@RequestParam("msgId") long msgId,
+                             @RequestParam(value = "lastEventId", required = false) String lastEventId) {
+        return chatStreamService.resumeAsync(msgId, lastEventId);
     }
 
 }

@@ -6,33 +6,23 @@ import com.xxl.ai.api.business.chat.mapper.AgentConvMapper;
 import com.xxl.ai.api.business.chat.mapper.AgentMsgMapper;
 import com.xxl.ai.api.business.chat.model.entity.AgentConv;
 import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
-import com.xxl.ai.api.business.llm.model.ChatText;
-import com.xxl.ai.api.business.llm.service.LlmAgentChatService;
-import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
-import com.xxl.ai.api.business.supplier.service.SupplierService;
-import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 /**
- * Agent 公开访问 Service（不校验管理端登录态，按 uuid + visitorId 隔离会话）
+ * Agent 公开访问服务（免管理端登录态，按 uuid + visitorId 隔离会话）
  *
- * 仅维护会议与消息元数据（创建/列表/改名/删除/消息列表），LLM 运行时编排移交
- * {@link LlmAgentChatService}（spring-ai）
+ * 1、会话元数据：Agent 加载、对话创建/列表/改名/删除、消息列表；
+ * 2、会话校验：Agent 就绪、对话归属（供流式对话复用，单一校验源）。
  *
  * @author xxl-ai 2026-09-05
  */
 @Service
 public class AgentAccessService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AgentAccessService.class);
 
     @Resource
     private AgentMapper agentMapper;
@@ -40,39 +30,28 @@ public class AgentAccessService {
     private AgentConvMapper agentConvMapper;
     @Resource
     private AgentMsgMapper agentMsgMapper;
-    @Resource
-    private SupplierService supplierService;
-    @Resource
-    private LlmAgentChatService llmAgentChatService;
+
+    // ==================== 会话元数据 ====================
 
     /**
      * Load Agent 基础信息（仅已发布、正常的 Agent）
      */
     public Response<Agent> load(String uuid) {
-        if (StringTool.isBlank(uuid)) {
-            return Response.ofFail("访问地址无效");
+        try {
+            return Response.ofSuccess(requireReadyAgent(uuid));
+        } catch (IllegalArgumentException e) {
+            return Response.ofFail(e.getMessage());
         }
-        Agent agent = agentMapper.loadByUuid(uuid);
-        if (agent == null) {
-            return Response.ofFail("Agent 不存在或已删除");
-        }
-        // 差异化提示：停用 / 未发布
-        if (agent.getStatus() == 1) {
-            return Response.ofFail("Agent 已停用，暂不可访问");
-        }
-        if (agent.getPublishStatus() != 1) {
-            return Response.ofFail("Agent 未发布，暂不可访问");
-        }
-        return Response.ofSuccess(agent);
     }
 
     /**
-     * 创建对话
+     * 创建对话（先校验 Agent 可用）
      */
     public Response<AgentConv> convCreate(String uuid, String visitorId, String title) {
-        Response<Agent> agentResp = load(uuid);
-        if (!agentResp.isSuccess()) {
-            return Response.ofFail(agentResp.getMsg());
+        try {
+            requireReadyAgent(uuid);
+        } catch (IllegalArgumentException e) {
+            return Response.ofFail(e.getMessage());
         }
         AgentConv agentConv = new AgentConv();
         agentConv.setAgentUuid(uuid);
@@ -86,8 +65,7 @@ public class AgentAccessService {
      * 对话列表（按访客隔离）
      */
     public Response<List<AgentConv>> convList(String uuid, String visitorId) {
-        List<AgentConv> convList = agentConvMapper.listByVisitor(uuid, visitorId);
-        return Response.ofSuccess(convList);
+        return Response.ofSuccess(agentConvMapper.listByVisitor(uuid, visitorId));
     }
 
     /**
@@ -100,8 +78,7 @@ public class AgentAccessService {
         if (title.trim().length() > 50) {
             return Response.ofFail("对话标题最长50个字符");
         }
-        AgentConv agentConv = agentConvMapper.load(convId);
-        if (agentConv == null) {
+        if (agentConvMapper.load(convId) == null) {
             return Response.ofFail("对话不存在");
         }
         agentConvMapper.updateTitle(convId, title.trim());
@@ -112,8 +89,7 @@ public class AgentAccessService {
      * 消息列表
      */
     public Response<List<AgentMsg>> msgList(long convId) {
-        List<AgentMsg> msgList = agentMsgMapper.listByConvId(convId);
-        return Response.ofSuccess(msgList);
+        return Response.ofSuccess(agentMsgMapper.listByConvId(convId));
     }
 
     /**
@@ -121,121 +97,41 @@ public class AgentAccessService {
      */
     public Response<String> convDelete(long convId) {
         agentMsgMapper.deleteByConvId(convId);
-        int ret = agentConvMapper.delete(convId);
-        return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+        return agentConvMapper.delete(convId) > 0 ? Response.ofSuccess() : Response.ofFail();
     }
 
-    /**
-     * 异步对话：校验会话与模型 → 落库用户消息 → spring-ai 流式对话 → 落库助手消息
-     *
-     * @param uuid     Agent 访问UUID
-     * @param visitorId 访客标识
-     * @param convId    对话ID
-     * @param content   用户消息
-     * @param emitter   SseEmitter（流式返回：thinking 事件=思考过程，message 事件=回复内容）
-     */
-    public void sendAsync(String uuid, String visitorId, long convId, String content, SseEmitter emitter) {
-        new Thread(() -> {
-            try {
-                doSend(uuid, visitorId, convId, content, emitter);
-            } catch (Exception e) {
-                logger.warn("Agent 对话异常, uuid={}, err={}", uuid, e.getMessage(), e);
-                safeSend(emitter, "message", "__ERROR__" + e.getMessage());
-            } finally {
-                emitter.complete();
-            }
-        }, "agent-stream").start();
-    }
+    // ==================== 会话校验（流式对话共用的单一校验源） ====================
 
     /**
-     * 对话主流程（会话/模型校验 + 消息落库 + 移交 spring-ai LLM 编排）
+     * 校验并返回可用 Agent（存在、未停用、已发布），不满足抛 IllegalArgumentException
      */
-    private void doSend(String uuid, String visitorId, long convId, String content, SseEmitter emitter) throws Exception {
-        if (StringTool.isBlank(content)) {
-            safeSend(emitter, "message", "__ERROR__请输入内容");
-            return;
+    public Agent requireReadyAgent(String uuid) {
+        if (StringTool.isBlank(uuid)) {
+            throw new IllegalArgumentException("访问地址无效");
         }
         Agent agent = agentMapper.loadByUuid(uuid);
         if (agent == null) {
-            safeSend(emitter, "message", "__ERROR__Agent 不存在或已删除");
-            return;
+            throw new IllegalArgumentException("Agent 不存在或已删除");
         }
         // 差异化提示：停用 / 未发布
         if (agent.getStatus() == 1) {
-            safeSend(emitter, "message", "__ERROR__Agent 已停用，暂不可访问");
-            return;
+            throw new IllegalArgumentException("Agent 已停用，暂不可访问");
         }
         if (agent.getPublishStatus() != 1) {
-            safeSend(emitter, "message", "__ERROR__Agent 未发布，暂不可访问");
-            return;
+            throw new IllegalArgumentException("Agent 未发布，暂不可访问");
         }
-        AgentConv agentConv = agentConvMapper.load(convId);
-        if (agentConv == null || !uuid.equals(agentConv.getAgentUuid())) {
-            safeSend(emitter, "message", "__ERROR__对话不存在");
-            return;
-        }
-
-        // 历史消息 + 首条消息自动生成对话标题（首次提问内容，超50字截断后补"..."）
-        List<AgentMsg> historyMsgList = agentMsgMapper.listByConvId(convId);
-        if (CollectionTool.isEmpty(historyMsgList)
-                && (StringTool.isBlank(agentConv.getTitle()) || "新对话".equals(agentConv.getTitle()))) {
-            String convContent = content.trim();
-            String convTitle = convContent.length() > 50 ? convContent.substring(0, 47) + "..." : convContent;
-            agentConvMapper.updateTitle(convId, convTitle);
-        }
-
-        // 模型运行时配置
-        Response<SupplierRuntime> runtimeResp = supplierService.loadRuntime(agent.getSpaceId(),
-                agent.getModelSupplierId(), agent.getModelId());
-        if (!runtimeResp.isSuccess()) {
-            safeSend(emitter, "message", "__ERROR__" + runtimeResp.getMsg());
-            return;
-        }
-        SupplierRuntime runtime = runtimeResp.getData();
-        if (runtime.getModelType() != 0) {
-            safeSend(emitter, "message", "__ERROR__所选模型不是对话模型");
-            return;
-        }
-
-        // 落库用户消息
-        AgentMsg userMsg = new AgentMsg();
-        userMsg.setConvId(convId);
-        userMsg.setRole("user");
-        userMsg.setContent(content);
-        agentMsgMapper.insert(userMsg);
-        // 刷新对话更新时间，列表展示最近活跃时间
-        agentConvMapper.touch(convId);
-
-        // spring-ai 流式对话（统一装配 工具/RAG/Skill，SSE 下发 thinking/message）
-        String sessionId = "xxl-ai-conv-" + convId;
-        ChatText chatText = llmAgentChatService.chat(agent, runtime, historyMsgList, content, sessionId, emitter);
-
-        // 落库助手消息（含思考过程）
-        if (StringTool.isNotBlank(chatText.getContent()) || StringTool.isNotBlank(chatText.getThinking())) {
-            AgentMsg assistantMsg = new AgentMsg();
-            assistantMsg.setConvId(convId);
-            assistantMsg.setRole("assistant");
-            assistantMsg.setReasoning(StringTool.isNotBlank(chatText.getThinking()) ? chatText.getThinking() : null);
-            assistantMsg.setContent(chatText.getContent());
-            agentMsgMapper.insert(assistantMsg);
-            // 刷新对话更新时间，列表展示最近活跃时间
-            agentConvMapper.touch(convId);
-        }
+        return agent;
     }
 
     /**
-     * SSE 安全发送（失败忽略）
-     *
-     * @param emitter   SseEmitter
-     * @param eventName 事件名：thinking-思考过程、message-回复内容
-     * @param data      事件数据
+     * 校验并返回归属于该 Agent 的对话，不满足抛 IllegalArgumentException
      */
-    private void safeSend(SseEmitter emitter, String eventName, String data) {
-        try {
-            emitter.send(SseEmitter.event().name(eventName).data(data));
-        } catch (Exception e) {
-            logger.warn("SSE 发送失败, err={}", e.getMessage());
+    public AgentConv requireConversation(String uuid, long convId) {
+        AgentConv agentConv = agentConvMapper.load(convId);
+        if (agentConv == null || !uuid.equals(agentConv.getAgentUuid())) {
+            throw new IllegalArgumentException("对话不存在");
         }
+        return agentConv;
     }
 
 }

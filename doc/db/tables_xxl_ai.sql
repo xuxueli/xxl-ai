@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS `xxl_ai_agent_msg` (
     `role`          VARCHAR(10)     NOT NULL            COMMENT '角色：user/assistant',
     `reasoning`     TEXT            NULL DEFAULT NULL   COMMENT '思考过程（推理模型 reasoning_content）',
     `content`       TEXT            NOT NULL            COMMENT '消息内容',
+    `status`        TINYINT         NOT NULL DEFAULT 1  COMMENT '状态：0-生成中、1-完成、2-失败（助手消息ID复用为结果流标识）',
     `add_time`      DATETIME        NOT NULL            COMMENT '新增时间',
     `update_time`   DATETIME        NOT NULL            COMMENT '更新时间',
     PRIMARY KEY (`id`),

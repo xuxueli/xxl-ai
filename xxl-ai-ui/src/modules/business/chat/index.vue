@@ -179,7 +179,8 @@ import {
   agentAccessMsgList,
   agentAccessConvDelete,
   agentAccessConvRename,
-  agentSendStream
+  agentSendStream,
+  agentResumeStream
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
 import { parseTime } from '@/utils/common'
@@ -311,6 +312,45 @@ async function selectConv(convId: number) {
   const res = await agentAccessMsgList(convId)
   messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
   await scrollToBottom()
+  // 存在生成中的助手消息（如刷新页面/切换对话后）：自动断点续传并展开思考区
+  const pending = messages.value.find((m) => m.role === 'assistant' && m.status === 0 && m.id != null)
+  if (pending) {
+    pending.showThinking = true
+    void resumeGenerating(pending)
+  }
+}
+
+/**
+ * 续传生成中的助手消息：从结果流起点重放全部增量，回填到对应消息
+ */
+async function resumeGenerating(msg: ChatMsg) {
+  if (msg.id == null) return
+  const idx = messages.value.indexOf(msg)
+  sending.value = true
+  try {
+    const reader = await agentResumeStream(msg.id)
+    if (reader) {
+      await streamWithResume(
+        reader,
+        { msgId: msg.id },
+        (chunk) => {
+          const m = messages.value[idx]
+          if (m) m.reasoning = (m.reasoning || '') + chunk
+          scrollToBottom()
+        },
+        (chunk) => {
+          const m = messages.value[idx]
+          if (m) m.content += chunk
+          scrollToBottom()
+        }
+      )
+    }
+  } catch (e) {
+    // 续传失败保留已展示内容
+  } finally {
+    sending.value = false
+    await scrollToBottom()
+  }
 }
 
 // --------------------------------- 对话标题修改 ---------------------------------
@@ -404,6 +444,8 @@ async function handleSend() {
   const assistantIdx = messages.value.push(assistantMsg) - 1
   await scrollToBottom()
 
+  // 流状态：msgId 由后端 stream 事件下发，lastEventId 为已处理的结果流条目，用于断线续传
+  const streamState: { msgId?: number; lastEventId?: string } = {}
   try {
     const reader = await agentSendStream(uuid.value, visitorId.value, currentConvId.value, content)
     if (!reader) {
@@ -411,8 +453,9 @@ async function handleSend() {
       sending.value = false
       return
     }
-    await readStream(
+    await streamWithResume(
       reader,
+      streamState,
       (chunk) => {
         // 经响应式代理累加思考过程，触发视图逐段更新
         const msg = messages.value[assistantIdx]
@@ -445,35 +488,87 @@ async function handleSend() {
 }
 
 /**
- * 流式读取：按 SSE 事件解析（thinking=思考过程，message=回复内容），逐事件回调
+ * 读取流并断线自动续传：正常结束（[DONE]/错误）返回；中断则携 msgId + lastEventId 续传（最多 3 次）
+ *
+ * @param reader 初始流（发送或续传获得）
+ * @param state  流状态（stream 事件回填 msgId，内容事件推进 lastEventId）
+ */
+async function streamWithResume(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  state: { msgId?: number; lastEventId?: string },
+  onThinking: (text: string) => void,
+  onContent: (text: string) => void
+) {
+  let attempts = 0
+  while (reader) {
+    let completed = false
+    try {
+      completed = await readStream(reader, onThinking, onContent, state)
+    } catch (e) {
+      // 网络中断：进入续传分支
+      completed = false
+    }
+    if (completed) return
+    // 未正常结束且已获得 msgId：携带断点续传（最多 3 次）
+    if (!state.msgId || attempts >= 3) return
+    attempts++
+    await new Promise((resolve) => setTimeout(resolve, 500 * attempts))
+    try {
+      const resumed = await agentResumeStream(state.msgId, state.lastEventId)
+      if (!resumed) return
+      reader = resumed
+    } catch (e) {
+      return
+    }
+  }
+}
+
+/**
+ * 流式读取：按 SSE 事件解析（stream=流标识，thinking=思考过程，message=回复内容，ping=心跳），逐事件回调
  *
  * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
  * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致 markdown 实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
+ *
+ * @returns 是否收到结束标志（[DONE]/错误）；未收到即视为中断，由调用方携带 state 续传
  */
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onThinking: (text: string) => void,
-  onContent: (text: string) => void
-) {
+  onContent: (text: string) => void,
+  state: { msgId?: number; lastEventId?: string }
+): Promise<boolean> {
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
   let eventName = 'message'
+  // 当前事件 id（结果流条目，用于断线续传）
+  let eventId = ''
   // 待拼装的事件数据（同一事件内的多条 data: 行）
   let dataLines: string[] = []
 
   /** 派发单个事件：命中结束/错误标志返回 true，终止读取 */
   const dispatch = (data: string): boolean => {
     if (!data) return false
-    if (data === '[DONE]') return true
+    if (data === '[DONE]') {
+      if (eventId) state.lastEventId = eventId
+      return true
+    }
     if (data.startsWith('__ERROR__')) {
+      if (eventId) state.lastEventId = eventId
       ElMessage.error(data.slice(9))
       return true
     }
+    if (eventName === 'stream') {
+      state.msgId = Number(data)
+      return false
+    }
+    if (eventName === 'ping') return false
     if (eventName === 'thinking') {
       onThinking(data)
     } else {
       onContent(data)
     }
+    // 仅内容事件推进断点，续传时从该 id 之后继续
+    if (eventId) state.lastEventId = eventId
     return false
   }
 
@@ -490,12 +585,17 @@ async function readStream(
         if (dataLines.length > 0) {
           const data = dataLines.join('\n')
           dataLines = []
-          if (dispatch(data)) return
+          if (dispatch(data)) return true
         }
+        eventId = ''
         continue
       }
       if (line.startsWith('event:')) {
         eventName = line.substring(6).trim()
+        continue
+      }
+      if (line.startsWith('id:')) {
+        eventId = line.substring(3).trim()
         continue
       }
       if (line.startsWith('data:')) {
@@ -503,13 +603,14 @@ async function readStream(
         dataLines.push(line.substring(5))
         continue
       }
-      // 忽略其它字段（id / retry / 注释行等）
+      // 忽略其它字段（retry / 注释行等）
     }
   }
   // 流结束兜底：派发未以空行收尾的残留数据（如最后一个事件未换行结尾）
   if (dataLines.length > 0) {
-    dispatch(dataLines.join('\n'))
+    return dispatch(dataLines.join('\n'))
   }
+  return false
 }
 
 /** 展开/收起思考过程 */

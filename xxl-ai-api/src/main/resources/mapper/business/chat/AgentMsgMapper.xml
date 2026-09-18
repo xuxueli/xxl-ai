@@ -9,6 +9,7 @@
 		<result column="role" property="role" />
 		<result column="reasoning" property="reasoning" />
 		<result column="content" property="content" />
+		<result column="status" property="status" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
 	</resultMap>
@@ -19,17 +20,27 @@
 		t.role,
 		t.reasoning,
 		t.content,
+		t.status,
 		t.add_time,
 		t.update_time
 	</sql>
 
 	<insert id="insert" parameterType="com.xxl.ai.api.business.chat.model.entity.AgentMsg" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_agent_msg (
-			conv_id, role, reasoning, content, add_time, update_time
+			conv_id, role, reasoning, content, status, add_time, update_time
 		) VALUES (
-			 #{convId}, #{role}, #{reasoning}, #{content}, NOW(), NOW()
+			 #{convId}, #{role}, #{reasoning}, #{content}, #{status}, NOW(), NOW()
 		 );
 	</insert>
+
+	<update id="updateAssistant" parameterType="java.util.HashMap" >
+		UPDATE xxl_ai_agent_msg
+		SET content = #{content},
+			reasoning = #{reasoning},
+			status = #{status},
+			update_time = NOW()
+		WHERE id = #{id}
+	</update>
 
 	<delete id="deleteByConvId" parameterType="java.util.HashMap">
 		DELETE FROM xxl_ai_agent_msg WHERE conv_id = #{convId}

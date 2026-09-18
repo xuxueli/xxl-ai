@@ -31,6 +31,8 @@ export interface AgentMsg {
   /** 思考过程（推理模型 reasoning_content，可空） */
   reasoning?: string
   content: string
+  /** 状态：0-生成中、1-完成、2-失败（生成中可据消息ID断点续传） */
+  status?: number
   addTime?: string
   [key: string]: unknown
 }

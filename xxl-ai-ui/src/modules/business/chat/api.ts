@@ -54,3 +54,20 @@ export async function agentSendStream(
   }
   return response.body.getReader()
 }
+
+/**
+ * 断线续传（SSE 流式）
+ * 携带 msgId（助手消息ID）+ 已收到的 lastEventId，从断点之后继续读取结果流
+ */
+export async function agentResumeStream(
+  msgId: number,
+  lastEventId?: string
+): Promise<ReadableStreamDefaultReader<Uint8Array> | null> {
+  const params = new URLSearchParams({ msgId: String(msgId) })
+  if (lastEventId) params.set('lastEventId', lastEventId)
+  const response = await fetch(`${BASE}/chat/resume?${params.toString()}`, { method: 'POST' })
+  if (!response.ok || !response.body) {
+    throw new Error(`请求失败，HTTP ${response.status}`)
+  }
+  return response.body.getReader()
+}
