@@ -78,6 +78,8 @@ public class SkillFileServiceImpl implements SkillFileService {
         dir.setLocked(0);
         dir.setSort(nextSort(dto.getSkillId(), dto.getParentId()));
         skillFileMapper.insert(dir);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(dto.getSkillId());
         return Response.ofSuccess();
     }
 
@@ -101,6 +103,8 @@ public class SkillFileServiceImpl implements SkillFileService {
         file.setSort(nextSort(dto.getSkillId(), dto.getParentId()));
         file.setContent(defaultContent(file.getFileType()));
         skillFileMapper.insert(file);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(dto.getSkillId());
         return Response.ofSuccess();
     }
 
@@ -132,6 +136,8 @@ public class SkillFileServiceImpl implements SkillFileService {
         update.setContent(node.getContent());
         update.setSort(node.getSort());
         skillFileMapper.update(update);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(node.getSkillId());
         return Response.ofSuccess();
     }
 
@@ -171,6 +177,8 @@ public class SkillFileServiceImpl implements SkillFileService {
             return Response.ofFail("目标目录下已存在同名节点[" + node.getName() + "]");
         }
         skillFileMapper.updateParent(node.getId(), targetParentId);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(node.getSkillId());
         return Response.ofSuccess();
     }
 
@@ -196,6 +204,8 @@ public class SkillFileServiceImpl implements SkillFileService {
         update.setContent(content);
         update.setSort(node.getSort());
         skillFileMapper.update(update);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(node.getSkillId());
         return Response.ofSuccess();
     }
 
@@ -218,6 +228,8 @@ public class SkillFileServiceImpl implements SkillFileService {
         ids.add(node.getId());
         collectDescendants(node.getSkillId(), node.getId(), ids);
         skillFileMapper.deleteByIds(ids);
+        // 内容变更：刷新 SKILL 更新时间，供本地物化变更检测
+        skillMapper.touch(node.getSkillId());
         return Response.ofSuccess();
     }
 

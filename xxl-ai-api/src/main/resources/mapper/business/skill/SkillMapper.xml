@@ -55,6 +55,12 @@
 		WHERE id = #{id}
 	</update>
 
+	<update id="touch" parameterType="java.util.HashMap" >
+		UPDATE xxl_ai_skill
+		SET update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
 	<select id="load" parameterType="java.util.HashMap" resultMap="Skill">
 		SELECT <include refid="Base_Column_List" />
 		FROM xxl_ai_skill AS t

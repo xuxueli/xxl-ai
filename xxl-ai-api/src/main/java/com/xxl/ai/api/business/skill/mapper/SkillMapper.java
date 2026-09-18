@@ -22,6 +22,9 @@ public interface SkillMapper {
 
     int update(Skill skill);
 
+    /** 内容文件变更时刷新更新时间（Skill 变更检测唯一依据） */
+    int touch(@Param("id") long id);
+
     Skill load(@Param("id") long id);
 
     List<Skill> listBySpace(@Param("spaceId") long spaceId);

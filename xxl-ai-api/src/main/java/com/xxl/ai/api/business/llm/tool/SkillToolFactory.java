@@ -17,6 +17,7 @@ import org.springaicommunity.agent.tools.ListDirectoryTool;
 import org.springaicommunity.agent.tools.ShellTools;
 import org.springaicommunity.agent.tools.SkillsTool;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -25,20 +26,34 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Skill 工具工厂（spring-ai-agent-utils SkillsTool）
  *
- * 把「Agent 绑定的 Skill」（DB 文件树）物化为 SKILL.md 知识模块目录，构建 SkillsTool：
- *  - SkillsTool 以单个 Skill 工具注册进 ChatClient，模型按语义匹配触发，注入完整技能内容
- *  - 按（Agent + 技能指纹）缓存复用，技能内容变更自动重建
- * 同时提供配套的终端/文件执行工具（buildExecutorTools）：技能内容中的 bash 指令依赖
- * 终端与文件操作能力（Shell + Read/Write/Edit/Glob/Grep/List），工作目录取空间技能物化根，
- * 按空间隔离沙箱
+ * 把「Agent 绑定的 Skill」（DB 文件树）物化为本地技能目录，构建 SkillsTool：
+ *  - 目录结构：{skill.root}/{spaceId}/{agentId}/{skillName}/SKILL.md（每技能独立子目录，Agent 级沙箱隔离）
+ *  - 变更检测：Skill 内容变更由写侧刷新 xxl_ai_skill.update_time，此处按「技能ID:更新时间」指纹比对，
+ *    指纹不一致时整目录重建（清空再物化，杜绝换绑/删除后的残留文件）
+ *  - 缓存：按 agentId 缓存快照（指纹 + 根目录 + SkillsTool），指纹不变直接复用
+ *
+ *
+ * ${xxl-ai.skill.root}/
+ * └── {spaceId}/
+ *     └── {agentId}/
+ *         ├── .fingerprint          # 单行指纹，仅缓存校验用
+ *         ├── {skillName}/          # 每个技能一个子目录（name 空间内唯一，且仅字母数字中划线）
+ *         │   ├── SKILL.md
+ *         │   ├── scripts/
+ *         │   └── reference/
+ *         └── {skillName2}/
+ *             └── SKILL.md
  *
  * @author xxl-ai 2026-09-12
  */
@@ -49,51 +64,36 @@ public class SkillToolFactory {
 
     private static final String SKILL_FILE_NAME = "SKILL.md";
 
+    /** 指纹标记文件名（Agent 根下，仅本地缓存校验用） */
+    private static final String MARKER_FILE_NAME = ".fingerprint";
+
     @Resource
     private SkillService skillService;
     @Resource
     private SkillFileMapper skillFileMapper;
 
-    /** SKILL.md 物化根目录 */
-    private final Path skillsRoot = Path.of(System.getProperty("java.io.tmpdir"), "xxl-ai", "skills");
+    /** SKILL根目录 */
+    @Value("${xxl-ai.skill.root}")
+    private String skillRoot;
 
-    /** 技能工具缓存（agentId + 技能指纹 → SkillsTool） */
-    private final ConcurrentHashMap<String, ToolCallback> skillsToolCache = new ConcurrentHashMap<>();
+    /** Agent 物化快照缓存（agentId → 指纹 + 根目录 + 技能工具） */
+    private final ConcurrentHashMap<Long, SkillSnapshot> snapshotCache = new ConcurrentHashMap<>();
+
+    /** 按 Agent 串行物化锁（避免并发重建互相破坏目录） */
+    private final ConcurrentHashMap<Long, Object> syncLocks = new ConcurrentHashMap<>();
 
     /**
-     * 构建 Agent 装配的 Skill 工具（无技能时返回 null 表示不注册）
+     * Agent 物化快照：指纹与本地根一致时复用工具
+     */
+    private record SkillSnapshot(String fingerprint, Path root, ToolCallback tool) {
+    }
+
+    /**
+     * 构建 Agent 装配的 Skill 工具（无技能或技能无有效 SKILL.md 时返回 null 表示不注册）
      */
     public ToolCallback buildTool(Agent agent) {
-        List<Long> skillIdList = splitIds(agent.getSkillIds());
-        if (CollectionTool.isEmpty(skillIdList)) {
-            return null;
-        }
-        List<Skill> skillList = skillService.listByIds(skillIdList);
-        if (CollectionTool.isEmpty(skillList)) {
-            return null;
-        }
-        // 技能指纹：技能ID + 更新时间 + 技能文件树更新时间，内容变更自动重建
-        String fingerprint = buildFingerprint(skillList);
-        String cacheKey = agent.getId() + ":" + fingerprint;
-        ToolCallback cached = skillsToolCache.get(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-        try {
-            Path spaceRoot = skillsRoot.resolve(String.valueOf(agent.getSpaceId()));
-            for (Skill skill : skillList) {
-                if (skill.getStatus() == 1) {
-                    continue;
-                }
-                materializeSkill(spaceRoot, skill.getId());
-            }
-            ToolCallback skillsTool = SkillsTool.builder().addSkillsDirectory(spaceRoot.toString()).build();
-            skillsToolCache.put(cacheKey, skillsTool);
-            return skillsTool;
-        } catch (Exception e) {
-            logger.warn("Agent Skill 工具构建失败, agentId={}, err={}", agent.getId(), e.getMessage());
-            return null;
-        }
+        SkillSnapshot snapshot = sync(agent);
+        return snapshot == null ? null : snapshot.tool();
     }
 
     /**
@@ -102,38 +102,107 @@ public class SkillToolFactory {
      * 与 buildTool 配套：SkillsTool 注入 SKILL.md 内容（含 bash 指令），此处提供 SKILL.md 依赖的
      * 执行能力（ShellTools 的 bash/bash_output/kill_shell 与 FileSystemTools 的 Read/Write/Edit、
      * GlobTool 的 Glob、GrepTool 的 Grep、ListDirectoryTool 的 List Directory），
-     * 全部限定于空间技能物化根，按空间隔离沙箱
+     * 全部限定于 Agent 物化根，按 Agent 隔离沙箱
      */
     public List<Object> buildExecutorTools(Agent agent) {
-        List<Long> skillIdList = splitIds(agent.getSkillIds());
-        if (CollectionTool.isEmpty(skillIdList)) {
+        SkillSnapshot snapshot = sync(agent);
+        if (snapshot == null) {
             return new ArrayList<>();
         }
-        Path spaceRoot = skillsRoot.resolve(String.valueOf(agent.getSpaceId()));
-        try {
-            Files.createDirectories(spaceRoot);
-            logger.info("执行工具工作目录创建成功, agentId={}, path={}", agent.getId(), spaceRoot.toString());
-        } catch (IOException e) {
-            logger.warn("执行工具工作目录创建失败, agentId={}, err={}", agent.getId(), e.getMessage());
-            return new ArrayList<>();
-        }
+        Path agentRoot = snapshot.root();
         List<Object> tools = new ArrayList<>();
-        tools.add(ShellTools.builder().workingDirectory(spaceRoot).build());
-        tools.add(FileSystemTools.builder().allowedDirectory(spaceRoot).build());
-        tools.add(GlobTool.builder().workingDirectory(spaceRoot).allowedDirectory(spaceRoot).build());
-        tools.add(GrepTool.builder().workingDirectory(spaceRoot).allowedDirectory(spaceRoot).build());
-        tools.add(ListDirectoryTool.builder().workingDirectory(spaceRoot).allowedDirectory(spaceRoot).build());
+        tools.add(ShellTools.builder().workingDirectory(agentRoot).build());
+        tools.add(FileSystemTools.builder().allowedDirectory(agentRoot).build());
+        tools.add(GlobTool.builder().workingDirectory(agentRoot).allowedDirectory(agentRoot).build());
+        tools.add(GrepTool.builder().workingDirectory(agentRoot).allowedDirectory(agentRoot).build());
+        tools.add(ListDirectoryTool.builder().workingDirectory(agentRoot).allowedDirectory(agentRoot).build());
         return tools;
     }
 
     /**
-     * 物化单个 Skill 文件树到目录
+     * 同步并返回 Agent 物化快照：指纹变更则整目录重建，否则复用缓存
      */
-    private void materializeSkill(Path spaceRoot, long skillId) throws IOException {
+    private SkillSnapshot sync(Agent agent) {
+        List<Long> skillIdList = splitIds(agent.getSkillIds());
+        if (CollectionTool.isEmpty(skillIdList)) {
+            return null;
+        }
+        List<Skill> skillList = skillService.listByIds(skillIdList);
+        if (CollectionTool.isEmpty(skillList)) {
+            return null;
+        }
+        String fingerprint = buildFingerprint(skillList);
+        SkillSnapshot cached = snapshotCache.get(agent.getId());
+        if (isSnapshotValid(cached, fingerprint)) {
+            return cached;
+        }
+        synchronized (syncLock(agent.getId())) {
+            // 双重检查：并发请求下避免重复重建
+            cached = snapshotCache.get(agent.getId());
+            if (isSnapshotValid(cached, fingerprint)) {
+                return cached;
+            }
+            Path root = agentRoot(agent);
+            try {
+                // 全量重建：先清空 Agent 目录，再物化全部启用技能
+                deleteRecursively(root);
+                Files.createDirectories(root);
+                boolean hasSkill = false;
+                for (Skill skill : skillList) {
+                    if (skill.getStatus() == 1) {
+                        continue;
+                    }
+                    if (materializeSkill(root.resolve(sanitize(skill.getName())), skill.getId())) {
+                        hasSkill = true;
+                    }
+                }
+                writeMarker(root, fingerprint);
+                // 无有效 SKILL.md 时仅物化文件、不构建技能工具（SkillsTool 要求至少一个技能）
+                ToolCallback tool = hasSkill
+                        ? SkillsTool.builder().addSkillsDirectory(root.toString()).build()
+                        : null;
+                SkillSnapshot snapshot = new SkillSnapshot(fingerprint, root, tool);
+                snapshotCache.put(agent.getId(), snapshot);
+                logger.info("Skill 物化完成, agentId={}, path={}", agent.getId(), root);
+                return snapshot;
+            } catch (Exception e) {
+                logger.warn("Agent Skill 物化失败, agentId={}, err={}", agent.getId(), e.getMessage());
+                return cached;
+            }
+        }
+    }
+
+    /**
+     * 本地快照是否有效：指纹一致且标记文件存在且内容一致
+     */
+    private boolean isSnapshotValid(SkillSnapshot cached, String fingerprint) {
+        if (cached == null || !fingerprint.equals(cached.fingerprint())) {
+            return false;
+        }
+        try {
+            Path marker = cached.root().resolve(MARKER_FILE_NAME);
+            return Files.exists(marker)
+                    && fingerprint.equals(Files.readString(marker, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 写入指纹标记（覆盖写，一行文本）
+     */
+    private void writeMarker(Path root, String fingerprint) throws IOException {
+        Files.writeString(root.resolve(MARKER_FILE_NAME), fingerprint, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 物化单个 Skill 文件树到技能目录，返回是否包含 SKILL.md
+     */
+    private boolean materializeSkill(Path skillDir, long skillId) throws IOException {
         List<SkillFile> fileList = skillFileMapper.listBySkill(skillId);
         if (CollectionTool.isEmpty(fileList)) {
             logger.warn("Skill 无内容文件, skillId={}", skillId);
-            return;
+            return false;
         }
         Map<Long, SkillFile> fileMap = new HashMap<>();
         for (SkillFile file : fileList) {
@@ -143,7 +212,7 @@ public class SkillToolFactory {
         Map<Long, String> pathCache = new HashMap<>();
         boolean hasMain = false;
         for (SkillFile file : fileList) {
-            Path target = spaceRoot.resolve(resolvePath(file, fileMap, pathCache));
+            Path target = skillDir.resolve(resolvePath(file, fileMap, pathCache));
             if (file.getType() == 1) {
                 if (SKILL_FILE_NAME.equals(file.getName())) {
                     hasMain = true;
@@ -160,28 +229,53 @@ public class SkillToolFactory {
         if (!hasMain) {
             logger.warn("Skill 缺少 SKILL.md, skillId={}", skillId);
         }
+        return hasMain;
     }
 
     /**
-     * 技能文件树指纹：技能ID + 更新时间 + 文件树最新更新时间
+     * 递归删除目录（不存在的路径忽略）
+     */
+    private void deleteRecursively(Path path) throws IOException {
+        if (!Files.exists(path)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(path)) {
+            List<Path> pathList = paths.sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+            for (Path item : pathList) {
+                Files.deleteIfExists(item);
+            }
+        }
+    }
+
+    /**
+     * 技能变更指纹：技能ID + 更新时间（内容变更由写侧刷新 skill.update_time）
      */
     private String buildFingerprint(List<Skill> skillList) {
-        StringBuilder sb = new StringBuilder();
-        for (Skill skill : skillList) {
-            sb.append(skill.getId()).append(':').append(skill.getVersion()).append('\n');
-            long latest = skill.getUpdateTime() == null ? 0 : skill.getUpdateTime().getTime();
-            List<SkillFile> fileList = skillFileMapper.listBySkill(skill.getId());
-            if (CollectionTool.isNotEmpty(fileList)) {
-                for (SkillFile file : fileList) {
-                    long updateTime = file.getUpdateTime() == null ? 0 : file.getUpdateTime().getTime();
-                    if (updateTime > latest) {
-                        latest = updateTime;
-                    }
-                }
-            }
-            sb.append(skill.getId()).append(':').append(latest).append('\n');
-        }
-        return sb.toString();
+        return skillList.stream()
+                .sorted(Comparator.comparingLong(Skill::getId))
+                .map(skill -> skill.getId() + ":" + (skill.getUpdateTime() == null ? 0L : skill.getUpdateTime().getTime()))
+                .collect(Collectors.joining(";"));
+    }
+
+    /**
+     * Agent 物化根目录：{skill.root}/{spaceId}/{agentId}
+     */
+    private Path agentRoot(Agent agent) {
+        return skillsRoot().resolve(String.valueOf(agent.getSpaceId())).resolve(String.valueOf(agent.getId()));
+    }
+
+    /**
+     * SKILL物化根目录 Path（读配置，支持运行期改配置后按需生效）
+     */
+    private Path skillsRoot() {
+        return Path.of(skillRoot);
+    }
+
+    /**
+     * 按 Agent 获取物化锁
+     */
+    private Object syncLock(long agentId) {
+        return syncLocks.computeIfAbsent(agentId, key -> new Object());
     }
 
     /**
