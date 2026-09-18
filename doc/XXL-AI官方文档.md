@@ -218,7 +218,7 @@ docker compose down
 
 （内容整理中……）
 
-## 四、新增业务模块
+## 四、XX
 
 （内容整理中……）
 
@@ -335,34 +335,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 - 未登录访问受保护接口时，XXL-SSO 拦截并返回统一登录失效提示；
 - 需要强权限校验（RBAC 按钮级）的接口，配合业务权限标识二次校验（见 5.3）。
 
-### 5.4、统一响应与交互规范
-
-- 统一返回结构 `Response{ code、msg、data }`（`com.xxl.tool.response.Response`），code 200 表示成功；
-- 分页统一返回 `Response<PageModel>`；分页入参统一 `offset`、`pagesize`；
-- 接口路径规范：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`），业务接口统一 `@RequestMapping("/{module}")`（同名业务）/ `@RequestMapping("/{module}/{business}")`（多业务）+ `@XxlSso` 鉴权；
-- 前端取值约定：`response.data`（成功数据）、`response.data.data`（列表）、`response.data.total`（总数）；
-- Mapper XML 中显式配置字段映射（resultMap），`add_time` / `update_time` 写入用 `NOW()`。
-
-### 5.5、业务扩展与菜单零路由
-
-新增业务模块遵循“平台核心不动、业务可插拔”的扩展原则：
-
-- 平台核心：`framework` 包仅承载平台内置能力（登录、权限、系统管理、工具等），不承载具体业务；
-- 业务扩展：新增业务一律落位到 `business/{module}` 包（后端）、`resources/mapper/business/{module}/`（Mapper XML）；
-- 菜单零路由：平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化），新建页面文件后在对应角色 static 资源列表追加菜单项（`url` 配置为 `/module` 或 `/module/business`）即可，前端 `loadView` 自动映射页面，全程无需改动路由代码；
-- 模块/业务命名：`{module}` 一级或 `{module}/{business}` 多级。同名业务直接一级（`business/{module}`、`/module`、权限 `{module}:default`）；多业务模块在模块下再分 `{business}`（如 `supplier` 聚合供应商+模型、`agent` 聚合 `agent`+`conv`）；
-- 前后端落位对照：
-
-```
-后端   Controller  business/{module}/或business/{module}/{business}  （com.xxl.ai.api.business.{module}[.{business}]）
-后端   Mapper XML  resources/mapper/business/{module}/
-前端   页面        src/modules/business/{module}/pages/index.vue（多业务页同目录聚合）
-前端   接口封装    src/modules/business/{module}/api/index.ts
-前端   类型        src/modules/business/{module}/types/index.ts
-菜单   XxlRoleEnum 角色 static 资源列表（type=0/1/2，url 驱动零路由改动）
-```
-
-### 5.6、AI + Skill 辅助开发设计
+### 5.4、AI + Skill 辅助开发设计
 
 为让 AI 编程助手也能产出平台级规范代码，仓库在 `.agents/skills/` 内置 开发 SKILL，作为 AI 的“项目内专业规范”：
 
@@ -381,7 +354,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 
 工作原理：AI 编程助手检测到任务时自动加载 SKILL，按 “建表 → 后端 → 前端 → 菜单权限 → 验证” 标准流程直生代码并落位，最后按校验清单自检交付。SKILL 缺省策略为按内置代码生成模板直生等价代码，同时提示用户可到后台走生成器，两种产出完全一致、可无缝切换。详见 “4.1 方式一：AI + SKILL 驱动开发”。
 
-### 5.7、流式对话（SSE）技术方案
+### 5.5、流式对话（SSE）技术方案
 
 Agent 公开对话（`/chat/**`）采用 SSE 流式交互。为支持多节点集群部署与断线续传，生成与下发完全解耦：**web 节点只负责“接收请求 + 转发结果”，LLM 生成由 worker 消费 Redis Stream 任务异步完成**，任一节点均可服务任一连接，无需粘性会话。
 
