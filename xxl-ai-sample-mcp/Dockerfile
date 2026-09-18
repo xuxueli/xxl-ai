@@ -12,7 +12,7 @@ ENV TZ=PRC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # copy jar
-ADD target/xxl-ai-api-sample-*.jar /app.jar
+ADD target/xxl-ai-sample-mcp-*.jar /app.jar
 
 # expose port
 EXPOSE 8091

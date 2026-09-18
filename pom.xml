@@ -13,7 +13,7 @@
 
 	<modules>
 		<module>xxl-ai-api</module>
-		<module>xxl-ai-api-sample</module>
+		<module>xxl-ai-sample-mcp</module>
 	</modules>
 
 	<properties>
@@ -124,7 +124,7 @@
 				<artifactId>spring-ai-agent-utils</artifactId>
 				<version>0.12.0</version>
 			</dependency>
-			<!-- spring-ai：MCP Server（注解式 @McpTool，Streamable HTTP，供 xxl-ai-api-sample 使用） -->
+			<!-- spring-ai：MCP Server（注解式 @McpTool，Streamable HTTP，供 xxl-ai-sample-mcp 使用） -->
 			<dependency>
 				<groupId>org.springframework.ai</groupId>
 				<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>

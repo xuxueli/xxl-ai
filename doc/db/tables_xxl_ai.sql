@@ -292,7 +292,7 @@ VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区�
 -- 7、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
-    -- 远程 Streamable HTTP：示例MCP（由独立应用 xxl-ai-api-sample 提供，单端点聚合多 Tool 功能；）
+    -- 远程 Streamable HTTP：示例MCP（由独立应用 xxl-ai-sample-mcp 提供，单端点聚合多 Tool 功能；）
     (1, '远程MCP服务（示例）', 0, 'http://127.0.0.1:8091/sample/mcp', null, '{"transport":"http","url":"http://127.0.0.1:8091/sample/mcp","headers":{}}', 0, '示例MCP服务（远程）：提供 get_current_time/calculator 等多工具能力', NOW(), NOW()),
     -- 本地 stdio 进程：：示例MCP
     (1, 'Fetch 网页抓取', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","mcp-fetch-server"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),

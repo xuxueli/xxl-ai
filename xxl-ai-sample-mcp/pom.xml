@@ -8,7 +8,7 @@
 		<artifactId>xxl-ai</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>xxl-ai-api-sample</artifactId>
+	<artifactId>xxl-ai-sample-mcp</artifactId>
 	<packaging>jar</packaging>
 
 	<properties>
