@@ -46,19 +46,26 @@ public enum XxlRoleEnum {
     /** 管理员资源列表：首页 + AI业务（供应商/MCP/Skill/知识库/Agent）+ 系统管理（业务空间/用户/配置/日志）+ 帮助中心 */
     public static final List<Resource> ADMIN_RESOURCES = new ArrayList<>();
     static {
+        // 首页
         ADMIN_RESOURCES.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
 
-        // AI 业务一级菜单：插在 首页 与 系统管理 之间
-        ADMIN_RESOURCES.add(res(2, 0, "Agent管理", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        // Agent对话
+        ADMIN_RESOURCES.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        ADMIN_RESOURCES.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
+
+        // 知识库
         ADMIN_RESOURCES.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
-        // 知识文档（隐藏菜单，承载知识库文档管理页路由）
         ADMIN_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
-        ADMIN_RESOURCES.add(res(4, 0, "SKILL管理", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
-        // SKILL内容（隐藏菜单，承载 SKILL 内容管理页路由）
+
+        // SKILL
+        ADMIN_RESOURCES.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
         ADMIN_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
-        ADMIN_RESOURCES.add(res(5, 0, "MCP管理", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
-        ADMIN_RESOURCES.add(res(6, 0, "供应商管理", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
-        // 供应商模型（隐藏菜单，承载供应商模型管理页路由）
+
+        // MCP
+        ADMIN_RESOURCES.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
+
+        // 供应商
+        ADMIN_RESOURCES.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
         ADMIN_RESOURCES.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
 
         // 系统管理
@@ -75,19 +82,26 @@ public enum XxlRoleEnum {
     /** 普通用户资源列表：首页 + AI业务（供应商/MCP/Skill/知识库/Agent） + 帮助中心 */
     public static final List<Resource> USER_RESOURCES = new ArrayList<>();
     static {
+        // 首页
         USER_RESOURCES.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
 
-        // AI 业务一级菜单
-        USER_RESOURCES.add(res(2, 0, "Agent管理", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        // Agent对话：包括隐藏菜单
+        USER_RESOURCES.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        USER_RESOURCES.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
+
+        // 知识库
         USER_RESOURCES.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
-        // 知识文档（隐藏菜单）
         USER_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
-        USER_RESOURCES.add(res(4, 0, "SKILL管理", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
-        // SKILL内容（隐藏菜单，承载 SKILL 内容管理页路由）
+
+        // SKILL
+        USER_RESOURCES.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
         USER_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
-        USER_RESOURCES.add(res(5, 0, "MCP管理", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
-        USER_RESOURCES.add(res(6, 0, "供应商管理", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
-        // 供应商模型（隐藏菜单，承载供应商模型管理页路由）
+
+        // MCP
+        USER_RESOURCES.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
+
+        // 供应商
+        USER_RESOURCES.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
         USER_RESOURCES.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
 
         // 帮助中心

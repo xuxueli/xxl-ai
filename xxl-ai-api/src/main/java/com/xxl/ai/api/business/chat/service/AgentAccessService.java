@@ -203,6 +203,8 @@ public class AgentAccessService {
         userMsg.setRole("user");
         userMsg.setContent(content);
         agentMsgMapper.insert(userMsg);
+        // 刷新对话更新时间，列表展示最近活跃时间
+        agentConvMapper.touch(convId);
 
         // spring-ai 流式对话（统一装配 工具/RAG/Skill，SSE 下发 thinking/message）
         String sessionId = "xxl-ai-conv-" + convId;
@@ -216,6 +218,8 @@ public class AgentAccessService {
             assistantMsg.setReasoning(StringTool.isNotBlank(chatText.getThinking()) ? chatText.getThinking() : null);
             assistantMsg.setContent(chatText.getContent());
             agentMsgMapper.insert(assistantMsg);
+            // 刷新对话更新时间，列表展示最近活跃时间
+            agentConvMapper.touch(convId);
         }
     }
 

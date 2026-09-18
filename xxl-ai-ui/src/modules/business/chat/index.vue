@@ -45,6 +45,29 @@
         </div>
         <el-empty v-if="!convLoading && convList.length === 0" :description="t('business.agent.noConv')" :image-size="60" />
       </div>
+      <!-- 底部：访客信息 + 全屏切换 -->
+      <div class="conv-footer">
+        <el-dropdown trigger="click" @command="handleVisitorCommand">
+          <span class="visitor-trigger" :title="visitorId">
+            <el-icon class="visitor-icon"><User /></el-icon>
+            <span class="visitor-label">{{ t('business.agent.visitor') }}</span>
+            <el-icon class="visitor-arrow"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="'copyVisitor'" :disabled="!visitorId">
+                {{ t('business.agent.visitorInfo') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <SvgIcon
+          class="footer-fullscreen"
+          :icon-class="isFullscreen ? 'exit-fullscreen' : 'fullscreen'"
+          :title="isFullscreen ? t('business.agent.exitFullscreen') : t('business.agent.fullscreen')"
+          @click="toggleFullscreen"
+        />
+      </div>
     </aside>
 
     <!-- 右侧：对话正文 -->
@@ -59,20 +82,6 @@
           <Fold v-else />
         </el-icon>
         <span class="chat-intro">{{ agent?.intro || '' }}</span>
-        <el-dropdown trigger="click" @command="handleVisitorCommand">
-          <span class="visitor-trigger">
-            <el-icon class="visitor-icon"><User /></el-icon>
-            <span class="visitor-label">{{ t('business.agent.visitor') }}</span>
-            <el-icon class="visitor-arrow"><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item :command="'copyVisitor'" :disabled="!visitorId">
-                {{ t('business.agent.visitorInfo') }}
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
       </div>
       <div class="chat-main">
         <div class="chat-body" ref="chatBodyRef" @scroll="handleScroll">
@@ -88,13 +97,17 @@
                   <div v-if="msg.reasoning" class="msg-reasoning">
                     <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
                       <el-icon class="reasoning-icon"><MagicStick /></el-icon>
-                      <span class="reasoning-label">{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
+                      <span class="reasoning-label">{{
+                        msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking')
+                      }}</span>
                       <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
                     </div>
                     <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
                   </div>
                   <!-- 回复内容 -->
-                  <span v-if="!msg.content" class="msg-streaming">{{ t('business.agent.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span></span>
+                  <span v-if="!msg.content" class="msg-streaming"
+                    >{{ t('business.agent.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span
+                  ></span>
                   <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
                   <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
                   <span v-else class="msg-content">{{ msg.content }}</span>
@@ -129,12 +142,7 @@
           <el-empty v-else :description="t('business.agent.selectConv')" :image-size="80" />
         </div>
         <!-- 回到底部按钮：用户上翻阅读时显示，点击平滑吸底并恢复自动跟随 -->
-        <button
-          v-if="currentConvId && !nearBottom"
-          class="scroll-to-bottom"
-          :title="t('business.agent.scrollToBottom')"
-          @click="goBottom"
-        >
+        <button v-if="currentConvId && !nearBottom" class="scroll-to-bottom" :title="t('business.agent.scrollToBottom')" @click="goBottom">
           <el-icon><ArrowDown /></el-icon>
         </button>
       </div>
@@ -175,12 +183,17 @@ import {
 } from './api'
 import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
 import { parseTime } from '@/utils/common'
+import { SvgIcon } from '@/components'
+import { useFullscreen } from '@vueuse/core'
 import { Renderer, marked, type Tokens } from 'marked'
 import DOMPurify from 'dompurify'
 import { nextTick, onMounted, ref } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
+
+/** 浏览器全屏状态与切换（vueuse） */
+const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
 const uuid = ref<string>(String(route.params.uuid || ''))
 const visitorId = ref<string>('')
@@ -380,7 +393,14 @@ async function handleSend() {
   const now = new Date().toISOString()
   const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false, addTime: now }
   messages.value.push(userMsg)
-  const assistantMsg: ChatMsg = { convId: currentConvId.value, role: 'assistant', content: '', reasoning: '', showThinking: true, addTime: now }
+  const assistantMsg: ChatMsg = {
+    convId: currentConvId.value,
+    role: 'assistant',
+    content: '',
+    reasoning: '',
+    showThinking: true,
+    addTime: now
+  }
   const assistantIdx = messages.value.push(assistantMsg) - 1
   await scrollToBottom()
 
@@ -560,7 +580,7 @@ async function handleCopyCode(event: MouseEvent) {
 
 /** 消息发送时间（无值时返回空，悬浮时展示） */
 function timeText(msg: ChatMsg) {
-  return msg.addTime ? (parseTime(msg.addTime) || '') : ''
+  return msg.addTime ? parseTime(msg.addTime) || '' : ''
 }
 
 // --------------------------------- 滚动 ---------------------------------
@@ -650,7 +670,9 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.25s ease, border-right-color 0.25s ease;
+  transition:
+    width 0.25s ease,
+    border-right-color 0.25s ease;
 
   /* 折叠：面板收窄至 0，内容随之隐藏 */
   &.collapsed {
@@ -766,6 +788,29 @@ onMounted(() => {
 
 .conv-item:hover .conv-del {
   visibility: visible;
+}
+
+/* 左侧面板底部：访客信息 + 全屏切换 */
+.conv-footer {
+  flex-shrink: 0;
+  padding: 14px 16px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 全屏切换图标（与访客图标保持同尺寸） */
+.footer-fullscreen {
+  width: 14px;
+  height: 14px;
+  color: #606266;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--el-color-primary);
+  }
 }
 
 .chat-panel {

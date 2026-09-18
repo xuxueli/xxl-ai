@@ -40,6 +40,12 @@
 		WHERE id = #{id}
 	</update>
 
+	<update id="touch" parameterType="java.util.HashMap">
+		UPDATE xxl_ai_agent_conv
+		SET update_time = NOW()
+		WHERE id = #{id}
+	</update>
+
 	<delete id="deleteByAgentUuid" parameterType="java.util.HashMap">
 		DELETE FROM xxl_ai_agent_conv WHERE agent_uuid = #{agentUuid}
 	</delete>
@@ -55,6 +61,32 @@
 		FROM xxl_ai_agent_conv AS t
 		WHERE t.agent_uuid = #{agentUuid} AND t.visitor_id = #{visitorId}
 		ORDER BY t.id DESC
+	</select>
+
+	<select id="pageList" parameterType="java.util.HashMap" resultMap="AgentConv">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_agent_conv AS t
+		WHERE t.agent_uuid = #{agentUuid}
+		<if test="title != null and title != ''">
+			AND t.title like CONCAT(CONCAT('%', #{title}), '%')
+		</if>
+		<if test="visitorId != null and visitorId != ''">
+			AND t.visitor_id like CONCAT(CONCAT('%', #{visitorId}), '%')
+		</if>
+		ORDER BY t.id DESC
+		LIMIT #{offset}, #{pagesize}
+	</select>
+
+	<select id="pageListCount" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_agent_conv AS t
+		WHERE t.agent_uuid = #{agentUuid}
+		<if test="title != null and title != ''">
+			AND t.title like CONCAT(CONCAT('%', #{title}), '%')
+		</if>
+		<if test="visitorId != null and visitorId != ''">
+			AND t.visitor_id like CONCAT(CONCAT('%', #{visitorId}), '%')
+		</if>
 	</select>
 
 </mapper>

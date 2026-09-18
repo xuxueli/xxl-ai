@@ -504,6 +504,8 @@
       "enterTip": "Enter to send, Shift+Enter for a new line",
       "visitor": "Visitor",
       "visitorInfo": "Visitor Info",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit Fullscreen",
       "visitorIdTip": "Visitor ID: {0}",
       "send": "Send",
       "sendFail": "Send failed, please retry later",
@@ -516,7 +518,17 @@
       "scrollToBottom": "Back to bottom",
       "collapseMenu": "Collapse sidebar",
       "expandMenu": "Expand sidebar",
-      "copyCode": "Copy code"
+      "copyCode": "Copy code",
+      "conv": "Agent Chats",
+      "convListTitle": "Conversation List",
+      "convDetail": "Conversation Detail",
+      "viewDetail": "View Conversation Detail",
+      "backAgent": "Back to Agent",
+      "convTitle": "Title",
+      "visitorId": "Visitor ID",
+      "roleUser": "User",
+      "roleAssistant": "Assistant",
+      "convEmptyTip": "No visitor conversations for this Agent"
     }
   }
 }

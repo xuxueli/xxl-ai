@@ -75,8 +75,11 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="320" class-name="small-padding fixed-width">
           <template #default="scope">
+            <el-button link type="primary" icon="ChatDotRound" @click="goConv(scope.row)" v-hasPermi="['agent:conv']">{{
+              t('business.agent.conv')
+            }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['agent:default']">{{
               t('common.modify')
             }}</el-button>
@@ -167,6 +170,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'Agent' })
 import { t } from '@/i18n'
+import { useRouter } from 'vue-router'
 import { listAgent, addAgent, updateAgent, delAgent, publishAgent, unpublishAgent } from '../api'
 import { listSupplierBySpace } from '@/modules/business/supplier/api'
 import { listModelBySupplier } from '@/modules/business/supplier/api'
@@ -189,6 +193,7 @@ import type { FormInstance } from 'element-plus'
 import { ref } from 'vue'
 
 const resetForm = useFormReset()
+const router = useRouter()
 
 interface AgentForm extends Agent {}
 
@@ -374,6 +379,12 @@ function handlePublishChange(row: Agent) {
 /** 打开 Agent 发布页面（新窗口跳转） */
 function openAgentUrl(uuid: string) {
   window.open(agentUrl(uuid), '_blank')
+}
+
+// --------------------------------- Agent 对话 ---------------------------------
+/** 跳转 Agent 对话管理页（隐藏路由，按 loadView 映射 agent/pages/conv.vue） */
+function goConv(row: Agent) {
+  router.push({ path: '/agent/conv', query: { agentId: String(row.id), agentName: row.name ?? '' } })
 }
 
 // --------------------------------- page init ---------------------------------
