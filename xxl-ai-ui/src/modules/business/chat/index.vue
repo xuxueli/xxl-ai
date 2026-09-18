@@ -12,7 +12,9 @@
           <span class="agent-name">{{ agent?.name || 'Agent' }}</span>
         </div>
         <div class="conv-actions">
-          <el-button type="text" icon="Plus" @click="handleNewChat">{{ t('business.agent.newChat') }}</el-button>
+          <el-button class="new-chat-btn" type="primary" plain round icon="Plus" @click="handleNewChat">
+            {{ t('business.agent.newChat') }}
+          </el-button>
         </div>
       </div>
       <div class="conv-list" v-loading="convLoading">
@@ -662,6 +664,27 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 新建对话：按钮形式，水平居中于左侧面板 */
+.conv-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.conv-actions .new-chat-btn {
+  width: 100%;
+  font-weight: 500;
+  /* 淡色主题：常态/悬浮/按下均取浅色调，观感柔和 */
+  --el-button-bg-color: var(--el-color-primary-light-9);
+  --el-button-border-color: var(--el-color-primary-light-7);
+  --el-button-text-color: var(--el-color-primary-light-3);
+  --el-button-hover-bg-color: var(--el-color-primary-light-8);
+  --el-button-hover-border-color: var(--el-color-primary-light-5);
+  --el-button-hover-text-color: var(--el-color-primary-light-3);
+  --el-button-active-bg-color: var(--el-color-primary-light-8);
+  --el-button-active-border-color: var(--el-color-primary-light-7);
+  --el-button-active-text-color: var(--el-color-primary-light-3);
 }
 
 .conv-list {
