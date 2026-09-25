@@ -84,22 +84,22 @@ public enum XxlRoleEnum {
         resources.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
 
         // Agent对话
-        resources.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        resources.add(res(2, 0, "Agent管理", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
         resources.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
 
         // 知识库
-        resources.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
+        resources.add(res(3, 0, "知识库RAG", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
         resources.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
 
         // SKILL
-        resources.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
+        resources.add(res(4, 0, "SKILL技能", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
         resources.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
 
         // MCP
-        resources.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
+        resources.add(res(5, 0, "MCP工具", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
 
         // 供应商
-        resources.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
+        resources.add(res(6, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
         resources.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
 
         // 系统管理（仅管理员）

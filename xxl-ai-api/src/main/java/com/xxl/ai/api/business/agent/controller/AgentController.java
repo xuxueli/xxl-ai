@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Agent管理 Controller：Agent 在线配置 + 发布/取消发布
+ * Agent管理 Controller：Agent 在线配置（标准 CRUD）+ 发布/取消发布
  *
  * @author xxl-ai 2026-09-05
  */

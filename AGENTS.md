@@ -70,6 +70,8 @@ com/xxl/ai/api/framework
 - 后端 `com.xxl.ai.api.business.{module}`（controller/service/mapper/model/enums 子包），业务同名时直接一级目录（如 `business/skill`、接口 `/skill`），多业务模块按 `/{module}/{business}` 组织（如 `business/supplier` 聚合供应商+模型、`business/knowledge` 聚合知识库+文档）；`mapper/{module}/...` 遵循模块级约定。
 - 前端 `src/modules/business/{module}/`（pages/api/types 子目录聚合），与后端包名一致；接口路径 `/{module}`（同名）或 `/{module}/{business}`（多业务）。
 
+> ⚠️ **业务目录囊括全部操作入口**：`business/{module}` 是**功能完备**的业务模块——包含该模块**全部 CRUD 与其对外操作入口**（controller/service/mapper/model 齐全，非元数据操作也在本模块暴露 controller 入口）；`business/harness` 只是服务于各业务模块的**底层支撑**，**无自己的 controller**。细则见 **4.3 harness 支撑层**。
+
 Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/business/{module}/`（业务 Mapper XML 按模块平铺于该目录，文件名标识业务，前缀 `business/` 与后端 `business` 根包一致）。
 
 ### 4.2 前端（xxl-ai-ui）
@@ -91,7 +93,40 @@ src
 - 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/system/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
 - 业务新增示例：`src/modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}` 对齐；多业务模块在模块内聚合（如 `supplier` 下 pages 分 index.vue 与 model.vue）。
 
-### 4.3 菜单零路由改动约定
+### 4.3 harness 支撑层（模型与 Agent harness 统一归口）
+
+分层定位（**两条铁律**）：
+
+1. **`business/{module}` 是功能完备的业务模块**：包含全部 CRUD 与**全部对外操作入口**（controller/service/mapper/model 齐全），业务编排（校验、空间归属、状态回写、DTO 组装）一律留在这里。
+2. **`harness` 是运行时支撑层**：收敛模型构建/对话执行、对话生成 worker（任务队列 + 结果流 + SSE 转发）、MCP/向量库/技能沙箱等运行时能力；**不定义 Controller、不做空间归属校验**，业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatGenerator` 按 uuid 复校 Agent 并回填消息，是对话域运行时的既定例外）。
+
+```
+com/xxl/ai/api/business/harness          ← 运行时支撑层：无 controller（对外操作入口仍在 business）
+├── llm         LlmModelFactory（对话/嵌入模型构建）、LlmChatTool（单轮流式对话执行，内嵌 ChatText） */
+├── chat        ChatGenerator（对话生成 worker：任务队列 + 生成消费 + 结果流 + SSE 转发） */
+├── rag         RagTool（向量化/检索/清理/Advisor，内聚 Milvus + 分片） */
+├── mcp         McpClient（连接/传输 + 列举/调用/连通测试；内嵌 McpToolInfo/McpConnectResult/McpToolDetail）、McpToolFactory（MCP 工具回调） */
+├── skill       SkillToolFactory（技能物化+执行沙箱） */
+└── supplier    SupplierApiTool（供应商 HTTP 探测工具） */
+```
+
+**边界判定（一句话）**：这段逻辑是不是「业务编排」（校验归属、读写业务状态、组装返回）？是 → 留 `business/{module}` 的 Service；它调用的**底层调用/执行能力**（HTTP、SDK、模型、向量库、进程沙箱、对话流队列/SSE）→ 落 `harness`。
+
+- **操作入口全部在 business**：`business/{module}` 各模块自带完整 controller/service/mapper/model，所有对外接口入口（含非元数据操作）都在本模块的 Controller 暴露，路径不变。harness **不定义任何 `@RestController`**。
+- **business → harness 单向依赖**：业务 Service/Controller 需要底层能力时**直接注入 harness 的工具类**，例如：
+  - `AgentServiceImpl`（删 Agent 清理沙箱）→ `harness.skill.SkillToolFactory#evict`；
+  - `KnowledgeDocServiceImpl`（向量化/检索/清向量）→ `harness.rag.RagTool`；
+  - `KnowledgeBaseServiceImpl`（删库/换嵌入模型清向量与失效缓存）→ `harness.rag.RagTool`；
+  - `SupplierServiceImpl`（连通测试/拉远程模型）→ `harness.supplier.SupplierApiTool`；
+  - `McpServiceImpl`（连通测试/删释放连接）→ `harness.mcp.McpClient`；
+  - `ChatService`（business/chat/service，对话发送/续传入口）→ `harness.chat.ChatGenerator`（对话生成 worker：任务队列/结果流/SSE 转发 + 生成编排，内部经 `harness.llm.LlmChatTool`、`harness.mcp.McpToolFactory`、`harness.skill.SkillToolFactory`、`harness.rag.RagTool`）。
+- **harness 允许反向读取 business 元数据**：harness 运行时按 ID 经 business 的 Mapper/Service 读取配置（如 `AgentMapper`、`KnowledgeBaseMapper`、`SupplierService`），属预期依赖，不把 CRUD 挪进 harness。
+- **判归 harness 的典型工具**：模型构建与对话执行、对话生成 worker / 任务队列 / 结果流 / SSE 转发、MCP 连接与调用、向量库读写与检索、技能物化与终端/文件沙箱、供应商 HTTP 探测。
+- **反向约束**：`harness` **不得定义 Controller、不得新增元数据表**；空间归属校验与业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatGenerator` 属对话域运行时例外）；`business/{module}` 不得再新增 `client/rag/tool/stream` 等运行时子包，也不得直接依赖 spring-ai / Milvus / MCP SDK / Redis 等运行时组件（一律经 harness）。
+
+> 术语澄清：`harness` 承载运行时支撑（模型/对话执行/对话生成 worker/任务队列/结果流/SSE 转发/工具/RAG/MCP/技能沙箱）；对外操作入口仍在 `business/{module}`，harness 不定义任何 `@RestController`。harness 内新增能力优先命名 `XxxTool` / `XxxClient` / `XxxFactory`。
+
+### 4.4 菜单零路由改动约定
 
 平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表由 `buildRoleResources(role)` 统一构建，已下线 `xxl_ai_resource`/`xxl_ai_role_res` 表），**新增页面无需动路由代码**：
 
@@ -121,6 +156,7 @@ src
 ### 6.2 后端分层与接口规范
 
 - 分层职责清晰：Controller 参数接收与校验、Service 业务逻辑、Mapper 数据访问，不跨层越权。
+- `business/{module}` 为功能完备业务模块（全部 CRUD + 对外操作入口，controller/service/mapper/model 齐全）；`business/harness` 为底层支撑（无 controller，只被上层调用）。运行时实现落 harness，**操作入口仍由业务 Controller 暴露**，细则见 **4.3 harness 支撑层**。
 - 接口路径「模块前缀 + 动词式后缀」：`/system/log/pageList`、`/load`、`/insert`、`/delete`、`/update`。
 - 业务接口统一 `@RequestMapping("/{module}")`（同名业务）/ `@RequestMapping("/{module}/{business}")`（多业务） + `@XxlSso` 鉴权注解。
 - Java set/get 方法不折叠，使用正常方法体。
@@ -181,4 +217,4 @@ src
 ---
 
 - 基础规范条款源参考：xxl-ai 现有 `xxl-ai-api`、`xxl-ai-ui` 各模块既有实现。
-- 作业细则、落位清单、模板骨架与校验清单在 `.agents/skills/xxl-ai/SKILL.md`。
+- 作业细则、落位清单、模板骨架与校验清单在 `.agents/skills/xxl-ai/SKILL.md`；模型与 Agent harness 运行时统一归口 `business/harness`（见 4.3）。

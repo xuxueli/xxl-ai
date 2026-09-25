@@ -1,6 +1,5 @@
 package com.xxl.ai.api.business.mcp.controller;
 
-import com.xxl.ai.api.business.mcp.model.dto.McpConnectDTO;
 import com.xxl.ai.api.business.mcp.model.dto.McpDTO;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.ai.api.business.mcp.service.McpService;
@@ -19,7 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * MCP管理 Controller：MCP 在线配置管理 + 连通性测试
+ * MCP管理 Controller：MCP 在线配置管理（标准 CRUD）
+ *
+ * 连通性测试属 harness 运行时，见 McpRuntimeController。
  *
  * @author xxl-ai 2026-09-05
  */
@@ -94,21 +95,6 @@ public class McpController {
             return Response.ofFail(spaceResp.getMsg());
         }
         return mcpService.update(dto);
-    }
-
-    /**
-     * 连通性测试（initialize + tools/list）
-     */
-    @RequestMapping("/test")
-    @XxlSso(permission = "mcp:default")
-    public Response<McpConnectDTO> test(HttpServletRequest request,
-                                        @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                        @RequestParam("id") long id) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return mcpService.test(spaceResp.getData().getSpaceId(), id);
     }
 
     /**

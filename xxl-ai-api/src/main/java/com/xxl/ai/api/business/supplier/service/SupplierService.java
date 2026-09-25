@@ -13,6 +13,8 @@ import java.util.List;
 /**
  * 供应商 Service
  *
+ * 承载供应商元数据 CRUD，以及供应商连通测试、模型运行时解析；探测能力委托 harness（SupplierApiTool）。
+ *
  * @author xxl-ai 2026-09-05
  */
 public interface SupplierService {

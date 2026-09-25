@@ -2,6 +2,7 @@ package com.xxl.ai.api.business.supplier.controller;
 
 import com.xxl.ai.api.business.space.model.SpaceContext;
 import com.xxl.ai.api.business.space.service.SpaceService;
+import com.xxl.ai.api.business.supplier.model.dto.RemoteModelDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierConnectDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierDTO;
 import com.xxl.ai.api.business.supplier.model.entity.Supplier;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 供应商管理 Controller：供应商在线管理（模型对接配置）
+ * 供应商管理 Controller：供应商在线管理（模型对接配置），含连通测试入口
  *
  * @author xxl-ai 2026-09-05
  */
@@ -41,8 +42,8 @@ public class SupplierController {
                                                      @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
                                                      @RequestParam(required = false, defaultValue = "0") int offset,
                                                      @RequestParam(required = false, defaultValue = "10") int pagesize,
-String name,
-                                                      @RequestParam(required = false, defaultValue = "-1") int status) {
+                                                     String name,
+                                                     @RequestParam(required = false, defaultValue = "-1") int status) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -106,21 +107,6 @@ String name,
     }
 
     /**
-     * 连通测试（GET {baseUrl}/models 优先，失败回退 POST {baseUrl}/chat/completions）
-     */
-    @RequestMapping("/testConnect")
-    @XxlSso(permission = "supplier:default")
-    public Response<SupplierConnectDTO> testConnect(HttpServletRequest request,
-                                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                                    @RequestParam("id") long id) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return supplierService.testConnect(spaceResp.getData().getSpaceId(), id);
-    }
-
-    /**
      * 查询当前空间供应商列表（下拉选择：Agent模型 / 知识库向量化模型）
      */
     @RequestMapping("/listBySpace")
@@ -133,6 +119,23 @@ String name,
         }
         List<Supplier> list = supplierService.listBySpace(spaceResp.getData().getSpaceId());
         return Response.ofSuccess(list);
+    }
+
+    /**
+     * 连通测试（GET {baseUrl}/models 优先，失败回退 POST {baseUrl}/chat/completions）
+     *
+     * 探测实现经 SupplierService 委托 harness（SupplierApiTool）。
+     */
+    @RequestMapping("/testConnect")
+    @XxlSso(permission = "supplier:default")
+    public Response<SupplierConnectDTO> testConnect(HttpServletRequest request,
+                                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                                    @RequestParam("id") long id) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return supplierService.testConnect(spaceResp.getData().getSpaceId(), id);
     }
 
 }

@@ -3,7 +3,7 @@ package com.xxl.ai.api.business.mcp.service.impl;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xxl.ai.api.business.mcp.client.McpClient;
+import com.xxl.ai.api.business.harness.mcp.McpClient;
 import com.xxl.ai.api.business.mcp.enums.McpTypeEnum;
 import com.xxl.ai.api.business.mcp.mapper.McpMapper;
 import com.xxl.ai.api.business.mcp.model.adaptor.McpAdaptor;
@@ -19,10 +19,13 @@ import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * MCP 服务 Service 实现
+ *
+ * 元数据 CRUD 与连通测试在本模块编排；连接/调用底层能力委托 harness 的 {@link McpClient}。
  *
  * @author xxl-ai 2026-09-05
  */
@@ -111,7 +114,23 @@ public class McpServiceImpl implements McpService {
     }
 
     /**
-     * 连通性测试：initialize + tools/list
+     * 查询空间内 MCP 列表（Agent 绑定下拉）
+     */
+    @Override
+    public List<Mcp> listBySpace(long spaceId) {
+        return mcpMapper.listBySpace(spaceId);
+    }
+
+    /**
+     * 按ID集合查询 MCP 列表（Agent 配置回显）
+     */
+    @Override
+    public List<Mcp> listByIds(List<Long> ids) {
+        return mcpMapper.listByIds(ids);
+    }
+
+    /**
+     * 连通性测试：校验归属 → harness MCP 客户端探测 → 组装结果
      */
     @Override
     public Response<McpConnectDTO> test(long spaceId, long mcpId) {
@@ -128,7 +147,7 @@ public class McpServiceImpl implements McpService {
         dto.setToolCount(result.getToolCount());
         dto.setElapsedMs(result.getElapsedMs());
         dto.setMessage(result.getMessage());
-        List<McpToolDTO> tools = new java.util.ArrayList<>();
+        List<McpToolDTO> tools = new ArrayList<>();
         if (result.getTools() != null) {
             for (McpClient.McpToolDetail detail : result.getTools()) {
                 McpToolDTO tool = new McpToolDTO();
@@ -140,22 +159,6 @@ public class McpServiceImpl implements McpService {
         }
         dto.setTools(tools);
         return Response.ofSuccess(dto);
-    }
-
-    /**
-     * 查询空间内 MCP 列表（Agent 绑定下拉）
-     */
-    @Override
-    public List<Mcp> listBySpace(long spaceId) {
-        return mcpMapper.listBySpace(spaceId);
-    }
-
-    /**
-     * 按ID集合查询 MCP 列表（Agent 配置回显）
-     */
-    @Override
-    public List<Mcp> listByIds(List<Long> ids) {
-        return mcpMapper.listByIds(ids);
     }
 
     /**

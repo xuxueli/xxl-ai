@@ -1,7 +1,7 @@
 package com.xxl.ai.api.business.space.service.impl;
 
 import com.xxl.ai.api.business.agent.mapper.AgentMapper;
-import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
+import com.xxl.ai.api.business.knowledge.mapper.KnowledgeBaseMapper;
 import com.xxl.ai.api.business.mcp.mapper.McpMapper;
 import com.xxl.ai.api.business.skill.mapper.SkillMapper;
 import com.xxl.ai.api.business.space.mapper.SpaceMapper;

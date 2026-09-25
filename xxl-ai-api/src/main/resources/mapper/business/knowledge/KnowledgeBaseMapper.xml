@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper">
+<mapper namespace="com.xxl.ai.api.business.knowledge.mapper.KnowledgeBaseMapper">
 
-	<resultMap id="KnowledgeBase" type="com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase" >
+	<resultMap id="KnowledgeBase" type="com.xxl.ai.api.business.knowledge.model.entity.KnowledgeBase" >
 		<result column="id" property="id" />
 		<result column="space_id" property="spaceId" />
 		<result column="name" property="name" />
@@ -33,7 +33,7 @@
 		t.update_time
 	</sql>
 
-	<insert id="insert" parameterType="com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase" useGeneratedKeys="true" keyProperty="id" >
+	<insert id="insert" parameterType="com.xxl.ai.api.business.knowledge.model.entity.KnowledgeBase" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_knowledge_base (
 			space_id, name, description, embed_supplier_id, embed_model_id,
 			chunk_size, chunk_overlap, top_k, status, add_time, update_time
@@ -55,7 +55,7 @@
 		</foreach>
 	</delete>
 
-	<update id="update" parameterType="com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase" >
+	<update id="update" parameterType="com.xxl.ai.api.business.knowledge.model.entity.KnowledgeBase" >
 		UPDATE xxl_ai_knowledge_base
 		SET name = #{name},
 			description = #{description},

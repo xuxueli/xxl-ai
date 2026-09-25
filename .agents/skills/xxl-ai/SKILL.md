@@ -20,13 +20,16 @@ description: 在 XXL-AI 前后端分离模式（xxl-ai-api 端口 8090 + xxl-ai-
 ```
 xxl-ai-api/src/main
 ├── java/com/xxl/ai/api/framework/…        ← 平台内置（controller/service/mapper/model/constant/enums/web）
-├── java/com/xxl/ai/api/business/{module}    ← 新增业务落此（同名业务一级化 /business/{module}；多业务再按 /business/{module}/{business} 聚合，如 supplier 聚合 supplier+model）
+├── java/com/xxl/ai/api/business/{module}    ← 新增业务落此（功能完备：全部 CRUD + 对外操作入口，controller/service/mapper/model 齐全；同名业务一级化 /business/{module}；多业务再按 /business/{module}/{business} 聚合，如 supplier 聚合 supplier+model）
+├── java/com/xxl/ai/api/business/harness     ← 底层支撑（模型/LLM 对话/agent loop/RAG/Skill 工具/MCP 调用/连通探测等），无 controller，只被上层业务调用
 └── resources/mapper/business/{module}/    ← 业务 Mapper XML（按模块平铺，文件名标识业务）
 xxl-ai-ui/src
 ├── modules/framework/{domain}/{module}/     ← 平台内置模块（auth/system/dashboard/…，同目录聚合 pages+api+types）
 ├── modules/business/{module}/               ← 业务模块（pages/ + api/ + types/ 三子目录；同名业务直接一级，多业务在模块内聚合）
 └── types/index.ts                           ← 全局基础类型（Response/PageModel/PageQuery…）
 ```
+
+> 🔒 **business / harness 边界（强制）**：`business/{module}` 是**功能完备**的业务模块——包含该模块**全部 CRUD 与对外操作入口**（controller/service/mapper/model 齐全，非元数据操作也在本模块的 Controller 暴露）；`business/harness` 是**底层支撑层**，**无自己的 controller**，只为上层业务提供模型/LLM 对话/agent loop/RAG/Skill 工具/MCP 调用/连通探测等运行时实现。业务 Controller 暴露操作入口并委托 harness 的 Service 接口（business → harness 单向依赖）；harness 可反向经 business 的 Mapper 读取元数据。运行时接口 URL 保持不变，前端 `api/` 无需改动。细则见根 `AGENTS.md` 4.3）。
 
 通用规范（返回结构、注释、命名、DB）见仓库根 `AGENTS.md` 第六节。
 
@@ -241,6 +244,7 @@ if (role == ADMIN) {
 - [ ] 后端：Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
 - [ ] 前端：types 三件齐（实体/Query/ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
 - [ ] 权限：按钮 `v-hasPermi`，XxlRoleEnum 菜单+按钮已注册。注释符合 AGENTS.md 6.1。
+- [ ] 边界：业务模块功能完备，含全部 CRUD 与对外操作入口（controller 齐全）；运行时实现统一落 `business/harness`，harness 无 controller、只被上层调用；运行时接口 URL 不变。
 - [ ] i18n：页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`。语言配置 `default-settings.ts` 的 `language`。
 - [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`。
 - [ ] 联调：菜单可见、列表/新增/修改/删除/搜索可用、权限失效项按钮隐藏、空参数后端友好提示。

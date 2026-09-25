@@ -124,8 +124,7 @@
 defineOptions({ name: 'AgentConv' })
 import { t } from '@/i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { loadAgent } from '../api'
-import { listConvMsg, pageConv } from '@/modules/business/chat/api'
+import { loadAgent, listConvMsg, pageConv } from '../api'
 import MarkdownView from '@/modules/business/chat/components/MarkdownView.vue'
 import type { ChatConv, ChatConvQuery, ChatMsg } from '@/modules/business/chat/types'
 import { useFormReset } from '@/composables/useFormReset'

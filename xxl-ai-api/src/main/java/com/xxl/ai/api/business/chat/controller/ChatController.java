@@ -4,7 +4,6 @@ import com.xxl.ai.api.business.agent.model.entity.Agent;
 import com.xxl.ai.api.business.chat.model.entity.ChatConv;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.ai.api.business.chat.service.ChatService;
-import com.xxl.ai.api.business.chat.stream.ChatStreamService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
@@ -18,6 +17,9 @@ import java.util.List;
 /**
  * 对话公开访问 Controller：免管理端登录态，按访问 URL（UUID）直接访问
  *
+ * 承载 agent loop 的入口（SSE 流式对话 / 断线续传）；会话与流式入口收敛在 ChatService，
+ * 生成与下发（任务队列 / 结果流 / SSE 转发）由 ChatGenerator 一体承载。
+ *
  * @author xxl-ai 2026-09-05
  */
 @RestController
@@ -26,8 +28,6 @@ public class ChatController {
 
     @Resource
     private ChatService chatService;
-    @Resource
-    private ChatStreamService chatStreamService;
 
     /**
      * Load Agent 基础信息（公开）
@@ -96,7 +96,7 @@ public class ChatController {
                            @RequestParam("visitorId") String visitorId,
                            @RequestParam("convId") long convId,
                            @RequestParam("content") String content) {
-        return chatStreamService.send(uuid, visitorId, convId, content);
+        return chatService.send(uuid, visitorId, convId, content);
     }
 
     /**
@@ -108,7 +108,7 @@ public class ChatController {
     @XxlSso(login = false)
     public SseEmitter resume(@RequestParam("msgId") long msgId,
                              @RequestParam(value = "lastEventId", required = false) String lastEventId) {
-        return chatStreamService.resume(msgId, lastEventId);
+        return chatService.resume(msgId, lastEventId);
     }
 
 }

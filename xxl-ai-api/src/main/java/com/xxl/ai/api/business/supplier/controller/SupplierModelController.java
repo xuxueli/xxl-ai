@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 供应商模型 Controller：供应商下模型的内联维护
+ * 供应商模型 Controller：供应商下模型的内联维护，含拉取远程模型入口
  *
  * @author xxl-ai 2026-09-05
  */
@@ -117,21 +117,6 @@ public class SupplierModelController {
     }
 
     /**
-     * 拉取远程可用模型（自动导入选择列表）
-     */
-    @RequestMapping("/loadRemoteModels")
-    @XxlSso(permission = "supplier:default")
-    public Response<List<RemoteModelDTO>> loadRemoteModels(HttpServletRequest request,
-                                                           @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                                           @RequestParam("supplierId") long supplierId) {
-        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
-        if (!spaceResp.isSuccess()) {
-            return Response.ofFail(spaceResp.getMsg());
-        }
-        return supplierService.loadRemoteModels(spaceResp.getData().getSpaceId(), supplierId);
-    }
-
-    /**
      * 批量导入远程模型（自动导入保存）
      */
     @RequestMapping("/importRemote")
@@ -145,6 +130,21 @@ public class SupplierModelController {
             return Response.ofFail(spaceResp.getMsg());
         }
         return supplierModelService.importRemote(supplierId, models);
+    }
+
+    /**
+     * 拉取远程可用模型（自动导入选择列表）
+     */
+    @RequestMapping("/loadRemoteModels")
+    @XxlSso(permission = "supplier:default")
+    public Response<List<RemoteModelDTO>> loadRemoteModels(HttpServletRequest request,
+                                                           @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
+                                                           @RequestParam("supplierId") long supplierId) {
+        Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
+        if (!spaceResp.isSuccess()) {
+            return Response.ofFail(spaceResp.getMsg());
+        }
+        return supplierService.loadRemoteModels(spaceResp.getData().getSpaceId(), supplierId);
     }
 
 }

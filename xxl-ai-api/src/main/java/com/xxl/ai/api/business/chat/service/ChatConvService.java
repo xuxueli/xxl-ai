@@ -1,6 +1,6 @@
 package com.xxl.ai.api.business.chat.service;
 
-import com.xxl.ai.api.business.chat.model.entity.ChatConv;
+import com.xxl.ai.api.business.chat.model.dto.ChatConvDTO;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
@@ -25,7 +25,7 @@ public interface ChatConvService {
      * @param visitorId 访客标识（模糊）
      * @return 对话分页数据
      */
-    PageModel<ChatConv> pageList(long spaceId, long agentId, int offset, int pagesize, String title, String visitorId);
+    PageModel<ChatConvDTO> pageList(long spaceId, long agentId, int offset, int pagesize, String title, String visitorId);
 
     /**
      * 查询对话消息明细（校验对话归属当前 Agent）

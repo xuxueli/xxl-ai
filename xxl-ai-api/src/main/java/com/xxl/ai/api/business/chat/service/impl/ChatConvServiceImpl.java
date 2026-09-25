@@ -4,9 +4,12 @@ import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
 import com.xxl.ai.api.business.chat.mapper.ChatConvMapper;
 import com.xxl.ai.api.business.chat.mapper.ChatMsgMapper;
+import com.xxl.ai.api.business.chat.model.adaptor.ChatConvAdaptor;
+import com.xxl.ai.api.business.chat.model.dto.ChatConvDTO;
 import com.xxl.ai.api.business.chat.model.entity.ChatConv;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.ai.api.business.chat.service.ChatConvService;
+import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
@@ -37,8 +40,8 @@ public class ChatConvServiceImpl implements ChatConvService {
      * 分页查询指定 Agent 的对话列表
      */
     @Override
-    public PageModel<ChatConv> pageList(long spaceId, long agentId, int offset, int pagesize, String title, String visitorId) {
-        PageModel<ChatConv> pageModel = new PageModel<>();
+    public PageModel<ChatConvDTO> pageList(long spaceId, long agentId, int offset, int pagesize, String title, String visitorId) {
+        PageModel<ChatConvDTO> pageModel = new PageModel<>();
         Agent agent = agentMapper.load(agentId);
         // 校验 Agent 归属：不存在、跨空间或尚未发布（无访问 UUID）时返回空列表
         if (agent == null || agent.getSpaceId() != spaceId || StringTool.isBlank(agent.getUuid())) {
@@ -47,8 +50,14 @@ public class ChatConvServiceImpl implements ChatConvService {
             return pageModel;
         }
         List<ChatConv> pageList = chatConvMapper.pageList(agent.getUuid(), title, visitorId, offset, pagesize);
+        List<ChatConvDTO> pageListDto = new ArrayList<>();
+        if (CollectionTool.isNotEmpty(pageList)) {
+            for (ChatConv chatConv : pageList) {
+                pageListDto.add(ChatConvAdaptor.adapt2dto(chatConv));
+            }
+        }
         int totalCount = chatConvMapper.pageListCount(agent.getUuid(), title, visitorId);
-        pageModel.setData(pageList);
+        pageModel.setData(pageListDto);
         pageModel.setTotal(totalCount);
         return pageModel;
     }

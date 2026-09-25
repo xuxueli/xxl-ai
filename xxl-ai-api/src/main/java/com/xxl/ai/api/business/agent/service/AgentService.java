@@ -10,6 +10,8 @@ import java.util.List;
 /**
  * Agent Service
  *
+ * 承载 Agent 元数据 CRUD 与发布/取消发布；运行时沙箱清理等底层能力委托 harness。
+ *
  * @author xxl-ai 2026-09-05
  */
 public interface AgentService {
@@ -40,7 +42,7 @@ public interface AgentService {
     Response<String> update(AgentDTO dto);
 
     /**
-     * 发布：生成访问 UUID、置已发布
+     * 发布：生成访问 URL（UUID）、置已发布
      */
     Response<String> publish(long id);
 

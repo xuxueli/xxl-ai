@@ -4,8 +4,8 @@
  *      - 管理端：按 Agent 查看访客对话列表与消息明细。
  */
 import { request } from '@/utils/request'
-import type { Response, PageModel } from '@/types'
-import type { AgentChatInfo, ChatConv, ChatConvListQuery, ChatMsg } from '../types'
+import type { Response } from '@/types'
+import type { AgentChatInfo, ChatConv, ChatMsg } from '../types'
 
 const BASE = import.meta.env.VITE_APP_BASE_API || '/api'
 
@@ -74,16 +74,4 @@ export async function resumeStream(
     throw new Error(`请求失败，HTTP ${response.status}`)
   }
   return response.body.getReader()
-}
-
-// ==================== 管理端：对话管理 ====================
-
-/** 分页查询指定 Agent 的访客对话列表（支持标题、访客ID 模糊查询） */
-export function pageConv(agentId: number, query: ChatConvListQuery): Promise<Response<PageModel<ChatConv>>> {
-  return request({ url: '/chat/conv/pageList', method: 'get', params: { ...query, agentId } })
-}
-
-/** 查询对话消息明细 */
-export function listConvMsg(agentId: number, convId: number): Promise<Response<ChatMsg[]>> {
-  return request({ url: '/chat/conv/msgList', method: 'get', params: { agentId, convId } })
 }

@@ -11,6 +11,8 @@ import java.util.List;
 /**
  * MCP 服务 Service
  *
+ * 承载 MCP 元数据 CRUD 及连通性测试；探测能力委托 harness（McpClient）。
+ *
  * @author xxl-ai 2026-09-05
  */
 public interface McpService {

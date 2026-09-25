@@ -404,112 +404,89 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 
 ### 5.5、流式对话（SSE）技术方案
 
-Agent 公开对话（`/chat/**`）采用 SSE 流式交互。为支持多节点集群部署与断线续传，生成与下发完全解耦：**web 节点只负责“接收请求 + 转发结果”，LLM 生成由 worker 消费 Redis Stream 任务异步完成**，任一节点均可服务任一连接，无需粘性会话。
+`/chat/**` 公开对话用 SSE 流式交互。为支持多节点集群与断线续传，生成与下发解耦：**请求节点只做「校验落库 + 转发」，LLM 生成由 worker 消费 Redis Stream 异步执行**，任一节点可服务任一连接，无需粘性会话。
+
+关键约定：**助手占位主键 `msgId` 同时作为结果流标识**（结果流 key `xxl:ai:chat:result:{msgId}`），一轮对话 = 一条助手消息 = 一条结果流。
 
 整体链路：
 
 ```
 POST /chat/send
   └─ 请求节点：校验会话 → 落库用户消息 + 助手占位 → XADD 任务 → XREAD 结果流转发 SSE
-                                   │
-                        Redis Stream 任务队列（消费组）
-                                   ▼
-                 worker（任意节点，可独立扩容）：执行 LLM → XADD 结果流
-                                   │
-                                   ▼
-           SSE 转发（任意节点）XREAD → 事件带 id → 客户端；断线走 /chat/resume 续传
+                                    │
+                     Redis Stream 任务队列（消费组）
+                                    ▼
+                worker（任意节点，可独立扩容）：执行 LLM → 增量 XADD 结果流
+                                    │
+       任意节点 XREAD 结果流 → SSE（事件带 id）→ 客户端；断线走 /chat/resume 从 lastEventId 续传
 ```
 
-组件划分（按层）：
+组件划分：
 
-| 层 | 组件 | 职责 |
+| 层 | 组件（目录） | 职责 |
 |---|---|---|
-| 接入 | `ChatController` | 仅路由透传：元数据接口走 `ChatService`，`/chat/send`、`/chat/resume` 走 `ChatStreamService` |
-| 应用 | `ChatService` | 会话元数据 CRUD + 会话校验（Agent 就绪/对话归属，单一校验源） |
-| 编排 | `ChatStreamService` | 发送/续传编排：校验会话 → 落库用户消息+助手占位 → 投递任务 → 委托转发 |
-| 存储 | `ChatStreamStore` | Redis Stream 纯存储层：任务队列（消费组/超时认领）+ 结果流（追加/读取/TTL） |
-| 生成 | `ChatGenerator` | 生成 worker（`SmartLifecycle` 托管线程）：消费任务 → LLM → 结果流 → 回填消息（status=1/2） |
-| 转发 | `ChatSseForwarder` | 有界转发线程池 + 结果流 XREAD → SSE（心跳/容错，任意节点可转发） |
-| 生成引擎 | `LlmAgentChatService` | 模型编排：装配上下文/工具/RAG，流式增量经回调输出（与传输层解耦） |
-| 存储 | Redis Stream + MySQL | 任务队列 `xxl:ai:chat:tasks`、结果流 `xxl:ai:chat:result:{msgId}`、消息表 `xxl_ai_chat_msg` |
+| 接入 | `ChatController`（business/chat/controller） | `/chat/**` 路由：元数据与 `send`/`resume` 均走 `ChatService` |
+| 应用 | `ChatService`（business/chat/service） | 会话元数据 CRUD + 会话校验（单一校验源）+ 流式发送/续传编排（落库一轮 → 投递任务 → 打开 SSE 连接） |
+| 生成器 | `ChatGenerator`（harness/chat） | 对话生成 worker（`SmartLifecycle`）：任务队列 + 生成消费 + 结果流 + SSE 转发 + 生成编排（装配上下文/工具/RAG → `LlmChatTool` → 回填消息 status=1/2） |
+| 生成引擎 | `LlmChatTool`（harness/llm） | 按已装配的上下文/工具/RAG 执行一次流式对话，增量经回调输出（与传输层解耦） |
 
-组件流转关系（正向发送）：
+发送流转：
 
 ```
-前端 handleSend
-  └─ agentSendStream → ChatController.send → ChatStreamService.send
-       ├─ submit：校验 + 落用户消息(status=1) + 助手占位(status=0) → XADD 任务
-       └─ forward(emitter, msgId) → XREAD 结果流 → SSE(stream/thinking/message/ping/[DONE])
-
-内置 worker 线程（消费组）
-  └─ XREADGROUP 任务 → generate → LlmAgentChatService.chat(agent, runtime, history, content, onThinking, onContent)
-       └─ 增量回调 → appendResult(msgId, ...)（并本地累积，供失败回填）
-       └─ finally：updateAssistant(msgId, 内容, status=1) + appendResult([DONE]) + ack
+前端 sendStream → ChatController.send → ChatService.send
+  ├─ 校验 + 落用户消息(status=1) + 助手占位(status=0) → generator.submit(任务)
+  └─ generator.open(msgId)：XREAD 结果流 → SSE
+worker（消费组）：XREADGROUP 任务 → ChatGenerator.handleTask（校验 / 装配历史与工具 / 调 LlmChatTool）
+  ├─ 增量经回调 → appendResult(msgId, thinking/message)（本地累积，供失败回填）
+  └─ 回填 updateAssistant(内容, status)；写终态 done/error + ack
 ```
 
-组件流转关系（断线 / 刷新续传）：
+续传流转：
 
 ```
-前端 selectConv → 发现 assistant.status=0
-  └─ resumeGenerating(msg.id)
-       └─ ChatController.resume → ChatStreamService.resume(msgId, lastEventId)
-            └─ forward → 从断点 XREAD 结果流继续 → SSE
+前端发现助手消息 status=0（刷新/断线）→ resumeStream(msgId, lastEventId)
+  └─ ChatService.resume → generator.open → 从 lastEventId 之后 XREAD 重放，不重新生成
 ```
 
-组件依赖关系：
-
-```
-Controller ──> ChatService（元数据 / 校验）
-           └─> ChatStreamService（发送 / 续传编排）
-ChatStreamService ──> ChatService（Agent/对话校验）+ ChatMsg/ChatConvMapper + ChatStreamStore + ChatSseForwarder
-ChatStreamStore   ──> Redis Stream（任务队列 / 结果流）
-ChatGenerator     ──> ChatStreamStore + ChatService + LlmAgentChatService（增量写结果流）
-ChatSseForwarder  ──> ChatStreamStore（XREAD 转发）
-```
-
-> 一句话：**对话域收敛在 `business/chat`**——`ChatStreamService` 只做发送/续传编排，Redis 存取在 `ChatStreamStore`、生成在 `ChatGenerator`、转发在 `ChatSseForwarder`；`ChatService` 管会话元数据与校验，`LlmAgentChatService` 经回调输出增量、与传输层解耦，`msgId`（助手占位主键）同时标识消息与结果流。
-
-SSE 事件协议：
+SSE 事件协议（`ChatConstant`）：
 
 | 事件 | 数据 | 说明 |
 |---|---|---|
-| `stream` | `msgId` | 连接建立即下发（助手消息ID，即结果流标识），客户端据此断线续传 |
-| `thinking` | 思考过程增量 | 推理模型 `reasoning_content`，多行内容由前端按 SSE 规范还原 |
+| `stream` | `msgId` | 连接建立即下发，客户端据此断线续传 |
+| `thinking` | 思考过程增量 | 推理模型 `reasoning_content` |
 | `message` | 回复内容增量 | Markdown 文本增量 |
-| `ping` | `ping` | 空闲心跳，防止网关/浏览器空闲断开 |
-| `message` | `[DONE]` | 结束标志 |
-| `message` | `__ERROR__xxx` | 错误提示，随后结束 |
+| `ping` | `ping` | 空闲心跳保活 |
+| `done` | 空 | 生成结束（终态） |
+| `error` | 错误提示 | 生成失败（终态） |
+
+除 `stream` / `ping` 外的事件均带结果流条目 id（SSE `id:`），客户端以最后一个 id 作为 `lastEventId`。
 
 接口与续传：
 
 - `POST /chat/send?uuid&visitorId&convId&content`：落库用户消息 + 助手占位后投递任务并转发；
 - `POST /chat/resume?msgId&lastEventId`：从结果流 `lastEventId` 之后继续转发，不重新生成；
-- `xxl_ai_chat_msg` 增加 `status`（0-生成中、1-完成、2-失败）：发送即落助手占位，**其主键 `id` 复用为结果流标识**（1:1，无需额外 stream 字段），worker 结束时回填内容与状态。刷新页面后，前端发现 `status=0` 的助手消息即据消息ID自动续传并展开思考区，生成结果不丢失。
+- `xxl_ai_chat_msg.status`（0-生成中、1-完成、2-失败）：发送即落助手占位；刷新后前端发现 `status=0` 即按 msgId 自动续传，生成结果不丢失。
 
-集群与可靠性要点：
+集群与可靠性：
 
 - **无状态转发**：结果流存于 Redis，任意节点可转发，节点重启/扩缩容不影响在途生成；
-- **至少一次消费**：消费组保证任务不重复消费；worker 宕机后，超时未确认任务由其他节点在启动时认领（认领空闲阈值须大于单次生成最长耗时，避免误抢在途任务）；
-- **连接容错**：转发线程池满时回退“服务繁忙”；单个 Redis 读取抖动退避重试，连续失败才中断，客户端可再续传；
-- **保留窗口**：结果流按 TTL（默认 600s，每追加片段续期）保留，供断线/刷新续传；
-- **生成不受连接影响**：客户端断开后 worker 仍会完成生成并落库，重新进入对话可直接读取。
+- **至少一次消费**：消费组竞争消费；worker 宕机后超时未确认任务由其他节点认领（认领阈值 > 单次生成最长耗时，避免误抢在途任务）；
+- **连接容错**：转发线程池满时回退「服务繁忙」；Redis 读取连续失败达阈值才中断，客户端可再续传；
+- **保留窗口**：结果流按 TTL（默认 600s，追加时续期）保留，即断线/刷新的续传时间窗；
+- **生成不受连接影响**：客户端断开后 worker 仍完成生成并落库。
 
 相关配置（`application.properties`）：
 
 ```
-xxl-ai.agent.stream.timeout=180000   # 单连接/单次生成最长时长(ms)
-xxl-ai.chat.stream.ttl=600           # 结果流保留时长(s)，即断线/刷新可续传的时间窗
-xxl-ai.chat.worker.count=2           # 单节点生成并发数
-xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
+xxl-ai.chat.stream.timeout=180000   # 单连接/单次生成最长时长(ms)
+xxl-ai.chat.stream.ttl=600          # 结果流保留时长(s)
+xxl-ai.chat.worker.count=2          # 单节点生成并发数
+xxl-ai.chat.sse.max=64              # 单节点 SSE 转发最大并发连接数
 ```
 
-其余为内部实现细节，已写死/派生、不再暴露配置，避免误配：
+内部实现（写死/派生，不暴露配置）：XREAD 阻塞窗口 `5000ms`、单次批量 `50` 条；SSE 线程池核心数 `sse.max / 8`、队列容量 `0`（`SynchronousQueue`，确保并发扩到 `max` 且不排队长连接）；宕机认领阈值 = `chat.stream.timeout + 60s`。
 
-- XREAD 阻塞窗口固定 `5000ms`、单次批量 `50` 条；
-- SSE 线程池核心数 = `sse.max / 8`、队列容量 = `sse.max * 4`；
-- 宕机任务认领阈值 = `agent.stream.timeout + 60s`（确保大于单次生成最长耗时，不误抢在途任务）。
-
-> 注意：阻塞窗口固定 5s，`spring.data.redis.timeout`（默认 10s）须大于它，否则阻塞读会抛 `RedisCommandTimeoutException`。
+> 阻塞窗口固定 5s，须小于 `spring.data.redis.timeout`（默认 10s），否则阻塞读会抛 `RedisCommandTimeoutException`。
 
 ### 5.6、业务数据模型与空间隔离
 
@@ -534,8 +511,8 @@ xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
 ### 5.7、AI 运行时与工具装配
 
 - **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型 + 会话」LRU 缓存，Header value 支持 `{session}` 占位；
-- **对话编排 `LlmAgentChatService`**：装配「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
-- **RAG `RagService` / `VectorStoreFactory`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入，检索经 `QuestionAnswerAdvisor` 自动注入上下文；
+- **对话编排 `LlmChatTool`**：按已装配的「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
+- **RAG `RagTool`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入、检索经 `QuestionAnswerAdvisor` 自动注入上下文；内聚嵌入模型解析、向量存储缓存与文本分片；
 - **MCP `McpToolFactory`**：`McpClient` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；
 - **SKILL `SkillToolFactory`**：将 DB 技能文件树物化为 `{skill.root}/agent_{agentId}/{skillName}/`，构建 `SkillsTool` 及配套 shell / 文件执行工具（bash、Read/Write/Edit、Glob、Grep、List），技能内容变更按更新时间指纹自动重建；
 - **工具装配顺序**：`buildTools` 依次装配 MCP 工具 + Skill 工具 + 执行工具，统一以 `Object` 列表随请求传入，spring-ai 自动解析注册。
