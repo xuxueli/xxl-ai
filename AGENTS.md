@@ -10,10 +10,11 @@ XXL-AI 是AI应用开发平台，采用 Monorepo 统一托管「后端服务」�
 |---|---|
 | `xxl-ai-api` | 后端 API（Spring Boot 纯 API），端口 8090，SSO 登录态存 Redis |
 | `xxl-ai-ui` | Vue3 前端（Element Plus + TypeScript + Vite），端口 3000 |
+| `xxl-ai-sample-mcp` | 示例 MCP 服务（spring-ai MCP Server 注解式 `@McpTool`，Streamable HTTP），端口 8091 |
 | `doc/db` | 数据库初始化脚本（`xxl_ai`：用户/配置/审计日志等框架表与种子数据） |
-| `docker` | 一键部署栈（mysql + redis + api + ui） |
+| `docker` | 一键部署栈（mysql + redis + milvus(etcd/minio/attu) + api + sample-mcp + ui） |
 
-通用依赖：`xxl-tool`（工具与统一响应）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis。
+通用依赖：`xxl-tool`（工具与统一响应，经 `xxl-sso-core` 传递）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis、spring-ai（OpenAI 兼容模型 / Milvus 向量库 / MCP SDK）。
 
 ## 二、 Skill 速查
 
@@ -21,7 +22,7 @@ Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个�
 
 ## 三、快速开始
 
-前置环境：JDK 17+、Maven 3.6+、Node 18+、MySQL 8、Redis。
+前置环境：JDK 17+、Maven 3.6+、Node 18+、MySQL 8、Redis（RAG 向量化另需 Milvus）。
 
 ### 3.1 初始化数据库
 
@@ -35,14 +36,17 @@ source doc/db/tables_xxl_ai.sql;
 ### 3.2 本地启动
 
 ```bash
-# 后端 API（Redis 需先启动）
+# 后端 API（Redis 需先启动；RAG 向量化另需 Milvus）
 cd xxl-ai-api && mvn spring-boot:run     # 8090
 
 # 前端（本地代理 /api → 8090）
 cd xxl-ai-ui && npm i && npm run dev     # 3000
+
+# 示例 MCP 服务（可选，供「MCP管理」连通测试联调）
+cd xxl-ai-sample-mcp && mvn spring-boot:run   # 8091
 ```
 
-或一键 docker 部署栈：
+或一键 docker 部署栈（含 mysql + redis + milvus + api + sample-mcp + ui）：
 
 ```bash
 cd docker && docker compose up -d --build
@@ -58,7 +62,7 @@ cd docker && docker compose up -d --build
 com/xxl/ai/api/framework
 ├── controller/{system,base}                 /* 接口入口，只做参数接收与校验 */
 ├── service/  +  service/impl/               /* 业务逻辑：接口 + 实现 */
-├── mapper/system                            /* 数据访问接口 */
+├── mapper                                   /* 数据访问接口 */
 ├── model/{entity,dto,adaptor}               /* 实体 / 展示DTO / 实体转DTO */
 ├── constant/{enums,consts}                  /* 枚举与常量 */
 ├── web/{xxlsso,xxllog,error}                /* 登录态、审计日志、错误页 */
@@ -76,14 +80,16 @@ Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resou
 
 ### 4.2 前端（xxl-ai-ui）
 
-模块化统一管理：全部模块按「模块自包含」落位 `src/modules`，顶级用 `framework/`（平台内置：auth/system/dashboard/help/…）与 `business/`（项目业务）隔离；同一模块的页面、接口、类型按 `pages/`、`api/`、`types/` 三个子目录聚合维护。
+模块化统一管理：全部模块按「模块自包含」落位 `src/modules`，顶级用 `framework/`（平台内置：auth/system/dashboard/help/…）与 `business/`（项目业务）隔离；同一模块的页面、接口、类型以 `pages/`、`api/`、`types/` 三个子目录聚合维护，模块内共享的组件/组合式函数可另置 `components/`、`composables/`。
 
 ```
 src
 ├── modules/{framework|business}/{domain}/{module}/   /* 模块自包含目录 */
-│   ├── pages/                    /* 页面 + 页内组件（index.vue、data.vue、XxxFormModal.vue…） */
+│   ├── pages/                    /* 页面 + 页内组件（index.vue、model.vue、doc.vue…，弹窗内联于页面） */
 │   ├── api/                      /* 接口封装（index.ts，同目录聚合） */
-│   └── types/                    /* 类型定义（index.ts，同目录聚合） */
+│   ├── types/                    /* 类型定义（index.ts，同目录聚合） */
+│   ├── components/               /* 可选：模块内共享组件（如 chat/MarkdownView.vue） */
+│   └── composables/              /* 可选：模块内组合式函数（如 chat/useChatStream.ts） */
 ├── composables                   /* usePageParams / useEnumOption / useFormReset */
 ├── i18n                          /* 文案中心：locales/{zh,en}.json（JSON 数据纯存储，t() 引用） */
 ├── components / directive / utils / store   /* 平台公共层（框架与业务共用） */
@@ -91,7 +97,7 @@ src
 ```
 
 - 平台内置示例：`src/modules/framework/auth/`（登录：pages/login.vue + api/）、`src/modules/framework/system/user/`、`src/modules/framework/system/log/`（pages/index.vue + api/ + types/）、`src/modules/framework/dashboard/`（pages/index.vue + api/）等。
-- 业务新增示例：`src/modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts + FormModal.vue），与后端 `com.xxl.ai.api.business.{module}` 对齐；多业务模块在模块内聚合（如 `supplier` 下 pages 分 index.vue 与 model.vue）。
+- 业务新增示例：`src/modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts，弹窗内联于列表页），与后端 `com.xxl.ai.api.business.{module}` 对齐；多业务模块在模块内聚合（如 `supplier` 下 pages 分 index.vue 与 model.vue、`knowledge` 下分 base/ 与 doc/）。
 
 ### 4.3 harness 支撑层（模型与 Agent harness 统一归口）
 
@@ -141,7 +147,7 @@ com/xxl/ai/api/business/harness          ← 运行时支撑层：无 controller
 4. **联调验证**：起后端 + 前端，验证菜单可见、CRUD 可用、权限生效。
 5. **规范复核**：对照第六节规范与 Skill 内「校验清单」过一遍再提交。
 
-> 标准动作在开发前加载对应模式 Skill：`xxl-ai-vue`。
+> 标准动作在开发前加载对应模式 Skill：`xxl-ai`。
 
 ## 六、代码规范
 

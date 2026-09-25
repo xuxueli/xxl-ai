@@ -13,15 +13,13 @@ description: 在 XXL-AI 前后端分离模式（xxl-ai-api 端口 8090 + xxl-ai-
 - 需要新增一个带列表页的业务模块（标准 CRUD）。
 - 只需要动后端接口而不动前端时，同样适用（取「后端落位」一节）。
 
-如运行对象是 `xxl-ai-admin` 单人渲染，用 `xxl-ai-monolith`；如前端是 React，用 `xxl-ai-react`。
-
 ## 前置：工程结构速览
 
 ```
 xxl-ai-api/src/main
 ├── java/com/xxl/ai/api/framework/…        ← 平台内置（controller/service/mapper/model/constant/enums/web）
 ├── java/com/xxl/ai/api/business/{module}    ← 新增业务落此（功能完备：全部 CRUD + 对外操作入口，controller/service/mapper/model 齐全；同名业务一级化 /business/{module}；多业务再按 /business/{module}/{business} 聚合，如 supplier 聚合 supplier+model）
-├── java/com/xxl/ai/api/business/harness     ← 底层支撑（模型/LLM 对话/agent loop/RAG/Skill 工具/MCP 调用/连通探测等），无 controller，只被上层业务调用
+├── java/com/xxl/ai/api/business/harness     ← 底层支撑（模型构建/对话执行/对话生成 worker/RAG/Skill 工具/MCP 调用/连通探测等），无 controller，只被上层业务调用
 └── resources/mapper/business/{module}/    ← 业务 Mapper XML（按模块平铺，文件名标识业务）
 xxl-ai-ui/src
 ├── modules/framework/{domain}/{module}/     ← 平台内置模块（auth/system/dashboard/…，同目录聚合 pages+api+types）
@@ -29,7 +27,7 @@ xxl-ai-ui/src
 └── types/index.ts                           ← 全局基础类型（Response/PageModel/PageQuery…）
 ```
 
-> 🔒 **business / harness 边界（强制）**：`business/{module}` 是**功能完备**的业务模块——包含该模块**全部 CRUD 与对外操作入口**（controller/service/mapper/model 齐全，非元数据操作也在本模块的 Controller 暴露）；`business/harness` 是**底层支撑层**，**无自己的 controller**，只为上层业务提供模型/LLM 对话/agent loop/RAG/Skill 工具/MCP 调用/连通探测等运行时实现。业务 Controller 暴露操作入口并委托 harness 的 Service 接口（business → harness 单向依赖）；harness 可反向经 business 的 Mapper 读取元数据。运行时接口 URL 保持不变，前端 `api/` 无需改动。细则见根 `AGENTS.md` 4.3）。
+> 🔒 **business / harness 边界（强制）**：`business/{module}` 是**功能完备**的业务模块——包含该模块**全部 CRUD 与对外操作入口**（controller/service/mapper/model 齐全，非元数据操作也在本模块的 Controller 暴露）；`business/harness` 是**底层支撑层**，**无自己的 controller**，只为上层业务提供模型构建/对话执行/对话生成 worker/RAG/Skill 工具/MCP 调用/连通探测等运行时实现。业务 Controller 暴露操作入口并委托 harness 的 Service 接口（business → harness 单向依赖）；harness 可反向经 business 的 Mapper 读取元数据。运行时接口 URL 保持不变，前端 `api/` 无需改动。细则见根 `AGENTS.md` 4.3）。
 
 通用规范（返回结构、注释、命名、DB）见仓库根 `AGENTS.md` 第六节。
 
@@ -40,10 +38,18 @@ xxl-ai-ui/src
 2. **建表**：`xxl_ai_*` SQL，公共字段 `id/add_time/update_time`，TINYINT 状态，`COMMENT` 注释；SQL 脚本写入该需求子目录（如 `{business}-table.sql`、`{business}-init.sql`）。
 3. **生成或手写代码**：本 Skill 缺省策略为 AI 按模板直生等价代码落位（后端 6 件套 + 前端 vue3 文件），落位细则见下方「后端落位清单 / 前端落位清单」。
 4. **落位**：业务一级化——后端 Java 落 `business/{module}`（同名业务；多业务模块在模块下再分 `{business}`），Mapper XML 落 `resources/mapper/business/{module}/`；前端业务模块聚合落 `modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts）。
-5. **菜单/权限**：在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
+5. **菜单/权限**：在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加菜单(type=1)；页面按钮 `v-hasPermi` 复用菜单权限标识（需按钮级细粒度时再追加 type=2 按钮资源）。
 6. **验证**：起 `xxl-ai-api`(8090) + `xxl-ai-ui`(3000，代理 /api→8090)，菜单可见、CRUD 可用、权限生效；验证结果回填 `plan.md`。
 
-> ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `xxl-ai-mysql`，docker-compose 定义），服务端已配置 utf8mb4，但 CLIENT 侧 CLI 默认连接字符集是 **latin1**，必须按下列姿势执行：
+> ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `xxl-ai-mysql`，docker-compose 定义），服务端已配置 utf8mb4，但 CLIENT 侧 CLI 默认连接字符集是 **latin1**，必须显式指定 utf8mb4，例如：
+
+```bash
+# docker 容器内执行（容器名 xxl-ai-mysql，密码见 docker/.env 的 MYSQL_ROOT_PASSWORD）
+docker exec -i xxl-ai-mysql mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" xxl_ai < xxx.sql
+
+# 宿主机 mysql 客户端执行
+mysql --default-character-set=utf8mb4 -h127.0.0.1 -P3306 -uroot -p xxl_ai < xxx.sql
+```
 
 ## 需求落盘（xxl-ai-spec）
 
@@ -89,7 +95,7 @@ SQL 脚本：`{business}-table.sql`
 
 ## 三、菜单 / 授权
 - 菜单（type=1）：`{名称}` permission=`{module}:default`（同名业务）或 `{module}:{business}`（多业务） url=`/{module}` 或 `/{module}/{business}`，在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加
-- 按钮（type=2）：新增 `:add` / 修改 `:edit` / 删除 `:remove`，parentId 指向所属菜单
+- 按钮：默认复用所属菜单权限标识（`{module}:default` / `{module}:{business}`），前端 `v-hasPermi` 直接引用，无需单独注册；仅当需要按钮级细粒度管控时再追加 type=2 资源
 - 授权：在 `buildRoleResources` 对应角色分支（如 `if (role == XxlRoleEnum.ADMIN)`）追加即对该角色可见，无需数据库授权
 - 落盘：`{business}-init.sql`（仅建表/种子数据；菜单走枚举注册）
 
@@ -151,7 +157,7 @@ SQL 脚本：`{business}-table.sql`
 | api | `src/modules/business/{module}/api/index.ts` | `request({url:'/{module}/pageList',params:...})` |
 | view | `src/modules/business/{module}/pages/index.vue` | 三段式列表页 |
 
-页面（含弹窗 XxxFormModal.vue）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/ListQuery…）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
+页面（列表页及其内联弹窗，拆分子页如 `model.vue`、`doc.vue`、`conv.vue` 也放 `pages/`）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/ListQuery…）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
 
 **i18n 落位**：用户可见文案一律 `import { t } from '@/i18n'` 引用，**禁止硬编码中文**（注释除外）；文案 key 统一维护在 `src/i18n/locales/{zh,en}.json` **单一文件**内（按域名节点分区，如 `business.*`；`app` 前置 → 公共组 `common`/`modal`/`request`/`layout`/`components` → 平台业务组 `auth`/`system`/`dashboard`/`help`/`error` → 常规业务模块），zh/en 成对补。通用词（新增/修改/删除/搜索/操作/状态/正常/停用/保存成功…）复用 `common.*`，插值用 `t('key',[v])`（`{0}`）。
 
@@ -210,7 +216,7 @@ getList()
 </script>
 ```
 
-- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:demo:add|edit|remove']"`、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible">` + `@/components` 的 Editor/ImageUpload 等按需引入。**列表页完整样例看 `src/modules/framework/system/config/pages/index.vue`、`src/modules/framework/system/user/pages/index.vue`。**
+- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:default']"`（多业务为 `['demo:demo']`）、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible">` + `@/components` 的 Editor/ImageUpload 等按需引入。**列表页完整样例看 `src/modules/framework/system/config/pages/index.vue`、`src/modules/framework/system/user/pages/index.vue`。**
 - `getList()` 一律经 `usePageParams(queryParams)()` 转 `offset/pagesize`；从 `response.data.data / response.data.total` 取值。
 
 ## 菜单 / 权限注册（枚举资源，替代原资源表）
@@ -218,10 +224,8 @@ getList()
 平台菜单/按钮已下线 `xxl_ai_resource`/`xxl_ai_role_res`，改为在 `framework/constant/enums/XxlRoleEnum.java#buildRoleResources(role)` 中按角色装配 `Resource` 项注册（公共区段各角色共享，角色专属项放入对应 `if (role == ...)` 分支）：
 
 ```java
-// 菜单（type=1：url 同时充当路由 path 与 modules/ 组件定位 key）
+// 菜单（type=1：url 同时充当路由 path 与 modules/ 组件定位 key；permission 即按钮权限标识）
 resources.add(res(7, 2, "Demo管理", ResourceTypeEnum.MENU, "demo:demo", "/demo/demo", "", 210));
-// 按钮（type=2：parentId 指向所属菜单，permission 形如 {module}:{business}:add|edit|remove）
-resources.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:add", "", "", 1));
 
 // 仅某角色可见：放入对应角色分支
 if (role == ADMIN) {
@@ -229,7 +233,7 @@ if (role == ADMIN) {
 }
 ```
 
-要点：资源 id 全局唯一、parentId 指向父目录/菜单；在 `buildRoleResources` 中追加（公共区段或角色分支）即对对应角色可见。页面由 `loadView` 按 `url` 自动映射，**无需改路由**。平台内置枚举/资源一律不动 `business` 包。
+要点：资源 id 全局唯一、parentId 指向父目录/菜单；在 `buildRoleResources` 中追加（公共区段或角色分支）即对对应角色可见。业务页面按钮默认用菜单 permission（`{module}:default` / `{module}:{business}`）做 `v-hasPermi`，无需单独注册按钮资源；仅当需要按钮级细粒度时，再追加 type=2 资源（`ResourceTypeEnum.BUTTOM`，parentId 指向所属菜单）。页面由 `loadView` 按 `url` 自动映射，**无需改路由**；平台内置枚举/资源一律不动 `business` 包。
 
 页面文件 `src/modules/business/{module}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
 
@@ -243,7 +247,7 @@ if (role == ADMIN) {
 - [ ] `xxl-ai-api` 下 `mvn -q compile` 通过。
 - [ ] 后端：Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
 - [ ] 前端：types 三件齐（实体/Query/ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
-- [ ] 权限：按钮 `v-hasPermi`，XxlRoleEnum 菜单+按钮已注册。注释符合 AGENTS.md 6.1。
+- [ ] 权限：菜单在 `XxlRoleEnum` 已注册；按钮 `v-hasPermi` 复用菜单权限标识（`{module}:default` / `{module}:{business}`）。注释符合 AGENTS.md 6.1。
 - [ ] 边界：业务模块功能完备，含全部 CRUD 与对外操作入口（controller 齐全）；运行时实现统一落 `business/harness`，harness 无 controller、只被上层调用；运行时接口 URL 不变。
 - [ ] i18n：页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`。语言配置 `default-settings.ts` 的 `language`。
 - [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`。

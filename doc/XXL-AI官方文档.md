@@ -20,7 +20,7 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 
 - 1、多模型供应商：统一接入 OpenAI 兼容协议（Deepseek、智谱GLM、Ollama、OpenCode 等），支持供应商与模型两级管理、连通性测试与远程模型导入；
 - 2、RAG 知识库：知识库 + 文档管理，文档分片向量化入库（Milvus），对话时检索上下文自动注入；
-- 3、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent；
+- 3、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent，另附示例 MCP 服务 `xxl-ai-sample-mcp`；
 - 4、SKILL 技能：以 `SKILL.md` + 文件树沉淀领域知识与脚本，自动物化为 Agent 可执行的技能目录；
 - 5、Agent 编排：模型 + 系统指令 + 知识库 + MCP + SKILL 组合为 Agent，一键发布为免登录公开访问地址；
 - 6、流式对话：SSE 流式输出（思考过程 / 回复内容），基于 Redis Stream 无状态化，支持集群部署与断线 / 刷新续传；
@@ -48,6 +48,7 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 - Mysql：8.0+
 - NodeJs：18+（可选：前后端分离项目需要）
 - Redis：7.0+（可选：前后端分离项目需要）
+- Milvus：2.6+（可选：RAG 知识库向量化需要）
 
 ### 1.5 发展历程
 
@@ -58,7 +59,7 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 
 ### 2.1 环境准备
 
-- 后端：JDK 17+、Maven 3+、MySQL 8.0+、Redis 7.0+；
+- 后端：JDK 17+、Maven 3+、MySQL 8.0+、Redis 7.0+（RAG 向量化另需 Milvus 2.6+）；
 - 前端：Node.js 18+；
 
 ### 2.2 初始化数据库
@@ -80,6 +81,7 @@ XXL-AI 是一个AI应用开发平台，其核心设计目标是开发迅速、�
 - xxl-ai/
     - xxl-ai-api              ：【前后端分离】后端API服务
     - xxl-ai-ui               ：【前后端分离】前端UI服务
+    - xxl-ai-sample-mcp       ：示例 MCP 服务（spring-ai @McpTool，Streamable HTTP）
 ```
 
 编译方式：
@@ -292,13 +294,14 @@ xxl-ai/
 ├── AGENTS.md                                  # 开发规范与 Skill 使用指南
 ├── .agents/skills/                            # 【AI 开发 SKILL 目录】
 │   └── xxl-ai/SKILL.md                        # 开发 Skill（name: xxl-ai）
+├── xxl-ai-spec/                               # 需求落盘目录（plan.md + 建表/初始化 SQL）
 │
 ├── doc/                                       # 文档目录
 │   ├── db/                                    # 数据库脚本目录
 │   │   ├── tables_xxl_ai.sql                  # 建库 + 框架表 + 业务表 + 种子数据【必须】
 │   └── XXL-AI官方文档.md                      # 官方文档
 │
-├── docker/                                    # Docker Compose 编排目录（mysql + redis + api + ui）
+├── docker/                                    # Docker Compose 编排目录（mysql + redis + milvus + api + sample-mcp + ui）
 │   ├── docker-compose.yml                     # 一键部署编排
 │   ├── .env                                   # 部署环境变量
 │   └── nginx.conf                             # 前端 Nginx 配置（反向代理 /api）
@@ -310,13 +313,18 @@ xxl-ai/
 │       ├── java/com/xxl/ai/api/
 │       │   ├── XxlAiApiApplication.java       # 启动类
 │       │   ├── framework/                     # 平台内置：系统管理、登录鉴权、审计日志、工具组件等
-│       │   └── business/                      # 业务扩展包：space/supplier/knowledge/mcp/skill/agent/chat/llm
+│       │   └── business/                      # 业务扩展包：space/supplier/knowledge/mcp/skill/agent/chat
+│       │       └── harness/                   # 运行时支撑层：llm/chat/rag/mcp/skill/supplier（无 controller）
 │       └── resources/
 │           ├── application.properties         # 主配置文件
 │           ├── mapper/
-│           │   ├── framework/                 # 核心 MyBatis 映射文件
-│           │   └── business/{module}/           # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
+│           │   ├── framework/system/          # 平台内置 MyBatis 映射文件
+│           │   └── business/{module}/         # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
 │           └── i18n/                          # 后端国际化资源（message_{zh_CN,zh_TC,en}.properties）
+│
+├── xxl-ai-sample-mcp/                         # 示例 MCP 服务（spring-ai @McpTool，Streamable HTTP，8091）
+│   ├── pom.xml                                # Maven配置（继承父工程）
+│   └── src/main/java/com/xxl/ai/api/sample/   # 启动类 + SampleMcpTool
 │
 └── xxl-ai-ui/                               # 【前后端分离】前端UI服务（3000）
     ├── package.json                           # 前端依赖配置
@@ -334,13 +342,13 @@ xxl-ai/
         ├── layout/ · router/                  # 布局与路由
         ├── store/                             # 状态管理
         ├── utils/                             # 工具类
-        ├── types/                             # 全局基础类型类型
+        ├── types/                             # 全局基础类型
         └── default-settings.ts                # 全局配置
 ```
 
 补充说明：
 - 构建：后端模块在仓库根目录执行 `mvn clean package` 即可一键编译全部 Maven 模块；前端模块进入 `xxl-ai-ui` 目录执行 `npm install`、`npm run dev` 即可本地启动；
-- 部署：前后端分离模式部署 `xxl-ai-api` + `xxl-ai-ui`；
+- 部署：前后端分离模式部署 `xxl-ai-api` + `xxl-ai-ui`（示例 MCP 服务 `xxl-ai-sample-mcp` 为可选联调组件）；
 - 扩展：新增业务模块时，可在各模块 `business` 扩展包中开发，并配套放置 Mapper 映射文件、模板文件及配置文件。
 
 ### 5.2、前后端分离运行模式
@@ -434,8 +442,8 @@ POST /chat/send
 
 ```
 前端 sendStream → ChatController.send → ChatService.send
-  ├─ 校验 + 落用户消息(status=1) + 助手占位(status=0) → generator.submit(任务)
-  └─ generator.open(msgId)：XREAD 结果流 → SSE
+  ├─ 校验 + 落用户消息(status=1) + 助手占位(status=0) → chatStreamTool.submit(任务)
+  └─ chatStreamTool.open(msgId)：XREAD 结果流 → SSE
 worker（消费组）：XREADGROUP 任务 → ChatStreamTool.handleTask（校验 / 装配历史与工具 / 调 LlmChatTool）
   ├─ 增量经回调 → appendResult(msgId, thinking/message)（本地累积，供失败回填）
   └─ 回填 updateAssistant(内容, status)；写终态 done/error + ack
@@ -445,10 +453,10 @@ worker（消费组）：XREADGROUP 任务 → ChatStreamTool.handleTask（校验
 
 ```
 前端发现助手消息 status=0（刷新/断线）→ resumeStream(msgId, lastEventId)
-  └─ ChatService.resume → generator.open → 从 lastEventId 之后 XREAD 重放，不重新生成
+  └─ ChatService.resume → chatStreamTool.open → 从 lastEventId 之后 XREAD 重放，不重新生成
 ```
 
-SSE 事件协议（`ChatConstant`）：
+SSE 事件协议（`ChatStreamTool` 的 `EVENT_*` 常量）：
 
 | 事件 | 数据 | 说明 |
 |---|---|---|
@@ -480,8 +488,9 @@ SSE 事件协议（`ChatConstant`）：
 ```
 xxl-ai.chat.stream.timeout=180000   # 单连接/单次生成最长时长(ms)
 xxl-ai.chat.stream.ttl=600          # 结果流保留时长(s)
-xxl-ai.chat.worker.count=2          # 单节点生成并发数
+xxl-ai.chat.worker.count=4          # 单节点生成 worker 并发数
 xxl-ai.chat.sse.max=64              # 单节点 SSE 转发最大并发连接数
+xxl-ai.chat.history.limit=50        # 附加给模型的最近历史消息条数上限
 ```
 
 内部实现（写死/派生，不暴露配置）：XREAD 阻塞窗口 `5000ms`、单次批量 `50` 条；SSE 线程池核心数 `sse.max / 8`、队列容量 `0`（`SynchronousQueue`，确保并发扩到 `max` 且不排队长连接）；宕机认领阈值 = `chat.stream.timeout + 60s`。
@@ -510,10 +519,10 @@ xxl-ai.chat.sse.max=64              # 单节点 SSE 转发最大并发连接数
 
 ### 5.7、AI 运行时与工具装配
 
-- **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型 + 会话」LRU 缓存，Header value 支持 `{session}` 占位；
+- **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型（+ 会话，仅当自定义 Header 含 `{session}` 占位时）」LRU 缓存，Header value 支持 `{session}` 占位；
 - **对话编排 `LlmChatTool`**：按已装配的「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
 - **RAG `RagTool`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入、检索经 `QuestionAnswerAdvisor` 自动注入上下文；内聚嵌入模型解析、向量存储缓存与文本分片；
-- **MCP `McpToolFactory`**：`McpClientTool` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；
+- **MCP `McpToolFactory`**：`McpClientTool` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；仓库内附示例 MCP 服务 `xxl-ai-sample-mcp`（spring-ai `@McpTool`，Streamable HTTP），供「MCP管理」连通测试联调；
 - **SKILL `SkillToolFactory`**：将 DB 技能文件树物化为 `{skill.root}/agent_{agentId}/{skillName}/`，构建 `SkillsTool` 及配套 shell / 文件执行工具（bash、Read/Write/Edit、Glob、Grep、List），技能内容变更按更新时间指纹自动重建；
 - **工具装配顺序**：`buildTools` 依次装配 MCP 工具 + Skill 工具 + 执行工具，统一以 `Object` 列表随请求传入，spring-ai 自动解析注册。
 
@@ -523,7 +532,7 @@ xxl-ai.chat.sse.max=64              # 单节点 SSE 转发最大并发连接数
 - 1、【初始化】XXL-AI 基于 XXL-Boot v2.1.1（前后端分离 Vue 模式）初始化成立，项目更名为 XXL-AI；
 - 2、【工程】构建 后端 `xxl-ai-api`（8090）与 前端 `xxl-ai-ui`（3000）双工程，数据库统一托管 `xxl_ai`；
 - 3、【能力】内置 安全登录（XXL-SSO）、RBAC 权限管控、空间隔离、系统管理、AI + SKILL 加速开发 等平台能力；
-- 4、【部署】随带 Docker Compose 一键部署栈（mysql + redis + api + ui）；
+- 4、【部署】随带 Docker Compose 一键部署栈（mysql + redis + milvus + api + sample-mcp + ui）；
 - 5、【AI 底座】基于 spring-ai 2.0.1：OpenAI 兼容模型工厂、Milvus 向量库（RAG）、官方 MCP SDK、Skill 工具；全部表随 `doc/db/tables_xxl_ai.sql` 初始化。
 - 6、【功能】新增：空间管理、供应商/模型管理、知识库/文档管理、MCP管理、SKILL管理、Agent管理；
 - 7、【功能】Chat 流式对话 SSE 无状态化改造：Redis Stream 任务队列解耦生成与下发，支持集群部署、断线/刷新续传（详见 5.5）；
