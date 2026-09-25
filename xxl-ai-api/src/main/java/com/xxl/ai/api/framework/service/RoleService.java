@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * 角色查询服务
  *
- * 角色定义与资源列表已收敛为枚举 XxlRoleEnum（static 代码块初始化），
+ * 角色定义与资源列表已收敛为枚举 XxlRoleEnum（资源列表由 buildRoleResources 统一构建），
  * 本服务提供角色/资源查询接口，替代原角色/资源数据表。
  *
  * @author xuxueli 2026-09-04

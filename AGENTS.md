@@ -93,16 +93,16 @@ src
 
 ### 4.3 菜单零路由改动约定
 
-平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表 static 代码块初始化，已下线 `xxl_ai_resource`/`xxl_ai_role_res` 表），**新增页面无需动路由代码**：
+平台菜单由枚举 `XxlRoleEnum` 定义（各角色资源列表由 `buildRoleResources(role)` 统一构建，已下线 `xxl_ai_resource`/`xxl_ai_role_res` 表），**新增页面无需动路由代码**：
 
 - Vue：界面文件 `modules/{framework|business}/{domain}/{module}/pages/{xxx}(/index).vue` 建好后，登录后由 `/getRouters` 按当前用户角色下发菜单资源构建动态路由；`url` 同时充当路由 path 与前端组件定位 key，前端 `loadView` 按 `modules/` 下相对路径（自动剥离 `framework/`/`business/` 与 `pages/` 段）映射对应页面（如 `/system/user` → `modules/framework/system/user/pages/index.vue`）。
-- 新增平台菜单：在 `XxlRoleEnum` 对应角色的 static 资源列表中追加 `Resource` 项（`url` 指向页面路径），即可对该角色可见、无需改路由与数据库。
+- 新增平台菜单：在 `XxlRoleEnum#buildRoleResources` 对应角色分支中追加 `Resource` 项（`url` 指向页面路径），即可对该角色可见、无需改路由与数据库。
 
 ## 五、新功能开发标准流程
 
 1. **建表**：数据库新建 `xxl_ai_*` 业务表（规范见 6.5）。
 2. **生成/手写代码**：按对应 Skill 模板直接生成等价代码。
-3. **落位与权限**：按对应 Skill 落位后端/前端文件；在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单/按钮项。
+3. **落位与权限**：按对应 Skill 落位后端/前端文件；在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加菜单/按钮项。
 4. **联调验证**：起后端 + 前端，验证菜单可见、CRUD 可用、权限生效。
 5. **规范复核**：对照第六节规范与 Skill 内「校验清单」过一遍再提交。
 
@@ -156,7 +156,7 @@ src
 - 前端权限：Vue `v-hasPermi="['{module}:default']"`（同名业务）或 `v-hasPermi="['{module}:{business}']"`（或 `v-hasRole="['admin']"`）。
 - 下拉选项来源：
   - 业务枚举：在 `business/{module}/enums`（多业务 `business/{module}/{business}/enums`）定义实现 `EnumTool.IEnum` 的枚举（平台内置枚举放 `framework/constant/enums`）；前端 `useEnumOption('XxxEnum')` 经 `/system/dict/loadEnumItem` 拉取（后端动态扫描 `com.xxl.ai` 根包内实现 `IEnum` 的枚举所在包，按枚举名解析，一次扫描后缓存并复用）；
-- 菜单资源：平台菜单/按钮由 `XxlRoleEnum` 各角色 static 代码块定义（资源 `url` 充当路由 path 与组件定位 key；类型/状态/显隐沿用 `ResourceTypeEnum`/`ResourceStatuEnum`/`ResourceVisibleEnum`），登录按用户角色聚合下发。
+- 菜单资源：平台菜单/按钮由 `XxlRoleEnum#buildRoleResources` 按角色定义（资源 `url` 充当路由 path 与组件定位 key；类型/状态/显隐沿用 `ResourceTypeEnum`/`ResourceStatuEnum`/`ResourceVisibleEnum`），登录按用户角色聚合下发。
 
 ### 6.7 国际化文案（i18n）
 

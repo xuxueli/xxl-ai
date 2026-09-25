@@ -37,7 +37,7 @@ xxl-ai-ui/src
 2. **建表**：`xxl_ai_*` SQL，公共字段 `id/add_time/update_time`，TINYINT 状态，`COMMENT` 注释；SQL 脚本写入该需求子目录（如 `{business}-table.sql`、`{business}-init.sql`）。
 3. **生成或手写代码**：本 Skill 缺省策略为 AI 按模板直生等价代码落位（后端 6 件套 + 前端 vue3 文件），落位细则见下方「后端落位清单 / 前端落位清单」。
 4. **落位**：业务一级化——后端 Java 落 `business/{module}`（同名业务；多业务模块在模块下再分 `{business}`），Mapper XML 落 `resources/mapper/business/{module}/`；前端业务模块聚合落 `modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts）。
-5. **菜单/权限**：在 `XxlRoleEnum` 对应角色 static 资源列表追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
+5. **菜单/权限**：在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加菜单(type=1)+按钮(type=2)；页面按钮用 `v-hasPermi`。
 6. **验证**：起 `xxl-ai-api`(8090) + `xxl-ai-ui`(3000，代理 /api→8090)，菜单可见、CRUD 可用、权限生效；验证结果回填 `plan.md`。
 
 > ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `xxl-ai-mysql`，docker-compose 定义），服务端已配置 utf8mb4，但 CLIENT 侧 CLI 默认连接字符集是 **latin1**，必须按下列姿势执行：
@@ -85,9 +85,9 @@ xxl-ai-ui/src
 SQL 脚本：`{business}-table.sql`
 
 ## 三、菜单 / 授权
-- 菜单（type=1）：`{名称}` permission=`{module}:default`（同名业务）或 `{module}:{business}`（多业务） url=`/{module}` 或 `/{module}/{business}`，追加进 `XxlRoleEnum` 对应角色的 static 资源列表
+- 菜单（type=1）：`{名称}` permission=`{module}:default`（同名业务）或 `{module}:{business}`（多业务） url=`/{module}` 或 `/{module}/{business}`，在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加
 - 按钮（type=2）：新增 `:add` / 修改 `:edit` / 删除 `:remove`，parentId 指向所属菜单
-- 授权：加入某角色静态资源列表（如 `ADMIN_RESOURCES`）即对该角色可见，无需数据库授权
+- 授权：在 `buildRoleResources` 对应角色分支（如 `if (role == XxlRoleEnum.ADMIN)`）追加即对该角色可见，无需数据库授权
 - 落盘：`{business}-init.sql`（仅建表/种子数据；菜单走枚举注册）
 
 ## 四、后端改造
@@ -212,16 +212,21 @@ getList()
 
 ## 菜单 / 权限注册（枚举资源，替代原资源表）
 
-平台菜单/按钮已下线 `xxl_ai_resource`/`xxl_ai_role_res`，改为在 `framework/constant/enums/XxlRoleEnum.java` 各角色 **static 代码块** 中追加 `Resource` 项注册：
+平台菜单/按钮已下线 `xxl_ai_resource`/`xxl_ai_role_res`，改为在 `framework/constant/enums/XxlRoleEnum.java#buildRoleResources(role)` 中按角色装配 `Resource` 项注册（公共区段各角色共享，角色专属项放入对应 `if (role == ...)` 分支）：
 
 ```java
 // 菜单（type=1：url 同时充当路由 path 与 modules/ 组件定位 key）
-ADMIN_RESOURCES.add(res(7, 2, "Demo管理", ResourceTypeEnum.MENU, "demo:demo", "/demo/demo", "", 210));
+resources.add(res(7, 2, "Demo管理", ResourceTypeEnum.MENU, "demo:demo", "/demo/demo", "", 210));
 // 按钮（type=2：parentId 指向所属菜单，permission 形如 {module}:{business}:add|edit|remove）
-ADMIN_RESOURCES.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:add", "", "", 1));
+resources.add(res(8, 7, "Demo新增", ResourceTypeEnum.BUTTOM, "demo:demo:add", "", "", 1));
+
+// 仅某角色可见：放入对应角色分支
+if (role == ADMIN) {
+    resources.add(res(9, 0, "仅管理员", ResourceTypeEnum.MENU, "admin:only", "/admin/only", "", 400));
+}
 ```
 
-要点：资源 id 全局唯一、parentId 指向父目录/菜单；加入 `ADMIN_RESOURCES`/`USER_RESOURCES` 静态列表即对对应角色可见。页面由 `loadView` 按 `url` 自动映射，**无需改路由**。平台内置枚举/资源一律不动 `business` 包。
+要点：资源 id 全局唯一、parentId 指向父目录/菜单；在 `buildRoleResources` 中追加（公共区段或角色分支）即对对应角色可见。页面由 `loadView` 按 `url` 自动映射，**无需改路由**。平台内置枚举/资源一律不动 `business` 包。
 
 页面文件 `src/modules/business/{module}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
 

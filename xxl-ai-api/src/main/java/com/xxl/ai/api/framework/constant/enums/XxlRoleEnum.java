@@ -4,7 +4,7 @@ import com.xxl.ai.api.framework.model.entity.Resource;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +14,7 @@ import java.util.Map;
  * 角色定义由「数据库表」收敛为「枚举 + 静态资源列表」：
  *   1. 角色：枚举项（管理员 ADMIN / 普通用户 USER），
  *      角色编码为字符串（admin/user），供用户表 role 字段、登录角色列表使用；
- *   2. 资源：每个角色的资源列表单独通过 static 代码块初始化（菜单/按钮），
+ *   2. 资源：各角色资源列表由统一构建方法生成（公共资源复用，管理员额外追加系统管理），
  *      替代原 xxl_ai_resource 数据表；
  *   3. 查询：由 RoleService 提供查询服务（全量角色、按用户ID查询角色/资源）。
  *
@@ -41,78 +41,80 @@ public enum XxlRoleEnum {
         return title;
     }
 
-    // ==================== 各角色资源列表（static 代码块单独初始化） ====================
+    /**
+     * 按 角色编码 匹配角色枚举
+     *
+     * @param roleCode 角色编码（如 admin、user）
+     * @return 匹配到的角色枚举，未匹配返回 null
+     */
+    public static XxlRoleEnum match(String roleCode) {
+        for (XxlRoleEnum role : values()) {
+            if (role.getCode().equals(roleCode)) {
+                return role;
+            }
+        }
+        return null;
+    }
 
-    /** 管理员资源列表：首页 + AI业务（供应商/MCP/Skill/知识库/Agent）+ 系统管理（业务空间/用户/配置/日志）+ 帮助中心 */
-    public static final List<Resource> ADMIN_RESOURCES = new ArrayList<>();
+
+    // ==================== 各角色资源列表（公共资源统一构建，避免重复定义） ====================
+
+    /** 角色 → 资源列表映射（以枚举为键，避免 code 字符串匹配） */
+    private static final Map<XxlRoleEnum, List<Resource>> ROLE_RESOURCE_MAP = new EnumMap<>(XxlRoleEnum.class);
     static {
+        // 逐角色构建资源列表：新增角色时此处无需改动，由 buildRoleResources 按角色装配
+        for (XxlRoleEnum role : values()) {
+            ROLE_RESOURCE_MAP.put(role, buildRoleResources(role));
+        }
+    }
+
+    /**
+     * 构建角色资源列表
+     *
+     * 公共资源（首页 + AI业务 + 帮助中心）在各角色间复用，管理员额外包含「系统管理」目录。
+     * 新增菜单/按钮时，在对应角色分支（或公共区段）追加 Resource 项即可；每次调用均生成独立实例。
+     *
+     * @param role 角色枚举
+     * @return 按菜单展示顺序排列的资源列表
+     */
+    private static List<Resource> buildRoleResources(XxlRoleEnum role) {
+        List<Resource> resources = new ArrayList<>();
+
         // 首页
-        ADMIN_RESOURCES.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
+        resources.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
 
         // Agent对话
-        ADMIN_RESOURCES.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
-        ADMIN_RESOURCES.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
+        resources.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
+        resources.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
 
         // 知识库
-        ADMIN_RESOURCES.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
-        ADMIN_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
+        resources.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
+        resources.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
 
         // SKILL
-        ADMIN_RESOURCES.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
-        ADMIN_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
+        resources.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
+        resources.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
 
         // MCP
-        ADMIN_RESOURCES.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
+        resources.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
 
         // 供应商
-        ADMIN_RESOURCES.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
-        ADMIN_RESOURCES.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
+        resources.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
+        resources.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
 
-        // 系统管理
-        ADMIN_RESOURCES.add(res(7, 0, "系统管理", ResourceTypeEnum.CATALOG, "system", "/system", "system", 200));
-        ADMIN_RESOURCES.add(res(71, 7, "业务空间", ResourceTypeEnum.MENU, "space:default", "/space", "component", 199));
-        ADMIN_RESOURCES.add(res(72, 7, "用户管理", ResourceTypeEnum.MENU, "system:user", "/system/user", "user", 201));
-        ADMIN_RESOURCES.add(res(73, 7, "配置管理", ResourceTypeEnum.MENU, "system:config", "/system/config", "edit", 202));
-        ADMIN_RESOURCES.add(res(74, 7, "审计日志", ResourceTypeEnum.MENU, "system:log", "/system/log", "log", 203));
-
-        // 帮助中心
-        ADMIN_RESOURCES.add(res(8, 0, "帮助中心", ResourceTypeEnum.MENU, "help", "/help", "guide", 300));
-    }
-
-    /** 普通用户资源列表：首页 + AI业务（供应商/MCP/Skill/知识库/Agent） + 帮助中心 */
-    public static final List<Resource> USER_RESOURCES = new ArrayList<>();
-    static {
-        // 首页
-        USER_RESOURCES.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
-
-        // Agent对话：包括隐藏菜单
-        USER_RESOURCES.add(res(2, 0, "Agent", ResourceTypeEnum.MENU, "agent:default", "/agent", "message", 110));
-        USER_RESOURCES.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
-
-        // 知识库
-        USER_RESOURCES.add(res(3, 0, "知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
-        USER_RESOURCES.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
-
-        // SKILL
-        USER_RESOURCES.add(res(4, 0, "SKILL", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 130));
-        USER_RESOURCES.add(resHidden(41, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 131));
-
-        // MCP
-        USER_RESOURCES.add(res(5, 0, "MCP", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 140));
-
-        // 供应商
-        USER_RESOURCES.add(res(6, 0, "供应商", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 150));
-        USER_RESOURCES.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 111));
+        // 系统管理（仅管理员）
+        if (role == ADMIN) {
+            resources.add(res(7, 0, "系统管理", ResourceTypeEnum.CATALOG, "system", "/system", "system", 200));
+            resources.add(res(71, 7, "业务空间", ResourceTypeEnum.MENU, "space:default", "/space", "component", 199));
+            resources.add(res(72, 7, "用户管理", ResourceTypeEnum.MENU, "system:user", "/system/user", "user", 201));
+            resources.add(res(73, 7, "配置管理", ResourceTypeEnum.MENU, "system:config", "/system/config", "edit", 202));
+            resources.add(res(74, 7, "审计日志", ResourceTypeEnum.MENU, "system:log", "/system/log", "log", 203));
+        }
 
         // 帮助中心
-        USER_RESOURCES.add(res(7, 0, "帮助中心", ResourceTypeEnum.MENU, "help", "/help", "guide", 300));
-    }
+        resources.add(res(8, 0, "帮助中心", ResourceTypeEnum.MENU, "help", "/help", "guide", 300));
 
-    /** 角色编码 → 资源列表映射 */
-    private static final Map<String, List<Resource>> ROLE_RESOURCE_MAP = new HashMap<>();
-    static {
-        ROLE_RESOURCE_MAP.put(ADMIN.getCode(), ADMIN_RESOURCES);
-        ROLE_RESOURCE_MAP.put(USER.getCode(), USER_RESOURCES);
+        return resources;
     }
 
     /**
@@ -145,29 +147,27 @@ public enum XxlRoleEnum {
     }
 
     /**
-     * 按 角色编码 匹配角色枚举
+     * 获取 角色 对应的资源列表（不可变视图）
      *
-     * @param roleCode 角色编码（如 admin、user）
-     * @return 匹配到的角色枚举，未匹配返回 null
+     * @param role 角色枚举
+     * @return 资源列表，入参为空返回空列表
      */
-    public static XxlRoleEnum match(String roleCode) {
-        for (XxlRoleEnum role : values()) {
-            if (role.getCode().equals(roleCode)) {
-                return role;
-            }
+    public static List<Resource> getResources(XxlRoleEnum role) {
+        if (role == null) {
+            return Collections.emptyList();
         }
-        return null;
+        List<Resource> resourceList = ROLE_RESOURCE_MAP.get(role);
+        return resourceList != null ? resourceList : Collections.emptyList();
     }
 
     /**
      * 获取 角色编码 对应的资源列表（不可变视图）
      *
-     * @param roleCode 角色编码
+     * @param roleCode 角色编码（如 admin、user）
      * @return 资源列表，未匹配返回空列表
      */
     public static List<Resource> getResources(String roleCode) {
-        List<Resource> resourceList = ROLE_RESOURCE_MAP.get(roleCode);
-        return resourceList != null ? resourceList : Collections.emptyList();
+        return getResources(match(roleCode));
     }
 
     /**

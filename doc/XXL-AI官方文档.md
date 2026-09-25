@@ -525,7 +525,7 @@ xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
 
 **空间隔离**：除平台表外，业务表均带 `space_id`；管理端当前空间由请求头 `xxl-space-id` 传入，后端按空间过滤；管理员可见全部空间，普通用户按 `xxl_ai_user_space` 授权。公开对话端以 Agent 的 `uuid` + 访客 `visitorId` 隔离会话。所有关联均为应用层维护（无数据库外键）。
 
-**权限模型**：平台菜单 / 按钮由枚举 `XxlRoleEnum` 各角色 static 资源列表定义（已下线资源 / 角色关联表），角色 `admin` / `user`；新增页面在对应角色资源列表追加即可、无需改路由与数据库，浏览器按钮权限用 `v-hasPermi`。
+**权限模型**：平台菜单 / 按钮由枚举 `XxlRoleEnum#buildRoleResources` 按角色定义（已下线资源 / 角色关联表），角色 `admin` / `user`；新增页面在对应角色分支追加即可、无需改路由与数据库，浏览器按钮权限用 `v-hasPermi`。
 
 ### 5.7、AI 运行时与工具装配
 
