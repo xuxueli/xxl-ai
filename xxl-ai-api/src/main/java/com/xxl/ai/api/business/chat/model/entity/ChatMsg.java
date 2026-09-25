@@ -3,11 +3,11 @@ package com.xxl.ai.api.business.chat.model.entity;
 import java.util.Date;
 
 /**
- * Agent 消息 实体（归属某对话）
+ * 对话消息 实体（归属某对话）
  *
  * @author xxl-ai 2026-09-05
  */
-public class AgentMsg {
+public class ChatMsg {
 
     private long id;            /* 消息ID */
     private long convId;        /* 对话ID */

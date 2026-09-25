@@ -77,7 +77,7 @@ export const constantRoutes = [
   // Agent 公开对话页（免登录，按发布 URL 直接访问）
   {
     path: '/chat/:uuid',
-    component: () => import('@/modules/business/chat/index.vue'),
+    component: () => import('@/modules/business/chat/pages/index.vue'),
     hidden: true
   }
 ]

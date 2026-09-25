@@ -2,10 +2,10 @@ package com.xxl.ai.api.business.chat.service;
 
 import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.chat.mapper.AgentConvMapper;
-import com.xxl.ai.api.business.chat.mapper.AgentMsgMapper;
-import com.xxl.ai.api.business.chat.model.entity.AgentConv;
-import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
+import com.xxl.ai.api.business.chat.mapper.ChatConvMapper;
+import com.xxl.ai.api.business.chat.mapper.ChatMsgMapper;
+import com.xxl.ai.api.business.chat.model.entity.ChatConv;
+import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Agent 公开访问服务（免管理端登录态，按 uuid + visitorId 隔离会话）
+ * 对话服务（公开访问：免管理端登录态，按 uuid + visitorId 隔离会话）
  *
  * 1、会话元数据：Agent 加载、对话创建/列表/改名/删除、消息列表；
  * 2、会话校验：Agent 就绪、对话归属（供流式对话复用，单一校验源）。
@@ -22,14 +22,14 @@ import java.util.List;
  * @author xxl-ai 2026-09-05
  */
 @Service
-public class AgentAccessService {
+public class ChatService {
 
     @Resource
     private AgentMapper agentMapper;
     @Resource
-    private AgentConvMapper agentConvMapper;
+    private ChatConvMapper chatConvMapper;
     @Resource
-    private AgentMsgMapper agentMsgMapper;
+    private ChatMsgMapper chatMsgMapper;
 
     // ==================== 会话元数据 ====================
 
@@ -47,25 +47,25 @@ public class AgentAccessService {
     /**
      * 创建对话（先校验 Agent 可用）
      */
-    public Response<AgentConv> convCreate(String uuid, String visitorId, String title) {
+    public Response<ChatConv> convCreate(String uuid, String visitorId, String title) {
         try {
             requireReadyAgent(uuid);
         } catch (IllegalArgumentException e) {
             return Response.ofFail(e.getMessage());
         }
-        AgentConv agentConv = new AgentConv();
-        agentConv.setAgentUuid(uuid);
-        agentConv.setVisitorId(visitorId);
-        agentConv.setTitle(StringTool.isBlank(title) ? "新对话" : title);
-        agentConvMapper.insert(agentConv);
-        return Response.ofSuccess(agentConv);
+        ChatConv chatConv = new ChatConv();
+        chatConv.setAgentUuid(uuid);
+        chatConv.setVisitorId(visitorId);
+        chatConv.setTitle(StringTool.isBlank(title) ? "新对话" : title);
+        chatConvMapper.insert(chatConv);
+        return Response.ofSuccess(chatConv);
     }
 
     /**
      * 对话列表（按访客隔离）
      */
-    public Response<List<AgentConv>> convList(String uuid, String visitorId) {
-        return Response.ofSuccess(agentConvMapper.listByVisitor(uuid, visitorId));
+    public Response<List<ChatConv>> convList(String uuid, String visitorId) {
+        return Response.ofSuccess(chatConvMapper.listByVisitor(uuid, visitorId));
     }
 
     /**
@@ -78,26 +78,26 @@ public class AgentAccessService {
         if (title.trim().length() > 50) {
             return Response.ofFail("对话标题最长50个字符");
         }
-        if (agentConvMapper.load(convId) == null) {
+        if (chatConvMapper.load(convId) == null) {
             return Response.ofFail("对话不存在");
         }
-        agentConvMapper.updateTitle(convId, title.trim());
+        chatConvMapper.updateTitle(convId, title.trim());
         return Response.ofSuccess();
     }
 
     /**
      * 消息列表
      */
-    public Response<List<AgentMsg>> msgList(long convId) {
-        return Response.ofSuccess(agentMsgMapper.listByConvId(convId));
+    public Response<List<ChatMsg>> msgList(long convId) {
+        return Response.ofSuccess(chatMsgMapper.listByConvId(convId));
     }
 
     /**
      * 删除对话（连带消息）
      */
     public Response<String> convDelete(long convId) {
-        agentMsgMapper.deleteByConvId(convId);
-        return agentConvMapper.delete(convId) > 0 ? Response.ofSuccess() : Response.ofFail();
+        chatMsgMapper.deleteByConvId(convId);
+        return chatConvMapper.delete(convId) > 0 ? Response.ofSuccess() : Response.ofFail();
     }
 
     // ==================== 会话校验（流式对话共用的单一校验源） ====================
@@ -126,12 +126,12 @@ public class AgentAccessService {
     /**
      * 校验并返回归属于该 Agent 的对话，不满足抛 IllegalArgumentException
      */
-    public AgentConv requireConversation(String uuid, long convId) {
-        AgentConv agentConv = agentConvMapper.load(convId);
-        if (agentConv == null || !uuid.equals(agentConv.getAgentUuid())) {
+    public ChatConv requireConversation(String uuid, long convId) {
+        ChatConv chatConv = chatConvMapper.load(convId);
+        if (chatConv == null || !uuid.equals(chatConv.getAgentUuid())) {
             throw new IllegalArgumentException("对话不存在");
         }
-        return agentConv;
+        return chatConv;
     }
 
 }

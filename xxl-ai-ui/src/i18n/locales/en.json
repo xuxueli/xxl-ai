@@ -494,8 +494,9 @@
       "publishSuccess": "Published",
       "unpublishSuccess": "Unpublished",
       "copyUrl": "Copy URL",
-      "copySuccess": "Copied",
-      "confirmDelete": "Are you sure to delete the agent with ID \"{0}\"?",
+      "confirmDelete": "Are you sure to delete the agent with ID \"{0}\"?"
+    },
+    "chat": {
       "newChat": "New Chat",
       "newChatAlready": "Already in a new conversation",
       "noConv": "No conversations",
@@ -519,6 +520,7 @@
       "collapseMenu": "Collapse sidebar",
       "expandMenu": "Expand sidebar",
       "copyCode": "Copy code",
+      "copySuccess": "Copied",
       "conv": "Agent Chats",
       "convListTitle": "Conversation List",
       "convDetail": "Conversation Detail",
@@ -527,8 +529,7 @@
       "convTitle": "Title",
       "visitorId": "Visitor ID",
       "roleUser": "User",
-      "roleAssistant": "Assistant",
-      "convEmptyTip": "No visitor conversations for this Agent"
+      "roleAssistant": "Assistant"
     }
   }
 }

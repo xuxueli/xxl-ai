@@ -7,13 +7,13 @@
     <!-- 左侧：对话列表（支持折叠/展开） -->
     <aside class="conv-panel" :class="{ collapsed }">
       <div class="conv-header">
-        <div class="agent-title" @click="handleRefresh" :title="t('business.agent.refresh')">
+        <div class="agent-title" @click="handleRefresh" :title="t('business.chat.refresh')">
           <img v-if="logo" :src="logo" class="agent-logo" alt="logo" />
           <span class="agent-name">{{ agent?.name || 'Agent' }}</span>
         </div>
         <div class="conv-actions">
           <el-button class="new-chat-btn" type="primary" plain round icon="Plus" @click="handleNewChat">
-            {{ t('business.agent.newChat') }}
+            {{ t('business.chat.newChat') }}
           </el-button>
         </div>
       </div>
@@ -43,20 +43,20 @@
           </template>
           <el-icon class="conv-del" @click.stop="deleteConv(conv)"><Delete /></el-icon>
         </div>
-        <el-empty v-if="!convLoading && convList.length === 0" :description="t('business.agent.noConv')" :image-size="60" />
+        <el-empty v-if="!convLoading && convList.length === 0" :description="t('business.chat.noConv')" :image-size="60" />
       </div>
       <!-- 底部：访客信息 + 全屏切换 -->
       <div class="conv-footer">
         <el-dropdown trigger="click" @command="handleVisitorCommand">
           <span class="visitor-trigger" :title="visitorId">
             <el-icon class="visitor-icon"><User /></el-icon>
-            <span class="visitor-label">{{ t('business.agent.visitor') }}</span>
+            <span class="visitor-label">{{ t('business.chat.visitor') }}</span>
             <el-icon class="visitor-arrow"><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item :command="'copyVisitor'" :disabled="!visitorId">
-                {{ t('business.agent.visitorInfo') }}
+                {{ t('business.chat.visitorInfo') }}
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -64,7 +64,7 @@
         <SvgIcon
           class="footer-fullscreen"
           :icon-class="isFullscreen ? 'exit-fullscreen' : 'fullscreen'"
-          :title="isFullscreen ? t('business.agent.exitFullscreen') : t('business.agent.fullscreen')"
+          :title="isFullscreen ? t('business.chat.exitFullscreen') : t('business.chat.fullscreen')"
           @click="toggleFullscreen"
         />
       </div>
@@ -75,7 +75,7 @@
       <div class="chat-header">
         <el-icon
           class="panel-toggle"
-          :title="collapsed ? t('business.agent.expandMenu') : t('business.agent.collapseMenu')"
+          :title="collapsed ? t('business.chat.expandMenu') : t('business.chat.collapseMenu')"
           @click="togglePanel"
         >
           <Expand v-if="collapsed" />
@@ -98,7 +98,7 @@
                     <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
                       <el-icon class="reasoning-icon"><MagicStick /></el-icon>
                       <span class="reasoning-label">{{
-                        msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking')
+                        msg.showThinking ? t('business.chat.hideThinking') : t('business.chat.thinking')
                       }}</span>
                       <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
                     </div>
@@ -106,10 +106,10 @@
                   </div>
                   <!-- 回复内容 -->
                   <span v-if="!msg.content" class="msg-streaming"
-                    >{{ t('business.agent.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span
+                    >{{ t('business.chat.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span
                   ></span>
                   <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
-                  <span v-if="msg.role === 'assistant'" class="msg-content" v-html="renderMarkdown(msg.content)"></span>
+                  <MarkdownView v-if="msg.role === 'assistant'" class="msg-content" :content="msg.content" />
                   <span v-else class="msg-content">{{ msg.content }}</span>
                 </div>
                 <!-- 发送时间：鼠标悬浮展示 -->
@@ -128,21 +128,21 @@
                 type="textarea"
                 :rows="6"
                 resize="none"
-                :placeholder="t('business.agent.inputPlaceholder')"
+                :placeholder="t('business.chat.inputPlaceholder')"
                 @keydown.enter.exact.prevent="handleSend"
               />
               <div class="chat-new-footer">
-                <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
+                <span class="input-tip">{{ t('business.chat.enterTip') }}</span>
                 <el-button type="primary" :loading="sending" @click="handleSend">
-                  {{ t('business.agent.send') }}
+                  {{ t('business.chat.send') }}
                 </el-button>
               </div>
             </div>
           </div>
-          <el-empty v-else :description="t('business.agent.selectConv')" :image-size="80" />
+          <el-empty v-else :description="t('business.chat.selectConv')" :image-size="80" />
         </div>
         <!-- 回到底部按钮：用户上翻阅读时显示，点击平滑吸底并恢复自动跟随 -->
-        <button v-if="currentConvId && !nearBottom" class="scroll-to-bottom" :title="t('business.agent.scrollToBottom')" @click="goBottom">
+        <button v-if="currentConvId && !nearBottom" class="scroll-to-bottom" :title="t('business.chat.scrollToBottom')" @click="goBottom">
           <el-icon><ArrowDown /></el-icon>
         </button>
       </div>
@@ -152,14 +152,14 @@
           type="textarea"
           :rows="3"
           resize="none"
-          :placeholder="t('business.agent.inputPlaceholder')"
+          :placeholder="t('business.chat.inputPlaceholder')"
           :disabled="!currentConvId || sending"
           @keydown.enter.exact.prevent="handleSend"
         />
         <div class="input-footer">
-          <span class="input-tip">{{ t('business.agent.enterTip') }}</span>
+          <span class="input-tip">{{ t('business.chat.enterTip') }}</span>
           <el-button type="primary" :loading="sending" @click="handleSend">
-            {{ t('business.agent.send') }}
+            {{ t('business.chat.send') }}
           </el-button>
         </div>
       </div>
@@ -172,23 +172,16 @@ import { t } from '@/i18n'
 import logo from '@/assets/images/logo.png'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  agentAccessLoad,
-  agentAccessConvCreate,
-  agentAccessConvList,
-  agentAccessMsgList,
-  agentAccessConvDelete,
-  agentAccessConvRename,
-  agentSendStream,
-  agentResumeStream
-} from './api'
-import type { AgentChatInfo, AgentConv, AgentMsg } from './types'
+import { createConv, deleteConv as removeConv, listConv, listMsg, loadAgentInfo, renameConv } from '../api'
+import { useChatStream } from '../composables/useChatStream'
+import MarkdownView from '../components/MarkdownView.vue'
+import type { AgentChatInfo, ChatConv, ChatMsg as ChatMsgData } from '../types'
 import { parseTime } from '@/utils/common'
 import { SvgIcon } from '@/components'
 import { useFullscreen } from '@vueuse/core'
-import { Renderer, marked, type Tokens } from 'marked'
-import DOMPurify from 'dompurify'
 import { nextTick, onMounted, ref } from 'vue'
+
+const { sendMessage, resumeMessage } = useChatStream()
 
 const route = useRoute()
 const router = useRouter()
@@ -200,14 +193,14 @@ const uuid = ref<string>(String(route.params.uuid || ''))
 const visitorId = ref<string>('')
 const agent = ref<AgentChatInfo>()
 
-const convList = ref<AgentConv[]>([])
+const convList = ref<ChatConv[]>([])
 const convLoading = ref(false)
 const currentConvId = ref<number | undefined>(undefined)
 /** 对话消息（含前端流式字段 showThinking） */
-interface ChatMsg extends AgentMsg {
+interface ChatMsgItem extends ChatMsgData {
   showThinking?: boolean
 }
-const messages = ref<ChatMsg[]>([])
+const messages = ref<ChatMsgItem[]>([])
 const inputText = ref('')
 const sending = ref(false)
 const chatBodyRef = ref<HTMLElement>()
@@ -239,7 +232,7 @@ function ensureVisitorId() {
 /** 初始化：加载 Agent 元信息 + 对话列表；带对话参数则定位单个对话，否则默认展示新建对话内容 */
 async function init() {
   try {
-    const res = await agentAccessLoad(uuid.value)
+    const res = await loadAgentInfo(uuid.value)
     agent.value = res.data
     document.title = agent.value?.name || 'Agent'
   } catch (e) {
@@ -263,7 +256,7 @@ async function init() {
 async function loadConvList() {
   convLoading.value = true
   try {
-    const res = await agentAccessConvList(uuid.value, visitorId.value)
+    const res = await listConv(uuid.value, visitorId.value)
     convList.value = res.data
   } finally {
     convLoading.value = false
@@ -277,7 +270,7 @@ function handleNewChat() {
   if (sending.value) return
   // 已在新建对话状态：提示并聚焦，不重复进入
   if (newChat.value && !currentConvId.value) {
-    ElMessage.warning(t('business.agent.newChatAlready'))
+    ElMessage.warning(t('business.chat.newChatAlready'))
     newChatInputRef.value?.focus()
     return
   }
@@ -309,7 +302,7 @@ async function selectConv(convId: number) {
   newChat.value = false
   syncUrlConvId(convId)
   messages.value = []
-  const res = await agentAccessMsgList(convId)
+  const res = await listMsg(convId)
   messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
   await scrollToBottom()
   // 存在生成中的助手消息（如刷新页面/切换对话后）：自动断点续传并展开思考区
@@ -323,28 +316,24 @@ async function selectConv(convId: number) {
 /**
  * 续传生成中的助手消息：从结果流起点重放全部增量，回填到对应消息
  */
-async function resumeGenerating(msg: ChatMsg) {
+async function resumeGenerating(msg: ChatMsgItem) {
   if (msg.id == null) return
   const idx = messages.value.indexOf(msg)
   sending.value = true
   try {
-    const reader = await agentResumeStream(msg.id)
-    if (reader) {
-      await streamWithResume(
-        reader,
-        { msgId: msg.id },
-        (chunk) => {
-          const m = messages.value[idx]
-          if (m) m.reasoning = (m.reasoning || '') + chunk
-          scrollToBottom()
-        },
-        (chunk) => {
-          const m = messages.value[idx]
-          if (m) m.content += chunk
-          scrollToBottom()
-        }
-      )
-    }
+    await resumeMessage(
+      msg.id,
+      (chunk) => {
+        const m = messages.value[idx]
+        if (m) m.reasoning = (m.reasoning || '') + chunk
+        scrollToBottom()
+      },
+      (chunk) => {
+        const m = messages.value[idx]
+        if (m) m.content += chunk
+        scrollToBottom()
+      }
+    )
   } catch (e) {
     // 续传失败保留已展示内容
   } finally {
@@ -356,19 +345,19 @@ async function resumeGenerating(msg: ChatMsg) {
 // --------------------------------- 对话标题修改 ---------------------------------
 
 /** 进入标题编辑态 */
-function startEditConvTitle(conv: AgentConv) {
+function startEditConvTitle(conv: ChatConv) {
   editingConvId.value = conv.id
   editingTitle.value = conv.title || ''
 }
 
 /** 保存标题（Enter / 失焦触发，最长50个字符） */
-function saveConvTitle(conv: AgentConv) {
+function saveConvTitle(conv: ChatConv) {
   if (editingConvId.value !== conv.id) return
   const title = editingTitle.value.trim()
   editingConvId.value = undefined
   editingTitle.value = ''
   if (!title || title === conv.title) return
-  agentAccessConvRename(conv.id, title)
+  renameConv(conv.id, title)
     .then(() => {
       conv.title = title
     })
@@ -382,14 +371,14 @@ function cancelConvTitle() {
 }
 
 /** 删除对话 */
-function deleteConv(conv: AgentConv) {
-  ElMessageBox.confirm(t('business.agent.deleteConvConfirm', [conv.title]), t('modal.title'), {
+function deleteConv(conv: ChatConv) {
+  ElMessageBox.confirm(t('business.chat.deleteConvConfirm', [conv.title]), t('modal.title'), {
     confirmButtonText: t('modal.confirmButton'),
     cancelButtonText: t('modal.cancelButton'),
     type: 'warning'
   })
     .then(async () => {
-      await agentAccessConvDelete(conv.id)
+      await removeConv(conv.id)
       if (currentConvId.value === conv.id) {
         currentConvId.value = undefined
         messages.value = []
@@ -405,7 +394,7 @@ function deleteConv(conv: AgentConv) {
 async function handleSend() {
   const content = inputText.value.trim()
   if (!content) {
-    ElMessage.warning(t('business.agent.questionRequired'))
+    ElMessage.warning(t('business.chat.questionRequired'))
     return
   }
   if (sending.value) return
@@ -415,7 +404,7 @@ async function handleSend() {
   // 新建状态：首次发送才创建对话（左侧新增对话，右侧展示正文）
   if (!currentConvId.value) {
     try {
-      const res = await agentAccessConvCreate(uuid.value, visitorId.value)
+      const res = await createConv(uuid.value, visitorId.value)
       const convId = res.data.id
       currentConvId.value = convId
       newChat.value = false
@@ -423,7 +412,7 @@ async function handleSend() {
       // 新对话置顶（列表按 id 倒序）
       convList.value.unshift(res.data)
     } catch (e) {
-      ElMessage.error(t('business.agent.sendFail'))
+      ElMessage.error(t('business.chat.sendFail'))
       sending.value = false
       return
     }
@@ -431,9 +420,9 @@ async function handleSend() {
 
   // 本地追加用户消息
   const now = new Date().toISOString()
-  const userMsg: ChatMsg = { convId: currentConvId.value, role: 'user', content, showThinking: false, addTime: now }
+  const userMsg: ChatMsgItem = { convId: currentConvId.value, role: 'user', content, showThinking: false, addTime: now }
   messages.value.push(userMsg)
-  const assistantMsg: ChatMsg = {
+  const assistantMsg: ChatMsgItem = {
     convId: currentConvId.value,
     role: 'assistant',
     content: '',
@@ -444,18 +433,9 @@ async function handleSend() {
   const assistantIdx = messages.value.push(assistantMsg) - 1
   await scrollToBottom()
 
-  // 流状态：msgId 由后端 stream 事件下发，lastEventId 为已处理的结果流条目，用于断线续传
-  const streamState: { msgId?: number; lastEventId?: string } = {}
   try {
-    const reader = await agentSendStream(uuid.value, visitorId.value, currentConvId.value, content)
-    if (!reader) {
-      ElMessage.error(t('business.agent.sendFail'))
-      sending.value = false
-      return
-    }
-    await streamWithResume(
-      reader,
-      streamState,
+    await sendMessage(
+      { uuid: uuid.value, visitorId: visitorId.value, convId: currentConvId.value as number, content },
       (chunk) => {
         // 经响应式代理累加思考过程，触发视图逐段更新
         const msg = messages.value[assistantIdx]
@@ -473,7 +453,7 @@ async function handleSend() {
     await scrollToBottom()
     requestAnimationFrame(() => scrollToBottom())
   } catch (e) {
-    ElMessage.error(t('business.agent.sendFail'))
+    ElMessage.error(t('business.chat.sendFail'))
   } finally {
     sending.value = false
     // 首条消息后后端自动生成了对话标题（首次提问内容，超50字截断补"..."），本地同步刷新左侧标题
@@ -487,132 +467,6 @@ async function handleSend() {
   }
 }
 
-/**
- * 读取流并断线自动续传：正常结束（[DONE]/错误）返回；中断则携 msgId + lastEventId 续传（最多 3 次）
- *
- * @param reader 初始流（发送或续传获得）
- * @param state  流状态（stream 事件回填 msgId，内容事件推进 lastEventId）
- */
-async function streamWithResume(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  state: { msgId?: number; lastEventId?: string },
-  onThinking: (text: string) => void,
-  onContent: (text: string) => void
-) {
-  let attempts = 0
-  while (reader) {
-    let completed = false
-    try {
-      completed = await readStream(reader, onThinking, onContent, state)
-    } catch (e) {
-      // 网络中断：进入续传分支
-      completed = false
-    }
-    if (completed) return
-    // 未正常结束且已获得 msgId：携带断点续传（最多 3 次）
-    if (!state.msgId || attempts >= 3) return
-    attempts++
-    await new Promise((resolve) => setTimeout(resolve, 500 * attempts))
-    try {
-      const resumed = await agentResumeStream(state.msgId, state.lastEventId)
-      if (!resumed) return
-      reader = resumed
-    } catch (e) {
-      return
-    }
-  }
-}
-
-/**
- * 流式读取：按 SSE 事件解析（stream=流标识，thinking=思考过程，message=回复内容，ping=心跳），逐事件回调
- *
- * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
- * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致 markdown 实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
- *
- * @returns 是否收到结束标志（[DONE]/错误）；未收到即视为中断，由调用方携带 state 续传
- */
-async function readStream(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  onThinking: (text: string) => void,
-  onContent: (text: string) => void,
-  state: { msgId?: number; lastEventId?: string }
-): Promise<boolean> {
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  let eventName = 'message'
-  // 当前事件 id（结果流条目，用于断线续传）
-  let eventId = ''
-  // 待拼装的事件数据（同一事件内的多条 data: 行）
-  let dataLines: string[] = []
-
-  /** 派发单个事件：命中结束/错误标志返回 true，终止读取 */
-  const dispatch = (data: string): boolean => {
-    if (!data) return false
-    if (data === '[DONE]') {
-      if (eventId) state.lastEventId = eventId
-      return true
-    }
-    if (data.startsWith('__ERROR__')) {
-      if (eventId) state.lastEventId = eventId
-      ElMessage.error(data.slice(9))
-      return true
-    }
-    if (eventName === 'stream') {
-      state.msgId = Number(data)
-      return false
-    }
-    if (eventName === 'ping') return false
-    if (eventName === 'thinking') {
-      onThinking(data)
-    } else {
-      onContent(data)
-    }
-    // 仅内容事件推进断点，续传时从该 id 之后继续
-    if (eventId) state.lastEventId = eventId
-    return false
-  }
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    // 按 SSE 行切分（兼容 \r\n / \r / \n），末尾不完整行留在 buffer 下次拼接
-    const lines = buffer.split(/\r\n|\r|\n/)
-    buffer = lines.pop() || ''
-    for (const line of lines) {
-      // 空行为事件结束标志：拼装完整内容后统一派发
-      if (line === '') {
-        if (dataLines.length > 0) {
-          const data = dataLines.join('\n')
-          dataLines = []
-          if (dispatch(data)) return true
-        }
-        eventId = ''
-        continue
-      }
-      if (line.startsWith('event:')) {
-        eventName = line.substring(6).trim()
-        continue
-      }
-      if (line.startsWith('id:')) {
-        eventId = line.substring(3).trim()
-        continue
-      }
-      if (line.startsWith('data:')) {
-        // 保留原始内容：不做 trim，避免丢失 Markdown 空行/缩进（多行内容由 join('\n') 还原）
-        dataLines.push(line.substring(5))
-        continue
-      }
-      // 忽略其它字段（retry / 注释行等）
-    }
-  }
-  // 流结束兜底：派发未以空行收尾的残留数据（如最后一个事件未换行结尾）
-  if (dataLines.length > 0) {
-    return dispatch(dataLines.join('\n'))
-  }
-  return false
-}
-
 /** 展开/收起思考过程 */
 function toggleThinking(index: number) {
   const msg = messages.value[index]
@@ -624,9 +478,9 @@ function toggleThinking(index: number) {
 /** 访客下拉：复制访客信息并提示 */
 async function handleVisitorCommand() {
   if (!visitorId.value) return
-  const tip = t('business.agent.visitorIdTip', [visitorId.value])
+  const tip = t('business.chat.visitorIdTip', [visitorId.value])
   await copyText(tip)
-  ElMessage.success(t('business.agent.copySuccess'))
+  ElMessage.success(t('business.chat.copySuccess'))
 }
 
 /** 复制文本：优先 navigator.clipboard，降级 textarea 方案 */
@@ -647,40 +501,8 @@ async function copyText(text: string) {
 
 // --------------------------------- 会话消息 ---------------------------------
 
-/** 转义 HTML 特殊字符（代码块内容/语言标签注入 HTML 前，防止被解释为标签） */
-function escapeHtml(text: string): string {
-  return (text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-/**
- * Markdown 渲染（净化防 XSS）
- *   - 代码块：浅色主题 + 「语言标签 / 复制按钮」头部，贴合业界常见观感；
- *   - 代码块内容经 HTML 转义后注入，避免非法标签内容被 DOMPurify 误删。
- */
-function renderMarkdown(text: string): string {
-  const renderer = new Renderer()
-  renderer.code = ({ text: body, lang }: Tokens.Code) => {
-    const language = escapeHtml(lang || '')
-    const label = language || 'code'
-    const codeHtml = escapeHtml(body)
-    return `<div class="code-block"><div class="code-header"><span class="code-lang">${label}</span><span class="code-copy">${t('business.agent.copyCode')}</span></div><pre><code class="language-${language}">${codeHtml}</code></pre></div>`
-  }
-  const html = marked.parse(text ?? '', { renderer, gfm: true }) as string
-  return DOMPurify.sanitize(html)
-}
-
-/** 复制代码块：v-html 注入的复制按钮无法绑定 Vue 事件，用事件委托处理 */
-async function handleCopyCode(event: MouseEvent) {
-  const target = (event.target as HTMLElement | null)?.closest?.('.code-copy')
-  if (!target) return
-  const codeEl = (target as HTMLElement).closest('.code-block')?.querySelector('code')
-  if (!codeEl) return
-  await copyText(codeEl.textContent ?? '')
-  ElMessage.success(t('business.agent.copySuccess'))
-}
-
 /** 消息发送时间（无值时返回空，悬浮时展示） */
-function timeText(msg: ChatMsg) {
+function timeText(msg: ChatMsgItem) {
   return msg.addTime ? parseTime(msg.addTime) || '' : ''
 }
 
@@ -747,8 +569,6 @@ async function scrollToBottom(force = false) {
 // --------------------------------- page init ---------------------------------
 onMounted(() => {
   init()
-  // 代码块复制按钮：v-html 注入内容无法直接绑定事件，挂载后统一走事件委托
-  chatBodyRef.value?.addEventListener('click', handleCopyCode)
 })
 </script>
 
@@ -1259,157 +1079,6 @@ onMounted(() => {
     transform: translateY(-4px);
     opacity: 1;
   }
-}
-
-/* Markdown 渲染内容样式（助手气泡内） */
-/* marked 已输出标准块级结构（p/h/ul…），重置气泡继承的 pre-wrap，
-   否则源码中块标签之间的换行会被当作空白行渲染，导致行距异常变大 */
-.assistant .msg-bubble .msg-content {
-  white-space: normal;
-}
-
-.assistant .msg-bubble .msg-content :deep(p) {
-  margin: 4px 0;
-}
-
-.assistant .msg-bubble .msg-content :deep(h1),
-.assistant .msg-bubble .msg-content :deep(h2),
-.assistant .msg-bubble .msg-content :deep(h3),
-.assistant .msg-bubble .msg-content :deep(h4),
-.assistant .msg-bubble .msg-content :deep(h5),
-.assistant .msg-bubble .msg-content :deep(h6) {
-  margin: 10px 0 6px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--el-text-color-primary);
-}
-
-.assistant .msg-bubble .msg-content :deep(h1) {
-  font-size: 20px;
-}
-
-.assistant .msg-bubble .msg-content :deep(h2) {
-  font-size: 18px;
-}
-
-.assistant .msg-bubble .msg-content :deep(h3) {
-  font-size: 16px;
-}
-
-.assistant .msg-bubble .msg-content :deep(h4),
-.assistant .msg-bubble .msg-content :deep(h5),
-.assistant .msg-bubble .msg-content :deep(h6) {
-  font-size: 14.5px;
-}
-
-.assistant .msg-bubble .msg-content :deep(ul),
-.assistant .msg-bubble .msg-content :deep(ol) {
-  padding-left: 22px;
-  margin: 4px 0;
-}
-
-.assistant .msg-bubble .msg-content :deep(blockquote) {
-  margin: 6px 0;
-  padding: 2px 12px;
-  border-left: 3px solid var(--el-border-color);
-  border-radius: 0 4px 4px 0;
-  background: var(--el-fill-color-lighter);
-  color: var(--el-text-color-secondary);
-}
-
-.assistant .msg-bubble .msg-content :deep(code) {
-  padding: 1px 5px;
-  border-radius: 3px;
-  background-color: var(--el-fill-color-light);
-  font-size: 12.5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
-}
-
-/* 代码块：浅色主题 + 语言/复制头部（renderMarkdown 注入 .code-block 结构） */
-.assistant .msg-bubble .msg-content :deep(.code-block) {
-  margin: 8px 0;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f6f8fa;
-}
-
-.assistant .msg-bubble .msg-content :deep(.code-header) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 12px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #f6f8fa;
-  font-size: 12px;
-  color: #57606a;
-}
-
-.assistant .msg-bubble .msg-content :deep(.code-lang) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
-  text-transform: lowercase;
-}
-
-.assistant .msg-bubble .msg-content :deep(.code-copy) {
-  cursor: pointer;
-  user-select: none;
-  color: #57606a;
-  transition: color 0.2s;
-
-  &:hover {
-    color: var(--el-color-primary);
-  }
-}
-
-.assistant .msg-bubble .msg-content :deep(pre) {
-  margin: 0;
-  padding: 10px 12px;
-  overflow-x: auto;
-  background: transparent;
-  color: #24292f;
-  white-space: pre;
-  word-break: normal;
-  line-height: 1.55;
-}
-
-.assistant .msg-bubble .msg-content :deep(pre code) {
-  padding: 0;
-  border-radius: 0;
-  background-color: transparent;
-  color: inherit;
-}
-
-.assistant .msg-bubble .msg-content :deep(a) {
-  color: var(--el-color-primary);
-}
-
-.assistant .msg-bubble .msg-content :deep(table) {
-  width: 100%;
-  margin: 8px 0;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.assistant .msg-bubble .msg-content :deep(th),
-.assistant .msg-bubble .msg-content :deep(td) {
-  padding: 6px 10px;
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.assistant .msg-bubble .msg-content :deep(th) {
-  background-color: var(--el-fill-color-lighter);
-  font-weight: 600;
-}
-
-.assistant .msg-bubble .msg-content :deep(hr) {
-  margin: 10px 0;
-  border: none;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.assistant .msg-bubble .msg-content :deep(img) {
-  max-width: 100%;
-  border-radius: 4px;
 }
 
 .chat-input {

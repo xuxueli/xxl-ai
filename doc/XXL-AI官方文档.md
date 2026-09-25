@@ -424,17 +424,20 @@ POST /chat/send
 
 | 层 | 组件 | 职责 |
 |---|---|---|
-| 接入 | `AgentAccessController` | 仅路由透传：元数据接口走 `AgentAccessService`，`/chat/send`、`/chat/resume` 走 `ChatStreamService` |
-| 应用 | `AgentAccessService` | 会话元数据 CRUD + 会话校验（Agent 就绪/对话归属，单一校验源） |
-| 流式 | `ChatStreamService` | **单类承载全部流式逻辑**：发送准备（落库用户消息+助手占位）→ 任务队列（消费组/超时认领）→ 生成 worker（LLM→结果流→回填消息）→ SSE 转发（心跳/容错）→ 有界转发线程池；`SmartLifecycle` 托管 worker 线程 |
-| 生成 | `LlmAgentChatService` | 模型编排：装配上下文/工具/RAG，流式增量经回调输出（与传输层解耦） |
-| 存储 | Redis Stream + MySQL | 任务队列 `xxl:ai:chat:tasks`、结果流 `xxl:ai:chat:result:{msgId}`、消息表 `xxl_ai_agent_msg` |
+| 接入 | `ChatController` | 仅路由透传：元数据接口走 `ChatService`，`/chat/send`、`/chat/resume` 走 `ChatStreamService` |
+| 应用 | `ChatService` | 会话元数据 CRUD + 会话校验（Agent 就绪/对话归属，单一校验源） |
+| 编排 | `ChatStreamService` | 发送/续传编排：校验会话 → 落库用户消息+助手占位 → 投递任务 → 委托转发 |
+| 存储 | `ChatStreamStore` | Redis Stream 纯存储层：任务队列（消费组/超时认领）+ 结果流（追加/读取/TTL） |
+| 生成 | `ChatGenerator` | 生成 worker（`SmartLifecycle` 托管线程）：消费任务 → LLM → 结果流 → 回填消息（status=1/2） |
+| 转发 | `ChatSseForwarder` | 有界转发线程池 + 结果流 XREAD → SSE（心跳/容错，任意节点可转发） |
+| 生成引擎 | `LlmAgentChatService` | 模型编排：装配上下文/工具/RAG，流式增量经回调输出（与传输层解耦） |
+| 存储 | Redis Stream + MySQL | 任务队列 `xxl:ai:chat:tasks`、结果流 `xxl:ai:chat:result:{msgId}`、消息表 `xxl_ai_chat_msg` |
 
 组件流转关系（正向发送）：
 
 ```
 前端 handleSend
-  └─ agentSendStream → AgentAccessController.send → ChatStreamService.send
+  └─ agentSendStream → ChatController.send → ChatStreamService.send
        ├─ submit：校验 + 落用户消息(status=1) + 助手占位(status=0) → XADD 任务
        └─ forward(emitter, msgId) → XREAD 结果流 → SSE(stream/thinking/message/ping/[DONE])
 
@@ -449,21 +452,22 @@ POST /chat/send
 ```
 前端 selectConv → 发现 assistant.status=0
   └─ resumeGenerating(msg.id)
-       └─ AgentAccessController.resume → ChatStreamService.resume(msgId, lastEventId)
+       └─ ChatController.resume → ChatStreamService.resume(msgId, lastEventId)
             └─ forward → 从断点 XREAD 结果流继续 → SSE
 ```
 
 组件依赖关系：
 
 ```
-Controller ──> AgentAccessService（元数据 / 校验）
-           └─> ChatStreamService（发送 / 续传 / 生成 / 转发）
-ChatStreamService ──> AgentAccessService（Agent/对话校验）+ AgentMsg/ConvMapper + SupplierService
-                   └─> LlmAgentChatService ──> 增量回调（写入结果流）
-                   └─> Redis Stream（任务队列 / 结果流）
+Controller ──> ChatService（元数据 / 校验）
+           └─> ChatStreamService（发送 / 续传编排）
+ChatStreamService ──> ChatService（Agent/对话校验）+ ChatMsg/ChatConvMapper + ChatStreamStore + ChatSseForwarder
+ChatStreamStore   ──> Redis Stream（任务队列 / 结果流）
+ChatGenerator     ──> ChatStreamStore + ChatService + LlmAgentChatService（增量写结果流）
+ChatSseForwarder  ──> ChatStreamStore（XREAD 转发）
 ```
 
-> 一句话：**`ChatStreamService` 单类承载“发送准备 → 任务队列 → 生成 worker → 结果流 → SSE 转发”全链路**；`AgentAccessService` 只管会话元数据与校验，`LlmAgentChatService` 经回调输出增量、与传输层解耦，`msgId`（助手占位主键）同时标识消息与结果流。
+> 一句话：**对话域收敛在 `business/chat`**——`ChatStreamService` 只做发送/续传编排，Redis 存取在 `ChatStreamStore`、生成在 `ChatGenerator`、转发在 `ChatSseForwarder`；`ChatService` 管会话元数据与校验，`LlmAgentChatService` 经回调输出增量、与传输层解耦，`msgId`（助手占位主键）同时标识消息与结果流。
 
 SSE 事件协议：
 
@@ -480,7 +484,7 @@ SSE 事件协议：
 
 - `POST /chat/send?uuid&visitorId&convId&content`：落库用户消息 + 助手占位后投递任务并转发；
 - `POST /chat/resume?msgId&lastEventId`：从结果流 `lastEventId` 之后继续转发，不重新生成；
-- `xxl_ai_agent_msg` 增加 `status`（0-生成中、1-完成、2-失败）：发送即落助手占位，**其主键 `id` 复用为结果流标识**（1:1，无需额外 stream 字段），worker 结束时回填内容与状态。刷新页面后，前端发现 `status=0` 的助手消息即据消息ID自动续传并展开思考区，生成结果不丢失。
+- `xxl_ai_chat_msg` 增加 `status`（0-生成中、1-完成、2-失败）：发送即落助手占位，**其主键 `id` 复用为结果流标识**（1:1，无需额外 stream 字段），worker 结束时回填内容与状态。刷新页面后，前端发现 `status=0` 的助手消息即据消息ID自动续传并展开思考区，生成结果不丢失。
 
 集群与可靠性要点：
 
@@ -521,7 +525,7 @@ xxl-ai.chat.sse.max=64               # 单节点 SSE 转发最大并发连接数
 | 知识库 | `xxl_ai_knowledge_base`、`xxl_ai_knowledge_doc` | 知识库、文档（向量化状态） |
 | MCP | `xxl_ai_mcp` | MCP 服务配置 |
 | SKILL | `xxl_ai_skill`、`xxl_ai_skill_file` | 技能、技能文件树 |
-| Agent | `xxl_ai_agent`、`xxl_ai_agent_conv`、`xxl_ai_agent_msg` | Agent、对话、消息 |
+| Agent | `xxl_ai_agent`、`xxl_ai_chat_conv`、`xxl_ai_chat_msg` | Agent、对话、消息 |
 
 **空间隔离**：除平台表外，业务表均带 `space_id`；管理端当前空间由请求头 `xxl-space-id` 传入，后端按空间过滤；管理员可见全部空间，普通用户按 `xxl_ai_user_space` 授权。公开对话端以 Agent 的 `uuid` + 访客 `visitorId` 隔离会话。所有关联均为应用层维护（无数据库外键）。
 

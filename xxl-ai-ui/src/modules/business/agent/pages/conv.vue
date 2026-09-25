@@ -7,25 +7,25 @@
     <div class="content-inner">
       <!-- 页头：返回 + Agent 信息 -->
       <el-row class="mb8" align="middle">
-        <el-button icon="Back" @click="goBack">{{ t('business.agent.backAgent') }}</el-button>
-        <span class="conv-header-title">{{ agentName || t('business.agent.conv') }} · {{ t('business.agent.convListTitle') }}</span>
+        <el-button icon="Back" @click="goBack">{{ t('business.chat.backAgent') }}</el-button>
+        <span class="conv-header-title">{{ agentName || t('business.chat.conv') }} · {{ t('business.chat.convListTitle') }}</span>
       </el-row>
 
       <!-- 搜索栏 -->
       <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
-        <el-form-item :label="t('business.agent.convTitle')" prop="title">
+        <el-form-item :label="t('business.chat.convTitle')" prop="title">
           <el-input
             v-model="queryParams.title"
-            :placeholder="t('common.inputPlaceholder', [t('business.agent.convTitle')])"
+            :placeholder="t('common.inputPlaceholder', [t('business.chat.convTitle')])"
             clearable
             style="width: 200px"
             @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item :label="t('business.agent.visitorId')" prop="visitorId">
+        <el-form-item :label="t('business.chat.visitorId')" prop="visitorId">
           <el-input
             v-model="queryParams.visitorId"
-            :placeholder="t('common.inputPlaceholder', [t('business.agent.visitorId')])"
+            :placeholder="t('common.inputPlaceholder', [t('business.chat.visitorId')])"
             clearable
             style="width: 200px"
             @keyup.enter="handleQuery"
@@ -40,9 +40,9 @@
       <!-- 对话列表：仅点击「查看明细」查看，行点击不触发 -->
       <el-table v-loading="table.loading" :data="table.list">
         <el-table-column :label="t('common.serialNo')" align="center" type="index" min-width="70" />
-        <el-table-column :label="t('business.agent.convTitle')" align="left" prop="title" min-width="220" :show-overflow-tooltip="true" />
+        <el-table-column :label="t('business.chat.convTitle')" align="left" prop="title" min-width="220" :show-overflow-tooltip="true" />
         <el-table-column
-          :label="t('business.agent.visitorId')"
+          :label="t('business.chat.visitorId')"
           align="center"
           prop="visitorId"
           min-width="160"
@@ -53,7 +53,7 @@
         <el-table-column :label="t('common.operation')" align="center" min-width="120" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="View" @click="openDetail(scope.row)" v-hasPermi="['agent:conv']">{{
-              t('business.agent.viewDetail')
+              t('business.chat.viewDetail')
             }}</el-button>
           </template>
         </el-table-column>
@@ -70,7 +70,7 @@
     </div>
 
     <!-- 对话明细抽屉 -->
-    <el-drawer v-model="drawer.visible" class="conv-detail-drawer" :title="t('business.agent.convDetail')" size="820px" append-to-body>
+    <el-drawer v-model="drawer.visible" class="conv-detail-drawer" :title="t('business.chat.convDetail')" size="820px" append-to-body>
       <div class="conv-detail" v-loading="drawer.loading">
         <!-- 元信息卡片：标题 + 访客/时间标签 -->
         <div class="conv-detail-meta">
@@ -83,7 +83,7 @@
           <div class="meta-chips">
             <span class="meta-chip">
               <el-icon><User /></el-icon>
-              <span class="meta-chip-label">{{ t('business.agent.visitorId') }}</span>
+              <span class="meta-chip-label">{{ t('business.chat.visitorId') }}</span>
               <span class="meta-chip-value">{{ drawer.conv.visitorId }}</span>
             </span>
             <span class="meta-chip">
@@ -96,19 +96,19 @@
 
         <div class="conv-detail-msgs">
           <div v-for="(msg, index) in drawer.messages" :key="index" class="detail-msg" :class="msg.role">
-            <div class="detail-msg-role">{{ msg.role === 'user' ? t('business.agent.roleUser') : t('business.agent.roleAssistant') }}</div>
+            <div class="detail-msg-role">{{ msg.role === 'user' ? t('business.chat.roleUser') : t('business.chat.roleAssistant') }}</div>
             <div class="detail-msg-bubble">
               <!-- 思考过程：可折叠展示 -->
               <div v-if="msg.reasoning" class="detail-msg-reasoning">
                 <div class="detail-msg-reasoning-toggle" @click="toggleThinking(index)">
                   <el-icon class="reasoning-icon"><MagicStick /></el-icon>
-                  <span>{{ msg.showThinking ? t('business.agent.hideThinking') : t('business.agent.thinking') }}</span>
+                  <span>{{ msg.showThinking ? t('business.chat.hideThinking') : t('business.chat.thinking') }}</span>
                   <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
                 </div>
                 <div v-if="msg.showThinking" class="detail-msg-reasoning-body">{{ msg.reasoning }}</div>
               </div>
               <!-- 助手内容 Markdown 渲染（净化防XSS），用户内容保持纯文本 -->
-              <span v-if="msg.role === 'assistant'" class="detail-msg-content" v-html="renderMarkdown(msg.content)"></span>
+              <MarkdownView v-if="msg.role === 'assistant'" class="detail-msg-content" :content="msg.content" />
               <span v-else class="detail-msg-content">{{ msg.content }}</span>
               <div class="detail-msg-time">{{ msg.addTime }}</div>
             </div>
@@ -124,14 +124,14 @@
 defineOptions({ name: 'AgentConv' })
 import { t } from '@/i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { listAgentConv, listAgentConvMsg } from '../api'
+import { loadAgent } from '../api'
+import { listConvMsg, pageConv } from '@/modules/business/chat/api'
+import MarkdownView from '@/modules/business/chat/components/MarkdownView.vue'
+import type { ChatConv, ChatConvQuery, ChatMsg } from '@/modules/business/chat/types'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
 import { Pagination } from '@/components'
 import type { TableState } from '@/types'
-import type { AgentConv, AgentConvQuery, AgentMsg } from '../types'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
 import { ref } from 'vue'
 
 const route = useRoute()
@@ -139,22 +139,22 @@ const router = useRouter()
 const resetForm = useFormReset()
 
 /** 对话消息（含前端折叠状态 showThinking） */
-interface ConvMsg extends AgentMsg {
+interface ConvMsg extends ChatMsg {
   showThinking?: boolean
 }
 
 // --------------------------------- ref data ---------------------------------
 const agentId = ref(Number(route.query.agentId) || 0)
-const agentName = ref(String(route.query.agentName ?? ''))
+const agentName = ref('')
 
-const queryParams = ref<AgentConvQuery>({ pageNum: 1, pageSize: 10, title: undefined, visitorId: undefined })
+const queryParams = ref<ChatConvQuery>({ pageNum: 1, pageSize: 10, title: undefined, visitorId: undefined })
 
-const table = ref<TableState<AgentConv>>({ list: [], total: 0, loading: true, showSearch: true, ids: [] })
+const table = ref<TableState<ChatConv>>({ list: [], total: 0, loading: true, showSearch: true, ids: [] })
 
 const drawer = ref<{
   visible: boolean
   loading: boolean
-  conv: AgentConv
+  conv: Partial<ChatConv>
   messages: ConvMsg[]
 }>({ visible: false, loading: false, conv: {}, messages: [] })
 
@@ -163,7 +163,7 @@ function getList() {
   if (!agentId.value) return
   table.value.loading = true
   const params = usePageParams(queryParams)()
-  listAgentConv(agentId.value, params)
+  pageConv(agentId.value, params)
     .then((response) => {
       table.value.list = response.data.data
       table.value.total = response.data.total
@@ -185,13 +185,13 @@ function resetQuery() {
 }
 
 /** 打开对话明细抽屉：加载消息列表 */
-function openDetail(row: AgentConv) {
+function openDetail(row: any) {
   drawer.value.conv = row
   drawer.value.messages = []
   drawer.value.visible = true
   if (row.id == null) return
   drawer.value.loading = true
-  listAgentConvMsg(agentId.value, row.id)
+  listConvMsg(agentId.value, row.id)
     .then((response) => {
       drawer.value.messages = response.data.map((msg) => ({ ...msg, showThinking: false }))
     })
@@ -206,18 +206,23 @@ function toggleThinking(index: number) {
   if (msg) msg.showThinking = !msg.showThinking
 }
 
-/** Markdown 渲染（净化防 XSS） */
-function renderMarkdown(text: string): string {
-  const html = marked.parse(text ?? '') as string
-  return DOMPurify.sanitize(html)
-}
-
 /** 返回 Agent 管理列表 */
 function goBack() {
   router.push({ path: '/agent' })
 }
 
+/** 加载 Agent 名称（页头展示，失败回退通用标题） */
+function loadAgentName() {
+  if (!agentId.value) return
+  loadAgent(agentId.value)
+    .then((response) => {
+      agentName.value = response.data?.name ?? ''
+    })
+    .catch(() => {})
+}
+
 // --------------------------------- page init ---------------------------------
+loadAgentName()
 getList()
 </script>
 
@@ -399,80 +404,4 @@ getList()
   word-break: break-word;
 }
 
-/* 助手 Markdown 内容样式 */
-.detail-msg.assistant .detail-msg-content :deep(p) {
-  margin: 4px 0;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(h1),
-.detail-msg.assistant .detail-msg-content :deep(h2),
-.detail-msg.assistant .detail-msg-content :deep(h3),
-.detail-msg.assistant .detail-msg-content :deep(h4),
-.detail-msg.assistant .detail-msg-content :deep(h5),
-.detail-msg.assistant .detail-msg-content :deep(h6) {
-  margin: 10px 0 6px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(ul),
-.detail-msg.assistant .detail-msg-content :deep(ol) {
-  padding-left: 22px;
-  margin: 4px 0;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(blockquote) {
-  margin: 6px 0;
-  padding: 2px 12px;
-  border-left: 3px solid var(--el-border-color);
-  background: var(--el-fill-color-lighter);
-  color: var(--el-text-color-secondary);
-}
-
-.detail-msg.assistant .detail-msg-content :deep(code) {
-  padding: 1px 5px;
-  border-radius: 3px;
-  background-color: var(--el-fill-color-light);
-  font-size: 12.5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(pre) {
-  margin: 8px 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  overflow-x: auto;
-  background: #f6f8fa;
-  color: #24292f;
-  white-space: pre;
-  line-height: 1.55;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(pre code) {
-  padding: 0;
-  background-color: transparent;
-  color: inherit;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(a) {
-  color: var(--el-color-primary);
-}
-
-.detail-msg.assistant .detail-msg-content :deep(table) {
-  width: 100%;
-  margin: 8px 0;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.detail-msg.assistant .detail-msg-content :deep(th),
-.detail-msg.assistant .detail-msg-content :deep(td) {
-  padding: 6px 10px;
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.detail-msg.assistant .detail-msg-content :deep(th) {
-  background-color: var(--el-fill-color-lighter);
-  font-weight: 600;
-}
 </style>

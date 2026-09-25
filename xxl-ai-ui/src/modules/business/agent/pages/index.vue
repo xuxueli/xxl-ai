@@ -78,7 +78,7 @@
         <el-table-column :label="t('common.operation')" align="center" width="320" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="ChatDotRound" @click="goConv(scope.row)" v-hasPermi="['agent:conv']">{{
-              t('business.agent.conv')
+              t('business.chat.conv')
             }}</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['agent:default']">{{
               t('common.modify')
@@ -384,7 +384,7 @@ function openAgentUrl(uuid: string) {
 // --------------------------------- Agent 对话 ---------------------------------
 /** 跳转 Agent 对话管理页（隐藏路由，按 loadView 映射 agent/pages/conv.vue） */
 function goConv(row: Agent) {
-  router.push({ path: '/agent/conv', query: { agentId: String(row.id), agentName: row.name ?? '' } })
+  router.push({ path: '/agent/conv', query: { agentId: String(row.id) } })
 }
 
 // --------------------------------- page init ---------------------------------

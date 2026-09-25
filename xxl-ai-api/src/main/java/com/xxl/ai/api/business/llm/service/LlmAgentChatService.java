@@ -1,11 +1,11 @@
 package com.xxl.ai.api.business.llm.service;
 
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
 import com.xxl.ai.api.business.knowledge.base.mapper.KnowledgeBaseMapper;
 import com.xxl.ai.api.business.knowledge.base.model.entity.KnowledgeBase;
 import com.xxl.ai.api.business.llm.client.LlmModelFactory;
 import com.xxl.ai.api.business.llm.model.ChatText;
+import com.xxl.ai.api.business.llm.model.LlmMessage;
 import com.xxl.ai.api.business.llm.rag.RagService;
 import com.xxl.ai.api.business.llm.tool.McpToolFactory;
 import com.xxl.ai.api.business.llm.tool.SkillToolFactory;
@@ -13,6 +13,8 @@ import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import jakarta.annotation.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -40,6 +42,8 @@ import java.util.function.Consumer;
 @Service
 public class LlmAgentChatService {
 
+    private static final Logger logger = LoggerFactory.getLogger(LlmAgentChatService.class);
+
     /** 思考过程元数据键（spring-ai OpenAI 推理模型 reason_content） */
     private static final String KEY_REASONING = "reasoningContent";
 
@@ -62,11 +66,11 @@ public class LlmAgentChatService {
      * @param historyList  历史消息（不含当前用户消息）
      * @param content      用户消息
      * @param sessionId      会话标识（Header {session} 占位替换）
-     * @param onThinking     思考过程增量回调（推理模型，可为空）
+     * @param onThinking     思考过程增量回调（推理模型；知识库降级提示亦经此输出）
      * @param onContent      回复内容增量回调
      * @return 完整回复（内容 + 思考过程）
      */
-    public ChatText chat(Agent agent, SupplierRuntime runtime, List<AgentMsg> historyList, String content,
+    public ChatText chat(Agent agent, SupplierRuntime runtime, List<LlmMessage> historyList, String content,
                          String sessionId, Consumer<String> onThinking, Consumer<String> onContent) throws Exception {
         // 装配对话请求：消息（系统指令+历史+当前）+ 工具 + RAG Advisor
         ChatClient chatClient = llmModelFactory.chatClient(runtime, sessionId);
@@ -75,21 +79,35 @@ public class LlmAgentChatService {
         if (tools.length > 0) {
             spec = spec.tools(tools);
         }
-        List<Advisor> advisorList = buildAdvisors(agent);
+        // RAG Advisor：单个知识库不可用（如向量库不可达）时跳过并降级，不阻断对话
+        List<String> degradeNotices = new ArrayList<>();
+        List<Advisor> advisorList = buildAdvisors(agent, degradeNotices);
         if (CollectionTool.isNotEmpty(advisorList)) {
             spec = spec.advisors(advisorList);
         }
-        return stream(spec, onThinking, onContent);
+        // 降级提示先写入思考流（前端「深度思考」区可见），并并入最终思考文本，保证刷新后一致
+        StringBuilder noticeText = new StringBuilder();
+        for (String notice : degradeNotices) {
+            if (onThinking != null) {
+                onThinking.accept(notice);
+            }
+            noticeText.append(notice);
+        }
+        ChatText chatText = stream(spec, onThinking, onContent);
+        if (noticeText.length() > 0) {
+            chatText = new ChatText(chatText.getContent(), noticeText + chatText.getThinking());
+        }
+        return chatText;
     }
 
     /**
      * 消息装配：系统指令（无配置时默认引导）+ 历史 + 当前用户消息
      */
-    private List<Message> buildMessages(Agent agent, List<AgentMsg> historyList, String content) {
+    private List<Message> buildMessages(Agent agent, List<LlmMessage> historyList, String content) {
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage(buildSystemPrompt(agent)));
         if (CollectionTool.isNotEmpty(historyList)) {
-            for (AgentMsg historyMsg : historyList) {
+            for (LlmMessage historyMsg : historyList) {
                 if ("user".equals(historyMsg.getRole())) {
                     messages.add(new UserMessage(StringTool.isBlank(historyMsg.getContent()) ? "" : historyMsg.getContent()));
                 } else if ("assistant".equals(historyMsg.getRole())) {
@@ -135,17 +153,29 @@ public class LlmAgentChatService {
 
     /**
      * RAG Advisor：按 Agent 绑定的知识库逐个装配（检索上下文自动注入系统提示）
+     *
+     * 单个知识库装配失败（如向量库不可达）时跳过并追加降级提示，不影响其余知识库与对话主流程。
+     *
+     * @param agent          Agent 实体
+     * @param degradeNotices 降级提示收集（输出至思考流并记日志）
      */
-    private List<Advisor> buildAdvisors(Agent agent) {
+    private List<Advisor> buildAdvisors(Agent agent, List<String> degradeNotices) {
         List<Advisor> advisorList = new ArrayList<>();
         for (Long kbId : splitIds(agent.getKbIds())) {
             KnowledgeBase knowledgeBase = knowledgeBaseMapper.load(kbId);
             if (knowledgeBase == null || knowledgeBase.getSpaceId() != agent.getSpaceId()) {
                 continue;
             }
-            Advisor advisor = ragService.buildAdvisor(knowledgeBase);
-            if (advisor != null) {
-                advisorList.add(advisor);
+            try {
+                Advisor advisor = ragService.buildAdvisor(knowledgeBase);
+                if (advisor != null) {
+                    advisorList.add(advisor);
+                }
+            } catch (Exception e) {
+                // 单个知识库不可用（如向量库不可达）时降级：跳过 RAG，保证对话主流程可用
+                logger.warn("Agent 知识库 RAG 装配失败，已降级跳过, agentId={}, kbId={}, name={}, err={}",
+                        agent.getId(), kbId, knowledgeBase.getName(), e.getMessage());
+                degradeNotices.add("【知识库降级】「" + knowledgeBase.getName() + "」检索服务不可用，本次对话已跳过 RAG 上下文。\n");
             }
         }
         return advisorList;

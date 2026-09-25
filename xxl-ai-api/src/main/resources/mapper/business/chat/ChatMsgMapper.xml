@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.xxl.ai.api.business.chat.mapper.AgentMsgMapper">
+<mapper namespace="com.xxl.ai.api.business.chat.mapper.ChatMsgMapper">
 
-	<resultMap id="AgentMsg" type="com.xxl.ai.api.business.chat.model.entity.AgentMsg" >
+	<resultMap id="ChatMsg" type="com.xxl.ai.api.business.chat.model.entity.ChatMsg" >
 		<result column="id" property="id" />
 		<result column="conv_id" property="convId" />
 		<result column="role" property="role" />
@@ -25,8 +25,8 @@
 		t.update_time
 	</sql>
 
-	<insert id="insert" parameterType="com.xxl.ai.api.business.chat.model.entity.AgentMsg" useGeneratedKeys="true" keyProperty="id" >
-		INSERT INTO xxl_ai_agent_msg (
+	<insert id="insert" parameterType="com.xxl.ai.api.business.chat.model.entity.ChatMsg" useGeneratedKeys="true" keyProperty="id" >
+		INSERT INTO xxl_ai_chat_msg (
 			conv_id, role, reasoning, content, status, add_time, update_time
 		) VALUES (
 			 #{convId}, #{role}, #{reasoning}, #{content}, #{status}, NOW(), NOW()
@@ -34,7 +34,7 @@
 	</insert>
 
 	<update id="updateAssistant" parameterType="java.util.HashMap" >
-		UPDATE xxl_ai_agent_msg
+		UPDATE xxl_ai_chat_msg
 		SET content = #{content},
 			reasoning = #{reasoning},
 			status = #{status},
@@ -43,12 +43,18 @@
 	</update>
 
 	<delete id="deleteByConvId" parameterType="java.util.HashMap">
-		DELETE FROM xxl_ai_agent_msg WHERE conv_id = #{convId}
+		DELETE FROM xxl_ai_chat_msg WHERE conv_id = #{convId}
 	</delete>
 
-	<select id="listByConvId" parameterType="java.util.HashMap" resultMap="AgentMsg">
+	<delete id="deleteByAgentUuid" parameterType="java.util.HashMap">
+		DELETE t FROM xxl_ai_chat_msg AS t
+		JOIN xxl_ai_chat_conv AS c ON t.conv_id = c.id
+		WHERE c.agent_uuid = #{agentUuid}
+	</delete>
+
+	<select id="listByConvId" parameterType="java.util.HashMap" resultMap="ChatMsg">
 		SELECT <include refid="Base_Column_List" />
-		FROM xxl_ai_agent_msg AS t
+		FROM xxl_ai_chat_msg AS t
 		WHERE t.conv_id = #{convId}
 		ORDER BY t.id ASC
 	</select>

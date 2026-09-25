@@ -67,7 +67,7 @@ com/xxl/ai/api/framework
 
 **新增业务一律落 `business/{module}` 模块包**（同名业务一级化，可聚合多个业务；`framework` 仅属于平台内置能力，不要塞业务）：
 
-- 后端 `com.xxl.ai.api.business.{module}`（controller/service/mapper/model/enums 子包），业务同名时直接一级目录（如 `business/skill`、接口 `/skill`），多业务模块按 `/{module}/{business}` 组织（如 `business/supplier` 聚合供应商+模型、`business/agent` + `business/agent/conv`）；`mapper/{module}/...` 遵循模块级约定。
+- 后端 `com.xxl.ai.api.business.{module}`（controller/service/mapper/model/enums 子包），业务同名时直接一级目录（如 `business/skill`、接口 `/skill`），多业务模块按 `/{module}/{business}` 组织（如 `business/supplier` 聚合供应商+模型、`business/knowledge` 聚合知识库+文档）；`mapper/{module}/...` 遵循模块级约定。
 - 前端 `src/modules/business/{module}/`（pages/api/types 子目录聚合），与后端包名一致；接口路径 `/{module}`（同名）或 `/{module}/{business}`（多业务）。
 
 Mapper XML 对应：`resources/mapper/framework/...`（平台内置）与 `resources/mapper/business/{module}/`（业务 Mapper XML 按模块平铺于该目录，文件名标识业务，前缀 `business/` 与后端 `business` 根包一致）。

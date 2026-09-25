@@ -494,8 +494,9 @@
       "publishSuccess": "发布成功",
       "unpublishSuccess": "已取消发布",
       "copyUrl": "复制URL",
-      "copySuccess": "已复制",
-      "confirmDelete": "是否确认删除 Agent 编号为\"{0}\"的数据项？",
+      "confirmDelete": "是否确认删除 Agent 编号为\"{0}\"的数据项？"
+    },
+    "chat": {
       "newChat": "新建对话",
       "newChatAlready": "已经是新对话",
       "noConv": "暂无对话",
@@ -519,6 +520,7 @@
       "collapseMenu": "收起侧栏",
       "expandMenu": "展开侧栏",
       "copyCode": "复制代码",
+      "copySuccess": "已复制",
       "conv": "Agent对话",
       "convListTitle": "对话列表",
       "convDetail": "对话明细",
@@ -527,8 +529,7 @@
       "convTitle": "标题",
       "visitorId": "访客ID",
       "roleUser": "用户",
-      "roleAssistant": "助手",
-      "convEmptyTip": "该 Agent 暂无访客对话"
+      "roleAssistant": "助手"
     }
   }
 }

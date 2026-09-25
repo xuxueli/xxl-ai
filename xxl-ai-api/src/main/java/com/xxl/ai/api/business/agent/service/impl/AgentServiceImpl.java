@@ -5,14 +5,17 @@ import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.adaptor.AgentAdaptor;
 import com.xxl.ai.api.business.agent.model.dto.AgentDTO;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
+import com.xxl.ai.api.business.agent.model.event.AgentDeletedEvent;
 import com.xxl.ai.api.business.agent.service.AgentService;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +29,8 @@ public class AgentServiceImpl implements AgentService {
 
     @Resource
     private AgentMapper agentMapper;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 分页查询 Agent 列表
@@ -75,15 +80,29 @@ public class AgentServiceImpl implements AgentService {
     }
 
     /**
-     * 批量删除 Agent
+     * 批量删除 Agent（同步发布删除事件，供对话等关联数据级联清理）
      */
     @Override
     public Response<String> deleteByIds(List<Long> ids) {
         if (CollectionTool.isEmpty(ids)) {
             return Response.ofFail("请选择要删除的 Agent");
         }
+        // 删除前收集已发布 Agent 的访问 UUID（未发布无关联对话）
+        List<String> agentUuids = new ArrayList<>();
+        for (Long id : ids) {
+            Agent agent = agentMapper.load(id);
+            if (agent != null && StringTool.isNotBlank(agent.getUuid())) {
+                agentUuids.add(agent.getUuid());
+            }
+        }
         int ret = agentMapper.deleteByIds(ids);
-        return ret > 0 ? Response.ofSuccess() : Response.ofFail();
+        if (ret <= 0) {
+            return Response.ofFail();
+        }
+        if (CollectionTool.isNotEmpty(agentUuids)) {
+            applicationEventPublisher.publishEvent(new AgentDeletedEvent(agentUuids));
+        }
+        return Response.ofSuccess();
     }
 
     /**

@@ -1,9 +1,9 @@
 package com.xxl.ai.api.business.chat.controller;
 
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.chat.model.entity.AgentConv;
-import com.xxl.ai.api.business.chat.model.entity.AgentMsg;
-import com.xxl.ai.api.business.chat.service.AgentAccessService;
+import com.xxl.ai.api.business.chat.model.entity.ChatConv;
+import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
+import com.xxl.ai.api.business.chat.service.ChatService;
 import com.xxl.ai.api.business.chat.stream.ChatStreamService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
@@ -16,16 +16,16 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 
 /**
- * Agent 公开访问 Controller：免管理端登录态，按访问 URL（UUID）直接访问
+ * 对话公开访问 Controller：免管理端登录态，按访问 URL（UUID）直接访问
  *
  * @author xxl-ai 2026-09-05
  */
 @RestController
 @RequestMapping("/chat")
-public class AgentAccessController {
+public class ChatController {
 
     @Resource
-    private AgentAccessService agentAccessService;
+    private ChatService chatService;
     @Resource
     private ChatStreamService chatStreamService;
 
@@ -35,7 +35,7 @@ public class AgentAccessController {
     @RequestMapping("/load")
     @XxlSso(login = false)
     public Response<Agent> load(@RequestParam("uuid") String uuid) {
-        return agentAccessService.load(uuid);
+        return chatService.load(uuid);
     }
 
     /**
@@ -43,10 +43,10 @@ public class AgentAccessController {
      */
     @RequestMapping("/convCreate")
     @XxlSso(login = false)
-    public Response<AgentConv> convCreate(@RequestParam("uuid") String uuid,
-                                          @RequestParam("visitorId") String visitorId,
-                                          String title) {
-        return agentAccessService.convCreate(uuid, visitorId, title);
+    public Response<ChatConv> convCreate(@RequestParam("uuid") String uuid,
+                                         @RequestParam("visitorId") String visitorId,
+                                         String title) {
+        return chatService.convCreate(uuid, visitorId, title);
     }
 
     /**
@@ -54,9 +54,9 @@ public class AgentAccessController {
      */
     @RequestMapping("/convList")
     @XxlSso(login = false)
-    public Response<List<AgentConv>> convList(@RequestParam("uuid") String uuid,
-                                              @RequestParam("visitorId") String visitorId) {
-        return agentAccessService.convList(uuid, visitorId);
+    public Response<List<ChatConv>> convList(@RequestParam("uuid") String uuid,
+                                             @RequestParam("visitorId") String visitorId) {
+        return chatService.convList(uuid, visitorId);
     }
 
     /**
@@ -66,7 +66,7 @@ public class AgentAccessController {
     @XxlSso(login = false)
     public Response<String> convRename(@RequestParam("convId") long convId,
                                        @RequestParam("title") String title) {
-        return agentAccessService.convRename(convId, title);
+        return chatService.convRename(convId, title);
     }
 
     /**
@@ -74,8 +74,8 @@ public class AgentAccessController {
      */
     @RequestMapping("/msgList")
     @XxlSso(login = false)
-    public Response<List<AgentMsg>> msgList(@RequestParam("convId") long convId) {
-        return agentAccessService.msgList(convId);
+    public Response<List<ChatMsg>> msgList(@RequestParam("convId") long convId) {
+        return chatService.msgList(convId);
     }
 
     /**
@@ -84,7 +84,7 @@ public class AgentAccessController {
     @RequestMapping("/convDelete")
     @XxlSso(login = false)
     public Response<String> convDelete(@RequestParam("convId") long convId) {
-        return agentAccessService.convDelete(convId);
+        return chatService.convDelete(convId);
     }
 
     /**
