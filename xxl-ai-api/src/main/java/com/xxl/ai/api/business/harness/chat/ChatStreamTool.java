@@ -41,6 +41,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -138,6 +139,9 @@ public class ChatStreamTool implements SmartLifecycle {
     /** 单节点 SSE 最大并发连接数 */
     @Value("${xxl-ai.chat.sse.max}")
     private int sseMax;
+    /** 附加给模型的最近历史消息条数上限（控制上下文长度） */
+    @Value("${xxl-ai.chat.history.limit}")
+    private int historyLimit;
 
     /** 结果流 TTL 上次续期时刻（msgId → 毫秒），用于 EXPIRE 节流 */
     private final Map<Long, Long> resultExpireAt = new ConcurrentHashMap<>();
@@ -539,7 +543,7 @@ public class ChatStreamTool implements SmartLifecycle {
     /**
      * 执行一次生成：校验 Agent → 解析模型运行时 → 装配历史/工具/RAG → harness 流式对话
      *
-     * 历史仅取当前助手占位（msgId）之前的消息，跳过未完成的助手占位，并移除末尾当前提问（由 LLM 工具另行追加）。
+     * 历史仅取当前助手占位（msgId）之前最近 historyLimit 条，跳过未完成的助手占位，并移除末尾当前提问（由 LLM 工具另行追加）。
      */
     private LlmChatTool.ChatText generate(long msgId, String uuid, long convId, String content,
                               java.util.function.Consumer<String> onThinking, java.util.function.Consumer<String> onContent) throws Exception {
@@ -554,14 +558,14 @@ public class ChatStreamTool implements SmartLifecycle {
         if (runtime.getModelType() != 0) {
             throw new IllegalStateException("所选模型不是对话模型");
         }
-        // 历史消息（角色 / 内容 平行列表），末尾当前提问由 content 单独传入
+        // 历史消息（角色 / 内容 平行列表）：仅取当前助手占位之前最近的 historyLimit 条，避免上下文过长
+        // 查询按 id 倒序取最近 N 条，此处按 id 升序排列还原为对话时间顺序
+        List<ChatMsg> recentMsgs = chatMsgMapper.listRecentByConvId(convId, msgId, historyLimit);
+        recentMsgs.sort(Comparator.comparingLong(ChatMsg::getId));
         List<String> roleList = new ArrayList<>();
         List<String> contentList = new ArrayList<>();
-        for (ChatMsg historyMsg : chatMsgMapper.listByConvId(convId)) {
-            // 仅取当前助手占位之前的历史（占位及其后消息不属于上下文）
-            if (historyMsg.getId() >= msgId) {
-                continue;
-            }
+        for (ChatMsg historyMsg : recentMsgs) {
+            // 跳过未完成的助手占位（如异常残留），避免把半截回复带入上下文
             if (ChatConstant.ROLE_ASSISTANT.equals(historyMsg.getRole())
                     && historyMsg.getStatus() == ChatConstant.MSG_STATUS_GENERATING) {
                 continue;

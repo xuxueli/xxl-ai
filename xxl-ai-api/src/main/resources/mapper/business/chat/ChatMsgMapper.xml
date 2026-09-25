@@ -59,6 +59,14 @@
 		ORDER BY t.id ASC
 	</select>
 
+	<select id="listRecentByConvId" parameterType="java.util.HashMap" resultMap="ChatMsg">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_ai_chat_msg AS t
+		WHERE t.conv_id = #{convId} AND t.id <![CDATA[ < ]]> #{beforeId}
+		ORDER BY t.id DESC
+		LIMIT #{limit}
+	</select>
+
 	<select id="countByConvId" parameterType="java.util.HashMap" resultType="int">
 		SELECT count(1)
 		FROM xxl_ai_chat_msg AS t

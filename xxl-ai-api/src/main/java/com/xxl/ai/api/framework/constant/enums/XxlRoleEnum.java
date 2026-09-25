@@ -88,7 +88,7 @@ public enum XxlRoleEnum {
         resources.add(resHidden(21, 0, "Agent对话", ResourceTypeEnum.MENU, "agent:conv", "/agent/conv", "", 111));
 
         // 知识库
-        resources.add(res(3, 0, "知识库RAG", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
+        resources.add(res(3, 0, "RAG知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 120));
         resources.add(resHidden(31, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 141));
 
         // SKILL

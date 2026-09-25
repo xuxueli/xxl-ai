@@ -33,6 +33,11 @@ public interface ChatMsgMapper {
 
     List<ChatMsg> listByConvId(@Param("convId") long convId);
 
+    /** 取指定消息之前最近的 limit 条消息（按 id 倒序，最新在前），用于构建模型上下文、控制长度 */
+    List<ChatMsg> listRecentByConvId(@Param("convId") long convId,
+                                     @Param("beforeId") long beforeId,
+                                     @Param("limit") int limit);
+
     /** 首页：每日会话消息量趋势 [{date, count}] */
     List<Map<String, Object>> trendList(@Param("days") int days);
 
