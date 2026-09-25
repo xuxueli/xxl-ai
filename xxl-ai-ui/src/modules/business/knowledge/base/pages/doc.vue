@@ -126,7 +126,7 @@
     </div>
 
     <!-- 添加或修改文档对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="720px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="1000px" append-to-body>
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.knowledge.docName')" prop="name">
           <el-input v-model="formState.form.name" maxlength="200" />
@@ -135,7 +135,8 @@
           <el-input
             v-model="formState.form.content"
             type="textarea"
-            :rows="14"
+            :rows="20"
+            class="doc-content-input"
             :placeholder="t('business.knowledge.docContentPlaceholder')"
             maxlength="16777215"
           />
@@ -428,5 +429,9 @@ getList()
 }
 .search-query-input {
   width: 420px;
+}
+.doc-content-input :deep(.el-textarea__inner) {
+  max-height: 52vh;
+  overflow-y: auto;
 }
 </style>
