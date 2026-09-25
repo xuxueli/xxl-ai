@@ -390,7 +390,7 @@ public class ChatStreamService implements SmartLifecycle {
                         handleTask(record);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.warn("Chat worker 消费异常, consumer={}, err={}", consumer, e.getMessage());
                 sleepQuietly(1000);
             }
