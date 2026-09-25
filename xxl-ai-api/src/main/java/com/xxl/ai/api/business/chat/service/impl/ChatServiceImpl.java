@@ -210,7 +210,7 @@ public class ChatServiceImpl implements ChatService {
     // ==================== 会话校验（流式对话共用的单一校验源） ====================
 
     /**
-     * 校验并返回可用 Agent（存在、未停用、已发布），不满足抛 IllegalArgumentException
+     * 校验并返回可用 Agent（存在、已发布），不满足抛 IllegalArgumentException
      */
     @Override
     public Agent requireReadyAgent(String uuid) {
@@ -220,10 +220,6 @@ public class ChatServiceImpl implements ChatService {
         Agent agent = agentMapper.loadByUuid(uuid);
         if (agent == null) {
             throw new IllegalArgumentException("Agent 不存在或已删除");
-        }
-        // 差异化提示：停用 / 未发布
-        if (agent.getStatus() == 1) {
-            throw new IllegalArgumentException("Agent 已停用，暂不可访问");
         }
         if (agent.getPublishStatus() != 1) {
             throw new IllegalArgumentException("Agent 未发布，暂不可访问");

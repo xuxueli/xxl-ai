@@ -17,7 +17,6 @@
 		<result column="skill_ids" property="skillIds" />
 		<result column="publish_status" property="publishStatus" />
 		<result column="uuid" property="uuid" />
-		<result column="status" property="status" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
 	</resultMap>
@@ -35,7 +34,6 @@
 		t.skill_ids,
 		t.publish_status,
 		t.uuid,
-		t.status,
 		t.add_time,
 		t.update_time
 	</sql>
@@ -43,10 +41,10 @@
 	<insert id="insert" parameterType="com.xxl.ai.api.business.agent.model.entity.Agent" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_agent (
 			space_id, name, intro, model_supplier_id, model_id, system_prompt,
-			kb_ids, mcp_ids, skill_ids, publish_status, uuid, status, add_time, update_time
+			kb_ids, mcp_ids, skill_ids, publish_status, uuid, add_time, update_time
 		) VALUES (
 			 #{spaceId}, #{name}, #{intro}, #{modelSupplierId}, #{modelId}, #{systemPrompt},
-			 #{kbIds}, #{mcpIds}, #{skillIds}, #{publishStatus}, #{uuid}, #{status}, NOW(), NOW()
+			 #{kbIds}, #{mcpIds}, #{skillIds}, #{publishStatus}, #{uuid}, NOW(), NOW()
 		 );
 	</insert>
 
@@ -74,7 +72,6 @@
 			skill_ids = #{skillIds},
 			publish_status = #{publishStatus},
 			uuid = #{uuid},
-			status = #{status},
 			update_time = NOW()
 		WHERE id = #{id}
 	</update>
@@ -121,9 +118,6 @@
 		<if test="publishStatus gt -1">
 			AND t.publish_status = #{publishStatus}
 		</if>
-		<if test="status gt -1">
-			AND t.status = #{status}
-		</if>
 		ORDER BY t.id ASC
 		LIMIT #{offset}, #{pagesize}
 	</select>
@@ -137,9 +131,6 @@
 		</if>
 		<if test="publishStatus gt -1">
 			AND t.publish_status = #{publishStatus}
-		</if>
-		<if test="status gt -1">
-			AND t.status = #{status}
 		</if>
 	</select>
 

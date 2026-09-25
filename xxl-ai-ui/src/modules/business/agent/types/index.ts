@@ -29,8 +29,6 @@ export interface Agent {
   publishStatus?: number
   /** 访问UUID */
   uuid?: string
-  /** 状态：0-正常、1-停用 */
-  status?: number
   addTime?: string
   updateTime?: string
   [key: string]: unknown
@@ -42,7 +40,6 @@ export interface AgentQuery {
   pageSize: number
   name?: string
   publishStatus: number
-  status: number
 }
 
 /** 列表接口请求参数 */

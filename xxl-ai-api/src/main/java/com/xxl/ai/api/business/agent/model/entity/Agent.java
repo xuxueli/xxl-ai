@@ -22,7 +22,6 @@ public class Agent {
     private String skillIds;        /* Skill ID集合(逗号分隔) */
     private int publishStatus;      /* 发布状态：0-未发布、1-已发布 */
     private String uuid;            /* 访问UUID */
-    private int status;             /* 状态：0-正常、1-停用 */
     private Date addTime;           /* 新增时间 */
     private Date updateTime;        /* 更新时间 */
 
@@ -128,14 +127,6 @@ public class Agent {
 
     public void setUuid(String uuid) {
         this.uuid = uuid;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
     }
 
     public Date getAddTime() {

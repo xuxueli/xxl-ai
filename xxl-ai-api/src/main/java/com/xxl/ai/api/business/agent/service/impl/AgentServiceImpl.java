@@ -40,9 +40,9 @@ public class AgentServiceImpl implements AgentService {
      * 分页查询 Agent 列表
      */
     @Override
-    public PageModel<AgentDTO> pageList(long spaceId, int offset, int pagesize, String name, int publishStatus, int status) {
-        List<Agent> pageList = agentMapper.pageList(spaceId, offset, pagesize, name, publishStatus, status);
-        int totalCount = agentMapper.pageListCount(spaceId, offset, pagesize, name, publishStatus, status);
+    public PageModel<AgentDTO> pageList(long spaceId, int offset, int pagesize, String name, int publishStatus) {
+        List<Agent> pageList = agentMapper.pageList(spaceId, offset, pagesize, name, publishStatus);
+        int totalCount = agentMapper.pageListCount(spaceId, offset, pagesize, name, publishStatus);
         List<AgentDTO> pageListDto = new java.util.ArrayList<>();
         if (CollectionTool.isNotEmpty(pageList)) {
             for (Agent agent : pageList) {

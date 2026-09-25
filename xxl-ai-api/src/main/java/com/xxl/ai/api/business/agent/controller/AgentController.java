@@ -43,13 +43,12 @@ public class AgentController {
                                                   @RequestParam(required = false, defaultValue = "0") int offset,
                                                   @RequestParam(required = false, defaultValue = "10") int pagesize,
                                                   String name,
-                                                  @RequestParam(required = false, defaultValue = "-1") int publishStatus,
-                                                  @RequestParam(required = false, defaultValue = "-1") int status) {
+                                                  @RequestParam(required = false, defaultValue = "-1") int publishStatus) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
         }
-        PageModel<AgentDTO> pageModel = agentService.pageList(spaceResp.getData().getSpaceId(), offset, pagesize, name, publishStatus, status);
+        PageModel<AgentDTO> pageModel = agentService.pageList(spaceResp.getData().getSpaceId(), offset, pagesize, name, publishStatus);
         return Response.ofSuccess(pageModel);
     }
 

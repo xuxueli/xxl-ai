@@ -38,7 +38,6 @@ public class AgentAdaptor {
         agent.setSkillIds(joinIds(dto.getSkillIds()));
         agent.setPublishStatus(dto.getPublishStatus());
         agent.setUuid(dto.getUuid());
-        agent.setStatus(dto.getStatus());
         return agent;
     }
 
@@ -63,7 +62,6 @@ public class AgentAdaptor {
         dto.setSkillIds(splitIds(agent.getSkillIds()));
         dto.setPublishStatus(agent.getPublishStatus());
         dto.setUuid(agent.getUuid());
-        dto.setStatus(agent.getStatus());
         dto.setAddTime(DateTool.formatDateTime(agent.getAddTime()));
         dto.setUpdateTime(DateTool.formatDateTime(agent.getUpdateTime()));
         return dto;

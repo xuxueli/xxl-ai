@@ -19,7 +19,7 @@ public interface AgentService {
     /**
      * 分页查询 Agent 列表
      */
-    PageModel<AgentDTO> pageList(long spaceId, int offset, int pagesize, String name, int publishStatus, int status);
+    PageModel<AgentDTO> pageList(long spaceId, int offset, int pagesize, String name, int publishStatus);
 
     /**
      * 按ID查询 Agent

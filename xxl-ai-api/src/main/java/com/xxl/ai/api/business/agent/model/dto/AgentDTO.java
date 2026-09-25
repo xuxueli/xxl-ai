@@ -22,7 +22,6 @@ public class AgentDTO {
     private List<Long> skillIds;    /* Skill ID集合 */
     private int publishStatus;      /* 发布状态：0-未发布、1-已发布 */
     private String uuid;            /* 访问UUID */
-    private int status;             /* 状态：0-正常、1-停用 */
     private String addTime;         /* 新增时间（格式化字符串） */
     private String updateTime;      /* 更新时间（格式化字符串） */
 
@@ -128,14 +127,6 @@ public class AgentDTO {
 
     public void setUuid(String uuid) {
         this.uuid = uuid;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
     }
 
     public String getAddTime() {

@@ -52,11 +52,6 @@
         <el-table-column :label="t('common.serialNo')" align="center" type="index" width="70" />
         <el-table-column :label="t('business.agent.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.agent.intro')" align="center" prop="intro" min-width="200" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('common.status')" align="center" width="90">
-          <template #default="scope">
-            <el-switch v-model="scope.row.status" :active-value="0" :inactive-value="1" @change="handleStatusChange(scope.row)" />
-          </template>
-        </el-table-column>
         <el-table-column :label="t('business.agent.modelSupplier')" align="center" prop="modelSupplierName" min-width="140" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.agent.publishStatus')" align="center" width="90">
           <template #default="scope">
@@ -108,12 +103,6 @@
         </el-form-item>
         <el-form-item :label="t('business.agent.intro')" prop="intro">
           <el-input v-model="formState.form.intro" type="textarea" :rows="2" maxlength="500" />
-        </el-form-item>
-        <el-form-item :label="t('common.status')">
-          <el-radio-group v-model="formState.form.status">
-            <el-radio :value="0">{{ t('common.normal') }}</el-radio>
-            <el-radio :value="1">{{ t('common.disabled') }}</el-radio>
-          </el-radio-group>
         </el-form-item>
         <el-divider />
         <el-form-item :label="t('business.agent.systemPrompt')" prop="systemPrompt">
@@ -210,7 +199,7 @@ const kbOptions = ref<KnowledgeBase[]>([])
 const mcpOptions = ref<Mcp[]>([])
 const skillOptions = ref<Skill[]>([])
 
-const queryParams = ref<AgentQuery>({ pageNum: 1, pageSize: 10, name: undefined, publishStatus: -1, status: -1 })
+const queryParams = ref<AgentQuery>({ pageNum: 1, pageSize: 10, name: undefined, publishStatus: -1 })
 
 const table = ref<TableState<Agent>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
@@ -270,8 +259,7 @@ function reset() {
     mcpIds: [],
     skillIds: [],
     publishStatus: 0,
-    uuid: undefined,
-    status: 0
+    uuid: undefined
   }
   chatModelOptions.value = []
   resetForm('formRef')
@@ -322,21 +310,6 @@ function handleDelete(row: any) {
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
-}
-/** 状态快速切换（通过 update 接口传递完整行数据，避免其余字段被覆盖） */
-function handleStatusChange(row: Agent) {
-  const submitData = { ...row }
-  delete submitData.addTime
-  delete submitData.updateTime
-  delete submitData.modelSupplierName
-  updateAgent(submitData)
-    .then(() => {
-      modal.msgSuccess(t('common.updateSuccess'))
-    })
-    .catch(() => {
-      // 失败时回滚开关状态
-      row.status = Number(row.status) === 0 ? 1 : 0
-    })
 }
 function submitForm() {
   formRef.value!.validate((valid) => {

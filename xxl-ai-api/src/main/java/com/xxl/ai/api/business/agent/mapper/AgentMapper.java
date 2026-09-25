@@ -41,14 +41,12 @@ public interface AgentMapper {
                          @Param("offset") int offset,
                          @Param("pagesize") int pagesize,
                          @Param("name") String name,
-                         @Param("publishStatus") int publishStatus,
-                         @Param("status") int status);
+                         @Param("publishStatus") int publishStatus);
 
     int pageListCount(@Param("spaceId") long spaceId,
                       @Param("offset") int offset,
                       @Param("pagesize") int pagesize,
                       @Param("name") String name,
-                      @Param("publishStatus") int publishStatus,
-                      @Param("status") int status);
+                      @Param("publishStatus") int publishStatus);
 
 }
