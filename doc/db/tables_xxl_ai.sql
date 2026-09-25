@@ -386,11 +386,23 @@ VALUES
         '## 威慑后纪元与逃亡主义\n',
         '- 威慑失败后地球进入威慑后纪元，人类整体战略转向逃亡主义与本土生存博弈。'), 0, 0, NOW(), NOW());
 
--- 9、预设 Agent（开箱即用：Hi Agent；绑定知识库=1 三体知识库，便于 RAG 知识问答联调）
-
+-- 9、预设 Agent（开箱即用示例：RAG 知识问答 / Skill 工具 / MCP 工具三类能力演示）
 INSERT INTO `xxl_ai_agent` (id, space_id, name, intro, model_supplier_id, model_id, system_prompt, kb_ids, mcp_ids, skill_ids, publish_status, uuid, status, add_time, update_time)
 VALUES
-    (1, 1, 'Hi Agent', 'OpenCode Go驱动的定制Agent', 1, 1, '你叫Jason', '1', null, null, 0, '', 0, NOW(), NOW());
+    -- 基础示例：绑定知识库=1 三体知识库，便于 RAG 知识问答联调
+    (1, 1, 'Hi Agent', 'OpenCode Go驱动的定制Agent', 1, 1, '你叫Jason', '1', null, null, 0, NULL, 0, NOW(), NOW()),
+    -- RAG 示例：绑定知识库=1，回答仅依据检索内容（模型：Deepseek / DeepSeek V4 Pro）
+    (2, 1, '三体知识问答Agent', '基于《三体》知识库的 RAG 问答助手，回答仅依据知识库内容', 3, 7,
+     '你是《三体》知识问答助手。请仅依据检索到的知识库内容回答用户问题，优先引用原著中的人物、设定与情节；知识库中没有的信息如实说明，不要编造。',
+     '1', '2,3', null, 0, NULL, 0, NOW(), NOW()),
+    -- Skill 示例：绑定 sql-optimizer 技能 + 示例 MCP 工具（模型：智谱GLM / GLM-5.3）
+    (3, 1, 'SQL优化Agent', '基于 sql-optimizer Skill 的 SQL 诊断与优化建议助手', 4, 10,
+     '你是资深数据库性能优化专家。收到 SQL 后，先获取其表结构与 EXPLAIN 执行计划，再结合 sql-optimizer 技能的分析方法定位全表扫描、索引失效、深分页等问题，按优先级输出可落地的索引与 SQL 改写建议。',
+     null, null, '1', 0, NULL, 0, NOW(), NOW()),
+    -- MCP 示例：绑定 Fetch 网页抓取 MCP（模型：Deepseek / DeepSeek V4 Flash）
+    (4, 1, '网页总结Agent', '基于 Fetch MCP 抓取网页正文并提炼要点', 3, 6,
+     '你是网页内容总结助手。根据用户提供的 URL，调用网页抓取工具获取正文，提炼核心要点与结论，输出结构清晰的中文摘要，并附上原文链接。',
+     null, '2', null, 0, NULL, 0, NOW(), NOW());
 
 
 COMMIT;
