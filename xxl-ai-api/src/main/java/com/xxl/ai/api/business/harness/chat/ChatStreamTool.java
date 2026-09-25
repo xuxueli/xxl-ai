@@ -102,7 +102,7 @@ public class ChatStreamTool implements SmartLifecycle {
     /** 单次批量读取条数 */
     private static final long READ_BATCH_SIZE = 50;
     /** 超时任务认领间隔（毫秒） */
-    private static final long RECLAIM_INTERVAL_MILLIS = 30_000;
+    private static final long RECLAIM_INTERVAL_MILLIS = 60_000;
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -259,7 +259,7 @@ public class ChatStreamTool implements SmartLifecycle {
     // ==================== 发送 / 续传入口（业务调用） ====================
 
     /**
-     * 投递生成任务
+     * 投递生成任务 【1/3 - submit task-{msgId}】`
      */
     public void submit(long msgId, String uuid, long convId, String content) {
         stringRedisTemplate.opsForStream().add(
@@ -273,7 +273,7 @@ public class ChatStreamTool implements SmartLifecycle {
     }
 
     /**
-     * 打开 SSE 连接：从结果流 {@code lastEventId} 之后转发（空则从头重放），生成由 worker 异步完成
+     * 打开 SSE 连接：从结果流 {@code lastEventId} 之后转发（空则从头重放），生成由 worker 异步完成 【2/3 - monitor task-{msgId}】`
      */
     public SseEmitter open(long msgId, String lastEventId) {
         SseEmitter emitter = new SseEmitter(streamTimeout);
@@ -346,7 +346,7 @@ public class ChatStreamTool implements SmartLifecycle {
     // ==================== worker 消费 ====================
 
     /**
-     * worker 主循环：周期性认领超时遗留任务，其余时间持续阻塞消费新任务（异常退避 1s，保证长稳）
+     * worker 主循环：周期性认领超时遗留任务，其余时间持续阻塞消费新任务（异常退避 1s，保证长稳） 【3/3 - process task】`
      */
     private void consumeLoop(String consumer) {
         long lastReclaim = 0L;
@@ -401,10 +401,12 @@ public class ChatStreamTool implements SmartLifecycle {
         StringBuilder thinkText = new StringBuilder();
         java.util.function.Consumer<String> onThinking = delta -> {
             thinkText.append(delta);
+            logger.debug("appendResult thinkText, msgId={}, delta={}", msgId, delta);
             appendResult(msgId, EVENT_THINKING, delta);
         };
         java.util.function.Consumer<String> onContent = delta -> {
             replyText.append(delta);
+            logger.debug("appendResult replyText, msgId={}, delta={}", msgId, delta);
             appendResult(msgId, EVENT_MESSAGE, delta);
         };
         try {
@@ -500,6 +502,7 @@ public class ChatStreamTool implements SmartLifecycle {
                 fromId = record.getId().getValue();
                 String type = str(record.getValue().get("type"));
                 String data = str(record.getValue().get("data"));
+                logger.debug("sendEvent: msgId=" + msgId + ", type=" + type + ", data=" + data);
                 sendEvent(emitter, type, data, fromId, cancelled);
                 // 终态事件（done/error）即结束转发
                 if (EVENT_DONE.equals(type) || EVENT_ERROR.equals(type)) {
