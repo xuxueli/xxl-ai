@@ -22,11 +22,6 @@ public class ChatConstant {
     /** 消息状态：失败 */
     public static final int MSG_STATUS_FAILED = 2;
 
-    /** 结果流结束标志（与前端约定） */
-    public static final String DONE = "[DONE]";
-    /** 结果流错误前缀（与前端约定） */
-    public static final String ERROR_PREFIX = "__ERROR__";
-
     /** SSE 事件名：结果流标识 */
     public static final String EVENT_STREAM = "stream";
     /** SSE 事件名：思考过程 */
@@ -35,5 +30,9 @@ public class ChatConstant {
     public static final String EVENT_MESSAGE = "message";
     /** SSE 事件名：心跳 */
     public static final String EVENT_PING = "ping";
+    /** SSE 事件名：生成结束（终态，内容为空） */
+    public static final String EVENT_DONE = "done";
+    /** SSE 事件名：生成失败（终态，data 为错误提示） */
+    public static final String EVENT_ERROR = "error";
 
 }

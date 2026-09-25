@@ -59,4 +59,29 @@
 		ORDER BY t.id ASC
 	</select>
 
+	<select id="countByConvId" parameterType="java.util.HashMap" resultType="int">
+		SELECT count(1)
+		FROM xxl_ai_chat_msg AS t
+		WHERE t.conv_id = #{convId}
+	</select>
+
+	<!-- 首页：每日会话消息量趋势（近 days 天，按日聚合） -->
+	<select id="trendList" parameterType="java.util.HashMap" resultType="java.util.LinkedHashMap">
+		SELECT DATE_FORMAT(t.add_time, '%Y-%m-%d') AS `date`, COUNT(1) AS `count`
+		FROM xxl_ai_chat_msg AS t
+		WHERE t.add_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+		GROUP BY `date` ORDER BY `date` ASC
+	</select>
+
+	<!-- 首页：各 Agent 会话消息量占比（近 days 天，按 Agent 聚合，消息量倒序） -->
+	<select id="agentShare" parameterType="java.util.HashMap" resultType="java.util.LinkedHashMap">
+		SELECT IFNULL(a.name, c.agent_uuid) AS `name`, COUNT(1) AS `value`
+		FROM xxl_ai_chat_msg AS t
+		JOIN xxl_ai_chat_conv AS c ON t.conv_id = c.id
+		LEFT JOIN xxl_ai_agent AS a ON a.uuid = c.agent_uuid
+		WHERE t.add_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+		GROUP BY a.id, a.name, c.agent_uuid
+		ORDER BY `value` DESC
+	</select>
+
 </mapper>

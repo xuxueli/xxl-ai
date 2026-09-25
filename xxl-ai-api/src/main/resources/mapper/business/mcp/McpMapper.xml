@@ -118,4 +118,8 @@
 		</if>
 	</select>
 
+	<select id="countAll" resultType="int">
+		SELECT count(1) FROM xxl_ai_mcp
+	</select>
+
 </mapper>

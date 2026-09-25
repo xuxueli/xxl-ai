@@ -5,14 +5,13 @@ import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.adaptor.AgentAdaptor;
 import com.xxl.ai.api.business.agent.model.dto.AgentDTO;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.agent.model.event.AgentDeletedEvent;
 import com.xxl.ai.api.business.agent.service.AgentService;
+import com.xxl.ai.api.business.chat.service.ChatService;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -30,7 +29,7 @@ public class AgentServiceImpl implements AgentService {
     @Resource
     private AgentMapper agentMapper;
     @Resource
-    private ApplicationEventPublisher applicationEventPublisher;
+    private ChatService chatService;
 
     /**
      * 分页查询 Agent 列表
@@ -80,7 +79,7 @@ public class AgentServiceImpl implements AgentService {
     }
 
     /**
-     * 批量删除 Agent（同步发布删除事件，供对话等关联数据级联清理）
+     * 批量删除 Agent（同一事务内同步级联清理对话与消息）
      */
     @Override
     public Response<String> deleteByIds(List<Long> ids) {
@@ -99,9 +98,8 @@ public class AgentServiceImpl implements AgentService {
         if (ret <= 0) {
             return Response.ofFail();
         }
-        if (CollectionTool.isNotEmpty(agentUuids)) {
-            applicationEventPublisher.publishEvent(new AgentDeletedEvent(agentUuids));
-        }
+        // 同步级联清理对话与消息，与 Agent 删除同事务，避免异步清理带来的不一致
+        chatService.purgeByAgentUuids(agentUuids);
         return Response.ofSuccess();
     }
 

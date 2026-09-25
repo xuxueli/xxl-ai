@@ -1,6 +1,6 @@
 <!--
   页面：Dashboard（首页）
-  功能：统计概览、日志趋势、最新消息
+  功能：平台资源统计概览、Agent 会话消息趋势（折线图）、Agent 会话消息占比（饼图）
 -->
 <template>
   <div class="app-container dashboard">
@@ -21,46 +21,42 @@
       </el-col>
     </el-row>
 
-    <!-- 第二排：折线图 + 消息列表 -->
+    <!-- 第二排：会话消息趋势折线图 + 会话消息占比饼图 -->
     <el-row :gutter="20" class="row-chart">
-      <!-- 折线图 -->
+      <!-- 折线图：每日会话消息量 -->
       <el-col :xs="24" :lg="17">
         <el-card shadow="hover" class="chart-card">
           <template v-slot:header>
             <div class="card-header">
               <div class="card-header-left">
                 <SvgIcon icon-class="chart" />
-                <span>{{ t('dashboard.auditLog') }}</span>
+                <span>{{ t('dashboard.msgTrend') }}</span>
               </div>
-              <el-radio-group v-model="chartDays" size="small" @change="loadChart">
+              <el-radio-group v-model="chartDays" size="small" @change="loadTrendChart">
                 <el-radio-button :value="7">{{ t('dashboard.days7') }}</el-radio-button>
                 <el-radio-button :value="14">{{ t('dashboard.days14') }}</el-radio-button>
                 <el-radio-button :value="30">{{ t('dashboard.days30') }}</el-radio-button>
               </el-radio-group>
             </div>
           </template>
-          <div ref="chartRef" class="chart-box"></div>
+          <div ref="trendChartRef" class="chart-box"></div>
         </el-card>
       </el-col>
 
-      <!-- 示例数据 -->
+      <!-- 饼图：各 Agent 会话消息量占比 -->
       <el-col :xs="24" :lg="7">
-        <el-card shadow="hover" class="msg-card">
+        <el-card shadow="hover" class="chart-card">
           <template v-slot:header>
             <div class="card-header">
               <div class="card-header-left">
-                <SvgIcon icon-class="list" />
-                <span>{{ t('demo.title') }}</span>
+                <SvgIcon icon-class="chart" />
+                <span>{{ t('dashboard.msgShare') }}</span>
               </div>
             </div>
           </template>
-          <div class="msg-list">
-            <div v-for="item in sampleData" :key="item.id" class="msg-item">
-              <div class="msg-title">{{ item.title }}</div>
-              <div class="msg-meta">
-                <span class="msg-time">{{ item.addTime }}</span>
-              </div>
-            </div>
+          <div class="pie-wrap">
+            <div ref="shareChartRef" class="chart-box"></div>
+            <div v-if="shareEmpty" class="chart-empty">{{ t('common.emptyData') }}</div>
           </div>
         </el-card>
       </el-col>
@@ -70,7 +66,7 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Index' })
-import { getStats, getLogTrend } from '../api'
+import { getConvMsgShare, getConvMsgTrend, getStats } from '../api'
 import { parseTime } from '@/utils/common'
 import * as echarts from 'echarts'
 import type { ECharts } from 'echarts'
@@ -87,47 +83,39 @@ interface StatItem {
   bg: string
 }
 
-/** 示例数据项 */
-interface SampleDataItem {
-  id: number
-  title: string
-  addTime: string
-}
-
-// 指标卡片
+// 指标卡片：Agent / Skill / MCP / 供应商模型 数量
 const stats = ref<StatItem[]>([
-  { label: t('dashboard.userCount'), value: 0, icon: 'user', color: '#5b6abf', bg: '#eef0fb' },
-  { label: t('dashboard.roleCount'), value: 0, icon: 'peoples', color: '#319c8a', bg: '#e8f6f3' },
-  { label: t('dashboard.logCount'), value: 0, icon: 'log', color: '#d4943c', bg: '#fcf4e8' },
-  { label: t('demo.title'), value: 6, icon: 'list', color: '#c5566a', bg: '#fbeef1' }
+  { label: t('dashboard.agentCount'), value: 0, icon: 'people', color: '#5b6abf', bg: '#eef0fb' },
+  { label: t('dashboard.skillCount'), value: 0, icon: 'skill', color: '#319c8a', bg: '#e8f6f3' },
+  { label: t('dashboard.mcpCount'), value: 0, icon: 'server', color: '#d4943c', bg: '#fcf4e8' },
+  { label: t('dashboard.modelCount'), value: 0, icon: 'component', color: '#c5566a', bg: '#fbeef1' }
 ])
 
-// 示例数据（站内消息已下线，仪表盘展示静态示例数据）
-const sampleData = ref<SampleDataItem[]>([
-  { id: 1, title: t('demo.t1'), addTime: '2026-09-01' },
-  { id: 2, title: t('demo.t2'), addTime: '2026-09-02' },
-  { id: 3, title: t('demo.t3'), addTime: '2026-09-03' },
-  { id: 4, title: t('demo.t4'), addTime: '2026-09-04' },
-  { id: 5, title: t('demo.t5'), addTime: '2026-09-05' }
-])
-
-const chartRef = ref<HTMLElement>()
+const trendChartRef = ref<HTMLElement>()
+const shareChartRef = ref<HTMLElement>()
 const chartDays = ref(30)
-let chartInstance: ECharts | null = null
+/** 饼图无数据占位（避免空图） */
+const shareEmpty = ref(false)
+let trendInstance: ECharts | null = null
+let shareInstance: ECharts | null = null
 
 /**
  * init
  */
 onMounted(() => {
   loadStats()
-  nextTick(loadChart)
+  nextTick(() => {
+    loadTrendChart()
+    loadShareChart()
+  })
 })
 
 /**
  * destory
  */
 onUnmounted(() => {
-  chartInstance?.dispose()
+  trendInstance?.dispose()
+  shareInstance?.dispose()
 })
 
 /**
@@ -136,24 +124,23 @@ onUnmounted(() => {
 function loadStats() {
   getStats().then((res) => {
     const data = res.data
-    stats.value[0].value = data.userCount
-    stats.value[1].value = data.roleCount
-    stats.value[2].value = data.logCount
+    stats.value[0].value = data.agentCount
+    stats.value[1].value = data.skillCount
+    stats.value[2].value = data.mcpCount
+    stats.value[3].value = data.modelCount
   })
 }
 
 /**
- * 加载日志趋势折线图
+ * 加载 Agent 会话消息趋势折线图
  *
- * 1. 请求后端获取指定天数内的每日日志量
+ * 1. 请求后端获取指定天数内的每日会话消息量
  * 2. 将返回的 [{date, count}] 转为 Map，便于按日期查找
- * 3. 生成完整的日期序列（从 days-1 天前 → 今天），
- *    无数据日期补 0，确保折线图连续不断点
- * 4. 初始化 ECharts 实例，配置折线图选项
+ * 3. 生成完整的日期序列（从 days-1 天前 → 今天），无数据日期补 0，确保折线连续不断点
  */
-function loadChart() {
+function loadTrendChart() {
   const days = chartDays.value
-  getLogTrend(days).then((res) => {
+  getConvMsgTrend(days).then((res) => {
     // 后端返回 [{date: '2026-07-11', count: 3}, ...]
     const list = res.data || []
 
@@ -168,44 +155,38 @@ function loadChart() {
     const counts: number[] = []
     const now = new Date()
     for (let i = days - 1; i >= 0; i--) {
-      // format day time
       const d = new Date(now)
       d.setDate(d.getDate() - i)
       const key = parseTime(d, '{y}-{m}-{d}')
-
-      // write day date
       dates.push(key || '')
       counts.push(dateMap[key || ''] || 0) // 无数据日期补 0
     }
 
     // 3、渲染折线图（渐变面积 + 平滑曲线）
-    if (chartInstance) {
-      chartInstance.dispose()
+    if (trendInstance) {
+      trendInstance.dispose()
     }
-    chartInstance = echarts.init(chartRef.value as HTMLElement)
-    chartInstance.setOption({
-      tooltip: { trigger: 'axis' }, // 悬浮提示：轴触发
-      grid: { left: 40, right: 20, bottom: 30, top: 20 }, // 图表边距
-      // X轴：日期
+    trendInstance = echarts.init(trendChartRef.value as HTMLElement)
+    trendInstance.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 40, right: 20, bottom: 30, top: 20 },
       xAxis: {
         type: 'category',
         data: dates,
-        axisLabel: { fontSize: 11, color: '#909399' } // X 轴标签样式
+        axisLabel: { fontSize: 11, color: '#909399' }
       },
       yAxis: {
         type: 'value',
-        minInterval: 1, // Y 轴最小间隔为 1
+        minInterval: 1,
         axisLabel: { fontSize: 11, color: '#909399' }
       },
-      // X轴：数据
       series: [
         {
           data: counts,
           type: 'line',
-          smooth: true, // 平滑曲线
-          lineStyle: { width: 2, color: '#409EFF' }, // 折线样式
+          smooth: true,
+          lineStyle: { width: 2, color: '#409EFF' },
           areaStyle: {
-            // 渐变面积填充
             color: {
               type: 'linear',
               x: 0,
@@ -213,12 +194,55 @@ function loadChart() {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(64,158,255,0.3)' }, // 顶部：30% 透明度
-                { offset: 1, color: 'rgba(64,158,255,0.02)' } // 底部：2% 透明度
+                { offset: 0, color: 'rgba(64,158,255,0.3)' },
+                { offset: 1, color: 'rgba(64,158,255,0.02)' }
               ]
             }
           },
-          itemStyle: { color: '#409EFF' } // 数据点颜色
+          itemStyle: { color: '#409EFF' }
+        }
+      ]
+    })
+  })
+}
+
+/**
+ * 加载 Agent 会话消息占比饼图（每块为一个 Agent，占比为消息量百分比）
+ */
+function loadShareChart() {
+  const days = chartDays.value
+  getConvMsgShare(days).then((res) => {
+    const list = res.data || []
+    shareEmpty.value = list.length === 0
+
+    if (shareInstance) {
+      shareInstance.dispose()
+    }
+    if (list.length === 0) {
+      return
+    }
+    shareInstance = echarts.init(shareChartRef.value as HTMLElement)
+    shareInstance.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: {
+        type: 'scroll',
+        bottom: 0,
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        textStyle: { fontSize: 11, color: '#909399' }
+      },
+      series: [
+        {
+          name: t('dashboard.msgShare'),
+          type: 'pie',
+          radius: ['42%', '66%'],
+          center: ['50%', '44%'],
+          avoidLabelOverlap: true,
+          itemStyle: { borderColor: '#fff', borderWidth: 2 },
+          label: { show: false },
+          emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+          data: list.map((i) => ({ name: i.name, value: i.value }))
         }
       ]
     })
@@ -285,8 +309,7 @@ function loadChart() {
   margin-top: 4px;
 }
 
-.chart-card,
-.msg-card {
+.chart-card {
   margin-bottom: 20px;
   border-radius: 8px;
 }
@@ -311,47 +334,19 @@ function loadChart() {
   width: 100%;
 }
 
-.msg-empty {
-  text-align: center;
-  padding: 40px 0;
-  color: #bbb;
-  font-size: 13px;
+/* 饼图容器：空数据时叠加居中占位 */
+.pie-wrap {
+  position: relative;
 }
 
-.msg-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.msg-item {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.msg-title {
-  font-size: 13px;
-  color: #303133;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 6px;
-}
-
-.msg-meta {
+.chart-empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.msg-time {
-  font-size: 11px;
+  justify-content: center;
   color: #bbb;
+  font-size: 13px;
 }
 
 html.dark {
@@ -361,14 +356,6 @@ html.dark {
 
   .card-header {
     color: #e0e0e0;
-  }
-
-  .msg-title {
-    color: #e0e0e0;
-  }
-
-  .msg-item {
-    border-bottom-color: #2a2a3e;
   }
 }
 </style>

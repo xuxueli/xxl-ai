@@ -55,10 +55,14 @@ public class LlmModelFactory {
     }
 
     /**
-     * 获取（或构建）对话模型：按 供应商+模型+会话 缓存
+     * 获取（或构建）对话模型：按 供应商+模型 缓存
+     *
+     * 仅当自定义 Header 使用 {@code {session}} 占位符（需按会话隔离）时才把 sessionId 纳入缓存键，
+     * 否则同一模型跨会话复用，避免每个对话都构建一个模型实例。
      */
     private OpenAiChatModel chatModel(SupplierRuntime runtime, String sessionId) {
-        String key = runtime.getSupplierId() + ":" + runtime.getModelId() + ":" + (StringTool.isBlank(sessionId) ? "" : sessionId);
+        String sessionKey = usesSessionHeader(runtime.getHeaders()) && StringTool.isNotBlank(sessionId) ? sessionId : "";
+        String key = runtime.getSupplierId() + ":" + runtime.getModelId() + ":" + sessionKey;
         OpenAiChatModel cached = chatModelCache.get(key);
         if (cached != null) {
             return cached;
@@ -107,11 +111,32 @@ public class LlmModelFactory {
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
         }
-        String path = URI.create(url).getPath();
-        if (StringTool.isBlank(path) || "/".equals(path)) {
-            url = url + "/v1";
+        try {
+            String path = URI.create(url).getPath();
+            if (StringTool.isBlank(path) || "/".equals(path)) {
+                url = url + "/v1";
+            }
+        } catch (Exception e) {
+            // 非法 URL：按原值使用，交由后续请求报错，避免此处直接抛断
+            logger.warn("供应商 BaseURL 解析失败，按原值使用, url={}, err={}", url, e.getMessage());
         }
         return url;
+    }
+
+    /**
+     * 请求 Header 是否使用 {session} 占位符（决定模型是否需按会话隔离缓存）
+     */
+    private boolean usesSessionHeader(List<Map<String, String>> headers) {
+        if (CollectionTool.isEmpty(headers)) {
+            return false;
+        }
+        for (Map<String, String> header : headers) {
+            String value = header.get("value");
+            if (value != null && value.contains(SESSION_PLACEHOLDER)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

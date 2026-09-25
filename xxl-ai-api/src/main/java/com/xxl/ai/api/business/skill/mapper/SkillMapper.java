@@ -32,6 +32,9 @@ public interface SkillMapper {
     /** 统计空间下数据量（删除空间前置校验） */
     int countBySpaceId(@Param("spaceId") long spaceId);
 
+    /** 首页：统计 Skill 总数 */
+    int countAll();
+
     List<Skill> listByIds(@Param("ids") List<Long> ids);
 
     /** 名称唯一性校验（排除自身） */

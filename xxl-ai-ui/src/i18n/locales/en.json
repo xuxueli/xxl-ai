@@ -302,10 +302,12 @@
     }
   },
   "dashboard": {
-    "userCount": "Users",
-    "roleCount": "Roles",
-    "logCount": "Logs",
-    "auditLog": "Audit Log",
+    "agentCount": "Agents",
+    "skillCount": "Skills",
+    "mcpCount": "MCP",
+    "modelCount": "Supplier Models",
+    "msgTrend": "Agent Message Trend",
+    "msgShare": "Agent Message Share",
     "days7": "7 days",
     "days14": "14 days",
     "days30": "30 days"
@@ -325,14 +327,6 @@
     "notFoundHeadline": "Page not found!",
     "notFoundInfo": "Sorry, the page you are looking for does not exist. Try checking the URL for errors, then press the refresh button in your browser or try to find other content in our application.",
     "returnHome": "Back to Home "
-  },
-  "demo": {
-    "title": "Sample",
-    "t1": "Welcome to XXL-AI",
-    "t2": "Core goals: rapid development, easy to learn, lightweight, easy to extend",
-    "t3": "Open source and ready to use out of the box",
-    "t4": "Feedback is welcome if you encounter any issues",
-    "t5": "XXL-AI deeply integrates AI capabilities to boost application development"
   },
   "business": {
     "space": {

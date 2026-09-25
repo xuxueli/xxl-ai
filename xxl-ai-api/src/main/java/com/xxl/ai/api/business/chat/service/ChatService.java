@@ -2,10 +2,12 @@ package com.xxl.ai.api.business.chat.service;
 
 import com.xxl.ai.api.business.agent.mapper.AgentMapper;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
+import com.xxl.ai.api.business.chat.constant.ChatConstant;
 import com.xxl.ai.api.business.chat.mapper.ChatConvMapper;
 import com.xxl.ai.api.business.chat.mapper.ChatMsgMapper;
 import com.xxl.ai.api.business.chat.model.entity.ChatConv;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
+import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
@@ -98,6 +100,60 @@ public class ChatService {
     public Response<String> convDelete(long convId) {
         chatMsgMapper.deleteByConvId(convId);
         return chatConvMapper.delete(convId) > 0 ? Response.ofSuccess() : Response.ofFail();
+    }
+
+    /**
+     * 开启一轮对话：首条消息自动生成标题 → 落库用户消息（status=1）与助手占位（status=0）→ 刷新对话活跃时间
+     *
+     * 两次落库纳入同一事务，避免中断留下半轮脏数据；助手占位主键即结果流标识，返回供投递生成任务。
+     *
+     * @param chatConv 已校验归属的对话
+     * @param content  用户提问内容
+     * @return 助手消息 ID（结果流标识）
+     */
+    public long openRound(ChatConv chatConv, String content) {
+        long convId = chatConv.getId();
+        // 首条消息自动生成对话标题（首次提问内容，超50字截断后补"..."）
+        if (chatMsgMapper.countByConvId(convId) == 0
+                && (StringTool.isBlank(chatConv.getTitle()) || "新对话".equals(chatConv.getTitle()))) {
+            String convTitle = content.trim();
+            chatConvMapper.updateTitle(convId, convTitle.length() > 50 ? convTitle.substring(0, 47) + "..." : convTitle);
+        }
+        // 落库用户消息（status=1 已完成）
+        ChatMsg userMsg = new ChatMsg();
+        userMsg.setConvId(convId);
+        userMsg.setRole(ChatConstant.ROLE_USER);
+        userMsg.setContent(content);
+        userMsg.setStatus(ChatConstant.MSG_STATUS_DONE);
+        chatMsgMapper.insert(userMsg);
+        // 落库助手消息占位（status=0 生成中），其ID即结果流标识，刷新页面后据此续传
+        ChatMsg assistantMsg = new ChatMsg();
+        assistantMsg.setConvId(convId);
+        assistantMsg.setRole(ChatConstant.ROLE_ASSISTANT);
+        assistantMsg.setContent("");
+        assistantMsg.setStatus(ChatConstant.MSG_STATUS_GENERATING);
+        chatMsgMapper.insert(assistantMsg);
+        // 刷新对话更新时间
+        chatConvMapper.touch(convId);
+        return assistantMsg.getId();
+    }
+
+    /**
+     * 按 Agent 访问 UUID 批量清理对话与消息（Agent 删除时同步级联）
+     *
+     * @param agentUuids Agent 访问 UUID 列表
+     */
+    public void purgeByAgentUuids(List<String> agentUuids) {
+        if (CollectionTool.isEmpty(agentUuids)) {
+            return;
+        }
+        for (String agentUuid : agentUuids) {
+            if (StringTool.isBlank(agentUuid)) {
+                continue;
+            }
+            chatMsgMapper.deleteByAgentUuid(agentUuid);
+            chatConvMapper.deleteByAgentUuid(agentUuid);
+        }
     }
 
     // ==================== 会话校验（流式对话共用的单一校验源） ====================

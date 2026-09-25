@@ -38,4 +38,7 @@ public interface SupplierModelMapper {
                       @Param("name") String name,
                       @Param("type") int type);
 
+    /** 首页：统计供应商模型总数 */
+    int countAll();
+
 }

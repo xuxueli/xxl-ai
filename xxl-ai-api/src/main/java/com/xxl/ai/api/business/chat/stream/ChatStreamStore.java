@@ -1,5 +1,6 @@
 package com.xxl.ai.api.business.chat.stream;
 
+import com.xxl.ai.api.business.chat.constant.ChatConstant;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,6 +54,9 @@ public class ChatStreamStore {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    /** 结果流 TTL 上次续期时刻（msgId → 毫秒），用于 EXPIRE 节流 */
+    private final Map<Long, Long> resultExpireAt = new ConcurrentHashMap<>();
 
     /** 结果流保留时长（秒），即断线/刷新可续传时间窗 */
     @Value("${xxl-ai.chat.stream.ttl:600}")
@@ -145,10 +150,13 @@ public class ChatStreamStore {
     }
 
     /**
-     * 追加结果流条目并刷新 TTL（保证生成中/完成后一段时间内可续传）
+     * 追加结果流条目并续期 TTL（保证生成中/完成后一段时间内可续传）
+     *
+     * EXPIRE 节流：生成中增量按「半个 TTL」的间隔续期，避免每个 token 都触发一次 EXPIRE 往返；
+     * 终态条目（done/error）落一次完整 TTL 并清理节流状态。
      *
      * @param msgId 助手消息 ID（结果流标识）
-     * @param type  条目类型：thinking-思考过程、message-回复内容
+     * @param type  条目类型：thinking-思考过程、message-回复内容、done-结束、error-错误
      * @param data  文本增量（null 按空串处理）
      */
     public void appendResult(long msgId, String type, String data) {
@@ -156,7 +164,17 @@ public class ChatStreamStore {
         stringRedisTemplate.opsForStream().add(StreamRecords
                 .mapBacked(Map.of("type", type, "data", data == null ? "" : data))
                 .withStreamKey(key));
-        stringRedisTemplate.expire(key, resultTtlSeconds, TimeUnit.SECONDS);
+        long now = System.currentTimeMillis();
+        if (ChatConstant.EVENT_DONE.equals(type) || ChatConstant.EVENT_ERROR.equals(type)) {
+            stringRedisTemplate.expire(key, resultTtlSeconds, TimeUnit.SECONDS);
+            resultExpireAt.remove(msgId);
+            return;
+        }
+        Long last = resultExpireAt.get(msgId);
+        if (last == null || now - last >= resultTtlSeconds * 1000 / 2) {
+            stringRedisTemplate.expire(key, resultTtlSeconds, TimeUnit.SECONDS);
+            resultExpireAt.put(msgId, now);
+        }
     }
 
     /**

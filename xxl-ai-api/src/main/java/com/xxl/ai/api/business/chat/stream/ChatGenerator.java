@@ -57,8 +57,11 @@ public class ChatGenerator implements SmartLifecycle {
     @Value("${xxl-ai.chat.worker.count:2}")
     private int workerCount;
     /** 单次生成最长时长（毫秒），用作超时任务空闲阈值基准 */
-    @Value("${xxl-ai.agent.stream.timeout:180000}")
+    @Value("${xxl-ai.chat.stream.timeout:180000}")
     private long streamTimeout;
+
+    /** 超时任务认领间隔（毫秒）：周期性接管 worker 运行期宕机遗留的未确认任务 */
+    private static final long RECLAIM_INTERVAL_MILLIS = 30_000;
 
     /** 实例标识（消费名按实例+序号隔离） */
     private final String instanceId = UUID.randomUUID().toString().substring(0, 8);
@@ -118,16 +121,22 @@ public class ChatGenerator implements SmartLifecycle {
     /**
      * worker 主循环
      *
-     * 启动时先认领本组内超时未确认的遗留任务（宕机接管），随后持续阻塞消费新任务；
-     * 消费过程异常仅记录并退避 1s，不影响循环继续（保证 worker 长稳）。
+     * 周期性认领本组内超时未确认的遗留任务（覆盖启动时与运行期 worker 宕机两种场景），
+     * 其余时间持续阻塞消费新任务；消费过程异常仅记录并退避 1s，不影响循环继续（保证 worker 长稳）。
      *
      * @param consumer 当前消费者名（实例 + 序号）
      */
     private void consumeLoop(String consumer) {
-        for (MapRecord<String, Object, Object> record : chatStreamStore.reclaimTasks(consumer, reclaimIdle())) {
-            handleTask(record);
-        }
+        long lastReclaim = 0L;
         while (running) {
+            // 到达认领间隔：接管超时未确认任务（启动首轮亦触发）
+            long now = System.currentTimeMillis();
+            if (now - lastReclaim >= RECLAIM_INTERVAL_MILLIS) {
+                lastReclaim = now;
+                for (MapRecord<String, Object, Object> record : chatStreamStore.reclaimTasks(consumer, reclaimIdle())) {
+                    handleTask(record);
+                }
+            }
             try {
                 List<MapRecord<String, Object, Object>> records = chatStreamStore.pollTasks(consumer);
                 if (records != null) {
@@ -150,10 +159,10 @@ public class ChatGenerator implements SmartLifecycle {
     }
 
     /**
-     * 消费单条任务：解析 → 生成（增量写结果流）→ 回填助手消息 → 写结束标志 → 确认
+     * 消费单条任务：解析 → 生成（增量写结果流）→ 回填助手消息 → 写终态标志 → 确认
      *
-     * 生成成功回填 status=1；失败回填 status=2 且写入 {@code __ERROR__} 错误事件，同时保留已生成的部分内容；
-     * 无论成败都写 {@code [DONE]} 结束标志并 XACK 确认（确认在 finally 中，异常也会执行）。
+     * 生成成功回填 status=1；失败回填 status=2 且写入 {@code error} 终态事件，同时保留已生成的部分内容；
+     * 无论成败都写 {@code done} 终态事件并 XACK 确认（确认在 finally 中，异常也会执行）。
      * bootstrap 记录无 msgId，直接确认丢弃。
      *
      * @param record 任务记录
@@ -182,14 +191,14 @@ public class ChatGenerator implements SmartLifecycle {
             chatStreamStore.appendResult(msgId, ChatConstant.EVENT_MESSAGE, delta);
         };
         try {
-            saveAssistant(msgId, convId, generate(uuid, convId, userContent, onThinking, onContent), ChatConstant.MSG_STATUS_DONE);
+            saveAssistant(msgId, convId, generate(msgId, uuid, convId, userContent, onThinking, onContent), ChatConstant.MSG_STATUS_DONE);
         } catch (Exception e) {
             logger.warn("Chat 生成失败, msgId={}, err={}", msgId, e.getMessage());
-            chatStreamStore.appendResult(msgId, ChatConstant.EVENT_MESSAGE, ChatConstant.ERROR_PREFIX + e.getMessage());
+            chatStreamStore.appendResult(msgId, ChatConstant.EVENT_ERROR, e.getMessage());
             // 失败时回填已生成的部分内容（status=2），避免产出丢失
             saveAssistant(msgId, convId, new ChatText(replyText.toString(), thinkText.toString()), ChatConstant.MSG_STATUS_FAILED);
         } finally {
-            chatStreamStore.appendResult(msgId, ChatConstant.EVENT_MESSAGE, ChatConstant.DONE);
+            chatStreamStore.appendResult(msgId, ChatConstant.EVENT_DONE, "");
             chatStreamStore.ackTask(record.getId());
         }
     }
@@ -198,9 +207,11 @@ public class ChatGenerator implements SmartLifecycle {
      * 执行一次生成：校验 Agent → 解析模型运行时 → 装配历史 → LLM 流式输出
      *
      * 生成发生在 worker 节点，需以 uuid 重新校验 Agent 可用性（请求节点与 worker 可能不同）；
-     * 历史消息跳过生成中的助手占位，并排除本次刚落库的当前用户消息（由 LLM 服务另行追加，避免重复）；
+     * 历史仅取当前助手占位（msgId）之前的消息，跳过未完成的助手占位，并移除末尾当前提问
+     * （由 LLM 服务另行追加，避免重复）。
      * 思考/回复增量经回调实时下发，完整文本作为返回值用于落库。
      *
+     * @param msgId      助手消息 ID（当前占位，即历史消息 id 上界）
      * @param uuid       Agent 访问 UUID
      * @param convId     对话 ID
      * @param content    用户提问内容
@@ -209,7 +220,7 @@ public class ChatGenerator implements SmartLifecycle {
      * @return 完整回复（内容 + 思考过程）
      * @throws Exception Agent/模型不可用或 LLM 调用失败
      */
-    private ChatText generate(String uuid, long convId, String content,
+    private ChatText generate(long msgId, String uuid, long convId, String content,
                               Consumer<String> onThinking, Consumer<String> onContent) throws Exception {
         Agent agent = chatService.requireReadyAgent(uuid);
         Response<SupplierRuntime> runtimeResp = supplierService.loadRuntime(agent.getSpaceId(),
@@ -223,12 +234,17 @@ public class ChatGenerator implements SmartLifecycle {
         }
         List<LlmMessage> historyList = new ArrayList<>();
         for (ChatMsg historyMsg : chatMsgMapper.listByConvId(convId)) {
+            // 仅取当前助手占位之前的历史（占位及其后消息不属于上下文）
+            if (historyMsg.getId() >= msgId) {
+                continue;
+            }
             if (ChatConstant.ROLE_ASSISTANT.equals(historyMsg.getRole())
                     && historyMsg.getStatus() == ChatConstant.MSG_STATUS_GENERATING) {
                 continue;
             }
             historyList.add(new LlmMessage(historyMsg.getRole(), historyMsg.getContent()));
         }
+        // 末尾为本次刚落库的当前提问（由 content 参数单独传入），移除避免重复注入
         if (!historyList.isEmpty()
                 && ChatConstant.ROLE_USER.equals(historyList.get(historyList.size() - 1).getRole())) {
             historyList.remove(historyList.size() - 1);

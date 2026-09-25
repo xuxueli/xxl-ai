@@ -33,25 +33,28 @@ public class ChatSseForwarder {
     @Resource
     private ChatStreamStore chatStreamStore;
 
-    /** 单节点 SSE 最大并发连接数（线程池核心=m/8、队列=m*4） */
+    /** 单节点 SSE 最大并发连接数（受线程池 maxPoolSize 约束，超出直接拒绝） */
     @Value("${xxl-ai.chat.sse.max:64}")
     private int sseMax;
     /** 单次转发最长时长（毫秒） */
-    @Value("${xxl-ai.agent.stream.timeout:180000}")
+    @Value("${xxl-ai.chat.stream.timeout:180000}")
     private long streamTimeout;
 
     /** SSE 转发线程池（单个转发阻塞于 XREAD 直到流结束，故用有界池控制并发） */
     private ThreadPoolTaskExecutor sseExecutor;
 
     /**
-     * 初始化转发线程池：核心/队列容量由最大并发连接数派生
+     * 初始化转发线程池：核心/上限由最大并发连接数派生
+     *
+     * 队列容量必须为 0（SynchronousQueue）：否则 ThreadPoolExecutor 在队列未满前不会扩到 maxPoolSize，
+     * 「最大并发」会被 corePoolSize 压制；转发任务是长连接，排队连接同样是不可接受的资源占用。
      */
     @PostConstruct
     public void init() {
         sseExecutor = new ThreadPoolTaskExecutor();
         sseExecutor.setCorePoolSize(Math.max(1, sseMax / 8));
         sseExecutor.setMaxPoolSize(sseMax);
-        sseExecutor.setQueueCapacity(sseMax * 4);
+        sseExecutor.setQueueCapacity(0);
         sseExecutor.setThreadNamePrefix("chat-sse-");
         sseExecutor.initialize();
     }
@@ -94,7 +97,7 @@ public class ChatSseForwarder {
      * SSE 转发主循环
      *
      * 首个 {@code stream} 事件下发 msgId 供客户端续传；随后按条目实时下发，每个事件携带结果流条目 ID 作为
-     * {@code id}（断点续传锚点）；空闲时下发 {@code ping} 心跳保活。遇到 {@code [DONE]} / {@code __ERROR__}
+     * {@code id}（断点续传锚点）；空闲时下发 {@code ping} 心跳保活。遇到终态事件 {@code done}/{@code error}
      * 结束，或超时、客户端断开、Redis 连续读失败（容错阈值）而退出。
      *
      * @param emitter     SSE 连接
@@ -142,7 +145,8 @@ public class ChatSseForwarder {
                 String type = String.valueOf(record.getValue().get("type"));
                 String data = String.valueOf(record.getValue().get("data"));
                 sendEvent(emitter, type, data, fromId, cancelled);
-                if (ChatConstant.DONE.equals(data) || data.startsWith(ChatConstant.ERROR_PREFIX)) {
+                // 终态事件（done/error）即结束转发
+                if (ChatConstant.EVENT_DONE.equals(type) || ChatConstant.EVENT_ERROR.equals(type)) {
                     return;
                 }
             }
@@ -150,14 +154,14 @@ public class ChatSseForwarder {
     }
 
     /**
-     * 下发错误事件（{@code __ERROR__} 前缀）并结束 SSE 连接；发送失败忽略
+     * 下发错误事件（{@code error} 终态）并结束 SSE 连接；发送失败忽略
      *
      * @param emitter SSE 连接
-     * @param msg     错误提示（拼接错误前缀后下发）
+     * @param msg     错误提示（null 时回退通用提示）
      */
     public void sendError(SseEmitter emitter, String msg) {
         try {
-            emitter.send(SseEmitter.event().name(ChatConstant.EVENT_MESSAGE).data(ChatConstant.ERROR_PREFIX + msg));
+            emitter.send(SseEmitter.event().name(ChatConstant.EVENT_ERROR).data(msg == null ? "生成失败" : msg));
         } catch (Exception ignored) {
         }
         emitter.complete();

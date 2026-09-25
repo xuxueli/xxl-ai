@@ -29,6 +29,9 @@ public interface McpMapper {
     /** 统计空间下数据量（删除空间前置校验） */
     int countBySpaceId(@Param("spaceId") long spaceId);
 
+    /** 首页：统计 MCP 总数 */
+    int countAll();
+
     List<Mcp> listByIds(@Param("ids") List<Long> ids);
 
     List<Mcp> pageList(@Param("spaceId") long spaceId,

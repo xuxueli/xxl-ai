@@ -46,7 +46,7 @@ export function useChatStream() {
 }
 
 /**
- * 读取流并断线自动续传：正常结束（[DONE]/错误）返回；中断则携 msgId + lastEventId 续传（最多 3 次）
+ * 读取流并断线自动续传：正常结束（done/error 终态事件）返回；中断则携 msgId + lastEventId 续传（最多 3 次）
  *
  * @param reader 初始流（发送或续传获得）
  * @param state  流状态（stream 事件回填 msgId，内容事件推进 lastEventId）
@@ -82,12 +82,13 @@ async function streamWithResume(
 }
 
 /**
- * 流式读取：按 SSE 事件解析（stream=流标识，thinking=思考过程，message=回复内容，ping=心跳），逐事件回调
+ * 流式读取：按 SSE 事件解析（stream=流标识，thinking=思考过程，message=回复内容，ping=心跳，
+ * done=结束，error=错误），逐事件回调
  *
  * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
  * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致 markdown 实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
  *
- * @returns 是否收到结束标志（[DONE]/错误）；未收到即视为中断，由调用方携带 state 续传
+ * @returns 是否收到终态（done/error）；未收到即视为中断，由调用方携带 state 续传
  */
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -103,18 +104,19 @@ async function readStream(
   // 待拼装的事件数据（同一事件内的多条 data: 行）
   let dataLines: string[] = []
 
-  /** 派发单个事件：命中结束/错误标志返回 true，终止读取 */
+  /** 派发单个事件：命中终态返回 true，终止读取 */
   const dispatch = (data: string): boolean => {
+    // 终态事件（done/error）：后端专用事件名，不再混入内容通道
+    if (eventName === 'done') {
+      if (eventId) state.lastEventId = eventId
+      return true
+    }
+    if (eventName === 'error') {
+      if (eventId) state.lastEventId = eventId
+      ElMessage.error(data || '生成失败')
+      return true
+    }
     if (!data) return false
-    if (data === '[DONE]') {
-      if (eventId) state.lastEventId = eventId
-      return true
-    }
-    if (data.startsWith('__ERROR__')) {
-      if (eventId) state.lastEventId = eventId
-      ElMessage.error(data.slice(9))
-      return true
-    }
     if (eventName === 'stream') {
       state.msgId = Number(data)
       return false

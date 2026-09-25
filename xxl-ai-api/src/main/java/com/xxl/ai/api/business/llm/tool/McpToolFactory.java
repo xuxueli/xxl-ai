@@ -47,6 +47,9 @@ public class McpToolFactory {
 
     /**
      * 构建 Agent 装配的 MCP 工具集合（可空数组）
+     *
+     * tools/list 结果由 McpClient 内部按配置指纹缓存，此处在缓存命中的工具信息上仅做本地
+     * ToolCallback 包装，故无需再叠加一层缓存。
      */
     public ToolCallback[] buildTools(Agent agent) {
         List<ToolCallback> toolList = new ArrayList<>();

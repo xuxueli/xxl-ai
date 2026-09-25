@@ -1,14 +1,14 @@
 import { request } from '@/utils/request'
-import type { DashboardStats, LogTrendItem } from '../types'
+import type { AgentMsgShareItem, ConvMsgTrendItem, DashboardStats } from '../types'
 import type { Response } from '@/types'
 
 /**
  * 名称：首页 Dashboard API
- * 能力：提供首页指标卡片、审计日志趋势接口。
+ * 能力：提供首页指标卡片、Agent 会话消息趋势与占比接口。
  */
 
 /**
- * 首页：指标卡片。
+ * 首页：指标卡片（Agent / Skill / MCP / 供应商模型 数量）。
  * @returns 各项统计数量。
  */
 export function getStats(): Promise<Response<DashboardStats>> {
@@ -19,13 +19,26 @@ export function getStats(): Promise<Response<DashboardStats>> {
 }
 
 /**
- * 首页：审计日志折线图。
+ * 首页：Agent 会话消息趋势折线图。
  * @param days 统计天数。
- * @returns 每日日志量列表。
+ * @returns 每日会话消息量列表。
  */
-export function getLogTrend(days: number): Promise<Response<LogTrendItem[]>> {
+export function getConvMsgTrend(days: number): Promise<Response<ConvMsgTrendItem[]>> {
   return request({
-    url: '/dashboard/logTrend',
+    url: '/dashboard/convMsgTrend',
+    method: 'get',
+    params: { days }
+  })
+}
+
+/**
+ * 首页：Agent 会话消息占比饼图。
+ * @param days 统计天数。
+ * @returns 各 Agent 会话消息量列表。
+ */
+export function getConvMsgShare(days: number): Promise<Response<AgentMsgShareItem[]>> {
+  return request({
+    url: '/dashboard/convMsgShare',
     method: 'get',
     params: { days }
   })
