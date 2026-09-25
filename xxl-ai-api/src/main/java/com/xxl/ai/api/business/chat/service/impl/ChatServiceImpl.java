@@ -8,7 +8,7 @@ import com.xxl.ai.api.business.chat.mapper.ChatMsgMapper;
 import com.xxl.ai.api.business.chat.model.entity.ChatConv;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.ai.api.business.chat.service.ChatService;
-import com.xxl.ai.api.business.harness.chat.ChatGenerator;
+import com.xxl.ai.api.business.harness.chat.ChatStreamTool;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * 对话 Service 实现
  *
- * 会话元数据与校验直接访问 Mapper；流式对话的生成与下发委托 ChatGenerator。
+ * 会话元数据与校验直接访问 Mapper；流式对话的生成与下发委托 ChatStreamTool。
  *
  * @author xxl-ai 2026-09-05
  */
@@ -40,7 +40,7 @@ public class ChatServiceImpl implements ChatService {
     @Resource
     private ChatMsgMapper chatMsgMapper;
     @Resource
-    private ChatGenerator chatGenerator;
+    private ChatStreamTool chatStreamTool;
 
     // ==================== 会话元数据 ====================
 
@@ -188,11 +188,11 @@ public class ChatServiceImpl implements ChatService {
             requireReadyAgent(uuid);
             ChatConv chatConv = requireConversation(uuid, convId);
             long msgId = openRound(chatConv, content);
-            chatGenerator.submit(msgId, uuid, convId, content);
-            return chatGenerator.open(msgId, null);
+            chatStreamTool.submit(msgId, uuid, convId, content);
+            return chatStreamTool.open(msgId, null);
         } catch (Exception e) {
             logger.warn("Agent 对话提交失败, uuid={}, err={}", uuid, e.getMessage());
-            return chatGenerator.error(e.getMessage());
+            return chatStreamTool.error(e.getMessage());
         }
     }
 
@@ -202,9 +202,9 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public SseEmitter resume(long msgId, String lastEventId) {
         if (msgId <= 0) {
-            return chatGenerator.error("无效的会话流标识");
+            return chatStreamTool.error("无效的会话流标识");
         }
-        return chatGenerator.open(msgId, lastEventId);
+        return chatStreamTool.open(msgId, lastEventId);
     }
 
     // ==================== 会话校验（流式对话共用的单一校验源） ====================

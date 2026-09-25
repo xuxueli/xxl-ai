@@ -3,7 +3,7 @@ package com.xxl.ai.api.business.mcp.service.impl;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xxl.ai.api.business.harness.mcp.McpClient;
+import com.xxl.ai.api.business.harness.mcp.McpClientTool;
 import com.xxl.ai.api.business.mcp.enums.McpTypeEnum;
 import com.xxl.ai.api.business.mcp.mapper.McpMapper;
 import com.xxl.ai.api.business.mcp.model.adaptor.McpAdaptor;
@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * MCP 服务 Service 实现
  *
- * 元数据 CRUD 与连通测试在本模块编排；连接/调用底层能力委托 harness 的 {@link McpClient}。
+ * 元数据 CRUD 与连通测试在本模块编排；连接/调用底层能力委托 harness 的 {@link McpClientTool}。
  *
  * @author xxl-ai 2026-09-05
  */
@@ -37,7 +37,7 @@ public class McpServiceImpl implements McpService {
     @Resource
     private McpMapper mcpMapper;
     @Resource
-    private McpClient mcpClient;
+    private McpClientTool mcpClient;
 
     /**
      * 分页查询 MCP 列表
@@ -138,7 +138,7 @@ public class McpServiceImpl implements McpService {
         if (mcp == null || mcp.getSpaceId() != spaceId) {
             return Response.ofFail("MCP 不存在");
         }
-        McpClient.McpConnectResult result = mcpClient.test(mcp);
+        McpClientTool.McpConnectResult result = mcpClient.test(mcp);
         McpConnectDTO dto = new McpConnectDTO();
         dto.setConnectable(result.isConnectable());
         dto.setServerName(result.getServerName());
@@ -149,7 +149,7 @@ public class McpServiceImpl implements McpService {
         dto.setMessage(result.getMessage());
         List<McpToolDTO> tools = new ArrayList<>();
         if (result.getTools() != null) {
-            for (McpClient.McpToolDetail detail : result.getTools()) {
+            for (McpClientTool.McpToolDetail detail : result.getTools()) {
                 McpToolDTO tool = new McpToolDTO();
                 tool.setName(detail.getName());
                 tool.setTitle(detail.getTitle());

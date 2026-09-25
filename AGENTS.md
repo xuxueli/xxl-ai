@@ -98,14 +98,14 @@ src
 分层定位（**两条铁律**）：
 
 1. **`business/{module}` 是功能完备的业务模块**：包含全部 CRUD 与**全部对外操作入口**（controller/service/mapper/model 齐全），业务编排（校验、空间归属、状态回写、DTO 组装）一律留在这里。
-2. **`harness` 是运行时支撑层**：收敛模型构建/对话执行、对话生成 worker（任务队列 + 结果流 + SSE 转发）、MCP/向量库/技能沙箱等运行时能力；**不定义 Controller、不做空间归属校验**，业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatGenerator` 按 uuid 复校 Agent 并回填消息，是对话域运行时的既定例外）。
+2. **`harness` 是运行时支撑层**：收敛模型构建/对话执行、对话生成 worker（任务队列 + 结果流 + SSE 转发）、MCP/向量库/技能沙箱等运行时能力；**不定义 Controller、不做空间归属校验**，业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatStreamTool` 按 uuid 复校 Agent 并回填消息，是对话域运行时的既定例外）。
 
 ```
 com/xxl/ai/api/business/harness          ← 运行时支撑层：无 controller（对外操作入口仍在 business）
 ├── llm         LlmModelFactory（对话/嵌入模型构建）、LlmChatTool（单轮流式对话执行，内嵌 ChatText） */
-├── chat        ChatGenerator（对话生成 worker：任务队列 + 生成消费 + 结果流 + SSE 转发） */
+├── chat        ChatStreamTool（对话生成 worker：任务队列 + 生成消费 + 结果流 + SSE 转发） */
 ├── rag         RagTool（向量化/检索/清理/Advisor，内聚 Milvus + 分片） */
-├── mcp         McpClient（连接/传输 + 列举/调用/连通测试；内嵌 McpToolInfo/McpConnectResult/McpToolDetail）、McpToolFactory（MCP 工具回调） */
+├── mcp         McpClientTool（连接/传输 + 列举/调用/连通测试；内嵌 McpToolInfo/McpConnectResult/McpToolDetail）、McpToolFactory（MCP 工具回调） */
 ├── skill       SkillToolFactory（技能物化+执行沙箱） */
 └── supplier    SupplierApiTool（供应商 HTTP 探测工具） */
 ```
@@ -118,11 +118,11 @@ com/xxl/ai/api/business/harness          ← 运行时支撑层：无 controller
   - `KnowledgeDocServiceImpl`（向量化/检索/清向量）→ `harness.rag.RagTool`；
   - `KnowledgeBaseServiceImpl`（删库/换嵌入模型清向量与失效缓存）→ `harness.rag.RagTool`；
   - `SupplierServiceImpl`（连通测试/拉远程模型）→ `harness.supplier.SupplierApiTool`；
-  - `McpServiceImpl`（连通测试/删释放连接）→ `harness.mcp.McpClient`；
-  - `ChatService`（business/chat/service，对话发送/续传入口）→ `harness.chat.ChatGenerator`（对话生成 worker：任务队列/结果流/SSE 转发 + 生成编排，内部经 `harness.llm.LlmChatTool`、`harness.mcp.McpToolFactory`、`harness.skill.SkillToolFactory`、`harness.rag.RagTool`）。
+  - `McpServiceImpl`（连通测试/删释放连接）→ `harness.mcp.McpClientTool`；
+  - `ChatService`（business/chat/service，对话发送/续传入口）→ `harness.chat.ChatStreamTool`（对话生成 worker：任务队列/结果流/SSE 转发 + 生成编排，内部经 `harness.llm.LlmChatTool`、`harness.mcp.McpToolFactory`、`harness.skill.SkillToolFactory`、`harness.rag.RagTool`）。
 - **harness 允许反向读取 business 元数据**：harness 运行时按 ID 经 business 的 Mapper/Service 读取配置（如 `AgentMapper`、`KnowledgeBaseMapper`、`SupplierService`），属预期依赖，不把 CRUD 挪进 harness。
 - **判归 harness 的典型工具**：模型构建与对话执行、对话生成 worker / 任务队列 / 结果流 / SSE 转发、MCP 连接与调用、向量库读写与检索、技能物化与终端/文件沙箱、供应商 HTTP 探测。
-- **反向约束**：`harness` **不得定义 Controller、不得新增元数据表**；空间归属校验与业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatGenerator` 属对话域运行时例外）；`business/{module}` 不得再新增 `client/rag/tool/stream` 等运行时子包，也不得直接依赖 spring-ai / Milvus / MCP SDK / Redis 等运行时组件（一律经 harness）。
+- **反向约束**：`harness` **不得定义 Controller、不得新增元数据表**；空间归属校验与业务 CRUD 仍留 `business/{module}`（`harness/chat/ChatStreamTool` 属对话域运行时例外）；`business/{module}` 不得再新增 `client/rag/tool/stream` 等运行时子包，也不得直接依赖 spring-ai / Milvus / MCP SDK / Redis 等运行时组件（一律经 harness）。
 
 > 术语澄清：`harness` 承载运行时支撑（模型/对话执行/对话生成 worker/任务队列/结果流/SSE 转发/工具/RAG/MCP/技能沙箱）；对外操作入口仍在 `business/{module}`，harness 不定义任何 `@RestController`。harness 内新增能力优先命名 `XxxTool` / `XxxClient` / `XxxFactory`。
 

@@ -2,7 +2,7 @@ package com.xxl.ai.api.business.harness.mcp;
 
 import com.google.gson.Gson;
 import com.xxl.ai.api.business.agent.model.entity.Agent;
-import com.xxl.ai.api.business.harness.mcp.McpClient;
+import com.xxl.ai.api.business.harness.mcp.McpClientTool;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import com.xxl.ai.api.business.mcp.service.McpService;
 import com.xxl.tool.core.CollectionTool;
@@ -25,7 +25,7 @@ import java.util.function.Function;
  *
  * 把「Agent 绑定的 MCP 服务」暴露的工具桥接为 spring-ai ToolCallback：
  *  - 工具名：mcp名净化 + "__" + 原始工具名（避免多服务同名冲突，沿用既有规则）
- *  - 入参：透传 MCP 服务工具入参 JSON Schema，调用落地仍走 McpClient
+ *  - 入参：透传 MCP 服务工具入参 JSON Schema，调用落地仍走 McpClientTool
  * 工具加入 ChatClient 后由 spring-ai ToolCallingAdvisor 统一驱动（不再手写 tool_calls 循环）
  *
  * @author xxl-ai 2026-09-12
@@ -43,12 +43,12 @@ public class McpToolFactory {
     @Resource
     private McpService mcpService;
     @Resource
-    private McpClient mcpClient;
+    private McpClientTool mcpClient;
 
     /**
      * 构建 Agent 装配的 MCP 工具集合（可空集合）
      *
-     * tools/list 结果由 McpClient 内部按配置指纹缓存，此处在缓存命中的工具信息上仅做本地
+     * tools/list 结果由 McpClientTool 内部按配置指纹缓存，此处在缓存命中的工具信息上仅做本地
      * ToolCallback 包装，故无需再叠加一层缓存。
      */
     public List<Object> buildTools(Agent agent) {
@@ -66,7 +66,7 @@ public class McpToolFactory {
                 continue;
             }
             try {
-                for (McpClient.McpToolInfo toolInfo : mcpClient.listTools(mcp)) {
+                for (McpClientTool.McpToolInfo toolInfo : mcpClient.listTools(mcp)) {
                     toolList.add(buildCallback(mcp, toolInfo));
                 }
             } catch (Exception e) {
@@ -77,9 +77,9 @@ public class McpToolFactory {
     }
 
     /**
-     * 构建单个 MCP 工具回调：名称去冲突 + 入参 Schema 透传 + McpClient 调用落地
+     * 构建单个 MCP 工具回调：名称去冲突 + 入参 Schema 透传 + McpClientTool 调用落地
      */
-    private ToolCallback buildCallback(Mcp mcp, McpClient.McpToolInfo toolInfo) {
+    private ToolCallback buildCallback(Mcp mcp, McpClientTool.McpToolInfo toolInfo) {
         String fullName = buildToolName(mcp.getName(), toolInfo.getToolName());
         Function<Map<String, Object>, String> function = arguments ->
                 mcpClient.callTool(mcp, toolInfo.getToolName(), GSON.toJson(arguments));
@@ -119,7 +119,7 @@ public class McpToolFactory {
     /**
      * 工具入参 JSON Schema：缺省空对象 Schema
      */
-    private String buildInputSchema(McpClient.McpToolInfo toolInfo) {
+    private String buildInputSchema(McpClientTool.McpToolInfo toolInfo) {
         Map<String, Object> schema = toolInfo.getInputSchema();
         if (schema == null || schema.isEmpty()) {
             Map<String, Object> emptySchema = new HashMap<>();

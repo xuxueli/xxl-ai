@@ -18,7 +18,7 @@ import java.util.List;
  * 对话公开访问 Controller：免管理端登录态，按访问 URL（UUID）直接访问
  *
  * 承载 agent loop 的入口（SSE 流式对话 / 断线续传）；会话与流式入口收敛在 ChatService，
- * 生成与下发（任务队列 / 结果流 / SSE 转发）由 ChatGenerator 一体承载。
+ * 生成与下发（任务队列 / 结果流 / SSE 转发）由 ChatStreamTool 一体承载。
  *
  * @author xxl-ai 2026-09-05
  */

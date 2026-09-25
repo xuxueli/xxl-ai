@@ -33,9 +33,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author xxl-ai 2026-09-06
  */
 @Component
-public class McpClient {
+public class McpClientTool {
 
-    private static final Logger logger = LoggerFactory.getLogger(McpClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(McpClientTool.class);
     private static final Gson GSON = new Gson();
 
     /** 客户端缓存（按 mcpId） */

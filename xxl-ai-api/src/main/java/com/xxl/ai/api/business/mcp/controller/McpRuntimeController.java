@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * MCP 运行时 Controller：MCP 服务连通性测试（操作入口）
  *
- * 归属 MCP 模块；探测实现经 McpService 委托 harness（McpClient）。MCP CRUD 见 McpController。
+ * 归属 MCP 模块；探测实现经 McpService 委托 harness（McpClientTool）。MCP CRUD 见 McpController。
  *
  * @author xxl-ai 2026-09-26
  */

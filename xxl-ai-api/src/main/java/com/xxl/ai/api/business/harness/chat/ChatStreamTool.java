@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 对话生成器（harness 运行时）：对话流的「发送/续传入口 + 生成 worker + 结果流 + SSE 转发」一体
+ * 对话流工具（harness 运行时）：对话流的「发送/续传入口 + 生成 worker + 结果流 + SSE 转发」一体
  *
  * 【完整会话流程】
  * 1、发送（请求侧，业务 ChatService 调用）：
@@ -71,9 +71,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author xxl-ai 2026-09-19
  */
 @Component
-public class ChatGenerator implements SmartLifecycle {
+public class ChatStreamTool implements SmartLifecycle {
 
-    private static final Logger logger = LoggerFactory.getLogger(ChatGenerator.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChatStreamTool.class);
 
     /** 事件名：结果流标识（连接建立即下发） */
     public static final String EVENT_STREAM = "stream";

@@ -427,7 +427,7 @@ POST /chat/send
 |---|---|---|
 | 接入 | `ChatController`（business/chat/controller） | `/chat/**` 路由：元数据与 `send`/`resume` 均走 `ChatService` |
 | 应用 | `ChatService`（business/chat/service） | 会话元数据 CRUD + 会话校验（单一校验源）+ 流式发送/续传编排（落库一轮 → 投递任务 → 打开 SSE 连接） |
-| 生成器 | `ChatGenerator`（harness/chat） | 对话生成 worker（`SmartLifecycle`）：任务队列 + 生成消费 + 结果流 + SSE 转发 + 生成编排（装配上下文/工具/RAG → `LlmChatTool` → 回填消息 status=1/2） |
+| 生成器 | `ChatStreamTool`（harness/chat） | 对话生成 worker（`SmartLifecycle`）：任务队列 + 生成消费 + 结果流 + SSE 转发 + 生成编排（装配上下文/工具/RAG → `LlmChatTool` → 回填消息 status=1/2） |
 | 生成引擎 | `LlmChatTool`（harness/llm） | 按已装配的上下文/工具/RAG 执行一次流式对话，增量经回调输出（与传输层解耦） |
 
 发送流转：
@@ -436,7 +436,7 @@ POST /chat/send
 前端 sendStream → ChatController.send → ChatService.send
   ├─ 校验 + 落用户消息(status=1) + 助手占位(status=0) → generator.submit(任务)
   └─ generator.open(msgId)：XREAD 结果流 → SSE
-worker（消费组）：XREADGROUP 任务 → ChatGenerator.handleTask（校验 / 装配历史与工具 / 调 LlmChatTool）
+worker（消费组）：XREADGROUP 任务 → ChatStreamTool.handleTask（校验 / 装配历史与工具 / 调 LlmChatTool）
   ├─ 增量经回调 → appendResult(msgId, thinking/message)（本地累积，供失败回填）
   └─ 回填 updateAssistant(内容, status)；写终态 done/error + ack
 ```
@@ -513,7 +513,7 @@ xxl-ai.chat.sse.max=64              # 单节点 SSE 转发最大并发连接数
 - **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型 + 会话」LRU 缓存，Header value 支持 `{session}` 占位；
 - **对话编排 `LlmChatTool`**：按已装配的「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
 - **RAG `RagTool`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入、检索经 `QuestionAnswerAdvisor` 自动注入上下文；内聚嵌入模型解析、向量存储缓存与文本分片；
-- **MCP `McpToolFactory`**：`McpClient` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；
+- **MCP `McpToolFactory`**：`McpClientTool` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；
 - **SKILL `SkillToolFactory`**：将 DB 技能文件树物化为 `{skill.root}/agent_{agentId}/{skillName}/`，构建 `SkillsTool` 及配套 shell / 文件执行工具（bash、Read/Write/Edit、Glob、Grep、List），技能内容变更按更新时间指纹自动重建；
 - **工具装配顺序**：`buildTools` 依次装配 MCP 工具 + Skill 工具 + 执行工具，统一以 `Object` 列表随请求传入，spring-ai 自动解析注册。
 
