@@ -237,15 +237,22 @@ server {
 支持 Docker Compose 一键部署：
 
 ```
-// 第一步：前往仓库目录，并构建项目
+
+# 第一步：代码clone本部 + 前往仓库目录
+git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
+
+# 第二步：构建后端项目
 mvn clean package -Dmaven.test.skip=true
 
-// 第二步：进入 docker 目录，自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
+# 第三步：构建前端项目
+npm install --prefix ./xxl-ai-ui
+
+# 第四步：进入 docker 目录，支持自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
 cd ./docker/
 cat .env
 
-// 第三步：启动/停止项目
+# 第五步：启动/停止项目
 docker compose up -d
 docker compose down
 ```
