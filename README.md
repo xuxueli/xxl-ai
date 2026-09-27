@@ -2,7 +2,7 @@
     <img src="https://www.xuxueli.com/project/static/xxl-job/images/xxl-logo.jpg" width="150">
     <h3 align="center">XXL-AI</h3>
     <p align="center">
-        XXL-AI, an AI Agent development platform.
+        XXL-AI, an Agent development platform.
         <br>
         <a href="https://www.xuxueli.com/xxl-ai/"><strong>-- Home Page --</strong></a>
         <br>
@@ -28,9 +28,9 @@
 
 ## Introduction
 
-XXL-AI is an AI Agent development platform, easy to learn, easy to use, AI-driven, production-ready, and ready to use out of the box. It supports flexible orchestration of "models + instructions + knowledge base + MCP tools + SKILL skills" to quickly build and publish Agents with one click.
+XXL-AI is an Agent development platform, easy to learn, easy to use, AI-driven, production-ready, and ready to use out of the box. It supports flexible orchestration of "models + instructions + knowledge base + MCP tools + SKILL skills" to quickly build and publish Agents with one click.
 
-XXL-AI 是一个AI Agent 开发平台，易学易用、AI 驱动、可生产落地、开箱即用。支持灵活编排「模型 + 指令 + 知识库 + MCP 工具 + SKILL 技能」，快速构建并一键发布Agent。
+XXL-AI 是一个 Agent 开发平台，易学易用、AI 驱动、可生产落地、开箱即用。支持灵活编排「模型 + 指令 + 知识库 + MCP 工具 + SKILL 技能」，快速构建并一键发布Agent。
 
 ## Documentation
 - [中文文档](https://www.xuxueli.com/xxl-ai/)
