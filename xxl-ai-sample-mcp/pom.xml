@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>com.xuxueli</groupId>
 		<artifactId>xxl-ai</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>1.0.0</version>
 	</parent>
 	<artifactId>xxl-ai-sample-mcp</artifactId>
 	<packaging>jar</packaging>
