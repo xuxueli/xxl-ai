@@ -28,9 +28,10 @@
 
 ## Introduction
 
-XXL-AI is an AI Agent development platform, easy to learn, easy to use, AI-driven, production-ready, and ready to use out of the box. It supports flexible orchestration of "models + instructions + knowledge base + MCP tools + SKILL skills" to quickly build and publish Agents with one click.
+XXL-AI is an AI Agent development platform, supporting Agent orchestration, multi-vendor, standardized extension "MCP + SKILL + RAG", engineering base, etc., allowing for rapid construction and one-click publishing of Agents. The source code is now open and ready to use.
 
-XXL-AI 是一个AI应用开发平台，易学易用、AI 驱动、可生产落地、开箱即用。支持灵活编排「模型 + 指令 + 知识库 + MCP 工具 + SKILL 技能」，快速构建并一键发布Agent。
+XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标准化扩展「MCP + SKILL + RAG」、工程化底座等，可快速构建并一键发布Agent。现已开放源代码，开箱即用。
+
 
 ## Documentation
 - [中文文档](https://www.xuxueli.com/xxl-ai/)
