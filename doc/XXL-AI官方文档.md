@@ -68,13 +68,15 @@ XXL-AI 是一个AI Agent 开发平台，易学易用、AI 驱动、可生产落�
 - Maven：3+
 - Jdk：17+
 - Mysql：8.0+
-- NodeJs：18+（可选：前后端分离项目需要）
-- Redis：7.0+（可选：前后端分离项目需要）
+- NodeJs：18+
+- Redis：7.0+
 - Milvus：2.6+（可选：RAG 知识库向量化需要）
 
 ### 1.5 发展历程
 
-于2019年中，整合 XXL-BOOT 中的AI插件模块，升级为独立的AI应用开发平台 XXL-AI。
+于2026年6月，整合 XXL-BOOT 中的AI插件模块，升级为独立的AI应用开发平台 XXL-AI。
+
+于2026年9月，发布 1.0.0 版本，提供 Agent 编排、RAG 知识库、MCP 工具、SKILL 技能等核心功能，支持一键发布与流式对话。
 
 
 ## 二、快速入门
@@ -90,10 +92,8 @@ XXL-AI 是一个AI Agent 开发平台，易学易用、AI 驱动、可生产落�
 
 ```
 /doc/db/
-    - tables_xxl_ai.sql      ：建库 + 全量框架表 + 业务表 + 种子数据【必须】
+    - tables_xxl_ai.sql      ：数据库初始化SQL脚本
 ```
-
-说明：脚本首行包含 `SET NAMES utf8mb4;`，请以支持 utf8mb4 的客户端执行，避免中文注释与种子数据乱码（MySQL CLI 默认连接字符集为 latin1）。
 
 ### 2.3 源码编译
 
@@ -103,13 +103,12 @@ XXL-AI 是一个AI Agent 开发平台，易学易用、AI 驱动、可生产落�
 - xxl-ai/
     - xxl-ai-api              ：【前后端分离】后端API服务
     - xxl-ai-ui               ：【前后端分离】前端UI服务
-    - xxl-ai-sample-mcp       ：示例 MCP 服务（spring-ai @McpTool，Streamable HTTP）
+    - xxl-ai-sample-mcp       ：示例 MCP 服务（可选）
 ```
 
 编译方式：
 - 后端模块：仓库根目录执行 `mvn clean package -Dmaven.test.skip=true`，一键编译全部 Maven 模块；
 - 前端模块：进入 `xxl-ai-ui` 目录执行 `npm install` 安装依赖。
-
 
 
 ### 2.4 方式一：人工部署
@@ -134,11 +133,17 @@ spring.datasource.username=root
 spring.datasource.password=root_pwd
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
-### xxl-ai, redis。 缓存配置（前后端分离项目依赖，用于登录态存储等）
+### xxl-ai, redis。 缓存配置
 spring.data.redis.host=localhost
 spring.data.redis.port=6379
 spring.data.redis.database=0
 spring.data.redis.password=
+
+### xxl-ai, milvus。向量数据库配置
+xxl-ai.milvus.uri=http://127.0.0.1:19530
+xxl-ai.milvus.username=
+xxl-ai.milvus.password=
+xxl-ai.milvus.database=default
 ```
 
 补充说明：
@@ -190,7 +195,7 @@ npm run dev
 
 启动后访问 `http://localhost:3000`，开发服务器会将 `/api` 前缀的请求自动代理至 `VITE_API_URL` 指定的后端服务。
 
-#### 步骤四：部署前端项目（生产）
+#### 步骤四：部署前端项目（生产部署）
 
 生产模式下，构建产物后部署至 Web 服务器（如 Nginx），并配置反向代理转发 API 请求：
 
