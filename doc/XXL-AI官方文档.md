@@ -260,7 +260,79 @@ docker compose down
 
 ## 三、操作指南
 
-启动后端（8090）与前端（3000）后，访问 `http://localhost:3000`，使用默认账号 `admin/123456` 登录。以下按“从零搭建一个可对话 Agent”的顺序说明。
+登录
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_01.png "图片标题")
+
+首页，工作台
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_02.png "图片标题")
+
+业务空间
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_03.png "图片标题")
+
+用户管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_04.png "图片标题")
+
+供应商管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_05.png "图片标题")
+
+模型管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_06.png "图片标题")
+
+导入模型
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_07.png "图片标题")
+
+MCP工具管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_08.png "图片标题")
+
+MCP工具-测试连接性
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_09.png "图片标题")
+
+SKILL 技能管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_10.png "图片标题")
+
+SKILL 内容/文件管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_11.png "图片标题")
+
+RAG 知识库管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_12.png "图片标题")
+
+知识库内容/文档管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_13.png "图片标题")
+
+向量检索
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_14.png "图片标题")
+
+Agent管理
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_15.png "图片标题")
+
+Agent编排配置：指令、模型、SKILL 技能、MCP 工具、知识库关联
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_16.png "图片标题")
+
+Agent 发布页面：可以发起对话；
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_17.png "图片标题")
+
+Agent 对话实例：介绍自己、查看热点新闻。
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_18.png "图片标题")
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_19.png "图片标题")
 
 ### 3.1 登录与空间切换
 
