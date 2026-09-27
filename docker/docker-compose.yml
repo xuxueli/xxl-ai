@@ -18,7 +18,7 @@ services:
       - "3306:3306"
     volumes:
       # 说明：仅数据库首次初始化时执行；
-      - ../../doc/db/tables_xxl_ai.sql:/docker-entrypoint-initdb.d/tables_xxl_ai.sql:ro
+      - ../doc/db/tables_xxl_ai.sql:/docker-entrypoint-initdb.d/tables_xxl_ai.sql:ro
       # 3、数据库持久化目录位置，建议自定义：
       - ${MYSQL_PATH}/conf:/etc/mysql/conf.d
       - ${MYSQL_PATH}/logs:/var/log/mysql
@@ -124,6 +124,7 @@ services:
   xxl-ai-api:
     # 6、本地Build设置
     image: xuxueli/xxl-ai-api:local
+    pull_policy: never
     build:
       context: ../xxl-ai-api
       dockerfile: Dockerfile
@@ -153,6 +154,7 @@ services:
 
   xxl-ai-sample-mcp:
     image: xuxueli/xxl-ai-sample-mcp:local
+    pull_policy: never
     build:
       context: ../xxl-ai-sample-mcp
       dockerfile: Dockerfile
@@ -170,6 +172,7 @@ services:
   xxl-ai-ui:
     # 8、本地Build设置
     image: xuxueli/xxl-ai-ui:local
+    pull_policy: never
     build:
       context: ../xxl-ai-ui
       dockerfile: Dockerfile
