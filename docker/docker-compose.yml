@@ -167,16 +167,16 @@ services:
 
   # ==================== 前端服务 ====================
 
-  xxl-ai-ui-vue:
+  xxl-ai-ui:
     # 8、本地Build设置
-    image: xuxueli/xxl-ai-ui-vue:local
+    image: xuxueli/xxl-ai-ui:local
     build:
       context: ../xxl-ai-ui
       dockerfile: Dockerfile
       # 附加构建上下文：用于 COPY 目录下的 nginx 配置
       additional_contexts:
         nginx: ./
-    container_name: xxl-ai-ui-vue
+    container_name: xxl-ai-ui
     ports:
       - "${XXL_AI_UI_PORT}:80"
     depends_on:
