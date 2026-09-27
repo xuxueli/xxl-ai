@@ -285,11 +285,7 @@ VALUES
     (9, 4, 'GLM-5.3-Flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
     (10, 4, 'GLM-5.3', 'glm-5.3', 0, 0, NOW(), NOW());
 
--- 6、社区查询配置（框架配置）
-INSERT INTO `xxl_ai_config` (`name`, `key`, `value`, `status`, `remark`, `add_time`, `update_time`)
-VALUES ('Skill社区地址', 'system.skill.community.url', '', 0, 'Skill 社区检索接口地址，可配置为空则禁用社区查询', NOW(), NOW());
-
--- 7、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
+-- 6、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
 VALUES
     -- 远程 Streamable HTTP：示例MCP（由独立应用 xxl-ai-sample-mcp 提供，单端点聚合多 Tool 功能；）
@@ -298,13 +294,13 @@ VALUES
     (1, 'Fetch 网页抓取', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","mcp-fetch-server"],"env":{}}', 0, '网页抓取与内容提取', NOW(), NOW()),
     (1, 'Filesystem 文件系统', 1, null, null, '{"transport":"stdio","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/tmp"],"env":{}}', 0, '本地文件系统读写（请按需调整授权目录参数）', NOW(), NOW());
 
--- 8、预设 SKILL（开箱即用：sql-optimizer 慢SQL优化、ppt 演示文稿生成）
+-- 7、预设 SKILL（开箱即用：sql-optimizer 慢SQL优化、ppt 演示文稿生成）
 INSERT INTO `xxl_ai_skill` (`id`, `space_id`, `name`, `description`, `version`, `status`, `add_time`, `update_time`)
 VALUES
     (1, 1, 'sql-optimizer', 'SQL 优化 Skill：基于 EXPLAIN 执行计划分析慢查询，输出索引优化与 SQL 改写建议（全表扫描/低效索引/深分页等）', '1.0', 0, NOW(), NOW()),
     (2, 1, 'ppt', '演示文稿生成 Skill：基于 python-pptx 将结构化内容输出为排版规范的 .pptx 演示文稿，供汇报演示使用', '1.0', 0, NOW(), NOW());
 
--- 8-1、预设 SKILL 固定文件树（SKILL.md + scripts/ + reference/ 为锁定骨架，与新增播种结构一致）
+-- 7-1、预设 SKILL 固定文件树（SKILL.md + scripts/ + reference/ 为锁定骨架，与新增播种结构一致）
 INSERT INTO `xxl_ai_skill_file` (`skill_id`, `parent_id`, `name`, `type`, `file_type`, `content`, `locked`, `sort`, `add_time`, `update_time`)
 VALUES
     -- sql-optimizer：骨架（锁定）
@@ -325,7 +321,7 @@ VALUES
     ( 2, 9, 'style-guide.md', 1, 'md', CONCAT('# 排版规范参考\n', '\n', '- 封面页用布局 0，内容页用标题+要点布局（每页要点不超过 6 条）\n', '- 表格页表头加粗、列宽自适应，避免单元格文字溢出\n', '- 配色统一使用主题色，装饰克制，聚焦内容\n', '- 文件命名：{主题}-{yyyyMMdd}.pptx'), 0, 1, NOW(), NOW());
 
 
--- 8-2、预设知识库与知识文档（RAG 测试数据：《三体》主题，嵌入模型使用本地 Ollama qwen3-embedding，开箱即可向量化/检索）
+-- 8、预设知识库与知识文档（RAG 测试数据：《三体》主题，嵌入模型使用本地 Ollama qwen3-embedding，开箱即可向量化/检索）
 INSERT INTO `xxl_ai_knowledge_base` (`id`, `space_id`, `name`, `description`, `embed_supplier_id`, `embed_model_id`, `chunk_size`, `chunk_overlap`, `top_k`, `status`, `add_time`, `update_time`)
 VALUES
     (1, 1, '三体知识库', '刘慈欣《三体》系列知识库：主要人物、核心设定、关键情节，作为 RAG 知识问答联调用例', 2, 5, 500, 50, 5, 0, NOW(), NOW());
