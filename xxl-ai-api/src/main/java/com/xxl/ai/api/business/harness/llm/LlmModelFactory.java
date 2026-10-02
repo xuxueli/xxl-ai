@@ -11,6 +11,7 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -36,6 +37,9 @@ public class LlmModelFactory {
 
     /** 附属Header会话占位符：构建模型时按当前会话ID动态替换 */
     private static final String SESSION_PLACEHOLDER = "{session}";
+
+    /** 对外请求 User-Agent（覆盖 spring-ai 默认的 spring-ai-openai） */
+    private static final String USER_AGENT = "XXL-AI";
 
     private static final int CACHE_MAX = 128;
 
@@ -74,7 +78,10 @@ public class LlmModelFactory {
                 .model(runtime.getModelName())
                 .customHeaders(headers)
                 .build();
-        OpenAiChatModel model = OpenAiChatModel.builder().options(options).build();
+        OpenAiChatModel model = OpenAiChatModel.builder()
+                .options(options)
+                .httpClientBuilderCustomizer(userAgentCustomizer())
+                .build();
         chatModelCache.put(key, model);
         logger.debug("LLM 对话模型构建完成, supplierId={}, modelId={}", runtime.getSupplierId(), runtime.getModelId());
         return model;
@@ -96,10 +103,27 @@ public class LlmModelFactory {
                 .model(runtime.getModelName())
                 .customHeaders(headers)
                 .build();
-        OpenAiEmbeddingModel model = OpenAiEmbeddingModel.builder().options(options).build();
+        OpenAiEmbeddingModel model = OpenAiEmbeddingModel.builder()
+                .options(options)
+                .httpClientBuilderCustomizer(userAgentCustomizer())
+                .build();
         embeddingModelCache.put(key, model);
         logger.debug("LLM 嵌入模型构建完成, supplierId={}, modelId={}", runtime.getSupplierId(), runtime.getModelId());
         return model;
+    }
+
+    /**
+     * 构建 User-Agent 定制器：以 OkHttp 拦截器覆盖语义重写请求 User-Agent
+     *
+     * spring-ai 默认注入 {@code User-Agent: spring-ai-openai}，且其 customHeaders 为「追加」语义
+     * （底层 Headers.Builder.put 为 add），无法通过 customHeaders 直接覆盖；此处用 OkHttp
+     * Request.Builder.header(name,value) 的覆盖语义将其替换掉。
+     */
+    private OpenAiHttpClientBuilderCustomizer userAgentCustomizer() {
+        return builder -> builder.interceptor(chain -> chain.proceed(
+                chain.request().newBuilder()
+                        .header("User-Agent", USER_AGENT)
+                        .build()));
     }
 
     /**
