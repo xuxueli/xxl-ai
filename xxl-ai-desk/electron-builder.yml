@@ -28,3 +28,6 @@ linux:
   category: Utility
   maintainer: xuxueli
 npmRebuild: true
+# 中国大陆网络无法直连 GitHub 下载 Electron 产物，统一走 npmmirror 镜像
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/

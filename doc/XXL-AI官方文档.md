@@ -698,9 +698,11 @@ docker compose down
 - 2、【优化】模型API请求通参调整，设置 User-Agent: XXL-AI 便于供应商识别；
 - 3、【优化】供应商模型请求参数属性优化，支持格式检测与合法性检测；
 - 4、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
-- 5、【TODO】Memory：支持跨会话记忆、记忆内容主动沉淀更新、上下文检索及注入等。
-- 6、【TODO】可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
-- 7、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。
+
+### v1.2.0 Release Notes[ING]
+- 1、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。
+- 2、【TODO】Memory：支持跨会话记忆、记忆内容主动沉淀更新、上下文检索及注入等。
+- 3、【TODO】可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
 
 
 ### TODO LIST
