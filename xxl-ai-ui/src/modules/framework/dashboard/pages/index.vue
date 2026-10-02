@@ -98,6 +98,7 @@ const chartDays = ref(30)
 const shareEmpty = ref(false)
 let trendInstance: ECharts | null = null
 let shareInstance: ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
 
 /**
  * init
@@ -108,12 +109,22 @@ onMounted(() => {
     loadTrendChart()
     loadShareChart()
   })
+  // 容器尺寸变化时自适应重绘：窗口缩放、侧边栏折叠等场景
+  if (trendChartRef.value && shareChartRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      trendInstance?.resize()
+      shareInstance?.resize()
+    })
+    resizeObserver.observe(trendChartRef.value)
+    resizeObserver.observe(shareChartRef.value)
+  }
 })
 
 /**
  * destory
  */
 onUnmounted(() => {
+  resizeObserver?.disconnect()
   trendInstance?.dispose()
   shareInstance?.dispose()
 })
@@ -168,6 +179,7 @@ function loadTrendChart() {
     }
     trendInstance = echarts.init(trendChartRef.value as HTMLElement)
     trendInstance.setOption({
+      animation: false,
       tooltip: { trigger: 'axis' },
       grid: { left: 40, right: 20, bottom: 30, top: 20 },
       xAxis: {
@@ -223,6 +235,7 @@ function loadShareChart() {
     }
     shareInstance = echarts.init(shareChartRef.value as HTMLElement)
     shareInstance.setOption({
+      animation: false,
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
       legend: {
         type: 'scroll',

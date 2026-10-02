@@ -156,13 +156,9 @@ public class LoginController {
 	@XxlSso(login = false)
 	public Response<CaptchaDTO> captcha(){
 
-		// build response
-		CaptchaDTO captchaDTO = new CaptchaDTO();
-		captchaDTO.setEnable(isCaptchaEnabled());
-
-		// valid switch
-		if (!captchaDTO.isEnable()) {
-			return Response.ofSuccess(captchaDTO);
+		// 验证码关闭：直接返回空数据（开关统一由 /loadBaseConfig 下发，前端据此显隐）
+		if (!isCaptchaEnabled()) {
+			return Response.ofSuccess(new CaptchaDTO());
 		}
 
 		// 1、generate captcha text
@@ -186,6 +182,7 @@ public class LoginController {
 		redisCacheUtil.setObject(Consts.getLoginCaptchaKey(uuid), result, 3, TimeUnit.MINUTES);
 
 		// 4、build response
+		CaptchaDTO captchaDTO = new CaptchaDTO();
 		captchaDTO.setUuid(uuid);
 		captchaDTO.setImage(base64Image);
 
@@ -196,7 +193,7 @@ public class LoginController {
 	 * 登录验证码开关：从系统配置中读取（配置Key：system.login.captcha.enabled，值为 true/false）
 	 */
 	private boolean isCaptchaEnabled() {
-		Config config = configService.loadByKey("system.login.captcha.enabled").getData();
+		Config config = configService.loadByKeyWithCache("system.login.captcha.enabled").getData();
 		return config != null && Boolean.parseBoolean(config.getValue());
 	}
 

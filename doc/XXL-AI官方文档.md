@@ -432,7 +432,7 @@ xxl-ai/
 │           ├── mapper/
 │           │   ├── framework/system/          # 平台内置 MyBatis 映射文件
 │           │   └── business/{module}/         # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
-│           └── i18n/                          # 后端国际化资源（message_{zh_CN,zh_TC,en}.properties）
+│           └── i18n/                          # 后端国际化资源（message_{zh,en}.properties）
 │
 ├── xxl-ai-sample/                         # 示例 MCP 服务（spring-ai @McpTool，Streamable HTTP，8091）
 │   ├── pom.xml                                # Maven配置（继承父工程）
@@ -697,8 +697,9 @@ docker compose down
 - 1、【升级】项目依赖升级最新版本；
 - 2、【优化】模型API请求通参调整，设置 User-Agent: XXL-AI 便于供应商识别；
 - 3、【优化】供应商模型请求参数属性优化，支持格式检测与合法性检测；
-- 4、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
-- 5、【ING】部署优化：前后端合并部署，兼容Dev与Prod流程；
+- 4、【新增】I18N 模块重构：前后端国际化逻辑优化，统一国际化资源文件结构，支持多语言配置，并优化前端国际化加载逻辑；
+- 5、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
+- 6、【ING】部署优化：前后端合并部署，兼容Dev与Prod流程；
 
 ### v1.2.0 Release Notes[ING]
 - 1、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。

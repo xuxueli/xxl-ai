@@ -1,7 +1,9 @@
 /**
  * 类型定义：登录认证 & 路由（auth 模块）
- * 覆盖登录入参、验证码数据结构。
+ * 覆盖登录入参、验证码数据结构、系统基础配置。
  */
+
+import type { I18nLang } from '@/i18n'
 
 /**
  * 登录入参
@@ -19,10 +21,18 @@ export interface LoginParams {
  * 验证码结构。
  */
 export interface CaptchaData {
-  /** 是否启用验证码 */
-  enable: boolean
   /** 验证码图片 Base64 */
   image: string
   /** 验证码标识 */
   uuid: string
+}
+
+/**
+ * 系统基础配置结构。
+ */
+export interface BaseConfig {
+  /** 界面语言：zh/en */
+  language: I18nLang
+  /** 登录验证码开关 */
+  captchaEnabled: boolean
 }
