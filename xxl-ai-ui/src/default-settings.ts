@@ -15,7 +15,7 @@ export default {
   /**
    * 版本
    */
-  version: '1.0.0',
+  version: '1.0.1-SNAPSHOT',
 
   /**
    * 界面语言：zh 中文 / en 英文（由 i18n 读取，不支持运行时切换）
