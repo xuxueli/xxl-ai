@@ -16,7 +16,7 @@ _## 《AI应用开发平台XXL-AI》
 
 > 一个可接工具、可接知识、可一键发布、可生产落地的开源 AI Agent 平台。
 
-XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标准化扩展「MCP + SKILL + RAG」、工程化底座等，可快速构建并一键发布Agent。现已开放源代码，开箱即用。
+XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标准化扩展「MCP + SKILL + RAG」、工程化底座等，可快速构建并一键发布Agent。现已开放源代码，开箱即用。
 
 ### 1.2 特性
 
@@ -73,7 +73,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 
 ### 1.5 发展历程
 
-于2026年6月，整合 XXL-BOOT 中的AI插件模块，升级为独立的AI应用开发平台 XXL-AI。
+于2026年6月，整合 XXL-BOOT 中的AI插件模块，升级为独立的 AI应用开发平台 XXL-AI。
 
 于2026年9月，发布 1.0.0 版本，提供 Agent 编排、RAG 知识库、MCP 工具、SKILL 技能等核心功能，支持一键发布与流式对话。
 
@@ -698,7 +698,7 @@ docker compose down
 - 2、【优化】模型API请求通参调整，设置 User-Agent: XXL-AI 便于供应商识别；
 - 3、【优化】供应商模型请求参数属性优化，支持格式检测与合法性检测；
 - 4、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
-- 5、【部署】部署优化：前后端合并部署，兼容Dev与Prod流程；
+- 5、【ING】部署优化：前后端合并部署，兼容Dev与Prod流程；
 
 ### v1.2.0 Release Notes[ING]
 - 1、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。

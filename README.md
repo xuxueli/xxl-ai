@@ -30,7 +30,7 @@
 
 XXL-AI is an AI Agent development platform, supporting Agent orchestration, multi-vendor, standardized extension "MCP + SKILL + RAG", engineering base, etc., allowing for rapid construction and one-click publishing of Agents. The source code is now open and ready to use.
 
-XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标准化扩展「MCP + SKILL + RAG」、工程化底座等，可快速构建并一键发布Agent。现已开放源代码，开箱即用。
+XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标准化扩展「MCP + SKILL + RAG」、工程化底座等，可快速构建并一键发布Agent。现已开放源代码，开箱即用。
 
 
 ## Documentation
@@ -73,7 +73,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 
 ## Development
 
-于2026年6月，整合 XXL-BOOT 中的AI插件模块，升级为独立的AI应用开发平台 XXL-AI。
+于2026年6月，整合 XXL-BOOT 中的AI插件模块，升级为独立的 AI应用开发平台 XXL-AI。
 
 于2026年9月，发布 1.0.0 版本，提供 Agent 编排、RAG 知识库、MCP 工具、SKILL 技能等核心功能，支持一键发布与流式对话。
 
