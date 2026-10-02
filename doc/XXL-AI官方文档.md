@@ -704,7 +704,6 @@ docker compose down
 - 7、【TODO】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
 
 ### TODO LIST
-
 - 1、AI 能力增强：
     - WorkFlow 定义：工作流及 Agent/模型编排定义、执行与日志、分布式执行；
     - 知识库：多类型文档（Word / PDF / 图片）解析与向量化；
