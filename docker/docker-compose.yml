@@ -152,18 +152,18 @@ services:
 
   # ==================== 示例 MCP 服务 ====================
 
-  xxl-ai-sample-mcp:
-    image: xuxueli/xxl-ai-sample-mcp:local
-    container_name: xxl-ai-sample-mcp
+  xxl-ai-sample:
+    image: xuxueli/xxl-ai-sample:local
+    container_name: xxl-ai-sample
     pull_policy: never
     build:
-      context: ../sample/xxl-ai-sample-mcp
+      context: ../xxl-ai-sample
       dockerfile: Dockerfile
     environment:
       PARAMS: >-
-        --server.port=${XXL_AI_SAMPLE_MCP_PORT}
+        --server.port=${XXL_AI_SAMPLE_PORT}
     ports:
-      - "${XXL_AI_SAMPLE_MCP_PORT}:${XXL_AI_SAMPLE_MCP_PORT}"
+      - "${XXL_AI_SAMPLE_PORT}:${XXL_AI_SAMPLE_PORT}"
     networks:
       - xxl-ai-network
 

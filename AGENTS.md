@@ -10,9 +10,9 @@ XXL-AI 是AI应用开发平台，采用 Monorepo 统一托管「后端服务」�
 |---|---|
 | `xxl-ai-api` | 后端 API（Spring Boot 纯 API），端口 8090，SSO 登录态存 Redis |
 | `xxl-ai-ui` | Vue3 前端（Element Plus + TypeScript + Vite），端口 3000 |
-| `xxl-ai-sample-mcp` | 示例 MCP 服务（spring-ai MCP Server 注解式 `@McpTool`，Streamable HTTP），端口 8091 |
+| `xxl-ai-sample` | 示例 MCP 服务（spring-ai MCP Server 注解式 `@McpTool`，Streamable HTTP），端口 8091 |
 | `doc/db` | 数据库初始化脚本（`xxl_ai`：用户/配置/审计日志等框架表与种子数据） |
-| `docker` | 一键部署栈（mysql + redis + milvus(etcd/minio/attu) + api + sample-mcp + ui） |
+| `docker` | 一键部署栈（mysql + redis + milvus(etcd/minio/attu) + api + sample + ui） |
 
 通用依赖：`xxl-tool`（工具与统一响应，经 `xxl-sso-core` 传递）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis、spring-ai（OpenAI 兼容模型 / Milvus 向量库 / MCP SDK）。
 
@@ -43,10 +43,10 @@ cd xxl-ai-api && mvn spring-boot:run     # 8090
 cd xxl-ai-ui && npm i && npm run dev     # 3000
 
 # 示例 MCP 服务（可选，供「MCP管理」连通测试联调）
-cd xxl-ai-sample-mcp && mvn spring-boot:run   # 8091
+cd xxl-ai-sample && mvn spring-boot:run     # 8091
 ```
 
-或一键 docker 部署栈（含 mysql + redis + milvus + api + sample-mcp + ui）：
+或一键 docker 部署栈（含 mysql + redis + milvus + api + sample + ui）：
 
 ```bash
 cd docker && docker compose up -d --build

@@ -30,7 +30,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 - **MCP + Skill + RAG，让 Agent 真能干活**
 
 - 5、RAG 知识库：知识库 + 文档管理，文档分片向量化入库（Milvus），对话时检索上下文自动注入；
-- 6、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent，另附示例 MCP 服务 `xxl-ai-sample-mcp`；
+- 6、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent，另附示例 MCP 服务 `xxl-ai-sample`；
 - 7、SKILL 技能：以 `SKILL.md` + 文件树沉淀领域知识与脚本，自动物化为 Agent 可执行的技能目录；
 
 - **工程化底座，支持稳定上线**
@@ -102,7 +102,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 - xxl-ai/
     - xxl-ai-api              ：【前后端分离】后端API服务
     - xxl-ai-ui               ：【前后端分离】前端UI服务
-    - xxl-ai-sample-mcp       ：示例 MCP 服务（可选）
+    - xxl-ai-sample           ：示例 MCP 服务（可选）
 ```
 
 编译方式：
@@ -413,7 +413,7 @@ xxl-ai/
 │   │   ├── tables_xxl_ai.sql                  # 建库 + 框架表 + 业务表 + 种子数据【必须】
 │   └── XXL-AI官方文档.md                      # 官方文档
 │
-├── docker/                                    # Docker Compose 编排目录（mysql + redis + milvus + api + sample-mcp + ui）
+├── docker/                                    # Docker Compose 编排目录（mysql + redis + milvus + api + sample + ui）
 │   ├── docker-compose.yml                     # 一键部署编排
 │   ├── .env                                   # 部署环境变量
 │   └── nginx.conf                             # 前端 Nginx 配置（反向代理 /api）
@@ -434,7 +434,7 @@ xxl-ai/
 │           │   └── business/{module}/         # 【扩展点】业务扩展 MyBatis 映射文件（按模块平铺）
 │           └── i18n/                          # 后端国际化资源（message_{zh_CN,zh_TC,en}.properties）
 │
-├── xxl-ai-sample-mcp/                         # 示例 MCP 服务（spring-ai @McpTool，Streamable HTTP，8091）
+├── xxl-ai-sample/                         # 示例 MCP 服务（spring-ai @McpTool，Streamable HTTP，8091）
 │   ├── pom.xml                                # Maven配置（继承父工程）
 │   └── src/main/java/com/xxl/ai/api/sample/   # 启动类 + SampleMcpTool
 │
@@ -460,7 +460,7 @@ xxl-ai/
 
 补充说明：
 - 构建：后端模块在仓库根目录执行 `mvn clean package` 即可一键编译全部 Maven 模块；前端模块进入 `xxl-ai-ui` 目录执行 `npm install`、`npm run dev` 即可本地启动；
-- 部署：前后端分离模式部署 `xxl-ai-api` + `xxl-ai-ui`（示例 MCP 服务 `xxl-ai-sample-mcp` 为可选联调组件）；
+- 部署：前后端分离模式部署 `xxl-ai-api` + `xxl-ai-ui`（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
 - 扩展：新增业务模块时，可在各模块 `business` 扩展包中开发，并配套放置 Mapper 映射文件、模板文件及配置文件。
 
 ### 5.2、前后端分离运行模式
@@ -648,7 +648,7 @@ xxl-ai.chat.history.limit=50        # 附加给模型的最近历史消息条数
 - **模型工厂 `LlmModelFactory`**：按供应商配置程序化构建 OpenAI 兼容的 `OpenAiChatModel` / `OpenAiEmbeddingModel`（`spring.ai.model.*=none` 关闭自动装配），按「供应商 + 模型（+ 会话，仅当自定义 Header 含 `{session}` 占位时）」LRU 缓存，Header value 支持 `{session}` 占位；
 - **对话编排 `LlmChatTool`**：按已装配的「系统指令 + 历史消息 + 当前提问 + 工具 + RAG Advisor」，经 `ChatClient` 流式对话，思考过程（`reasoningContent`）与回复内容经回调增量输出；
 - **RAG `RagTool`**：每知识库对应一个 Milvus 集合 `kb_base_{baseId}`（COSINE / FLAT），文档分片向量化写入、检索经 `QuestionAnswerAdvisor` 自动注入上下文；内聚嵌入模型解析、向量存储缓存与文本分片；
-- **MCP `McpToolFactory`**：`McpClientTool` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；仓库内附示例 MCP 服务 `xxl-ai-sample-mcp`（spring-ai `@McpTool`，Streamable HTTP），供「MCP管理」连通测试联调；
+- **MCP `McpToolFactory`**：`McpClientTool` 基于官方 Java MCP SDK（stdio / Streamable HTTP），将 MCP 工具转换为 spring-ai `ToolCallback`；仓库内附示例 MCP 服务 `xxl-ai-sample`（spring-ai `@McpTool`，Streamable HTTP），供「MCP管理」连通测试联调；
 - **SKILL `SkillToolFactory`**：将 DB 技能文件树物化为 `{skill.root}/agent_{agentId}/{skillName}/`，构建 `SkillsTool` 及配套 shell / 文件执行工具（bash、Read/Write/Edit、Glob、Grep、List），技能内容变更按更新时间指纹自动重建；
 - **工具装配顺序**：`buildTools` 依次装配 MCP 工具 + Skill 工具 + 执行工具，统一以 `Object` 列表随请求传入，spring-ai 自动解析注册。
 

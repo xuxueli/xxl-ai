@@ -53,7 +53,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 - **MCP + Skill + RAG，标准化扩展**
 
 - 5、RAG 知识库：知识库 + 文档管理，文档分片向量化入库（Milvus），对话时检索上下文自动注入；
-- 6、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent，另附示例 MCP 服务 `xxl-ai-sample-mcp`；
+- 6、MCP 工具：支持远程（Streamable HTTP）与本地（stdio）MCP 服务接入，工具自动装配给 Agent，另附示例 MCP 服务 `xxl-ai-sample`；
 - 7、SKILL 技能：以 `SKILL.md` + 文件树沉淀领域知识与脚本，自动物化为 Agent 可执行的技能目录；
 
 - **工程化底座，支持稳定上线**
@@ -62,7 +62,7 @@ XXL-AI 是一个AI应用开发平台，支持 Agent编排、多供应商、标�
 - 9、账号安全：基于 XXL-SSO 登录认证，登录态（token）存于 Redis，支持集群部署与 SSO 集成；
 - 10、权限管控：基于 RBAC 的菜单 / 按钮级权限，动态菜单下发、零路由改动；
 - 11、系统管理：用户、系统配置、审计日志在线管理；
-- 12、一键部署：随带 Docker Compose 一键部署栈（mysql + redis + milvus + api + sample-mcp + ui）；
+- 12、一键部署：随带 Docker Compose 一键部署栈（mysql + redis + milvus + api + sample + ui）；
 
 - **研发与架构**
 
