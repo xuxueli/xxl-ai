@@ -693,6 +693,12 @@ docker compose up -d
 docker compose down
 ```
 
+### v1.1.0 Release Notes[ING]
+- 1、【TODO】Memory：支持跨会话记忆、记忆内容主动沉淀更新、上下文检索及注入等。
+- 2、【TODO】可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
+- 3、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用。
+（提供内置Agent对话能力，可用于功能调试或快速集成应用）
+- 4、【TODO】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
 
 ### TODO LIST
 
