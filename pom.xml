@@ -13,7 +13,7 @@
 
 	<modules>
 		<module>xxl-ai-api</module>
-		<module>sample/xxl-ai-sample-mcp</module>
+		<module>xxl-ai-sample</module>
 	</modules>
 
 	<properties>

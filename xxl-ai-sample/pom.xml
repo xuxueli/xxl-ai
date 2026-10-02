@@ -7,9 +7,8 @@
 		<groupId>com.xuxueli</groupId>
 		<artifactId>xxl-ai</artifactId>
 		<version>1.0.1-SNAPSHOT</version>
-		<relativePath>../../pom.xml</relativePath>
 	</parent>
-	<artifactId>xxl-ai-sample-mcp</artifactId>
+	<artifactId>xxl-ai-sample</artifactId>
 	<packaging>jar</packaging>
 
 	<properties>
