@@ -1,0 +1,59 @@
+/* 设计令牌：默认浅色（参考 ChatGPT 黑白灰配色），并保留深色主题 */
+:root {
+  /* XXL-AI Desk 自绘组件变量 */
+  --desk-bg: #ffffff;
+  --desk-bg-elevated: #f7f7f8;
+  --desk-sidebar: #f9f9f9;
+  --desk-border: #ececec;
+  --desk-text: #0d0d0d;
+  --desk-text-secondary: #5d5d5d;
+  --desk-text-tertiary: #8e8e8e;
+  --desk-primary: #0d0d0d;
+  --desk-primary-hover: #2f2f2f;
+  --desk-primary-soft: rgba(13, 13, 13, 0.06);
+  --desk-bubble-user: #f4f4f4;
+  --desk-bubble-user-text: #0d0d0d;
+  --desk-bubble-assistant: #f4f4f4;
+  --desk-danger: #d93025;
+  --desk-radius-sm: 10px;
+  --desk-radius: 16px;
+  --desk-radius-lg: 22px;
+  --desk-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+
+  /* Element Plus 主题对齐（黑白灰） */
+  --el-color-primary: #0d0d0d;
+  --el-color-primary-light-3: #3d3d3d;
+  --el-color-primary-light-5: #6b6b6b;
+  --el-color-primary-light-7: #a3a3a3;
+  --el-color-primary-light-8: #c7c7c7;
+  --el-color-primary-light-9: #f0f0f0;
+  --el-color-primary-dark-2: #000000;
+  --el-font-size-base: 15px;
+  --el-border-radius-base: 10px;
+}
+
+:root.dark {
+  --desk-bg: #212121;
+  --desk-bg-elevated: #2a2a2a;
+  --desk-sidebar: #171717;
+  --desk-border: #383838;
+  --desk-text: #ececec;
+  --desk-text-secondary: #b4b4b4;
+  --desk-text-tertiary: #8e8e8e;
+  --desk-primary: #8f8ffa;
+  --desk-primary-hover: #a3a3fb;
+  --desk-primary-soft: rgba(143, 143, 250, 0.14);
+  --desk-bubble-user: #303030;
+  --desk-bubble-user-text: #ececec;
+  --desk-bubble-assistant: #2a2a2a;
+  --desk-danger: #f2555a;
+  --desk-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+
+  --el-color-primary: #8f8ffa;
+  --el-color-primary-light-3: #a8a8fb;
+  --el-color-primary-light-5: #bcbcfc;
+  --el-color-primary-light-7: #d4d4fd;
+  --el-color-primary-light-8: #e2e2fe;
+  --el-color-primary-light-9: #f1f1ff;
+  --el-color-primary-dark-2: #7575e6;
+}
