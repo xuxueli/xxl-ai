@@ -138,7 +138,8 @@ function logout() {
   })
     .then(() => {
       userStore.logout().then(() => {
-        location.href = defaultSettings.homePath
+        // Hash 模式：跳转首页需带 # 前缀，避免请求服务端路径
+        location.href = '/#' + defaultSettings.homePath
       })
     })
     .catch(() => {})

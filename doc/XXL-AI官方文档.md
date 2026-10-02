@@ -23,7 +23,7 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 - **Agent 编排与发布（重点）**
 
 - 1、Agent 编排：模型 + 系统指令 + 知识库 + MCP + SKILL 组合为 Agent，各类资源均支持多选绑定；
-- 2、一键发布：发布后生成 UUID 公开访问地址（`/chat/{uuid}`，免登录），管理端可查看该 Agent 的访客对话与消息记录；
+- 2、一键发布：发布后生成 UUID 公开访问地址，管理端可查看该 Agent 的访客对话与消息记录；
 - 3、多模型供应商：统一接入 OpenAI 兼容协议（Deepseek、智谱GLM、Ollama、OpenCode 等），支持供应商与模型两级管理、连通性测试与远程模型导入；
 - 4、流式对话：SSE 流式输出（思考过程 / 回复内容），基于 Redis Stream 无状态化，支持集群部署与断线 / 刷新续传；
 
@@ -43,7 +43,7 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 
 - **研发与架构**
 
-- 13、Monorepo + 前后端分离：一套仓库统一托管 后端 API 与 前端 UI，统一版本与依赖管理，前后端独立部署、独立迭代；
+- 13、Monorepo + 前后端分离：一套仓库统一托管 后端 API 与 前端 UI，统一版本与依赖管理；开发期前后端独立启动，部署期前端产物内嵌进 API jar 合并发布；
 - 14、AI + SKILL 驱动：内置开发 SKILL，AI 编程助手一键加载，按平台规范直生业务代码并落位，显著加速业务开发；
 - 15、响应式 UI 与国际化：Vue3 + Element Plus + TypeScript，提供中文 / 英文两种语言；
 - 16、可扩展架构：标准分层分包、业务模块自包含，模型 / 对话 / RAG / MCP / SKILL 运行时统一收口支撑层；
@@ -67,8 +67,8 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 - Maven：3+
 - Jdk：17+
 - Mysql：8.0+
-- NodeJs：18+
 - Redis：7.0+
+- NodeJs：22+
 - Milvus：2.6+（可选：RAG 知识库向量化需要）
 
 ### 1.5 发展历程
@@ -83,7 +83,7 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 ### 2.1 环境准备
 
 - 后端：JDK 17+、Maven 3+、MySQL 8.0+、Redis 7.0+（RAG 向量化另需 Milvus 2.6+）；
-- 前端：Node.js 18+；
+- 前端：Node.js 22+
 
 ### 2.2 初始化数据库
 
@@ -105,15 +105,10 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
     - xxl-ai-sample           ：示例 MCP 服务（可选）
 ```
 
-编译方式：
-- 后端模块：仓库根目录执行 `mvn clean package -Dmaven.test.skip=true`，一键编译全部 Maven 模块；
-- 前端模块：进入 `xxl-ai-ui` 目录执行 `npm install` 安装依赖。
+### 2.4 方式一：人工部署（本地开发）
 
-
-### 2.4 方式一：人工部署
-
-- 部署项目：xxl-ai-api + xxl-ai-ui
-- 项目说明：前后端分离模式，后端 API 与前端 UI 独立部署、独立运行。
+- 部署项目：xxl-ai-api（内嵌前端产物）
+- 项目说明：开发期前后端分开启动（`xxl-ai-ui` 3000 + `xxl-ai-api` 8080）；部署期执行 Maven 内嵌构建，前端产物打入 API jar，单进程单端口（8080）同时提供页面与接口。
 
 #### 步骤一：启动后端服务
 
@@ -146,14 +141,18 @@ xxl-ai.milvus.database=default
 ```
 
 补充说明：
-- 后端服务默认端口为 `8090`，可通过 `server.port` 调整；
+- 后端服务默认端口为 `8080`，可通过 `server.port` 调整；
 - 前后端分离项目依赖 Redis，部署前需确保 Redis 服务可用。
 
 后端启动方式：
 
 ```
+# 编译项目：一键编译全部 Maven 模块（默认不含前端，供开发期使用）
 cd /xxl-ai/xxl-ai-api
-mvn spring-boot:run     # 启动后服务监听 http://localhost:8090
+mvn clean package -Dmaven.test.skip=true
+
+# 启动后服务
+mvn spring-boot:run    
 ```
 
 #### 步骤二：前端环境配置
@@ -166,74 +165,58 @@ mvn spring-boot:run     # 启动后服务监听 http://localhost:8090
 /xxl-ai/xxl-ai-ui/.env.production    # 生产环境
 ```
 
-配置内容说明：
+配置内容说明（以开发环境 `.env.development` 为例，`.env.production` 见下方说明）：
 
 ```
 # 前端端口号
 VITE_APP_PORT=3000
 
-# 后端API地址
-VITE_API_URL=http://localhost:8090
-# 后端路由前缀
+# 后端API地址（仅开发模式代理目标）
+VITE_API_URL=http://localhost:8080
+# 后端路由前缀（开发：/api，由 Vite 代理剥离后转发；生产：为空）
 VITE_APP_BASE_API='/api'
 ```
 
 补充说明：
-- `VITE_API_URL`：后端 API 服务地址，开发模式下由 Vite 代理转发，生产模式下由前端 Web 服务器（如 Nginx）反向代理；
-- `VITE_APP_BASE_API`：后端路由前缀，默认 `/api`，前端请求会统一添加此前缀，代理或反向代理时需将其移除并转发至后端服务。
+- `VITE_API_URL`：后端 API 服务地址，仅开发模式下由 Vite 代理转发；
+- `VITE_APP_BASE_API`：后端路由前缀。开发环境为 `/api`，Vite 代理时剥离后转发至后端；生产环境为空字符串，前端与 API 同源、接口直接走根路径（拍平）；
+- 前端采用 **Hash 路由**（`/#/xxx`），hash 段不发送至服务端，故无需服务端 History 回退配置。
 
-#### 步骤三：部署前端项目（本地开发）
+#### 步骤三：启动前端项目
 
 开发模式下，进入前端目录，安装依赖并启动即可：
 
 ```
+# 进入前端目录，安装依赖
 cd /xxl-ai/xxl-ai-ui
 npm install
+
+# 启动开发服务器（开发期，3000）
 npm run dev
 ```
 
 启动后访问 `http://localhost:3000`，开发服务器会将 `/api` 前缀的请求自动代理至 `VITE_API_URL` 指定的后端服务。
 
-#### 步骤四：部署前端项目（生产部署）
 
-生产模式下，构建产物后部署至 Web 服务器（如 Nginx），并配置反向代理转发 API 请求：
+### 2.5 方式二：人工部署（生产部署）
 
-```
-npm run build             # 构建产物输出至 dist 目录
-```
-
-Nginx 反向代理配置示例：
+部署期无需单独部署前端：执行内嵌构建后（首次执行会由 `frontend-maven-plugin` 下载内置 Node；），前端产物打入 API jar，`java -jar` 启动即同时提供页面与接口（无需 Nginx，也无需服务端 History 回退）：
 
 ```
-server {
-    listen       3000;
-    server_name  localhost;
+# 1、构建含前端的内嵌 jar（默认 mvn package 仅构建 API，不触发前端）
+mvn -pl xxl-ai-api -am package -Pembed-ui
 
-    # 前端静态资源
-    root  /usr/share/nginx/html;
-    index index.html;
-
-    # 单页应用路由支持（前端 History 模式）
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 后端API反向代理
-    location /api/ {
-        proxy_pass   http://127.0.0.1:8090/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+# 2、启动服务（页面与接口同在 8080）
+java -jar xxl-ai-api/target/xxl-ai-api-*.jar
 ```
 
 项目部署完成后，可通过如下地址及账号进行登录。
-- 访问地址：http://localhost:3000 （按实际部署配置调整）
+- 访问地址：http://localhost:8080 （按实际部署配置调整）
 - 默认登录账号："admin/123456"
 
-### 2.5 方式二：Docker Compose 部署
+### 2.6 方式三：Docker Compose 部署（生产部署）
 
-支持 Docker Compose 一键部署：
+支持 Docker Compose 一键部署（api 镜像直接打包"已内嵌前端"的 jar，页面与接口同在 8080）：
 
 ```
 
@@ -241,17 +224,14 @@ server {
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：构建后端项目
-mvn clean package -Dmaven.test.skip=true
+# 第二步：全量构建（api 内嵌前端；同时生成 sample 等模块 jar，供各镜像打包）
+mvn clean package -Dmaven.test.skip=true -Pembed-ui
 
-# 第三步：构建前端项目
-npm install --prefix ./xxl-ai-ui
-
-# 第四步：进入 docker 目录，支持自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
+# 第三步：进入 docker 目录，支持自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
 cd ./docker/
 cat .env
 
-# 第五步：启动/停止项目
+# 第四步：启动/停止项目
 docker compose up -d
 docker compose down
 ```
@@ -259,7 +239,7 @@ docker compose down
 
 ## 三、操作指南
 
-> 本章以「从零跑通一个可对话的 Agent」为主线，按 **登录 → 空间 → 供应商/模型 → MCP / SKILL / 知识库 → Agent 编排 → 发布对话** 的顺序，结合界面截图逐步说明。所有管理操作均在管理端（`http://localhost:3000`）完成，默认账号 `admin/123456`。
+> 本章以「从零跑通一个可对话的 Agent」为主线，按 **登录 → 空间 → 供应商/模型 → MCP / SKILL / 知识库 → Agent 编排 → 发布对话** 的顺序，结合界面截图逐步说明。所有管理操作均在管理端完成（开发 `http://localhost:3000`；合并部署 `http://localhost:8080`），默认账号 `admin/123456`。
 
 ### 3.0 操作总览
 
@@ -272,7 +252,7 @@ docker compose down
 | 5 | SKILL技能 | 沉淀领域知识与脚本 | 可被 Agent 执行的技能 |
 | 6 | RAG知识库 | 文档向量化入库 | 可检索的知识上下文 |
 | 7 | Agent管理 | 编排并发布 Agent | 公开访问 UUID |
-| 8 | `/chat/{uuid}` | 访客免登录对话 | 流式问答 |
+| 8 | `/#/chat/{uuid}` | 访客免登录对话 | 流式问答 |
 
 > 依赖关系：步骤 3 的「对话模型」是步骤 7 的必选项，步骤 3 的「嵌入模型」是步骤 6 向量化的前提；步骤 4 / 5 / 6 产出的 MCP / SKILL / 知识库可在步骤 7 中按需多选绑定。**最小可用路径**为「步骤 1 → 3 → 7 → 8」。
 
@@ -367,7 +347,7 @@ docker compose down
 
 ### 3.8 公开端对话
 
-- 点击「前往Agent」或直接访问公开地址 `/chat/{uuid}`（免登录），页面自动创建 / 切换会话；输入问题即时流式返回，支持「新建对话」与历史会话切换。
+- 点击「前往Agent」或直接访问公开地址 `/#/chat/{uuid}`（免登录），页面自动创建 / 切换会话；输入问题即时流式返回，支持「新建对话」与历史会话切换。
 
 ![图片](https://www.xuxueli.com/project/static/xxl-ai/images/img_17.png "Agent 发布页：免登录对话入口")
 
@@ -413,13 +393,12 @@ xxl-ai/
 │   │   ├── tables_xxl_ai.sql                  # 建库 + 框架表 + 业务表 + 种子数据【必须】
 │   └── XXL-AI官方文档.md                      # 官方文档
 │
-├── docker/                                    # Docker Compose 编排目录（mysql + redis + milvus + api + sample + ui）
+├── docker/                                    # Docker Compose 编排目录（mysql + redis + milvus + api(内嵌前端) + sample）
 │   ├── docker-compose.yml                     # 一键部署编排
-│   ├── .env                                   # 部署环境变量
-│   └── nginx.conf                             # 前端 Nginx 配置（反向代理 /api）
+│   └── .env                                   # 部署环境变量
 │
-├── xxl-ai-api/                              # 【前后端分离】后端API服务（8090）
-│   ├── pom.xml                                # Maven配置（继承父工程）
+├── xxl-ai-api/                              # 后端API服务（8080；部署期内嵌前端产物，单包单端口）
+│   ├── pom.xml                                # Maven配置（继承父工程；-Pembed-ui 内嵌前端）
 │   ├── Dockerfile                             # 容器构建配置
 │   └── src/main/
 │       ├── java/com/xxl/ai/api/
@@ -438,10 +417,9 @@ xxl-ai/
 │   ├── pom.xml                                # Maven配置（继承父工程）
 │   └── src/main/java/com/xxl/ai/api/sample/   # 启动类 + SampleMcpTool
 │
-└── xxl-ai-ui/                               # 【前后端分离】前端UI服务（3000）
+└── xxl-ai-ui/                               # 前端UI工程（开发 3000；Hash 路由）
     ├── package.json                           # 前端依赖配置
     ├── vite.config.ts                         # Vite构建配置
-    ├── Dockerfile                             # 容器构建配置
     └── src/
         ├── main.ts                            # 入口文件
         ├── modules/                           # 模块自包含目录（页面/接口/类型聚合）
@@ -460,28 +438,29 @@ xxl-ai/
 
 补充说明：
 - 构建：后端模块在仓库根目录执行 `mvn clean package` 即可一键编译全部 Maven 模块；前端模块进入 `xxl-ai-ui` 目录执行 `npm install`、`npm run dev` 即可本地启动；
-- 部署：前后端分离模式部署 `xxl-ai-api` + `xxl-ai-ui`（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
+- 部署：前端产物内嵌进 `xxl-ai-api` 单包发布（`mvn -pl xxl-ai-api -am package -Pembed-ui`），页面与接口同在 8080；前端工程 `xxl-ai-ui` 仅用于开发（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
 - 扩展：新增业务模块时，可在各模块 `business` 扩展包中开发，并配套放置 Mapper 映射文件、模板文件及配置文件。
 
-### 5.2、前后端分离运行模式
+### 5.2、开发分离 / 部署合并运行模式
 
-XXL-AI 采用 前后端分离：后端 API 与前端 UI 独立部署、独立运行，共享同一套数据库与权限体系：
+XXL-AI 开发期前后端分离、部署期合并：前端产物内嵌进 API jar，单进程单端口对外，共享同一套数据库与权限体系：
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
 │                                   浏览器 / 客户端                                    │
-│ 管理端 admin（登录后使用）        ·        公开端访客（/chat/{uuid}，免登录）        │
+│ 管理端 admin（登录后使用）        ·        公开端访客（/#/chat/{uuid}，免登录）        │
 └──────────────────────────────────────────────────────────────────────────────────────┘
                                             │  HTTP / SSE
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│      前端  xxl-ai-ui   ·   Vue3 + Vite + Element Plus + TypeScript   ·   :3000       │
-│ · 后端下发动态菜单 · 零路由改动 · 中 / 英 i18n                                       │
-│ · 列表 / 表单 CRUD，经 /api 访问后端                                                 │
-│ · SSE 流式对话：思考折叠 · Markdown 渲染 · 断线 / 刷新续传                           │
+│  前端  xxl-ai-ui   ·   Vue3 + Vite + Element Plus + TypeScript   ·   开发 :3000      │
+│ · 开发：Vite 代理 /api → 8080；生产：产物内嵌进 xxl-ai-api，随 :8080 一并对    │
+│ · 后端下发动态菜单 · 零路由改动（Hash） · 中 / 英 i18n                               │
+│ · 列表 / 表单 CRUD · SSE 流式对话：思考折叠 · Markdown 渲染 · 断线 / 刷新续传         │
 └──────────────────────────────────────────────────────────────────────────────────────┘
-                                            │  /api   （开发：Vite 代理   ·   生产：Nginx 反向代理）
+                                            │  生产同源：页面与接口同端口（8080）
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│          后端  xxl-ai-api   ·   SpringBoot + MyBatis + XXL-SSO   ·   :8090           │
+│          后端  xxl-ai-api   ·   SpringBoot + MyBatis + XXL-SSO   ·   :8080           │
+│ · 静态资源：classpath:/static/（内嵌前端产物，/** 提供页面）                          │
 │ · framework ：登录鉴权 / RBAC 菜单按钮权限 / 系统管理 / 审计日志                     │
 │ · business  ：space · supplier · knowledge · mcp · skill · agent · chat              │
 │ · harness   ：llm · chat · rag · mcp · skill · supplier（运行时支撑，无 Controller） │
@@ -497,9 +476,9 @@ XXL-AI 采用 前后端分离：后端 API 与前端 UI 独立部署、独立运
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- 后端：`xxl-ai-api`（8090），承载 登录鉴权、RBAC 权限、系统管理、AI 运行时（模型 / RAG / MCP / SKILL）等全部后端能力；
-- 前端：`xxl-ai-ui`（3000），基于 Vue3 + Element Plus + TypeScript，菜单由后端下发、`loadView` 自动映射页面、零路由改动；
-- 协作形态：前后端独立迭代、可独立部署（Docker 或 Nginx + Jar），团队分工协作最顺滑。
+- 后端：`xxl-ai-api`（8080），承载 登录鉴权、RBAC 权限、系统管理、AI 运行时（模型 / RAG / MCP / SKILL），部署期同时托管内嵌前端静态资源；
+- 前端：`xxl-ai-ui` 工程基于 Vue3 + Element Plus + TypeScript，菜单由后端下发、`loadView` 自动映射页面、零路由改动；开发期 `npm run dev`（3000，`/api` 代理），部署期产物内嵌进 API jar；
+- 协作形态：开发期前后端独立启动、独立迭代；部署期单包（单进程单端口）发布，无需 Nginx 与 History 回退。
 
 前后端共享：数据库表结构、空间与 RBAC 权限模型、登录鉴权（XXL-SSO）、系统管理能力、统一响应规范与开发 SKILL 规范。
 
@@ -658,7 +637,7 @@ xxl-ai.chat.history.limit=50        # 附加给模型的最近历史消息条数
 
 > 首个正式版本：一个可接工具、可接知识、可一键发布、可生产落地的开源 AI Agent 平台。
 
-- 1、【重点】**Agent 编排 + 一键发布（重点）**：模型 / 系统指令 / 知识库 / MCP / SKILL 自由组合、多选绑定；发布即生成免登录公开地址 `/chat/{uuid}`，管理端可查看访客对话与消息记录；对话支持思考过程折叠与 Markdown 实时渲染。
+- 1、【重点】**Agent 编排 + 一键发布（重点）**：模型 / 系统指令 / 知识库 / MCP / SKILL 自由组合、多选绑定；发布即生成免登录公开地址 `/#/chat/{uuid}`，管理端可查看访客对话与消息记录；对话支持思考过程折叠与 Markdown 实时渲染。
 - 2、【亮点】**MCP + SKILL + RAG 三位一体（让 Agent 真能干活）**：
   - MCP工具：支持 远程（Streamable HTTP）/ 本地（stdio）MCP 服务在线管理及连通测试，Agent 运行时自动装配可用工具；
   - SKILL 技能：支持在线管理 `SKILL.md` 及文件树内容与脚本，自动物化为可执行技能目录，Agent 运行时自动装配可用技能；
@@ -678,18 +657,15 @@ Docker Compose部署脚本：
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：构建后端项目
-mvn clean package -Dmaven.test.skip=true
+# 第二步：构建含前端的内嵌 jar（前端产物内嵌，无需单独构建前端）
+mvn -pl xxl-ai-api -am package -Pembed-ui
 
-# 第三步：构建前端项目
-npm install --prefix ./xxl-ai-ui
-
-# 第四步：进入 docker 目录，支持自定义 .env 配置
+# 第三步：进入 docker 目录，支持自定义 .env 配置
 cd ./docker/
 cat .env
 
-# 第五步：启动/停止项目
-docker compose up -d
+# 第四步：启动/停止项目
+docker compose up -d --build
 docker compose down
 ```
 
@@ -698,7 +674,7 @@ docker compose down
 - 2、【优化】模型API请求通参调整，设置 User-Agent: XXL-AI 便于供应商识别；
 - 3、【优化】供应商模型请求参数属性优化，支持格式检测与合法性检测；
 - 4、【新增】I18N 模块重构：前后端国际化逻辑优化，统一后端控制；标准化国际化资源文件结构，支持多语言配置，并优化前端国际化加载逻辑；
-- 5、【ING】部署优化：前后端合并部署，兼容Dev与Prod流程；
+- 5、【优化】项目部署优化：研发环节前后端分离，部署期前端产物内嵌进后端 Jar，单进程单端口对外；
 - 6、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
 
 

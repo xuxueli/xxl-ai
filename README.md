@@ -46,7 +46,7 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 - **Agent 编排与发布（重点）**
 
 - 1、Agent 编排：模型 + 系统指令 + 知识库 + MCP + SKILL 组合为 Agent，各类资源均支持多选绑定；
-- 2、一键发布：发布后生成 UUID 公开访问地址（`/chat/{uuid}`，免登录），管理端可查看该 Agent 的访客对话与消息记录；
+- 2、一键发布：发布后生成 UUID 公开访问地址，管理端可查看该 Agent 的访客对话与消息记录；
 - 3、多模型供应商：统一接入 OpenAI 兼容协议（Deepseek、智谱GLM、Ollama、OpenCode 等），支持供应商与模型两级管理、连通性测试与远程模型导入；
 - 4、流式对话：SSE 流式输出（思考过程 / 回复内容），基于 Redis Stream 无状态化，支持集群部署与断线 / 刷新续传；
 
@@ -62,11 +62,11 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 - 9、账号安全：基于 XXL-SSO 登录认证，登录态（token）存于 Redis，支持集群部署与 SSO 集成；
 - 10、权限管控：基于 RBAC 的菜单 / 按钮级权限，动态菜单下发、零路由改动；
 - 11、系统管理：用户、系统配置、审计日志在线管理；
-- 12、一键部署：随带 Docker Compose 一键部署栈（mysql + redis + milvus + api + sample + ui）；
+- 12、一键部署：随带 Docker Compose 一键部署栈（mysql + redis + milvus + api + sample）；
 
 - **研发与架构**
 
-- 13、Monorepo + 前后端分离：一套仓库统一托管 后端 API 与 前端 UI，统一版本与依赖管理，前后端独立部署、独立迭代；
+- 13、Monorepo + 前后端分离：一套仓库统一托管 后端 API 与 前端 UI，统一版本与依赖管理；开发期前后端独立启动，部署期前端产物内嵌进 API jar 合并发布；
 - 14、AI + SKILL 驱动：内置开发 SKILL，AI 编程助手一键加载，按平台规范直生业务代码并落位，显著加速业务开发；
 - 15、响应式 UI 与国际化：Vue3 + Element Plus + TypeScript，提供中文 / 英文两种语言；
 - 16、可扩展架构：标准分层分包、业务模块自包含，模型 / 对话 / RAG / MCP / SKILL 运行时统一收口支撑层；

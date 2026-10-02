@@ -3,10 +3,10 @@
  *
  * 职责：
  *   1. 声明静态路由（constantRoutes）——登录、错误页、个人中心等，启动即注册；
- *   2. 创建全局 router 实例（HTML5 history 模式）；
+ *   2. 创建全局 router 实例（Hash 模式：hash 段不发送到服务端，前端产物可随 API 内嵌部署、无需服务端 SPA 回退）；
  *   3. 定义全局守卫（beforeEach/afterEach）——鉴权、路由注入、进度条控制。
  */
-import { createWebHistory, createRouter, type RouteRecordRaw } from 'vue-router'
+import { createWebHashHistory, createRouter, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/layout/index.vue'
 import { ElMessage } from 'element-plus'
 import NProgress from 'nprogress'
@@ -86,8 +86,8 @@ export const constantRoutes = [
  * 路由实例：初始仅加载静态路由，动态路由后续 addRoute 注入
  */
 const router = createRouter({
-  // HTML5 history 模式
-  history: createWebHistory(),
+  // Hash 模式（开发 3000 与生产内嵌 API 均可直接部署，无需服务端 History 回退）
+  history: createWebHashHistory(),
   // 加载静态路由
   routes: constantRoutes,
   // 自定义路由切换时的页面滚动行为：前进/后退 恢复历史位置，否则回到顶部

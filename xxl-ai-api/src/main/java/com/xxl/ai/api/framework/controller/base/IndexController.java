@@ -41,7 +41,7 @@ public class IndexController {
 
     // ---------------------- index ----------------------
 
-	@RequestMapping("/")
+	@RequestMapping("/welcome")
 	@XxlSso(login = false)
 	public String index() {
         return StringTool.format("Welcome to {0}  {1} ",

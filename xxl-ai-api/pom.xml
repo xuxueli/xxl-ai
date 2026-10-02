@@ -132,4 +132,78 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<!-- 前端内嵌部署：-Pembed-ui，构建 xxl-ai-ui 并将 dist 打入 API jar 的 classpath:/static/；
+			 默认（不带 profile）不触发前端构建，保持开发期免 Node 依赖 -->
+		<profile>
+			<id>embed-ui</id>
+			<build>
+				<plugins>
+					<!-- 1、构建前端（自带 Node，避免依赖宿主环境） -->
+					<plugin>
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<version>${frontend-maven-plugin.version}</version>
+						<configuration>
+							<workingDirectory>${project.basedir}/../xxl-ai-ui</workingDirectory>
+							<installDirectory>${project.build.directory}/frontend</installDirectory>
+						</configuration>
+						<executions>
+							<execution>
+								<id>install-node-and-npm</id>
+								<goals>
+									<goal>install-node-and-npm</goal>
+								</goals>
+								<configuration>
+									<nodeVersion>v24.15.0</nodeVersion>
+								</configuration>
+							</execution>
+							<execution>
+								<id>npm-install</id>
+								<goals>
+									<goal>npm</goal>
+								</goals>
+								<configuration>
+									<arguments>install</arguments>
+								</configuration>
+							</execution>
+							<execution>
+								<id>npm-build</id>
+								<goals>
+									<goal>npm</goal>
+								</goals>
+								<configuration>
+									<arguments>run build</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<!-- 2、将 xxl-ai-ui/dist 拷入 classpath:/static/，随 jar 一起发布 -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>${maven-resources-plugin.version}</version>
+						<executions>
+							<execution>
+								<id>copy-ui-dist</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${project.basedir}/../xxl-ai-ui/dist</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

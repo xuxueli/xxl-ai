@@ -7,7 +7,7 @@ import { request } from '@/utils/request'
 import type { Response } from '@/types'
 import type { AgentChatInfo, ChatConv, ChatMsg } from '../types'
 
-const BASE = import.meta.env.VITE_APP_BASE_API || '/api'
+const BASE = import.meta.env.VITE_APP_BASE_API ?? ''
 
 // ==================== 公开对话页 ====================
 

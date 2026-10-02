@@ -8,11 +8,11 @@ XXL-AI 是 AI应用开发平台，采用 Monorepo 统一托管「后端服务」
 
 | 模块 | 说明 |
 |---|---|
-| `xxl-ai-api` | 后端 API（Spring Boot 纯 API），端口 8090，SSO 登录态存 Redis |
-| `xxl-ai-ui` | Vue3 前端（Element Plus + TypeScript + Vite），端口 3000 |
+| `xxl-ai-api` | 后端 API（Spring Boot），端口 8080，SSO 登录态存 Redis；部署期前端产物内嵌于此，单包单端口对外 |
+| `xxl-ai-ui` | Vue3 前端（Element Plus + TypeScript + Vite），开发端口 3000（Hash 路由） |
 | `xxl-ai-sample` | 示例 MCP 服务（spring-ai MCP Server 注解式 `@McpTool`，Streamable HTTP），端口 8091 |
 | `doc/db` | 数据库初始化脚本（`xxl_ai`：用户/配置/审计日志等框架表与种子数据） |
-| `docker` | 一键部署栈（mysql + redis + milvus(etcd/minio/attu) + api + sample + ui） |
+| `docker` | 一键部署栈（mysql + redis + milvus(etcd/minio/attu) + api(内嵌前端) + sample） |
 
 通用依赖：`xxl-tool`（工具与统一响应，经 `xxl-sso-core` 传递）、`xxl-sso`（登录鉴权，注解 `@XxlSso`）、MyBatis（Mapper + XML）、MySQL、Redis、spring-ai（OpenAI 兼容模型 / Milvus 向量库 / MCP SDK）。
 
@@ -22,7 +22,7 @@ Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个�
 
 ## 三、快速开始
 
-前置环境：JDK 17+、Maven 3.6+、Node 18+、MySQL 8、Redis（RAG 向量化另需 Milvus）。
+前置环境：JDK 17+、Maven 3.6+、Node 22+、MySQL 8、Redis（RAG 向量化另需 Milvus）。
 
 ### 3.1 初始化数据库
 
@@ -31,26 +31,44 @@ Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个�
 source doc/db/tables_xxl_ai.sql;
 ```
 
-数据库连接配置在 `xxl-ai-api/src/main/resources/application.properties`（默认 `jdbc:mysql://127.0.0.1:3306/xxl_ai`，root）。默认账号 `admin`。
+数据库连接配置在 `xxl-ai-api/src/main/resources/application.properties`（默认 `jdbc:mysql://127.0.0.1:3306/xxl_ai`，root）。默认账号 `admin` / `123456`。
 
 ### 3.2 本地启动
 
 ```bash
 # 后端 API（Redis 需先启动；RAG 向量化另需 Milvus）
-cd xxl-ai-api && mvn spring-boot:run     # 8090
+cd xxl-ai-api && mvn spring-boot:run     # 8080
 
-# 前端（本地代理 /api → 8090）
+# 前端（本地代理 /api → 8080）
 cd xxl-ai-ui && npm i && npm run dev     # 3000
 
 # 示例 MCP 服务（可选，供「MCP管理」连通测试联调）
 cd xxl-ai-sample && mvn spring-boot:run     # 8091
 ```
 
-或一键 docker 部署栈（含 mysql + redis + milvus + api + sample + ui）：
+或一键 docker 部署栈（含 mysql + redis + milvus + api(内嵌前端，8080 直接访问) + sample，**需先构建各模块 jar**）：
 
 ```bash
+# 1、全量构建：api 内嵌前端；同时生成 sample 等模块 jar（镜像各自打包其 target jar）
+mvn clean package -Dmaven.test.skip=true -Pembed-ui
+# 2、启动部署栈
 cd docker && docker compose up -d --build
 ```
+
+> 注意：`xxl-ai-api` 与 `xxl-ai-sample` 的 Dockerfile 均为 `ADD target/*.jar`，故 compose 构建前必须完成对应模块打包；只跑 `-pl xxl-ai-api` 会导致 sample 镜像构建报 `lstat .../target: no such file`。
+
+### 3.3 合并部署（前端内嵌进 API，单包单端口）
+
+开发期前后端分开启动；部署期前端产物内嵌进 API jar，单进程单端口（8080）同时提供页面与接口：
+
+```bash
+# 构建含前端的内嵌 jar
+mvn -pl xxl-ai-api -am package -Pembed-ui
+java -jar xxl-ai-api/target/xxl-ai-api-*.jar   # 访问 http://localhost:8080
+```
+
+- 前端路由为 **Hash 模式**（`/#/xxx`），无需服务端 SPA 回退；生产 `VITE_APP_BASE_API` 为空、接口拍平到根路径，开发仍走 `/api` + Vite 代理。
+- Docker 打包复用 `xxl-ai-api/Dockerfile`（`ADD target/xxl-ai-api-*.jar`），故需先执行上面的 `mvn ... -Pembed-ui package` 生成内嵌 jar。
 
 ## 四、工程结构与业务代码落位
 

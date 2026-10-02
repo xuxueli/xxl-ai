@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LoginControllerTest {
     private static final Logger logger = LoggerFactory.getLogger(LoginControllerTest.class);
 
-    private static final String API_SERVICE_URL = "http://localhost:8090";
+    private static final String API_SERVICE_URL = "http://localhost:8080";
     private static final String TEST_USER = "admin";
     private static final String TEST_PASS = "123456";
     private static final String TEST_TOKEN_KEY = "xxl-sso-login-token";
