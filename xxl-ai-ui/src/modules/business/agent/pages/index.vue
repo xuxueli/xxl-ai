@@ -63,7 +63,7 @@
             <el-link
               v-if="scope.row.publishStatus === 1 && scope.row.uuid"
               type="primary"
-              :underline="false"
+              underline="always"
               @click="openAgentUrl(scope.row.uuid)"
               >{{ t('business.agent.gotoAgent') }}</el-link
             >
