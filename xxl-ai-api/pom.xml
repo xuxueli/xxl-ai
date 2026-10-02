@@ -133,13 +133,16 @@
 	</build>
 
 	<profiles>
-		<!-- 前端内嵌部署：-Pembed-ui，构建 xxl-ai-ui 并将 dist 打入 API jar 的 classpath:/static/；
-			 默认（不带 profile）不触发前端构建，保持开发期免 Node 依赖 -->
+		<!--
+			前端内嵌部署：
+				-Pembed-ui，构建 xxl-ai-ui 并将 dist 打入 API jar 的 classpath:/static/；
+			 	默认（不带 profile）不触发前端构建，保持开发期免 Node 依赖
+		-->
 		<profile>
 			<id>embed-ui</id>
 			<build>
 				<plugins>
-					<!-- 1、构建前端（自带 Node，避免依赖宿主环境） -->
+					<!-- 构建前端（自带 Node，避免依赖宿主环境） -->
 					<plugin>
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
@@ -178,7 +181,7 @@
 							</execution>
 						</executions>
 					</plugin>
-					<!-- 2、将 xxl-ai-ui/dist 拷入 classpath:/static/，随 jar 一起发布 -->
+					<!-- 将 xxl-ai-ui/dist 拷入 classpath:/static/，随 jar 一起发布 -->
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-resources-plugin</artifactId>

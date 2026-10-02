@@ -41,9 +41,13 @@ public class IndexController {
 
     // ---------------------- index ----------------------
 
+	/**
+	 * 1、根路径 `/` -> 会 forward 到 classpath:/static/index.html
+	 * 2、/welcome（欢迎页） -> 返回欢迎信息
+	 */
 	@RequestMapping("/welcome")
 	@XxlSso(login = false)
-	public String index() {
+	public String welcome() {
         return StringTool.format("Welcome to {0}  {1} ",
                 I18nUtil.getString("admin_name_full"),
                 I18nUtil.getString("admin_version")

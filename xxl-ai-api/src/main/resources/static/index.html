@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>XXL-AI</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            max-width: 880px;
+            margin: 80px auto;
+            padding: 0 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        h2 { margin-bottom: 8px; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        a { color: #409eff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul { padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <h2>XXL-AI Server is running.</h2>
+    <p>Backend mode (without embedding the front end)。</p>
+    <ul>
+        <li>Front-end access：<a href="http://localhost:3000">http://localhost:3000</a>（<code>cd xxl-ai-ui &amp;&amp; npm run dev</code>）</li>
+        <li>Backend service：<a href="/welcome">/welcome</a></li>
+        <li>Merged deployment：<code>mvn -pl xxl-ai-api -am package -Pembed-ui &amp;&amp; java -jar</code></li>
+    </ul>
+</body>
+</html>
