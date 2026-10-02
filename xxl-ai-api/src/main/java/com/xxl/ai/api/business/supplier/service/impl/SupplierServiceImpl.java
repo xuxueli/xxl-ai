@@ -1,9 +1,7 @@
 package com.xxl.ai.api.business.supplier.service.impl;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.xxl.ai.api.business.harness.supplier.SupplierApiTool;
 import com.xxl.ai.api.business.supplier.mapper.SupplierMapper;
 import com.xxl.ai.api.business.supplier.mapper.SupplierModelMapper;
@@ -40,7 +38,7 @@ import java.util.stream.Collectors;
 @Service
 public class SupplierServiceImpl implements SupplierService {
 
-    /** JSON 解析器（附属Header校验用） */
+    /** JSON 解析器（请求Header校验用） */
     private static final Gson GSON = new Gson();
 
     @Resource
@@ -83,7 +81,7 @@ public class SupplierServiceImpl implements SupplierService {
             return Response.ofFail("供应商名称不能为空");
         }
         if (StringTool.isNotBlank(supplier.getHeaders()) && parseHeaders(supplier.getHeaders()) == null) {
-            return Response.ofFail("请求附属Header格式不正确，应为JSON数组：[{\"key\":\"...\",\"value\":\"...\"}]");
+            return Response.ofFail("请求Header格式不正确，应为JSON对象：{\"key\":\"value\"}");
         }
         supplier.setSpaceId(spaceId);
         supplierMapper.insert(supplier);
@@ -118,7 +116,7 @@ public class SupplierServiceImpl implements SupplierService {
             return Response.ofFail("供应商名称不能为空");
         }
         if (StringTool.isNotBlank(supplier.getHeaders()) && parseHeaders(supplier.getHeaders()) == null) {
-            return Response.ofFail("请求附属Header格式不正确，应为JSON数组：[{\"key\":\"...\",\"value\":\"...\"}]");
+            return Response.ofFail("请求Header格式不正确，应为JSON对象：{\"key\":\"value\"}");
         }
         int ret = supplierMapper.update(supplier);
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
@@ -176,7 +174,7 @@ public class SupplierServiceImpl implements SupplierService {
             return Response.ofFail("供应商接口地址为空，请先维护");
         }
         SupplierApiTool.ConnectResult result = supplierApiTool.testConnect(
-                supplier.getBaseUrl(), supplier.getApiKey(), supplier.getHeaders());
+                supplier.getBaseUrl(), supplier.getApiKey(), parseHeaders(supplier.getHeaders()));
         SupplierConnectDTO dto = new SupplierConnectDTO();
         dto.setConnectable(result.isConnectable());
         dto.setHttpCode(result.getHttpCode());
@@ -198,7 +196,7 @@ public class SupplierServiceImpl implements SupplierService {
             return Response.ofFail("供应商接口地址为空，请先维护");
         }
         List<String> remoteModels = supplierApiTool.listModels(
-                supplier.getBaseUrl(), supplier.getApiKey(), supplier.getHeaders());
+                supplier.getBaseUrl(), supplier.getApiKey(), parseHeaders(supplier.getHeaders()));
         if (remoteModels == null) {
             return Response.ofFail("模型拉取失败：请检查供应商地址与 API 密钥");
         }
@@ -222,30 +220,21 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     /**
-     * 解析请求附属Header配置（JSON数组：[{"key","value"}]），为空或格式错误时返回 null
+     * 解析请求Header配置（JSON对象：{"key":"value"}），为空或格式错误时返回 null
      */
-    private List<Map<String, String>> parseHeaders(String headersJson) {
+    private Map<String, String> parseHeaders(String headersJson) {
         if (StringTool.isBlank(headersJson)) {
             return null;
         }
         try {
-            JsonArray array = GSON.fromJson(headersJson, JsonArray.class);
-            if (array == null) {
+            JsonElement element = GSON.fromJson(headersJson, JsonElement.class);
+            if (element == null || !element.isJsonObject()) {
                 return null;
             }
-            List<Map<String, String>> headers = new ArrayList<>();
-            for (JsonElement item : array) {
-                if (item == null || !item.isJsonObject()) {
-                    return null;
-                }
-                JsonObject obj = item.getAsJsonObject();
-                if (!obj.has("key") || !obj.get("key").isJsonPrimitive()) {
-                    return null;
-                }
-                Map<String, String> header = new HashMap<>();
-                header.put("key", obj.get("key").getAsString());
-                header.put("value", obj.has("value") && obj.get("value").isJsonPrimitive() ? obj.get("value").getAsString() : "");
-                headers.add(header);
+            Map<String, String> headers = new HashMap<>();
+            for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
+                JsonElement value = entry.getValue();
+                headers.put(entry.getKey(), value != null && value.isJsonPrimitive() ? value.getAsString() : "");
             }
             return headers;
         } catch (Exception e) {

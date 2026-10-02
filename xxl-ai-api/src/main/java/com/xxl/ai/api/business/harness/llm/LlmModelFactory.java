@@ -1,7 +1,6 @@
 package com.xxl.ai.api.business.harness.llm;
 
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
-import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,7 +33,7 @@ public class LlmModelFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(LlmModelFactory.class);
 
-    /** 附属Header会话占位符：构建模型时按当前会话ID动态替换 */
+    /** 请求Header会话占位符：构建模型时按当前会话ID动态替换 */
     private static final String SESSION_PLACEHOLDER = "{session}";
 
     /** 对外请求 User-Agent（覆盖 spring-ai 默认的 spring-ai-openai） */
@@ -150,12 +148,11 @@ public class LlmModelFactory {
     /**
      * 请求 Header 是否使用 {session} 占位符（决定模型是否需按会话隔离缓存）
      */
-    private boolean usesSessionHeader(List<Map<String, String>> headers) {
-        if (CollectionTool.isEmpty(headers)) {
+    private boolean usesSessionHeader(Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) {
             return false;
         }
-        for (Map<String, String> header : headers) {
-            String value = header.get("value");
+        for (String value : headers.values()) {
             if (value != null && value.contains(SESSION_PLACEHOLDER)) {
                 return true;
             }
@@ -164,15 +161,15 @@ public class LlmModelFactory {
     }
 
     /**
-     * 解析请求附属Header：key/value 列表转 Map，{session} 占位符按会话ID替换，
+     * 解析请求Header：key/value 映射，{session} 占位符按会话ID替换，
      * 会话ID为空时跳过带占位符的Header
      */
-    private Map<String, String> buildHeaders(List<Map<String, String>> headers, String sessionId) {
+    private Map<String, String> buildHeaders(Map<String, String> headers, String sessionId) {
         Map<String, String> result = new LinkedHashMap<>();
-        if (CollectionTool.isNotEmpty(headers)) {
-            for (Map<String, String> header : headers) {
-                String key = header.get("key");
-                String value = header.get("value");
+        if (headers != null && !headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
                 if (StringTool.isBlank(key)) {
                     continue;
                 }

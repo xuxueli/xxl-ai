@@ -120,12 +120,17 @@
           />
         </el-form-item>
         <el-form-item :label="t('business.supplier.headers')" prop="headers">
-          <el-input
-            v-model="formState.form.headers"
-            type="textarea"
-            :rows="3"
-            :placeholder="t('business.supplier.headersPlaceholder')"
-          />
+          <div class="headers-editor">
+            <el-input
+              v-model="formState.form.headers"
+              type="textarea"
+              :rows="3"
+              :placeholder="t('business.supplier.headersPlaceholder')"
+            />
+            <el-button class="headers-format" link type="primary" icon="MagicStick" @click="formatHeaders">
+              {{ t('business.supplier.headersFormatBtn') }}
+            </el-button>
+          </div>
         </el-form-item>
         <el-form-item :label="t('common.status')">
           <el-radio-group v-model="formState.form.status">
@@ -254,11 +259,9 @@ function submitForm() {
     if (submitData.headers) {
       try {
         const parsed = JSON.parse(submitData.headers)
-        if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item.key !== 'string' || !item.key)) {
-          throw new Error('invalid')
-        }
-        submitData.headers = JSON.stringify(parsed)
-      } catch (e) {
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error()
+        submitData.headers = Object.keys(parsed).length ? JSON.stringify(parsed) : undefined
+      } catch {
         modal.msgError(t('business.supplier.headersFormat'))
         return
       }
@@ -274,6 +277,17 @@ function submitForm() {
 function cancel() {
   formState.value.visible = false
   reset()
+}
+
+/** 请求Header JSON 格式化（非空且非法 JSON 时提示） */
+function formatHeaders() {
+  const text = formState.value.form.headers
+  if (!text || !text.trim()) return
+  try {
+    formState.value.form.headers = JSON.stringify(JSON.parse(text), null, 2)
+  } catch {
+    modal.msgError(t('business.supplier.headersFormat'))
+  }
 }
 
 /** 连通测试（勾选单行，后端读库存配置探测） */
@@ -306,3 +320,21 @@ function goModel(row: any) {
 // --------------------------------- page init ---------------------------------
 getList()
 </script>
+
+<style scoped>
+/* 请求Header 编辑器：格式化按钮浮于输入框右上角 */
+.headers-editor {
+  position: relative;
+  width: 100%;
+}
+
+.headers-editor .headers-format {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 5;
+  height: auto;
+  padding: 0;
+  background: var(--el-fill-color-blank);
+}
+</style>

@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +15,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +34,7 @@ public class SupplierApiTool {
 
     private static final Gson GSON = new Gson();
 
-    /** 附属Header会话占位符：请求时按当前会话ID动态替换 */
+    /** 请求Header会话占位符：请求时按当前会话ID动态替换 */
     private static final String SESSION_PLACEHOLDER = "{session}";
 
     /** 连通探测 HTTP 客户端（连接超时 5s） */
@@ -94,16 +92,15 @@ public class SupplierApiTool {
      *
      * @param baseUrl 供应商接口地址
      * @param apiKey  API 密钥
-     * @param headers 请求附属Header（JSON数组，[{key,value}]；含 {session} 占位符的头跳过）
+     * @param headers 请求Header（key/value 映射；含 {session} 占位符的头跳过）
      */
-    public ConnectResult testConnect(String baseUrl, String apiKey, String headers) {
+    public ConnectResult testConnect(String baseUrl, String apiKey, Map<String, String> headers) {
         ConnectResult result = new ConnectResult();
         long start = System.currentTimeMillis();
         String base = normalize(baseUrl);
-        List<Map<String, String>> headerList = parseHeaders(headers);
 
         // 主校验：GET /models（标准 OpenAI 兼容接口）
-        HttpOutcome models = request(base + "/models", apiKey, headerList, "GET", null);
+        HttpOutcome models = request(base + "/models", apiKey, headers, "GET", null);
         if (models.httpCode == 200) {
             result.connectable = true;
             result.httpCode = 200;
@@ -119,7 +116,7 @@ public class SupplierApiTool {
             return result;
         }
         // 回退：POST /chat/completions 最小请求（仅探测服务可达与鉴权，不做真实对话）
-        HttpOutcome chat = request(base + "/chat/completions", apiKey, headerList, "POST",
+        HttpOutcome chat = request(base + "/chat/completions", apiKey, headers, "POST",
                 "{\"model\":\"test\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}");
         if (chat.httpCode == 200) {
             result.connectable = true;
@@ -157,8 +154,8 @@ public class SupplierApiTool {
      *
      * @return 模型标识列表；失败返回 null
      */
-    public List<String> listModels(String baseUrl, String apiKey, String headers) {
-        HttpOutcome outcome = request(normalize(baseUrl) + "/models", apiKey, parseHeaders(headers), "GET", null);
+    public List<String> listModels(String baseUrl, String apiKey, Map<String, String> headers) {
+        HttpOutcome outcome = request(normalize(baseUrl) + "/models", apiKey, headers, "GET", null);
         if (outcome.httpCode != 200) {
             logger.warn("供应商模型拉取失败, httpCode={}, err={}", outcome.httpCode, outcome.message);
             return null;
@@ -187,9 +184,9 @@ public class SupplierApiTool {
     }
 
     /**
-     * 发起 HTTP 探测请求（GET/POST），网络异常时记录原因（携带配置的静态附属Header，{session}占位头跳过）
+     * 发起 HTTP 探测请求（GET/POST），网络异常时记录原因（携带配置的静态请求Header，{session}占位头跳过）
      */
-    private HttpOutcome request(String url, String apiKey, List<Map<String, String>> headers, String method, String body) {
+    private HttpOutcome request(String url, String apiKey, Map<String, String> headers, String method, String body) {
         HttpOutcome outcome = new HttpOutcome();
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
@@ -198,10 +195,10 @@ public class SupplierApiTool {
             if (StringTool.isNotBlank(apiKey)) {
                 builder.header("Authorization", "Bearer " + apiKey);
             }
-            if (CollectionTool.isNotEmpty(headers)) {
-                for (Map<String, String> header : headers) {
-                    String key = header.get("key");
-                    String value = header.get("value");
+            if (headers != null && !headers.isEmpty()) {
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    String key = entry.getKey();
+                    String value = entry.getValue();
                     if (StringTool.isBlank(key) || (value != null && value.contains(SESSION_PLACEHOLDER))) {
                         continue;
                     }
@@ -235,38 +232,6 @@ public class SupplierApiTool {
      */
     private boolean isAuthFail(int httpCode) {
         return httpCode == 401 || httpCode == 403;
-    }
-
-    /**
-     * 解析请求附属Header配置（JSON数组：[{"key","value"}]），为空或格式错误时返回 null
-     */
-    private List<Map<String, String>> parseHeaders(String headersJson) {
-        if (StringTool.isBlank(headersJson)) {
-            return null;
-        }
-        try {
-            JsonArray array = GSON.fromJson(headersJson, JsonArray.class);
-            if (array == null) {
-                return null;
-            }
-            List<Map<String, String>> headers = new ArrayList<>();
-            for (JsonElement item : array) {
-                if (item == null || !item.isJsonObject()) {
-                    return null;
-                }
-                JsonObject obj = item.getAsJsonObject();
-                if (!obj.has("key") || !obj.get("key").isJsonPrimitive()) {
-                    return null;
-                }
-                Map<String, String> header = new HashMap<>();
-                header.put("key", obj.get("key").getAsString());
-                header.put("value", obj.has("value") && obj.get("value").isJsonPrimitive() ? obj.get("value").getAsString() : "");
-                headers.add(header);
-            }
-            return headers;
-        } catch (Exception e) {
-            return null;
-        }
     }
 
 }

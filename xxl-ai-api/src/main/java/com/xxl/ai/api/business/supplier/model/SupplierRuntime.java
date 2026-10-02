@@ -1,6 +1,5 @@
 package com.xxl.ai.api.business.supplier.model;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,7 +18,7 @@ public class SupplierRuntime {
     private String baseUrl;     /* 接口地址 */
     private String apiKey;      /* API密钥 */
     private int modelType;      /* 模型类型：0-对话、1-嵌入 */
-    private List<Map<String, String>> headers;  /* 请求附属Header（key/value 列表，value可含{session}占位符） */
+    private Map<String, String> headers;        /* 请求Header（key/value 映射，value可含{session}占位符） */
 
     public long getSupplierId() {
         return supplierId;
@@ -77,11 +76,11 @@ public class SupplierRuntime {
         this.modelType = modelType;
     }
 
-    public List<Map<String, String>> getHeaders() {
+    public Map<String, String> getHeaders() {
         return headers;
     }
 
-    public void setHeaders(List<Map<String, String>> headers) {
+    public void setHeaders(Map<String, String> headers) {
         this.headers = headers;
     }
 
