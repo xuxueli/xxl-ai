@@ -12,17 +12,17 @@ export function listSpace(query: SpaceListQuery): Promise<Response<PageModel<Spa
 
 /** 新增空间 */
 export function addSpace(data: Space): Promise<Response<string>> {
-  return request({ url: '/space/insert', method: 'post', params: data })
+  return request({ url: '/space/insert', method: 'post', data: data })
 }
 
 /** 批量删除空间 */
 export function delSpace(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/space/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/space/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改空间 */
 export function updateSpace(data: Space): Promise<Response<string>> {
-  return request({ url: '/space/update', method: 'post', params: data })
+  return request({ url: '/space/update', method: 'post', data: data })
 }
 
 /** 查询当前用户可见空间列表（顶部空间切换器 / 用户管理授权下拉） */

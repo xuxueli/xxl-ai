@@ -17,17 +17,17 @@ export function testConnectSupplier(id: number): Promise<Response<SupplierConnec
 
 /** 新增供应商 */
 export function addSupplier(data: Supplier): Promise<Response<string>> {
-  return request({ url: '/supplier/insert', method: 'post', params: data })
+  return request({ url: '/supplier/insert', method: 'post', data: data })
 }
 
 /** 批量删除供应商 */
 export function delSupplier(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/supplier/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/supplier/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改供应商 */
 export function updateSupplier(data: Supplier): Promise<Response<string>> {
-  return request({ url: '/supplier/update', method: 'post', params: data })
+  return request({ url: '/supplier/update', method: 'post', data: data })
 }
 
 /** 查询当前空间供应商列表（下拉选择：Agent模型 / 知识库向量化模型） */

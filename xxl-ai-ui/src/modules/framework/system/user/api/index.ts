@@ -32,7 +32,7 @@ export function listUser(query: UserListQuery): Promise<Response<PageModel<User>
 }
 
 /**
- * 新增用户（后端以请求参数绑定实体）。
+ * 新增用户（后端以 JSON 请求体绑定实体）。
  * @param data 用户数据。
  * @returns 新增结果。
  */
@@ -40,12 +40,12 @@ export function addUser(data: UserForm): Promise<Response<unknown>> {
   return request({
     url: '/system/user/add',
     method: 'post',
-    params: data
+    data: data
   })
 }
 
 /**
- * 修改用户（后端以请求参数绑定实体）。
+ * 修改用户（后端以 JSON 请求体绑定实体）。
  * @param data 用户数据。
  * @returns 修改结果。
  */
@@ -53,7 +53,7 @@ export function updateUser(data: UserForm): Promise<Response<unknown>> {
   return request({
     url: '/system/user/update',
     method: 'post',
-    params: data
+    data: data
   })
 }
 
@@ -66,7 +66,7 @@ export function delUser(ids: number | number[]): Promise<Response<unknown>> {
   return request({
     url: '/system/user/delete',
     method: 'post',
-    params: { ids: Array.isArray(ids) ? ids : [ids] }
+    data: Array.isArray(ids) ? ids : [ids]
   })
 }
 

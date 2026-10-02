@@ -10,6 +10,7 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,7 +56,7 @@ public class SpaceController {
      */
     @RequestMapping("/insert")
     @XxlSso(permission = "space:default")
-    public Response<String> insert(SpaceDTO dto) {
+    public Response<String> insert(@RequestBody SpaceDTO dto) {
         return spaceService.insert(dto);
     }
 
@@ -64,7 +65,7 @@ public class SpaceController {
      */
     @RequestMapping("/delete")
     @XxlSso(permission = "space:default")
-    public Response<String> delete(@RequestParam("ids[]") List<Long> ids) {
+    public Response<String> delete(@RequestBody List<Long> ids) {
         return spaceService.deleteByIds(ids);
     }
 
@@ -73,7 +74,7 @@ public class SpaceController {
      */
     @RequestMapping("/update")
     @XxlSso(permission = "space:default")
-    public Response<String> update(SpaceDTO dto) {
+    public Response<String> update(@RequestBody SpaceDTO dto) {
         return spaceService.update(dto);
     }
 

@@ -45,14 +45,14 @@ public class UserController {
     @RequestMapping("/add")
     @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "新增用户")
-    public Response<String> add(UserDTO userDTO) {
+    public Response<String> add(@RequestBody UserDTO userDTO) {
         return userService.insert(userDTO);
     }
 
     @RequestMapping("/update")
     @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "更新用户")
-    public Response<String> update(HttpServletRequest request, UserDTO userDTO) {
+    public Response<String> update(HttpServletRequest request, @RequestBody UserDTO userDTO) {
         // xxl-sso, logincheck
         Response<LoginInfo> loginInfoResponse = XxlSsoHelper.loginCheckWithAttr(request);
 
@@ -63,7 +63,7 @@ public class UserController {
     @XxlSso(permission = "system:user")
     @XxlLog(type= LogTypeEnum.OPT_LOG, module = LogModuleEnum.USER, title = "删除用户")
     public Response<String> delete(HttpServletRequest request,
-                                   @RequestParam("ids[]") List<Integer> ids) {
+                                   @RequestBody List<Integer> ids) {
         // xxl-sso, logincheck
         Response<LoginInfo> loginInfoResponse = XxlSsoHelper.loginCheckWithAttr(request);
 

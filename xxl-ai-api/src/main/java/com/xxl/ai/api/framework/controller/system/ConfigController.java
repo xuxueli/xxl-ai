@@ -83,7 +83,7 @@ public class ConfigController {
      */
     @RequestMapping("/delete")
     @XxlSso
-    public Response<String> delete(@RequestParam("ids[]") List<Integer> ids){
+    public Response<String> delete(@RequestBody List<Integer> ids){
         return configService.delete(ids);
     }
 

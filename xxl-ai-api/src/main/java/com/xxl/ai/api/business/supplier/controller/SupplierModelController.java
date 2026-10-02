@@ -4,6 +4,7 @@ import com.xxl.ai.api.business.space.model.SpaceContext;
 import com.xxl.ai.api.business.space.service.SpaceService;
 import com.xxl.ai.api.business.supplier.model.dto.RemoteModelDTO;
 import com.xxl.ai.api.business.supplier.model.dto.SupplierModelDTO;
+import com.xxl.ai.api.business.supplier.model.dto.SupplierModelImportDTO;
 import com.xxl.ai.api.business.supplier.model.entity.SupplierModel;
 import com.xxl.ai.api.business.supplier.service.SupplierModelService;
 import com.xxl.ai.api.business.supplier.service.SupplierService;
@@ -12,6 +13,7 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,7 +64,7 @@ public class SupplierModelController {
     @XxlSso(permission = "supplier:default")
     public Response<String> insert(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   SupplierModelDTO dto) {
+                                   @RequestBody SupplierModelDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -77,7 +79,7 @@ public class SupplierModelController {
     @XxlSso(permission = "supplier:default")
     public Response<String> delete(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   @RequestParam("ids[]") List<Long> ids) {
+                                   @RequestBody List<Long> ids) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -92,7 +94,7 @@ public class SupplierModelController {
     @XxlSso(permission = "supplier:default")
     public Response<String> update(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   SupplierModelDTO dto) {
+                                   @RequestBody SupplierModelDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -123,13 +125,12 @@ public class SupplierModelController {
     @XxlSso(permission = "supplier:default")
     public Response<String> importRemote(HttpServletRequest request,
                                          @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                         @RequestParam("supplierId") long supplierId,
-                                         @RequestParam("models[]") List<String> models) {
+                                         @RequestBody SupplierModelImportDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
         }
-        return supplierModelService.importRemote(supplierId, models);
+        return supplierModelService.importRemote(dto.getSupplierId(), dto.getModels());
     }
 
     /**

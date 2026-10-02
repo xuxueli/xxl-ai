@@ -1,12 +1,14 @@
 package com.xxl.ai.api.business.chat.controller;
 
 import com.xxl.ai.api.business.agent.model.entity.Agent;
+import com.xxl.ai.api.business.chat.model.dto.ChatSendDTO;
 import com.xxl.ai.api.business.chat.model.entity.ChatConv;
 import com.xxl.ai.api.business.chat.model.entity.ChatMsg;
 import com.xxl.ai.api.business.chat.service.ChatService;
 import com.xxl.sso.core.annotation.XxlSso;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -92,11 +94,8 @@ public class ChatController {
      */
     @RequestMapping("/send")
     @XxlSso(login = false)
-    public SseEmitter send(@RequestParam("uuid") String uuid,
-                           @RequestParam("visitorId") String visitorId,
-                           @RequestParam("convId") long convId,
-                           @RequestParam("content") String content) {
-        return chatService.send(uuid, visitorId, convId, content);
+    public SseEmitter send(@RequestBody ChatSendDTO dto) {
+        return chatService.send(dto.getUuid(), dto.getVisitorId(), dto.getConvId(), dto.getContent());
     }
 
     /**

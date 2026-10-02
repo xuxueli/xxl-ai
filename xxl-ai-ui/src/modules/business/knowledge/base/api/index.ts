@@ -17,17 +17,17 @@ export function loadKnowledgeBase(id: number): Promise<Response<KnowledgeBase>> 
 
 /** 新增知识库 */
 export function addKnowledgeBase(data: KnowledgeBase): Promise<Response<string>> {
-  return request({ url: '/knowledge/base/insert', method: 'post', params: data })
+  return request({ url: '/knowledge/base/insert', method: 'post', data: data })
 }
 
 /** 批量删除知识库 */
 export function delKnowledgeBase(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/knowledge/base/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/knowledge/base/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改知识库 */
 export function updateKnowledgeBase(data: KnowledgeBase): Promise<Response<string>> {
-  return request({ url: '/knowledge/base/update', method: 'post', params: data })
+  return request({ url: '/knowledge/base/update', method: 'post', data: data })
 }
 
 /** 向量检索（文档接口：/knowledge/doc/search） */

@@ -17,22 +17,22 @@ export function loadRemoteModels(supplierId: number): Promise<Response<RemoteMod
 
 /** 批量导入远程模型（自动导入保存） */
 export function importRemoteModels(supplierId: number, models: string[]): Promise<Response<string>> {
-  return request({ url: '/supplier/model/importRemote', method: 'post', params: { supplierId, models } })
+  return request({ url: '/supplier/model/importRemote', method: 'post', data: { supplierId, models } })
 }
 
 /** 新增模型 */
 export function addSupplierModel(data: SupplierModel): Promise<Response<string>> {
-  return request({ url: '/supplier/model/insert', method: 'post', params: data })
+  return request({ url: '/supplier/model/insert', method: 'post', data: data })
 }
 
 /** 批量删除模型 */
 export function delSupplierModel(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/supplier/model/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/supplier/model/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改模型 */
 export function updateSupplierModel(data: SupplierModel): Promise<Response<string>> {
-  return request({ url: '/supplier/model/update', method: 'post', params: data })
+  return request({ url: '/supplier/model/update', method: 'post', data: data })
 }
 
 /** 查询供应商下模型列表（下拉选择） */

@@ -81,6 +81,6 @@ export function delConfig(id: number | number[]): Promise<Response<unknown>> {
   return request({
     url: '/system/config/delete',
     method: 'post',
-    params: { ids: Array.isArray(id) ? id : [id] }
+    data: Array.isArray(id) ? id : [id]
   })
 }

@@ -12,17 +12,17 @@ export function listMcp(query: McpListQuery): Promise<Response<PageModel<Mcp>>> 
 
 /** 新增 MCP */
 export function addMcp(data: Mcp): Promise<Response<string>> {
-  return request({ url: '/mcp/insert', method: 'post', params: data })
+  return request({ url: '/mcp/insert', method: 'post', data: data })
 }
 
 /** 批量删除 MCP */
 export function delMcp(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/mcp/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/mcp/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改 MCP */
 export function updateMcp(data: Mcp): Promise<Response<string>> {
-  return request({ url: '/mcp/update', method: 'post', params: data })
+  return request({ url: '/mcp/update', method: 'post', data: data })
 }
 
 /** 连通性测试（initialize + tools/list） */

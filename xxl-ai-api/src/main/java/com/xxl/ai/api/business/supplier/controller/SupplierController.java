@@ -12,6 +12,7 @@ import com.xxl.tool.response.PageModel;
 import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -68,7 +69,7 @@ public class SupplierController {
     @XxlSso(permission = "supplier:default")
     public Response<String> insert(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   SupplierDTO dto) {
+                                   @RequestBody SupplierDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -83,7 +84,7 @@ public class SupplierController {
     @XxlSso(permission = "supplier:default")
     public Response<String> delete(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   @RequestParam("ids[]") List<Long> ids) {
+                                   @RequestBody List<Long> ids) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());
@@ -98,7 +99,7 @@ public class SupplierController {
     @XxlSso(permission = "supplier:default")
     public Response<String> update(HttpServletRequest request,
                                    @RequestHeader(value = "xxl-space-id", required = false) Integer spaceId,
-                                   SupplierDTO dto) {
+                                   @RequestBody SupplierDTO dto) {
         Response<SpaceContext> spaceResp = spaceService.checkSpace(request, spaceId);
         if (!spaceResp.isSuccess()) {
             return Response.ofFail(spaceResp.getMsg());

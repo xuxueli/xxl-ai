@@ -12,17 +12,17 @@ export function listSkill(query: SkillListQuery): Promise<Response<PageModel<Ski
 
 /** 新增 SKILL（自动播种固定文件 SKILL.md + scripts/ + reference/） */
 export function addSkill(data: Skill): Promise<Response<string>> {
-  return request({ url: '/skill/insert', method: 'post', params: data })
+  return request({ url: '/skill/insert', method: 'post', data: data })
 }
 
 /** 批量删除 SKILL */
 export function delSkill(ids: number[] | number): Promise<Response<string>> {
-  return request({ url: '/skill/delete', method: 'post', params: { ids: Array.isArray(ids) ? ids : [ids] } })
+  return request({ url: '/skill/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 
 /** 修改 SKILL */
 export function updateSkill(data: Skill): Promise<Response<string>> {
-  return request({ url: '/skill/update', method: 'post', params: data })
+  return request({ url: '/skill/update', method: 'post', data: data })
 }
 
 /** 查询当前空间 SKILL 列表（Agent 绑定下拉） */

@@ -107,7 +107,7 @@ SQL 脚本：`{business}-table.sql`
 | `{Business}Mapper.xml` | resources/mapper/business/{module}/ | resultMap 显式映射；add/update_time 用 NOW()；查询 <if> 动态拼条件 |
 | `{Business}Service.java` | business/{module}/service/ | 方法顺序 pageList/load/insert/delete/update |
 | `{Business}ServiceImpl.java` | business/{module}/service/impl/ | StringTool 校验，失败 Response.ofFail |
-| `{Business}Controller.java` | business/{module}/controller/ | 全 @XxlSso；分页 offset/pagesize；删除 ids[] |
+| `{Business}Controller.java` | business/{module}/controller/ | 全 @XxlSso；分页 offset/pagesize；删除 @RequestBody List<Long> |
 
 接口：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`）
 
@@ -147,7 +147,7 @@ SQL 脚本：`{business}-table.sql`
 - Controller 分页方法签名：`int offset(默认0)`、`int pagesize(默认10)` + 查询参数，返回 `Response<PageModel<XxxDTO/Entity>>`。
 - 参数校验用 `StringTool/RegexTool/CollectionTool`，失败 `Response.ofFail("提示")`；唯一性校验库中查一遍再插。
 - DTO 时间展示转字符串（`DateTool.formatDateTime`），用 Adaptor 完成 entity→dto。
-- 接口路径**全小写**：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`）；删除批量 `@RequestParam("ids[]") List<Integer>`。
+- 接口路径**全小写**：`/{module}/pageList|load|insert|delete|update`（多业务模块为 `/{module}/{business}/...`）。**参数通道约定**：结构化实体与集合（insert/update 的 DTO、delete 的 `List<Long>`）一律走 JSON 请求体（后端 `@RequestBody`、前端 `data`）；仅简单标量、分页与查询条件走 URL 参数（后端 `@RequestParam`、前端 `params`）。
 
 ## 前端落位清单（3 文件）
 

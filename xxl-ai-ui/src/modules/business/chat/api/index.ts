@@ -51,8 +51,11 @@ export async function sendStream(
   convId: number,
   content: string
 ): Promise<ReadableStreamDefaultReader<Uint8Array> | null> {
-  const url = `${BASE}/chat/send?uuid=${encodeURIComponent(uuid)}&visitorId=${encodeURIComponent(visitorId)}&convId=${convId}&content=${encodeURIComponent(content)}`
-  const response = await fetch(url, { method: 'POST' })
+  const response = await fetch(`${BASE}/chat/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, visitorId, convId, content })
+  })
   if (!response.ok || !response.body) {
     throw new Error(`请求失败，HTTP ${response.status}`)
   }
