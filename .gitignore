@@ -13,6 +13,9 @@ dist/
 .vite/
 package-lock.json
 auto-imports.d.ts
+/xxl-ai-api/src/main/resources/static/favicon.ico
+/xxl-ai-api/src/main/resources/static/ie.html
+/xxl-ai-api/src/main/resources/static/static/
 
 # for ai
 .opencode

@@ -122,7 +122,7 @@ services:
   # ==================== API 服务 ====================
 
   xxl-ai-api:
-    # 6、本地Build设置（先执行 mvn -pl xxl-ai-api -am package -Pembed-ui 生成内嵌前端的 jar）
+    # 6、本地Build设置（先执行 cd xxl-ai-ui && npm run build，再执行 mvn clean package 生成内嵌前端的 jar）
     image: xuxueli/xxl-ai-api:local
     container_name: xxl-ai-api
     pull_policy: never
