@@ -208,78 +208,8 @@
 			</build>
 		</profile>
 		<!--
-			前端内嵌部署（复用本机 Node/npm）：
-				-Pembed-ui-local，直接调用本机 npm 构建 xxl-ai-ui，不下载 Node；
-				需本机已安装 Node 与 npm 并在 PATH 中
-		-->
-		<profile>
-			<id>embed-ui-local</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>3.5.0</version>
-						<configuration>
-							<workingDirectory>${project.basedir}/../xxl-ai-ui</workingDirectory>
-							<executable>npm</executable>
-						</configuration>
-						<executions>
-							<execution>
-								<id>npm-install</id>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>exec</goal>
-								</goals>
-								<configuration>
-									<arguments>
-										<argument>install</argument>
-									</arguments>
-								</configuration>
-							</execution>
-							<execution>
-								<id>npm-build</id>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>exec</goal>
-								</goals>
-								<configuration>
-									<arguments>
-										<argument>run</argument>
-										<argument>build</argument>
-									</arguments>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-resources-plugin</artifactId>
-						<version>${maven-resources-plugin.version}</version>
-						<executions>
-							<execution>
-								<id>copy-ui-dist</id>
-								<phase>prepare-package</phase>
-								<goals>
-									<goal>copy-resources</goal>
-								</goals>
-								<configuration>
-									<outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
-									<resources>
-										<resource>
-											<directory>${project.basedir}/../xxl-ai-ui/dist</directory>
-										</resource>
-									</resources>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		<!--
 			仅拷贝前端（需先手动执行 xxl-ai-ui 的 npm run build）：
-				-Pcopy-ui，清空 classpath:/static/ 后拷入 xxl-ai-ui/dist，不下载 Node、不执行 npm
+				-Pcopy-ui，清空 src/main/resources/static 后拷入 xxl-ai-ui/dist，不下载 Node、不执行 npm
 		-->
 		<profile>
 			<id>copy-ui</id>
@@ -292,14 +222,16 @@
 						<executions>
 							<execution>
 								<id>copy-ui-dist</id>
-								<phase>prepare-package</phase>
+								<phase>process-resources</phase>
 								<goals>
 									<goal>run</goal>
 								</goals>
 								<configuration>
 									<target>
-										<delete dir="${project.build.outputDirectory}/static"/>
-										<copy todir="${project.build.outputDirectory}/static">
+										<delete includeemptydirs="true">
+											<fileset dir="${project.basedir}/src/main/resources/static" includes="**/*"/>
+										</delete>
+										<copy todir="${project.basedir}/src/main/resources/static">
 											<fileset dir="${project.basedir}/../xxl-ai-ui/dist"/>
 										</copy>
 									</target>
