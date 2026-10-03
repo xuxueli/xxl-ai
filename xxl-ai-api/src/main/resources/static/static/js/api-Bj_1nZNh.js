@@ -1,0 +1,1 @@
+import{y as e}from"./index-CHl37dQY.js";function t(t){return e({url:`/system/dict/loadEnumItem`,method:`get`,params:{enumName:t}})}export{t};

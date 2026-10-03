@@ -402,7 +402,7 @@ xxl-ai/
 │   └── .env                                   # 部署环境变量
 │
 ├── xxl-ai-api/                              # 后端API服务（8080；部署期内嵌前端产物，单包单端口）
-│   ├── pom.xml                                # Maven配置（继承父工程；-Pembed-ui 内嵌前端）
+│   ├── pom.xml                                # Maven配置（继承父工程）
 │   ├── Dockerfile                             # 容器构建配置
 │   └── src/main/
 │       ├── java/com/xxl/ai/api/
@@ -442,7 +442,7 @@ xxl-ai/
 
 补充说明：
 - 构建：后端模块在仓库根目录执行 `mvn clean package` 即可一键编译全部 Maven 模块；前端模块进入 `xxl-ai-ui` 目录执行 `npm install`、`npm run dev` 即可本地启动；
-- 部署：前端产物内嵌进 `xxl-ai-api` 单包发布（`mvn -pl xxl-ai-api -am package -Pembed-ui`），页面与接口同在 8080；前端工程 `xxl-ai-ui` 仅用于开发（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
+- 部署：先在前端工程执行 `npm run build`，产物会复制到 API 静态资源目录，再执行 Maven 打包；页面与接口同在 8080（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
 - 扩展：新增业务模块时，可在各模块 `business` 扩展包中开发，并配套放置 Mapper 映射文件、模板文件及配置文件。
 
 ### 5.2、开发分离 / 部署合并运行模式
@@ -661,8 +661,9 @@ Docker Compose部署脚本：
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：构建含前端的内嵌 jar（前端产物内嵌，无需单独构建前端）
-mvn -pl xxl-ai-api -am package -Pembed-ui
+# 第二步：构建前端并复制产物到 API，再构建 Maven 模块
+cd xxl-ai-ui && npm install && npm run build && cd ..
+mvn -pl xxl-ai-api -am package
 
 # 第三步：进入 docker 目录，支持自定义 .env 配置
 cd ./docker/

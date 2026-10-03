@@ -1,0 +1,1 @@
+import{ht as e}from"./runtime-core.esm-bundler-D6k-zdMg.js";import{t}from"./api-Bj_1nZNh.js";function n(...n){let r={};return n.forEach(n=>{r[n]=e([]),t(n).then(e=>{r[n].value=e.data})}),r}export{n as t};
