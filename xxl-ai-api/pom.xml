@@ -277,6 +277,39 @@
 				</plugins>
 			</build>
 		</profile>
+		<!--
+			仅拷贝前端（需先手动执行 xxl-ai-ui 的 npm run build）：
+				-Pcopy-ui，清空 classpath:/static/ 后拷入 xxl-ai-ui/dist，不下载 Node、不执行 npm
+		-->
+		<profile>
+			<id>copy-ui</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+							<execution>
+								<id>copy-ui-dist</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<target>
+										<delete dir="${project.build.outputDirectory}/static"/>
+										<copy todir="${project.build.outputDirectory}/static">
+											<fileset dir="${project.basedir}/../xxl-ai-ui/dist"/>
+										</copy>
+									</target>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 	</profiles>
 
 </project>
