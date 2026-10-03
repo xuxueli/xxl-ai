@@ -1,1 +1,0 @@
-function e(e){return function(){let{pageNum:t,pageSize:n,...r}=e.value;return{...r,offset:(t-1)*n,pagesize:n}}}export{e as t};
