@@ -108,7 +108,7 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
 ### 2.4 方式一：人工部署（本地开发）
 
 - 部署项目：xxl-ai-api（内嵌前端产物）
-- 项目说明：开发期前后端分开启动（`xxl-ai-ui` 3000 + `xxl-ai-api` 8080）；部署期执行 Maven 内嵌构建，前端产物打入 API jar，单进程单端口（8080）同时提供页面与接口。
+- 项目说明：开发期前后端分开启动（`xxl-ai-ui` 3000 + `xxl-ai-api` 8080）；部署期前端构建产物复制到 API 静态资源目录，再打包 API jar，单进程单端口（8080）同时提供页面与接口。
 
 #### 步骤一：启动后端服务
 
@@ -147,7 +147,7 @@ xxl-ai.milvus.database=default
 后端启动方式：
 
 ```
-# 编译项目：一键编译全部 Maven 模块（默认不含前端，供开发期使用）
+# 编译项目：一键编译全部 Maven 模块（开发期通常直接分别启动前后端）
 cd /xxl-ai/xxl-ai-api
 mvn clean package -Dmaven.test.skip=true
 
@@ -200,13 +200,16 @@ npm run dev
 
 ### 2.5 方式二：人工部署（生产部署）
 
-部署期无需单独部署前端：执行内嵌构建后（首次执行会由 `frontend-maven-plugin` 下载内置 Node；），前端产物打入 API jar，`java -jar` 启动即同时提供页面与接口（无需 Nginx，也无需服务端 History 回退）：
+部署期无需单独部署前端：先在前端工程执行 `npm run build`，构建产物会自动复制到 API 静态资源目录并清理旧文件；再打包 API jar，`java -jar` 启动即同时提供页面与接口（无需 Nginx，也无需服务端 History 回退）：
 
 ```
-# 1、构建含前端的内嵌 jar（默认 mvn package 仅构建 API，不触发前端）
-mvn -pl xxl-ai-api -am package -Pembed-ui
+# 1、构建前端（自动更新 API 静态资源目录）
+cd xxl-ai-ui && npm install && npm run build && cd ..
 
-# 2、启动服务（页面与接口同在 8080）
+# 2、打包 API jar
+mvn -pl xxl-ai-api -am package
+
+# 3、启动服务（页面与接口同在 8080）
 java -jar xxl-ai-api/target/xxl-ai-api-*.jar
 ```
 
@@ -224,8 +227,9 @@ java -jar xxl-ai-api/target/xxl-ai-api-*.jar
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：全量构建（api 内嵌前端；同时生成 sample 等模块 jar，供各镜像打包）
-mvn clean package -Dmaven.test.skip=true -Pembed-ui
+# 第二步：构建前端并复制产物到 API，再全量构建（同时生成 sample 等模块 jar，供各镜像打包）
+cd xxl-ai-ui && npm install && npm run build && cd ..
+mvn clean package -Dmaven.test.skip=true
 
 # 第三步：进入 docker 目录，支持自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
 cd ./docker/

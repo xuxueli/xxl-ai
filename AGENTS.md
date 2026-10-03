@@ -49,8 +49,9 @@ cd xxl-ai-sample && mvn spring-boot:run     # 8091
 或一键 docker 部署栈（含 mysql + redis + milvus + api(内嵌前端，8080 直接访问) + sample，**需先构建各模块 jar**）：
 
 ```bash
-# 1、全量构建：api 内嵌前端；同时生成 sample 等模块 jar（镜像各自打包其 target jar）
-mvn clean package -Dmaven.test.skip=true -Pembed-ui
+# 1、构建前端并复制产物到 API；再构建全部 Maven 模块（镜像各自打包其 target jar）
+cd xxl-ai-ui && npm install && npm run build && cd ..
+mvn clean package -Dmaven.test.skip=true
 # 2、启动部署栈
 cd docker && docker compose up -d --build
 ```
@@ -62,13 +63,14 @@ cd docker && docker compose up -d --build
 开发期前后端分开启动；部署期前端产物内嵌进 API jar，单进程单端口（8080）同时提供页面与接口：
 
 ```bash
-# 构建含前端的内嵌 jar
-mvn -pl xxl-ai-api -am package -Pembed-ui
+# 构建前端并复制到 API 静态资源目录，再构建 jar
+cd xxl-ai-ui && npm install && npm run build && cd ..
+mvn -pl xxl-ai-api -am package
 java -jar xxl-ai-api/target/xxl-ai-api-*.jar   # 访问 http://localhost:8080
 ```
 
 - 前端路由为 **Hash 模式**（`/#/xxx`），无需服务端 SPA 回退；生产 `VITE_APP_BASE_API` 为空、接口拍平到根路径，开发仍走 `/api` + Vite 代理。
-- Docker 打包复用 `xxl-ai-api/Dockerfile`（`ADD target/xxl-ai-api-*.jar`），故需先执行上面的 `mvn ... -Pembed-ui package` 生成内嵌 jar。
+- Docker 打包复用 `xxl-ai-api/Dockerfile`（`ADD target/xxl-ai-api-*.jar`），故需先构建前端并完成 Maven 打包。
 
 ## 四、工程结构与业务代码落位
 
