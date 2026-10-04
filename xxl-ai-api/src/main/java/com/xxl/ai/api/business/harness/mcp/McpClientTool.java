@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.xxl.ai.api.business.mcp.model.entity.Mcp;
 import io.modelcontextprotocol.client.McpSyncClient;
+import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
@@ -135,7 +136,7 @@ public class McpClientTool {
             return McpConnectResult.ok(serverName, serverVersion, instructions, tools, elapsed, "连接成功，发现 " + tools.size() + " 个工具");
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - start;
-            logger.warn("MCP 连通测试失败, id={}, name={}, err={}", mcp.getId(), mcp.getName(), e.getMessage());
+            logger.warn("MCP 连通测试失败, id={}, name={}, err={}", mcp.getId(), mcp.getName(), e.getMessage(), e);
             return McpConnectResult.fail(0, elapsed, String.valueOf(e.getMessage()));
         } finally {
             if (sync != null) {
@@ -184,14 +185,17 @@ public class McpClientTool {
     }
 
     /**
-     * 构建传输层：按 config 配置格式（http/stdio）解析；遵循类型映射（0=远程/1=本地）兜底
+     * 构建传输层：按 config 配置格式（http/sse/stdio）解析；遵循类型映射（0=远程/1=本地）兜底
      */
     private McpClientTransport transport(Mcp mcp) {
         McpConfig config = parseConfig(mcp);
         String transport = config.transport;
         try {
-            if ("stdio".equals(transport)) {
+            if ("stdio".equalsIgnoreCase(transport)) {
                 return buildStdioTransport(config);
+            }
+            if (isSseTransport(config)) {
+                return buildSseTransport(config);
             }
             return buildHttpTransport(config);
         } catch (Exception e) {
@@ -201,10 +205,38 @@ public class McpClientTool {
     }
 
     /**
-     * Streamable HTTP 传输：url（完整消息端点） + headers
+     * 判定是否使用 SSE 传输：
+     * 1. 显式指定 transport=sse 优先；
+     * 2. 显式指定 transport=streamable / streamable-http 时强制走 Streamable HTTP；
+     * 3. 默认情况下（transport 为空或 http 通用协议），根据 URL Path 路径特征智能推断（如 /sse、/api/v1/sse 等），避免匹配域名中的 //sse
+     */
+    private boolean isSseTransport(McpConfig config) {
+        if ("sse".equalsIgnoreCase(config.transport)) {
+            return true;
+        }
+        if ("streamable".equalsIgnoreCase(config.transport) || "streamable-http".equalsIgnoreCase(config.transport)) {
+            return false;
+        }
+        if (config.url != null && !config.url.isEmpty()) {
+            try {
+                URI uri = URI.create(config.url);
+                String path = uri.getRawPath();
+                if (path != null && (path.equals("/sse") || path.endsWith("/sse") || path.contains("/sse/"))) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+                return config.url.endsWith("/sse") || config.url.contains("/sse?") || config.url.contains("/sse/");
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Streamable HTTP 传输：url（完整消息端点，含 query 参数） + headers
      *
-     * SDK 传输层按 「base = scheme://host:port、endpoint = url.path」构建，
-     * 保证配置的服务地址精确作为 MCP 消息端点使用（避免 resolve("/mcp") 覆盖路径导致的 404）
+     * SDK 传输层按 「base = scheme://host:port、endpoint = url.rawPath + rawQuery」构建，
+     * 保证配置的服务地址精确作为 MCP 消息端点使用 （避免 resolve("/mcp") 覆盖路径导致的 404）
+     * （保留 ?key=xxx 等鉴权 query 参数）
      */
     private McpClientTransport buildHttpTransport(McpConfig config) {
         if (config.url == null || config.url.isEmpty()) {
@@ -216,14 +248,52 @@ public class McpClientTool {
             URI uri = URI.create(config.url);
             if (uri.getScheme() != null && uri.getAuthority() != null) {
                 baseUri = uri.getScheme() + "://" + uri.getAuthority();
-                String path = uri.getPath();
+                String path = uri.getRawPath();
+                String query = uri.getRawQuery();
                 endpoint = (path == null || path.isEmpty()) ? "/mcp" : path;
+                if (query != null && !query.isEmpty()) {
+                    endpoint += "?" + query;
+                }
             }
         } catch (IllegalArgumentException e) {
             logger.warn("MCP 服务地址解析失败, 使用原样地址, err={}", e.getMessage());
         }
         HttpClientStreamableHttpTransport.Builder builder = HttpClientStreamableHttpTransport.builder(baseUri)
                 .endpoint(endpoint)
+                .customizeClient(clientBuilder -> clientBuilder.connectTimeout(Duration.ofSeconds(10)));
+        if (config.headers != null && !config.headers.isEmpty()) {
+            builder.httpRequestCustomizer(headerCustomizer(config.headers));
+        }
+        return builder.build();
+    }
+
+    /**
+     * SSE 传输：url（完整消息端点，含 query 参数） + headers
+     *
+     * 针对标准 MCP SSE 服务（如 /sse?key=xxx），客户端建立 SSE 连接后自动按服务端返回的 endpoint 发送消息
+     */
+    private McpClientTransport buildSseTransport(McpConfig config) {
+        if (config.url == null || config.url.isEmpty()) {
+            return null;
+        }
+        String baseUri = config.url;
+        String sseEndpoint = "/sse";
+        try {
+            URI uri = URI.create(config.url);
+            if (uri.getScheme() != null && uri.getAuthority() != null) {
+                baseUri = uri.getScheme() + "://" + uri.getAuthority();
+                String path = uri.getRawPath();
+                String query = uri.getRawQuery();
+                sseEndpoint = (path == null || path.isEmpty()) ? "/sse" : path;
+                if (query != null && !query.isEmpty()) {
+                    sseEndpoint += "?" + query;
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            logger.warn("MCP SSE 服务地址解析失败, 使用原样地址, err={}", e.getMessage(), e);
+        }
+        HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(baseUri)
+                .sseEndpoint(sseEndpoint)
                 .customizeClient(clientBuilder -> clientBuilder.connectTimeout(Duration.ofSeconds(10)));
         if (config.headers != null && !config.headers.isEmpty()) {
             builder.httpRequestCustomizer(headerCustomizer(config.headers));
@@ -291,6 +361,10 @@ public class McpClientTool {
             config.cwd = (cwdEl != null && cwdEl.isJsonPrimitive()) ? cwdEl.getAsString() : null;
         } catch (Exception e) {
             logger.warn("MCP config 解析失败, id={}, err={}", mcp.getId(), e.getMessage());
+        }
+        // 兜底：若 config 中未指定 url，从实体平铺列回填
+        if (config.url == null || config.url.isEmpty()) {
+            config.url = mcp.getUrl();
         }
         // 兜底：config 缺 transport 时按类型映射（0=远程http、1=本地stdio）
         if (config.transport == null) {
