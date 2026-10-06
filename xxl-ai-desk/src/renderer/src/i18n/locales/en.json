@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "XXL-AI Desk",
-    "tagline": "Cross-platform AI Agent desktop client"
+    "tagline": "AI Agent desktop client"
   },
   "common": {
     "confirm": "Confirm",
@@ -24,6 +24,8 @@
   },
   "chat": {
     "newChat": "New chat",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
     "sessions": "Chats",
     "searchSession": "Search chats",
     "inputPlaceholder": "Message XXL-AI Desk, Enter to send / Shift+Enter for newline",

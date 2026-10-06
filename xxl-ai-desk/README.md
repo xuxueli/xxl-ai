@@ -1,6 +1,6 @@
 # XXL-AI Desk
 
-> 跨平台 AI Agent 桌面客户端 —— 基于 **Electron + Vue3 + Pi** 构建，独立于 XXL-AI 其他模块。
+> AI Agent 桌面客户端 —— 基于 **Electron + Vue3 + Pi** 构建，独立于 XXL-AI 其他模块。
 
 XXL-AI Desk 是一个本地优先的桌面 Agent 客户端：内置多供应商模型接入、流式对话、工具调用可视化，并预留 SKILL / MCP / 知识库 / 记忆等能力。UI 参考 ChatGPT Desktop、Claude Desktop 等成熟 Agent 产品。
 

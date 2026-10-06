@@ -38,9 +38,19 @@ body {
   flex-direction: column;
   background: var(--desk-sidebar);
   border-right: 1px solid var(--desk-border);
+  overflow: hidden;
+  transition:
+    width 0.2s ease,
+    border-right-color 0.2s ease;
+}
+
+/* 折叠为窄图标栏（宽度收窄，内部按 collapsed 类隐藏文字/列表） */
+.desk-sidebar.collapsed {
+  width: 56px;
 }
 
 .desk-main {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;

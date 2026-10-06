@@ -1,7 +1,30 @@
-import { createApp, type Component } from 'vue'
+import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import {
+  ArrowLeft,
+  Calendar,
+  CaretBottom,
+  CaretRight,
+  ChatDotRound,
+  ChatLineRound,
+  CircleCheck,
+  CircleClose,
+  CopyDocument,
+  Cpu,
+  Delete,
+  EditPen,
+  Expand,
+  Fold,
+  Loading,
+  Plus,
+  Promotion,
+  Refresh,
+  Search,
+  Setting,
+  User,
+  VideoPause
+} from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
@@ -12,8 +35,33 @@ import './styles/index.scss'
 /* 渲染进程入口 */
 const app = createApp(App)
 
-for (const [name, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(name, component as Component)
+/* 按需注册图标（避免全量引入整套图标，减小打包体积） */
+const icons = {
+  ArrowLeft,
+  Calendar,
+  CaretBottom,
+  CaretRight,
+  ChatDotRound,
+  ChatLineRound,
+  CircleCheck,
+  CircleClose,
+  CopyDocument,
+  Cpu,
+  Delete,
+  EditPen,
+  Expand,
+  Fold,
+  Loading,
+  Plus,
+  Promotion,
+  Refresh,
+  Search,
+  Setting,
+  User,
+  VideoPause
+}
+for (const [name, component] of Object.entries(icons)) {
+  app.component(name, component)
 }
 
 app.use(createPinia())

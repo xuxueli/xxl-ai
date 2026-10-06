@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "XXL-AI Desk",
-    "tagline": "跨平台 AI Agent 桌面客户端"
+    "tagline": "AI Agent 桌面客户端"
   },
   "common": {
     "confirm": "确定",
@@ -24,6 +24,8 @@
   },
   "chat": {
     "newChat": "新对话",
+    "collapseSidebar": "收起侧栏",
+    "expandSidebar": "展开侧栏",
     "sessions": "会话",
     "searchSession": "搜索会话",
     "inputPlaceholder": "给 XXL-AI Desk 发送消息，Enter 发送 / Shift+Enter 换行",

@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
+import { useLayoutStore } from '../stores/layout'
 import { t } from '../i18n'
 
 /* 左侧会话栏：新建 / 搜索 / 会话列表 / 底部操作 */
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
+const layout = useLayoutStore()
 const keyword = ref('')
 
 const filtered = computed(() => {
@@ -57,18 +59,13 @@ async function onDelete(id: string): Promise<void> {
   }
 }
 
-function toggleTheme(): void {
-  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark'
-  void settings.saveSettings({ theme: next })
-}
-
 function goSettings(): void {
   router.push('/settings')
 }
 </script>
 
 <template>
-  <aside class="desk-sidebar">
+  <aside class="desk-sidebar" :class="{ collapsed: layout.sidebarCollapsed }">
     <div class="sidebar-head" :class="{ mac: settings.platform === 'darwin' }">
       <div class="brand">
         <div class="brand-logo">XXL</div>
@@ -79,7 +76,7 @@ function goSettings(): void {
       </div>
       <el-button type="primary" class="new-btn" @click="onNew">
         <el-icon><Plus /></el-icon>
-        {{ t('chat.newChat') }}
+        <span class="new-btn-label">{{ t('chat.newChat') }}</span>
       </el-button>
     </div>
 
@@ -110,29 +107,56 @@ function goSettings(): void {
     </el-scrollbar>
 
     <div class="sidebar-foot">
-      <el-button text class="foot-btn" @click="goSettings">
+      <el-button text class="foot-btn" :title="t('settings.title')" @click="goSettings">
         <el-icon><Setting /></el-icon>
-        {{ t('settings.title') }}
+        <span class="foot-label">{{ t('settings.title') }}</span>
       </el-button>
-      <el-tooltip :content="t('settings.theme')">
-        <el-button text class="foot-btn icon-only" @click="toggleTheme">
-          <el-icon><Moon v-if="!settings.settings.theme || settings.settings.theme !== 'light'" /><Sunny v-else /></el-icon>
-        </el-button>
-      </el-tooltip>
+      <!-- 折叠/展开侧栏（原主题切换按钮位置） -->
+      <button
+        class="icon-btn"
+        :title="layout.sidebarCollapsed ? t('chat.expandSidebar') : t('chat.collapseSidebar')"
+        @click="layout.toggleSidebar"
+      >
+        <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
+      </button>
     </div>
   </aside>
 </template>
 
 <style scoped lang="scss">
 .sidebar-head {
-  padding: 14px 14px 12px;
+  padding: 10px 14px 12px;
   /* macOS 隐藏标题栏后，顶部区域需可拖拽移动窗口（系统红黄绿按钮不受影响） */
   -webkit-app-region: drag;
 }
 
-/* macOS：为左上角系统按钮让位，品牌 Logo 区域整体右移 */
-.sidebar-head.mac .brand {
-  padding-left: 64px;
+/* macOS：顶部留出系统红黄绿按钮高度，品牌行整体下移 */
+.sidebar-head.mac {
+  padding-top: 34px;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--desk-text-tertiary);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
 }
 
 .brand {
@@ -261,7 +285,41 @@ function goSettings(): void {
   color: var(--desk-text-secondary);
 }
 
-.icon-only {
-  padding: 8px;
+/* --- 折叠为窄图标栏：隐藏文字与列表，仅保留图标操作 --- */
+.desk-sidebar.collapsed .sidebar-head {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.desk-sidebar.collapsed .brand {
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.desk-sidebar.collapsed .brand-text,
+.desk-sidebar.collapsed .new-btn-label,
+.desk-sidebar.collapsed .foot-label,
+.desk-sidebar.collapsed .sidebar-search,
+.desk-sidebar.collapsed .sidebar-list {
+  display: none;
+}
+
+.desk-sidebar.collapsed .new-btn {
+  width: 36px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.desk-sidebar.collapsed .sidebar-foot {
+  /* 折叠态列表隐藏后无占位，靠 margin-top 将操作区压到左下角 */
+  margin-top: auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 8px;
+}
+
+.desk-sidebar.collapsed .foot-btn {
+  padding: 6px;
 }
 </style>

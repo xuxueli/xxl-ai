@@ -10,6 +10,18 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml,package-lock.json}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # 排除构建产物与输出目录（否则 release 会被递归打包进 asar）
+  - '!release/**'
+  - '!build/**'
+  - '!dist/**'
+  - '!*.log'
+  - '!**/*.{log,tmp,tsbuildinfo}'
+  # 精简打包：剔除依赖内的文档 / 源码映射 / 测试与示例，压缩体积
+  - '!**/*.{md,markdown,map}'
+  - '!**/{test,tests,__tests__,example,examples,spec,specs,benchmark,benchmarks}/**'
+  - '!**/{LICENSE,LICENCE,LICENSE.txt,LICENSE.md,CHANGELOG.md,README.md,.editorconfig,.eslintrc,.eslintrc.js,.eslintrc.cjs,.prettierrc,.prettierrc.yaml,.npmignore,.gitignore,.travis.yml,tsconfig.json}'
+# 最大压缩（dmg/AppImage 等安装包更小，代价是打包耗时略增）
+compression: maximum
 asarUnpack:
   - resources/**
 win:
