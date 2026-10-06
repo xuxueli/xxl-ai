@@ -15,6 +15,7 @@ export interface UiMessage {
   content: string
   thinking: string
   tools: ToolCallState[]
+  addTime: string
   pending?: boolean
   error?: boolean
 }

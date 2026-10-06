@@ -54,6 +54,16 @@ function contentToText(message: unknown): string {
   return ''
 }
 
+/* 将底层异常翻译为可读提示：明确指向具体供应商与模型 */
+function describeError(raw: string, providerName: string, modelId: string): string {
+  const message = (raw || '').trim()
+  if (/api key/i.test(message)) {
+    return `供应商「${providerName}」未配置 API Key，无法调用模型「${modelId}」，请在「设置」中补全后重试`
+  }
+  const suffix = message ? `：${message}` : ''
+  return `模型「${modelId}」（供应商「${providerName}」）调用失败${suffix}`
+}
+
 /* 供应商 DTO → Pi 运行时配置 */
 function toRuntimeConfig(provider: ProviderDTO): ProviderModelConfig {
   return {
@@ -139,8 +149,16 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.chatSend, async (_event, input: { sessionId: string; text: string }) => {
     const { sessionId, text } = input
     const window = getWindow()
+    /* 供应商/模型就绪后，错误提示统一带上「供应商 + 模型」上下文 */
+    let providerName = ''
+    let modelId = ''
+    let contextReady = false
     const emit = (event: HostEvent): void => {
-      window?.webContents.send(IPC.chatEvent, { sessionId, ...event })
+      const payload =
+        event.type === 'error' && contextReady
+          ? { ...event, message: describeError(event.message, providerName, modelId) }
+          : event
+      window?.webContents.send(IPC.chatEvent, { sessionId, ...payload })
     }
 
     try {
@@ -158,11 +176,15 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         return
       }
 
-      const modelId = session.modelId || settings.modelId || provider.models[0]
-      if (!modelId) {
+      const model = session.modelId || settings.modelId || provider.models[0]
+      if (!model) {
         emit({ type: 'error', message: '请为供应商配置至少一个模型' })
         return
       }
+
+      providerName = provider.name
+      modelId = model
+      contextReady = true
 
       const systemPrompt = session.systemPrompt || settings.systemPrompt
       const history = listMessages(sessionId)
@@ -186,11 +208,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       await runPrompt(agent, text, emit)
 
       /* 落库：以 Agent 完整上下文覆盖会话消息，保证下次续聊一致 */
-      const serialized = agent.state.messages.map((message) => ({
-        role: (message as { role?: string }).role ?? '',
-        content: contentToText(message),
-        data: JSON.stringify(message)
-      }))
+      const serialized = agent.state.messages.map((message) => {
+        const role = (message as { role?: string }).role ?? ''
+        const stopReason = (message as { stopReason?: string }).stopReason
+        const errorMessage = (message as { errorMessage?: string }).errorMessage
+        let content = contentToText(message)
+        /* 失败消息追加可读提示落库，避免切换会话后丢失错误信息（保留已生成的部分内容） */
+        if (role === 'assistant' && stopReason === 'error') {
+          const tip = describeError(errorMessage ?? '', providerName, modelId)
+          content = content ? `${content}\n\n${tip}` : tip
+        }
+        return { role, content, data: JSON.stringify(message) }
+      })
       replaceMessages(sessionId, serialized)
 
       /* 首次对话自动以提问作为会话标题 */

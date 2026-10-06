@@ -10,6 +10,28 @@ const props = defineProps<{ message: UiMessage }>()
 const html = computed(() => renderMarkdown(props.message.content))
 const thinkingOpen = ref(false)
 
+/* 每条消息在鼠标悬浮时展示的时间文案（当天仅时分，跨天补充月日） */
+const timeText = computed(() => formatTime(props.message.addTime))
+
+/* 格式化发送时间：ISO 字符串 → 展示文案，非法值返回空串 */
+function formatTime(iso: string): string {
+  if (!iso) {
+    return ''
+  }
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  const hourMinute = `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const now = new Date()
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  return sameDay ? hourMinute : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hourMinute}`
+}
+
 async function copyContent(): Promise<void> {
   if (!props.message.content) {
     return
@@ -56,10 +78,12 @@ async function copyContent(): Promise<void> {
       <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}</div>
       <div v-else class="markdown-body" :class="{ 'is-error': message.error }" v-html="html"></div>
 
-      <div v-if="message.role === 'assistant' && !message.pending && message.content" class="message-actions">
+      <!-- 悬浮操作：复制（左）+ 发送时间（右），输入与返回两侧均展示 -->
+      <div v-if="!message.pending" class="message-actions">
         <el-tooltip :content="t('common.copy')">
           <el-icon class="action" @click="copyContent"><CopyDocument /></el-icon>
         </el-tooltip>
+        <span class="message-time">{{ timeText }}</span>
       </div>
     </div>
 
@@ -189,12 +213,22 @@ async function copyContent(): Promise<void> {
 
 .message-actions {
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   opacity: 0;
   transition: opacity 0.15s ease;
 }
 
 .message:hover .message-actions {
   opacity: 1;
+}
+
+.message-time {
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  user-select: none;
 }
 
 .action {

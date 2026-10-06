@@ -689,9 +689,9 @@ docker compose down
   - 软件配置：规范化目录存储，基础配置、会话数据、技能/工具、工作空间及会话，自定义会话目录及权限控制；
   - 功能：
     - 多供应商
-    - SKILL/MCP工具; 
-    - 项目、会话管理；
-    - 权限控制；Plan、Build；项目外，审批；
+    - 项目、会话管理；【TODO】
+    - SKILL/MCP工具; 【TODO】
+    - 权限控制；Plan、Build；项目外，审批；【TODO】
 
 
 ### v1.2.0 Release Notes[ING]

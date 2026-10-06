@@ -15,12 +15,22 @@ function toUiMessage(message: StoredMessage): UiMessage | null {
   if (message.role !== 'user' && message.role !== 'assistant') {
     return null
   }
+  /* 解析原始数据，恢复失败标记（切换会话/重启后仍显示错误样式） */
+  let failed = false
+  try {
+    const parsed = JSON.parse(message.data) as { stopReason?: string }
+    failed = parsed?.stopReason === 'error'
+  } catch {
+    /* 数据缺失或非法时按正常消息处理 */
+  }
   return {
     id: message.id,
     role: message.role === 'user' ? 'user' : 'assistant',
     content: message.content,
     thinking: '',
-    tools: []
+    tools: [],
+    addTime: message.addTime,
+    error: failed
   }
 }
 
@@ -143,12 +153,17 @@ export const useChatStore = defineStore('chat', () => {
         }
         break
       }
-      case 'error':
+      case 'error': {
+        /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
+        if (!assistant.error) {
+          const tip = event.message ?? '请求失败'
+          assistant.content = assistant.content ? `${assistant.content}\n\n${tip}` : tip
+        }
         assistant.error = true
-        assistant.content = assistant.content || (event.message ?? '请求失败')
         assistant.pending = false
         streaming.value = false
         break
+      }
       case 'done':
         assistant.pending = false
         streaming.value = false
@@ -177,13 +192,14 @@ export const useChatStore = defineStore('chat', () => {
     }
     const sessionId = currentId.value
 
-    messages.value.push({ id: uid(), role: 'user', content, thinking: '', tools: [] })
+    messages.value.push({ id: uid(), role: 'user', content, thinking: '', tools: [], addTime: new Date().toISOString() })
     messages.value.push({
       id: uid(),
       role: 'assistant',
       content: '',
       thinking: '',
       tools: [],
+      addTime: new Date().toISOString(),
       pending: true
     })
     streaming.value = true

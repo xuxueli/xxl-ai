@@ -74,10 +74,10 @@ function goSettings(): void {
           <div class="brand-tag">{{ t('app.tagline') }}</div>
         </div>
       </div>
-      <el-button type="primary" class="new-btn" @click="onNew">
-        <el-icon><Plus /></el-icon>
-        <span class="new-btn-label">{{ t('chat.newChat') }}</span>
-      </el-button>
+      <div class="new-btn" @click="onNew">
+        <el-icon class="new-icon"><Plus /></el-icon>
+        <span class="new-btn-label">{{ t('chat.newChatAction') }}</span>
+      </div>
     </div>
 
     <div class="sidebar-search">
@@ -173,11 +173,27 @@ function goSettings(): void {
   white-space: nowrap;
 }
 
+/* 新建对话：与会话条目同款列表行（同字号/内边距/圆角），悬浮高亮 */
 .new-btn {
-  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
   border-radius: 10px;
-  height: 38px;
+  cursor: pointer;
+  color: var(--desk-text-secondary);
+  font-size: 14px;
+  transition: background 0.15s ease;
   -webkit-app-region: no-drag;
+}
+
+.new-btn:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+}
+
+.new-icon {
+  flex-shrink: 0;
 }
 
 .sidebar-search {
@@ -193,7 +209,7 @@ function goSettings(): void {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 6px 12px;
   margin-bottom: 2px;
   border-radius: 10px;
   cursor: pointer;
@@ -245,7 +261,7 @@ function goSettings(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 4px 12px;
   border-top: 1px solid var(--desk-border);
 }
 
@@ -276,6 +292,8 @@ function goSettings(): void {
   width: 36px;
   margin: 0 auto;
   padding: 0;
+  height: 36px;
+  justify-content: center;
 }
 
 .desk-sidebar.collapsed .sidebar-foot {
@@ -284,7 +302,7 @@ function goSettings(): void {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 10px 8px;
+  padding: 4px 8px;
 }
 
 .desk-sidebar.collapsed .foot-btn {

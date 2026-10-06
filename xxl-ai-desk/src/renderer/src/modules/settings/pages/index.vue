@@ -389,6 +389,7 @@ function back(): void {
     <!-- 供应商编辑弹窗 -->
     <el-dialog
       v-model="dialogVisible"
+      class="settings-dialog"
       :title="editingId ? t('settings.editProvider') : t('settings.addProvider')"
       width="620px"
       align-center
@@ -464,6 +465,15 @@ function back(): void {
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* 字号与左侧菜单保持一致（14px），统一按钮与主要文案 */
+  font-size: 14px;
+  --el-font-size-base: 14px;
+}
+
+/* 供应商弹窗（可能被 teleport 到 body，用 :global 命中），字号与左侧菜单一致 */
+:global(.settings-dialog) {
+  font-size: 14px;
+  --el-font-size-base: 14px;
 }
 
 .settings-header {

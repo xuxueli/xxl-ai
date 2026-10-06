@@ -24,6 +24,7 @@
   },
   "chat": {
     "newChat": "New chat",
+    "newChatAction": "New chat",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "sessions": "Chats",

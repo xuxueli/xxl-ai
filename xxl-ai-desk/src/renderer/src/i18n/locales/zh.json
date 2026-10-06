@@ -24,6 +24,7 @@
   },
   "chat": {
     "newChat": "新对话",
+    "newChatAction": "新建对话",
     "collapseSidebar": "收起侧栏",
     "expandSidebar": "展开侧栏",
     "sessions": "会话",

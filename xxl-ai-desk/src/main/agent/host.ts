@@ -114,7 +114,7 @@ export async function runPrompt(
   try {
     await agent.prompt(text)
     const failed = findLastError(agent)
-    if (failed) {
+    if (failed !== undefined) {
       sink({ type: 'error', message: failed })
     } else {
       sink({ type: 'done' })
@@ -126,14 +126,14 @@ export async function runPrompt(
   }
 }
 
-/* 检查最后一轮是否以错误结束 */
+/* 检查最后一轮是否以错误结束，返回错误信息（无错误返回 undefined） */
 function findLastError(agent: Agent): string | undefined {
   const messages = agent.state.messages
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i] as { role?: string; stopReason?: string; errorMessage?: string }
     if (message.role === 'assistant') {
       if (message.stopReason === 'error') {
-        return message.errorMessage || '模型调用失败'
+        return message.errorMessage || ''
       }
       return undefined
     }
