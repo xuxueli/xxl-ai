@@ -46,7 +46,7 @@ const suggestions = [
   height: 64px;
   border-radius: 18px;
   background: var(--desk-primary);
-  color: #fff;
+  color: var(--desk-primary-contrast);
   font-weight: 700;
   font-size: 16px;
   display: flex;

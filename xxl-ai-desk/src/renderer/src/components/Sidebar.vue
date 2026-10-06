@@ -20,8 +20,8 @@ const filtered = computed(() => {
   return chat.sessions.filter((item) => item.title.toLowerCase().includes(key))
 })
 
-async function onNew(): Promise<void> {
-  await chat.createSession()
+function onNew(): void {
+  chat.startNewChat()
   router.push('/')
 }
 
@@ -69,7 +69,7 @@ function goSettings(): void {
 
 <template>
   <aside class="desk-sidebar">
-    <div class="sidebar-head">
+    <div class="sidebar-head" :class="{ mac: settings.platform === 'darwin' }">
       <div class="brand">
         <div class="brand-logo">XXL</div>
         <div class="brand-text">
@@ -125,46 +125,67 @@ function goSettings(): void {
 
 <style scoped lang="scss">
 .sidebar-head {
-  padding: 20px 16px 12px;
+  padding: 14px 14px 12px;
+  /* macOS 隐藏标题栏后，顶部区域需可拖拽移动窗口（系统红黄绿按钮不受影响） */
+  -webkit-app-region: drag;
+}
+
+/* macOS：为左上角系统按钮让位，品牌 Logo 区域整体右移 */
+.sidebar-head.mac .brand {
+  padding-left: 64px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
   margin-bottom: 16px;
 }
 
+.brand-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   background: var(--desk-primary);
-  color: #fff;
+  color: var(--desk-primary-contrast);
   font-weight: 700;
   font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .brand-name {
   font-size: 15px;
   font-weight: 600;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand-tag {
   font-size: 12px;
   color: var(--desk-text-tertiary);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .new-btn {
   width: 100%;
   border-radius: 10px;
   height: 38px;
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-search {

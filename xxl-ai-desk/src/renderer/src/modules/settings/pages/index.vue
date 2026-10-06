@@ -15,11 +15,14 @@ const activeTab = ref('general')
 const theme = ref(settings.settings.theme)
 const language = ref(settings.settings.language)
 const systemPrompt = ref(settings.settings.systemPrompt)
+/* 运行时数据目录（可编辑，保存后需重启生效） */
+const dataDirInput = ref('')
 
 function syncGeneral(): void {
   theme.value = settings.settings.theme
   language.value = settings.settings.language
   systemPrompt.value = settings.settings.systemPrompt
+  dataDirInput.value = settings.dataDir
 }
 
 watch(() => settings.loaded, syncGeneral)
@@ -34,11 +37,36 @@ async function saveGeneral(): Promise<void> {
   ElMessage.success(t('common.saved'))
 }
 
+/* --- 运行时数据目录 --- */
+/* 通过系统对话框选择数据目录 */
+async function browseDataDir(): Promise<void> {
+  const dir = await settings.selectDataDir()
+  if (dir) {
+    dataDirInput.value = dir
+  }
+}
+
+/* 保存数据目录（写入配置文件，重启后生效） */
+async function saveDataDir(): Promise<void> {
+  await settings.saveDataDir(dataDirInput.value)
+  dataDirInput.value = settings.dataDir
+  ElMessage.success(t('settings.dataDirSaved'))
+}
+
+/* 恢复默认数据目录（仅回填输入框，保存后生效） */
+function resetDataDir(): void {
+  dataDirInput.value = settings.defaultDataDir
+}
+
 /* --- 供应商 --- */
 const dialogVisible = ref(false)
 const editingId = ref('')
 const form = ref({ name: '', baseUrl: '', apiKey: '', enabled: true })
-const modelsText = ref('')
+/* 模型行（动态多行管理，支持手输与远程下拉选择） */
+const modelRows = ref<string[]>([''])
+/* 远程查询得到的可选模型 */
+const remoteModels = ref<string[]>([])
+const remoteLoading = ref(false)
 const headersText = ref('{}')
 /* 请求Header 示例（含花括号，放模板文本避免 i18n 占位符解析冲突） */
 const headersExample = '{"x-opencode-session":"{session}"}'
@@ -46,7 +74,8 @@ const headersExample = '{"x-opencode-session":"{session}"}'
 function openAdd(): void {
   editingId.value = ''
   form.value = { name: '', baseUrl: '', apiKey: '', enabled: true }
-  modelsText.value = ''
+  modelRows.value = ['']
+  remoteModels.value = []
   headersText.value = '{}'
   dialogVisible.value = true
 }
@@ -59,16 +88,70 @@ function openEdit(row: ProviderDTO): void {
     apiKey: row.apiKey,
     enabled: row.enabled
   }
-  modelsText.value = row.models.join('\n')
+  modelRows.value = row.models.length > 0 ? [...row.models] : ['']
+  remoteModels.value = []
   headersText.value = JSON.stringify(row.headers ?? {}, null, 2)
   dialogVisible.value = true
 }
 
+/* 新增一行模型 */
+function addModelRow(value = ''): void {
+  modelRows.value.push(value)
+}
+
+/* 移除一行模型（保留至少一行） */
+function removeModelRow(index: number): void {
+  modelRows.value.splice(index, 1)
+  if (modelRows.value.length === 0) {
+    modelRows.value.push('')
+  }
+}
+
+/* 查询远程可用模型（复用当前表单的地址/密钥/请求头，未填密钥时后端按已保存配置兜底） */
+async function queryRemoteModels(): Promise<void> {
+  if (!form.value.baseUrl) {
+    ElMessage.warning(t('settings.baseUrlRequired'))
+    return
+  }
+  remoteLoading.value = true
+  try {
+    let headers: Record<string, string> = {}
+    const raw = headersText.value.trim()
+    if (raw) {
+      try {
+        headers = JSON.parse(raw)
+      } catch {
+        ElMessage.error(t('settings.headersInvalid'))
+        return
+      }
+    }
+    const list = await settings.queryRemoteModels({
+      id: editingId.value || undefined,
+      baseUrl: form.value.baseUrl,
+      apiKey: form.value.apiKey,
+      headers
+    })
+    remoteModels.value = list
+    if (list.length === 0) {
+      ElMessage.warning(t('settings.remoteEmpty'))
+    } else {
+      ElMessage.success(t('settings.remoteLoaded', [list.length]))
+    }
+  } catch {
+    ElMessage.error(t('settings.remoteFail'))
+  } finally {
+    remoteLoading.value = false
+  }
+}
+
 async function submitProvider(): Promise<void> {
-  const models = modelsText.value
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean)
+  const models = Array.from(
+    new Set(
+      modelRows.value
+        .map((item) => (item ?? '').trim())
+        .filter(Boolean)
+    )
+  )
   if (!form.value.name || !form.value.baseUrl || models.length === 0) {
     ElMessage.warning(t('settings.providerTip'))
     return
@@ -200,6 +283,27 @@ function back(): void {
               </el-form-item>
               <el-button type="primary" @click="saveGeneral">{{ t('common.save') }}</el-button>
             </el-form>
+
+            <!-- 运行时数据目录：查看 / 修改 / 打开 -->
+            <div class="data-dir">
+              <div class="data-dir-title">{{ t('settings.dataDir') }}</div>
+              <div class="data-dir-tip">{{ t('settings.dataDirTip') }}</div>
+              <div class="data-dir-row">
+                <el-input
+                  v-model="dataDirInput"
+                  class="data-dir-input"
+                  :placeholder="t('settings.dataDirPlaceholder')"
+                />
+                <el-button @click="browseDataDir">{{ t('settings.browse') }}</el-button>
+              </div>
+              <div class="data-dir-actions">
+                <el-button type="primary" @click="saveDataDir">{{ t('common.save') }}</el-button>
+                <el-button @click="resetDataDir">{{ t('settings.restoreDefault') }}</el-button>
+                <el-button @click="settings.openDataDir()">{{ t('settings.openDir') }}</el-button>
+                <el-button @click="settings.relaunch()">{{ t('settings.relaunch') }}</el-button>
+              </div>
+              <div class="field-hint">{{ t('settings.dbFile') }}: {{ settings.dbFile }}</div>
+            </div>
           </el-tab-pane>
 
           <!-- 供应商 -->
@@ -216,14 +320,29 @@ function back(): void {
               <el-table-column prop="baseUrl" :label="t('settings.baseUrl')" min-width="220" />
               <el-table-column :label="t('settings.models')" min-width="200">
                 <template #default="{ row }">
-                  <el-tag
-                    v-for="model in row.models"
-                    :key="model"
-                    size="small"
-                    class="model-tag"
+                  <el-tooltip
+                    v-if="row.models.length > 0"
+                    placement="top"
+                    :show-after="150"
+                    effect="dark"
                   >
-                    {{ model }}
-                  </el-tag>
+                    <template #content>
+                      <div class="model-tooltip">
+                        <div v-for="model in row.models" :key="model">{{ model }}</div>
+                      </div>
+                    </template>
+                    <div class="model-tags">
+                      <el-tag
+                        v-for="model in row.models"
+                        :key="model"
+                        size="small"
+                        class="model-tag"
+                      >
+                        {{ model }}
+                      </el-tag>
+                    </div>
+                  </el-tooltip>
+                  <span v-else>-</span>
                 </template>
               </el-table-column>
               <el-table-column :label="t('common.status')" width="100">
@@ -234,14 +353,16 @@ function back(): void {
                   />
                 </template>
               </el-table-column>
-              <el-table-column :label="t('common.actions')" width="140">
+              <el-table-column :label="t('common.actions')" width="170" align="center">
                 <template #default="{ row }">
-                  <el-button text type="primary" @click="openEdit(row)">
-                    {{ t('common.edit') }}
-                  </el-button>
-                  <el-button text type="danger" @click="removeProvider(row)">
-                    {{ t('common.delete') }}
-                  </el-button>
+                  <div class="row-actions">
+                    <el-button text type="primary" @click="openEdit(row)">
+                      {{ t('common.edit') }}
+                    </el-button>
+                    <el-button text type="danger" @click="removeProvider(row)">
+                      {{ t('common.delete') }}
+                    </el-button>
+                  </div>
                 </template>
               </el-table-column>
               <template #empty>
@@ -285,12 +406,34 @@ function back(): void {
           <div class="field-hint">示例：{{ headersExample }}</div>
         </el-form-item>
         <el-form-item :label="t('settings.models')">
-          <el-input
-            v-model="modelsText"
-            type="textarea"
-            :rows="4"
-            :placeholder="t('settings.modelsPlaceholder')"
-          />
+          <div class="model-editor">
+            <div v-for="(_, index) in modelRows" :key="index" class="model-row">
+              <el-select
+                v-model="modelRows[index]"
+                class="model-input"
+                filterable
+                allow-create
+                default-first-option
+                clearable
+                :placeholder="t('settings.modelPlaceholder')"
+              >
+                <el-option v-for="model in remoteModels" :key="model" :label="model" :value="model" />
+              </el-select>
+              <el-button text class="model-remove" @click="removeModelRow(index)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
+            <div class="model-actions">
+              <el-button @click="addModelRow()">
+                <el-icon><Plus /></el-icon>
+                {{ t('settings.addModel') }}
+              </el-button>
+              <el-button :loading="remoteLoading" @click="queryRemoteModels">
+                <el-icon><Refresh /></el-icon>
+                {{ t('settings.queryRemote') }}
+              </el-button>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item :label="t('common.enabled')">
           <el-switch v-model="form.enabled" />
@@ -319,6 +462,12 @@ function back(): void {
   gap: 12px;
   padding: 0 24px;
   border-bottom: 1px solid var(--desk-border);
+  /* 顶栏可拖拽移动窗口（返回按钮除外） */
+  -webkit-app-region: drag;
+}
+
+.settings-header :deep(.el-button) {
+  -webkit-app-region: no-drag;
 }
 
 .settings-title {
@@ -371,7 +520,100 @@ function back(): void {
   color: var(--desk-text-tertiary);
 }
 
-.model-tag {
-  margin: 0 6px 6px 0;
+/* 模型列表：单行展示、溢出省略，悬浮 tooltip 查看全部 */
+.model-tags {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.model-tags .model-tag {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.model-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* 供应商操作列：按钮不换行 */
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* 模型动态多行编辑器 */
+.model-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-editor .model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-editor .model-input {
+  flex: 1;
+}
+
+.model-editor .model-remove {
+  flex-shrink: 0;
+  color: var(--desk-text-tertiary);
+}
+
+.model-editor .model-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 运行时数据目录 */
+.data-dir {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--desk-border);
+}
+
+.data-dir-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.data-dir-tip {
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  margin-bottom: 12px;
+}
+
+.data-dir-row {
+  display: flex;
+  gap: 8px;
+  max-width: 640px;
+  margin-bottom: 12px;
+}
+
+.data-dir-input {
+  flex: 1;
+}
+
+.data-dir-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 </style>

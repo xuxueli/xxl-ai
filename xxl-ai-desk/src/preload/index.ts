@@ -5,6 +5,7 @@ import type {
   ChatEvent,
   DeskApi,
   ProviderDTO,
+  ProviderModelQuery,
   SessionDTO,
   StoredMessage
 } from '../shared/ipc'
@@ -13,7 +14,11 @@ import type {
 
 const api: DeskApi = {
   app: {
-    info: () => ipcRenderer.invoke(IPC.appInfo)
+    info: () => ipcRenderer.invoke(IPC.appInfo),
+    setDataDir: (dir: string) => ipcRenderer.invoke(IPC.appSetDataDir, dir),
+    selectDataDir: () => ipcRenderer.invoke(IPC.appSelectDataDir),
+    openDataDir: () => ipcRenderer.invoke(IPC.appOpenDataDir),
+    relaunch: () => ipcRenderer.invoke(IPC.appRelaunch)
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
@@ -22,7 +27,9 @@ const api: DeskApi = {
   provider: {
     list: () => ipcRenderer.invoke(IPC.providerList),
     save: (dto: Partial<ProviderDTO>) => ipcRenderer.invoke(IPC.providerSave, dto),
-    remove: (id: string) => ipcRenderer.invoke(IPC.providerRemove, id)
+    remove: (id: string) => ipcRenderer.invoke(IPC.providerRemove, id),
+    remoteModels: (input: ProviderModelQuery) =>
+      ipcRenderer.invoke(IPC.providerRemoteModels, input)
   },
   session: {
     list: () => ipcRenderer.invoke(IPC.sessionList),

@@ -14,6 +14,14 @@ export interface ProviderDTO {
   updateTime: string
 }
 
+/* 远程模型查询入参（未保存的草稿可直接传表单值，已保存的可只传 id 复用库存密钥） */
+export interface ProviderModelQuery {
+  id?: string
+  baseUrl?: string
+  apiKey?: string
+  headers?: Record<string, string>
+}
+
 /* 会话 */
 export interface SessionDTO {
   id: string
@@ -56,10 +64,23 @@ export interface ChatEvent {
   message?: string
 }
 
+/* 运行时信息（版本 / 平台 / 数据目录） */
+export interface RuntimeInfo {
+  version: string
+  platform: string
+  dataDir: string
+  defaultDataDir: string
+  dbFile: string
+}
+
 /* 预加载暴露给渲染进程的 API */
 export interface DeskApi {
   app: {
-    info(): Promise<{ version: string; platform: string }>
+    info(): Promise<RuntimeInfo>
+    setDataDir(dir: string): Promise<string>
+    selectDataDir(): Promise<string>
+    openDataDir(): Promise<void>
+    relaunch(): Promise<void>
   }
   settings: {
     get(): Promise<AppSettings>
@@ -69,6 +90,7 @@ export interface DeskApi {
     list(): Promise<ProviderDTO[]>
     save(dto: Partial<ProviderDTO>): Promise<ProviderDTO>
     remove(id: string): Promise<void>
+    remoteModels(input: ProviderModelQuery): Promise<string[]>
   }
   session: {
     list(): Promise<SessionDTO[]>
@@ -88,11 +110,16 @@ export interface DeskApi {
 
 export const IPC = {
   appInfo: 'desk:app:info',
+  appSetDataDir: 'desk:app:set-data-dir',
+  appSelectDataDir: 'desk:app:select-data-dir',
+  appOpenDataDir: 'desk:app:open-data-dir',
+  appRelaunch: 'desk:app:relaunch',
   settingsGet: 'desk:settings:get',
   settingsSave: 'desk:settings:save',
   providerList: 'desk:provider:list',
   providerSave: 'desk:provider:save',
   providerRemove: 'desk:provider:remove',
+  providerRemoteModels: 'desk:provider:remote-models',
   sessionList: 'desk:session:list',
   sessionCreate: 'desk:session:create',
   sessionUpdate: 'desk:session:update',

@@ -11,6 +11,8 @@
   --desk-primary: #0d0d0d;
   --desk-primary-hover: #2f2f2f;
   --desk-primary-soft: rgba(13, 13, 13, 0.06);
+  /* 主色背景上的对比文字（黑白灰体系下浅色主题用白） */
+  --desk-primary-contrast: #ffffff;
   --desk-bubble-user: #f4f4f4;
   --desk-bubble-user-text: #0d0d0d;
   --desk-bubble-assistant: #f4f4f4;
@@ -33,27 +35,29 @@
 }
 
 :root.dark {
-  --desk-bg: #212121;
-  --desk-bg-elevated: #2a2a2a;
+  --desk-bg: #1e1e1e;
+  --desk-bg-elevated: #262626;
   --desk-sidebar: #171717;
-  --desk-border: #383838;
+  --desk-border: #333333;
   --desk-text: #ececec;
-  --desk-text-secondary: #b4b4b4;
-  --desk-text-tertiary: #8e8e8e;
-  --desk-primary: #8f8ffa;
-  --desk-primary-hover: #a3a3fb;
-  --desk-primary-soft: rgba(143, 143, 250, 0.14);
+  --desk-text-secondary: #b0b0b0;
+  --desk-text-tertiary: #8a8a8a;
+  /* 深色主题沿用黑白灰：主色取浅灰，主色背景用深色文字保证对比度 */
+  --desk-primary: #e8e8e8;
+  --desk-primary-hover: #ffffff;
+  --desk-primary-soft: rgba(255, 255, 255, 0.08);
+  --desk-primary-contrast: #141414;
   --desk-bubble-user: #303030;
   --desk-bubble-user-text: #ececec;
-  --desk-bubble-assistant: #2a2a2a;
+  --desk-bubble-assistant: #262626;
   --desk-danger: #f2555a;
-  --desk-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  --desk-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
 
-  --el-color-primary: #8f8ffa;
-  --el-color-primary-light-3: #a8a8fb;
-  --el-color-primary-light-5: #bcbcfc;
-  --el-color-primary-light-7: #d4d4fd;
-  --el-color-primary-light-8: #e2e2fe;
-  --el-color-primary-light-9: #f1f1ff;
-  --el-color-primary-dark-2: #7575e6;
+  --el-color-primary: #e8e8e8;
+  --el-color-primary-light-3: #f4f4f4;
+  --el-color-primary-light-5: #c4c4c4;
+  --el-color-primary-light-7: #6f6f6f;
+  --el-color-primary-light-8: #474747;
+  --el-color-primary-light-9: #2c2c2c;
+  --el-color-primary-dark-2: #cfcfcf;
 }

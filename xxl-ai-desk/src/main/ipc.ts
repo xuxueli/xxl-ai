@@ -1,8 +1,27 @@
-import { app, ipcMain, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { AppSettings, ProviderDTO, SessionDTO, StoredMessage } from '../shared/ipc'
+import type {
+  AppSettings,
+  ProviderDTO,
+  ProviderModelQuery,
+  RuntimeInfo,
+  SessionDTO,
+  StoredMessage
+} from '../shared/ipc'
 import { getSettings, saveSettings } from './services/settingsService'
-import { deleteProvider, getProvider, listProviders, saveProvider } from './services/providerService'
+import {
+  getDataDir,
+  getDbFile,
+  getDefaultDataDir,
+  setDataDir
+} from './services/storageService'
+import {
+  deleteProvider,
+  fetchRemoteModels,
+  getProvider,
+  listProviders,
+  saveProvider
+} from './services/providerService'
 import {
   clearMessages,
   createSession,
@@ -49,10 +68,32 @@ function toRuntimeConfig(provider: ProviderDTO): ProviderModelConfig {
 
 /* 注册全部 IPC 处理器 */
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
-  ipcMain.handle(IPC.appInfo, () => ({
-    version: app.getVersion(),
-    platform: process.platform
-  }))
+  ipcMain.handle(
+    IPC.appInfo,
+    (): RuntimeInfo => ({
+      version: app.getVersion(),
+      platform: process.platform,
+      dataDir: getDataDir(),
+      defaultDataDir: getDefaultDataDir(),
+      dbFile: getDbFile()
+    })
+  )
+  ipcMain.handle(IPC.appSetDataDir, (_event, dir: string) => setDataDir(dir))
+  ipcMain.handle(IPC.appSelectDataDir, async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择数据目录',
+      defaultPath: getDataDir(),
+      properties: ['openDirectory', 'createDirectory']
+    })
+    return result.canceled || result.filePaths.length === 0 ? '' : result.filePaths[0]
+  })
+  ipcMain.handle(IPC.appOpenDataDir, async () => {
+    await shell.openPath(getDataDir())
+  })
+  ipcMain.handle(IPC.appRelaunch, () => {
+    app.relaunch()
+    app.exit(0)
+  })
 
   /* --- 设置 --- */
   ipcMain.handle(IPC.settingsGet, () => getSettings())
@@ -64,6 +105,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.providerRemove, (_event, id: string) => {
     deleteProvider(id)
   })
+  ipcMain.handle(IPC.providerRemoteModels, (_event, input: ProviderModelQuery) =>
+    fetchRemoteModels(input)
+  )
 
   /* --- 会话 --- */
   ipcMain.handle(IPC.sessionList, () => listSessions())

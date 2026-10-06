@@ -12,6 +12,8 @@ let mainWindow: BrowserWindow | null = null
 
 /* 创建主窗口 */
 function createWindow(): void {
+  /* macOS：隐藏标题栏但保留系统红黄绿按钮，内容铺满整个窗口；其它平台沿用系统默认边框 */
+  const isMac = process.platform === 'darwin'
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -21,6 +23,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     title: 'XXL-AI Desk',
     backgroundColor: '#ffffff',
+    ...(isMac ? { titleBarStyle: 'hidden' as const } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

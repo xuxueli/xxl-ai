@@ -1,7 +1,8 @@
-import { app } from 'electron'
-import { join } from 'path'
+import { mkdirSync } from 'fs'
+import { dirname } from 'path'
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { getDbFile } from '../services/storageService'
 import * as schema from './schema'
 
 /* SQLite 建表脚本：桌面端本地库，无需外部服务 */
@@ -58,7 +59,8 @@ function ensureColumn(table: string, column: string, ddl: string): void {
 
 /* 初始化本地数据库（应用就绪后调用） */
 export function initDatabase(): void {
-  const file = join(app.getPath('userData'), 'xxl-ai-desk.sqlite')
+  const file = getDbFile()
+  mkdirSync(dirname(file), { recursive: true })
   sqlite = new Database(file)
   sqlite.pragma('journal_mode = WAL')
   sqlite.exec(DDL)

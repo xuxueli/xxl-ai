@@ -162,3 +162,14 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* --- 深色主题下主色对比修正（主色为浅灰，实心主色 / 选中态文字改用深色） --- */
+html.dark .el-button--primary {
+  --el-button-text-color: var(--desk-primary-contrast);
+  --el-button-hover-text-color: var(--desk-primary-contrast);
+  --el-button-active-text-color: var(--desk-primary-contrast);
+}
+
+html.dark .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  color: var(--desk-primary-contrast);
+}

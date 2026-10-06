@@ -94,7 +94,7 @@ async function copyContent(): Promise<void> {
 
 .assistant-avatar {
   background: var(--desk-primary);
-  color: #fff;
+  color: var(--desk-primary-contrast);
 }
 
 .user-avatar {

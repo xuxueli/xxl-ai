@@ -3,8 +3,9 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '../db'
 import { providerTable } from '../db/schema'
 import { decryptSecret, encryptSecret } from '../security'
+import { normalizeBaseUrl } from '../agent/models'
 import { getSettings, saveSettings } from './settingsService'
-import type { ProviderDTO } from '../../shared/ipc'
+import type { ProviderDTO, ProviderModelQuery } from '../../shared/ipc'
 
 type ProviderRow = typeof providerTable.$inferSelect
 
@@ -95,6 +96,58 @@ export function saveProvider(input: Partial<ProviderDTO>): ProviderDTO {
 /* 删除供应商 */
 export function deleteProvider(id: string): void {
   getDb().delete(providerTable).where(eq(providerTable.id, id)).run()
+}
+
+/*
+ * 远程查询供应商可用模型（OpenAI 兼容 GET /models，兼容 Ollama /api/tags）。
+ * 未保存的草稿可直接传表单 baseUrl/apiKey/headers；已保存的可只传 id 复用库存配置（密钥解密后使用）。
+ */
+export async function fetchRemoteModels(input: ProviderModelQuery): Promise<string[]> {
+  let baseUrl = input.baseUrl?.trim() ?? ''
+  let apiKey = input.apiKey ?? ''
+  let headers = input.headers ?? {}
+
+  if (input.id && (!baseUrl || !apiKey || Object.keys(headers).length === 0)) {
+    const existing = getProvider(input.id)
+    if (existing) {
+      baseUrl = baseUrl || existing.baseUrl
+      apiKey = apiKey || existing.apiKey
+      headers = Object.keys(headers).length > 0 ? headers : existing.headers
+    }
+  }
+
+  if (!baseUrl) {
+    throw new Error('请先填写接口地址')
+  }
+
+  const requestHeaders: Record<string, string> = { ...headers }
+  if (apiKey) {
+    requestHeaders.Authorization = `Bearer ${apiKey}`
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
+  try {
+    const response = await fetch(`${normalizeBaseUrl(baseUrl)}/models`, {
+      headers: requestHeaders,
+      signal: controller.signal
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    const data = (await response.json()) as {
+      data?: Array<{ id?: string }>
+      models?: Array<{ name?: string; model?: string }>
+    }
+    const ids = Array.isArray(data.data)
+      ? data.data.map((item) => item.id)
+      : Array.isArray(data.models)
+        ? data.models.map((item) => item.name ?? item.model)
+        : []
+    return Array.from(new Set(ids.filter((id): id is string => Boolean(id))))
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /* 首次运行播种预设供应商（与平台种子保持一致；OpenCodeGo 使用 {session} 会话头） */

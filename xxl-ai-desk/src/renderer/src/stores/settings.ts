@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
 import { setLanguage } from '../i18n'
-import type { AppSettings, ProviderDTO } from '../../../shared/ipc'
+import type { AppSettings, ProviderDTO, ProviderModelQuery } from '../../../shared/ipc'
 
 /* 设置与供应商状态 */
 export const useSettingsStore = defineStore('settings', () => {
@@ -15,6 +15,13 @@ export const useSettingsStore = defineStore('settings', () => {
   })
   const providers = ref<ProviderDTO[]>([])
   const loaded = ref(false)
+  /* 运行时数据目录（含默认目录与库文件路径） */
+  const dataDir = ref('')
+  const defaultDataDir = ref('')
+  const dbFile = ref('')
+  const version = ref('')
+  /* 运行平台（darwin/win32/linux），用于窗口标题栏适配 */
+  const platform = ref('')
 
   const enabledProviders = computed(() => providers.value.filter((item) => item.enabled))
   const currentProvider = computed(
@@ -38,6 +45,12 @@ export const useSettingsStore = defineStore('settings', () => {
   async function load(): Promise<void> {
     settings.value = await api.settings.get()
     providers.value = await api.provider.list()
+    const info = await api.app.info()
+    version.value = info.version
+    dataDir.value = info.dataDir
+    defaultDataDir.value = info.defaultDataDir
+    dbFile.value = info.dbFile
+    platform.value = info.platform
     setLanguage(settings.value.language)
     applyTheme()
     loaded.value = true
@@ -72,6 +85,32 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  /* 远程查询供应商可用模型（不落库，供模型行下拉选择） */
+  async function queryRemoteModels(input: ProviderModelQuery): Promise<string[]> {
+    return api.provider.remoteModels(input)
+  }
+
+  /* 选择数据目录（系统对话框，取消返回空串） */
+  async function selectDataDir(): Promise<string> {
+    return api.app.selectDataDir()
+  }
+
+  /* 保存数据目录（重启后生效），返回生效目录 */
+  async function saveDataDir(dir: string): Promise<string> {
+    dataDir.value = await api.app.setDataDir(dir)
+    return dataDir.value
+  }
+
+  /* 用系统文件管理器打开当前数据目录 */
+  async function openDataDir(): Promise<void> {
+    await api.app.openDataDir()
+  }
+
+  /* 重启应用（数据目录切换后生效） */
+  async function relaunch(): Promise<void> {
+    await api.app.relaunch()
+  }
+
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: string): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
@@ -82,6 +121,11 @@ export const useSettingsStore = defineStore('settings', () => {
     settings,
     providers,
     loaded,
+    dataDir,
+    defaultDataDir,
+    dbFile,
+    version,
+    platform,
     enabledProviders,
     currentProvider,
     currentModels,
@@ -90,6 +134,11 @@ export const useSettingsStore = defineStore('settings', () => {
     saveSettings,
     saveProvider,
     removeProvider,
+    queryRemoteModels,
+    selectDataDir,
+    saveDataDir,
+    openDataDir,
+    relaunch,
     selectProvider,
     applyTheme
   }

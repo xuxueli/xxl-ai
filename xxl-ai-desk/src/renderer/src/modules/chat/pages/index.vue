@@ -136,6 +136,8 @@ async function onModelChange(value: string): Promise<void> {
   padding: 0 32px;
   border-bottom: 1px solid var(--desk-border);
   gap: 16px;
+  /* 顶栏可拖拽移动窗口（模型选择器除外） */
+  -webkit-app-region: drag;
 }
 
 .chat-title {
@@ -150,6 +152,7 @@ async function onModelChange(value: string): Promise<void> {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
 
 .provider-select {

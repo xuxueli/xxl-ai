@@ -81,6 +81,15 @@ export const useChatStore = defineStore('chat', () => {
     return session
   }
 
+  /* 进入新对话草稿态：不立即落库，首次发送时才创建会话（避免空对话被反复创建） */
+  function startNewChat(): void {
+    if (streaming.value) {
+      return
+    }
+    currentId.value = ''
+    messages.value = []
+  }
+
   /* 删除会话 */
   async function removeSession(id: string): Promise<void> {
     await api.session.remove(id)
@@ -208,6 +217,7 @@ export const useChatStore = defineStore('chat', () => {
     loadSessions,
     selectSession,
     createSession,
+    startNewChat,
     removeSession,
     renameSession,
     send,

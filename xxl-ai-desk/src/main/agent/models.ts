@@ -18,7 +18,7 @@ const DEFAULT_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
  * 归一化供应商 BaseURL：结尾去斜杠；裸地址（无路径前缀，如 Ollama http://host:11434）
  * 自动补 /v1 OpenAI 兼容版本前缀（语义同平台 LlmModelFactory）。
  */
-function normalizeBaseUrl(baseUrl: string): string {
+export function normalizeBaseUrl(baseUrl: string): string {
   let url = (baseUrl ?? '').trim()
   if (url.endsWith('/')) {
     url = url.slice(0, -1)
