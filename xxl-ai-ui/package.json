@@ -11,6 +11,7 @@
     "dev": "vite",
     "prebuild": "npm run type-check",
     "build": "vite build",
+    "sync:dist": "node scripts/sync-dist.mjs",
     "prebuild:stage": "npm run type-check",
     "build:stage": "vite build --mode staging",
     "preview": "vite preview",

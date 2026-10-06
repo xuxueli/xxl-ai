@@ -7,6 +7,9 @@
 .DS_Store
 .gitattributes
 
+# for backend-resource
+xxl-ai-api/src/main/resources/static/*
+
 # for fontend
 node_modules/
 dist/

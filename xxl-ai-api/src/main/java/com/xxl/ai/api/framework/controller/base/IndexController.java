@@ -17,6 +17,8 @@ import com.xxl.tool.response.Response;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,8 +44,25 @@ public class IndexController {
     // ---------------------- index ----------------------
 
 	/**
-	 * 1、根路径 `/` -> 会 forward 到 classpath:/static/index.html
-	 * 2、/welcome（欢迎页） -> 返回欢迎信息
+	 * 首页
+	 */
+	@RequestMapping("/")
+	@XxlSso(login = false)
+	public Object index() {
+		ClassPathResource indexPage = new ClassPathResource("static/index.html");
+
+		// 前端资源不存在，返回提示信息避免 404
+		if (!indexPage.exists()) {
+			return "Frontend resources not found, please build frontend first.";
+
+		}
+
+		// 前端资源完成构建，返回首页
+		return indexPage;
+	}
+
+	/**
+	 * 欢迎页
 	 */
 	@RequestMapping("/welcome")
 	@XxlSso(login = false)

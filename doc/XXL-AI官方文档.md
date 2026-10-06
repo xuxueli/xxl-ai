@@ -105,10 +105,10 @@ XXL-AI 是一个 AI应用开发平台，支持 Agent编排、多供应商、标�
     - xxl-ai-sample           ：示例 MCP 服务（可选）
 ```
 
-### 2.4 方式一：人工部署（本地开发）
+### 2.4 方式一：本地开发（前后端分离）
 
-- 部署项目：xxl-ai-api（内嵌前端产物）
-- 项目说明：开发期前后端分开启动（`xxl-ai-ui` 3000 + `xxl-ai-api` 8080）；部署期执行 Maven 内嵌构建，前端产物打入 API jar，单进程单端口（8080）同时提供页面与接口。
+- 运行形态：前后端分开启动——后端 `xxl-ai-api`（8080）提供 API，前端 `xxl-ai-ui`（3000）提供页面，浏览器访问前端 `http://localhost:3000`。
+- 项目说明：前端 `/api` 请求由 Vite 开发代理转发至后端 `8080`；本地开发**不涉及前端产物内嵌**（无需 `sync:dist`），内嵌单包部署见「2.5 方式二」「2.6 方式三」。
 
 #### 步骤一：启动后端服务
 
@@ -147,7 +147,7 @@ xxl-ai.milvus.database=default
 后端启动方式：
 
 ```
-# 编译项目：一键编译全部 Maven 模块（默认不含前端，供开发期使用）
+# 编译后端服务（本地开发无需前端产物）
 cd /xxl-ai/xxl-ai-api
 mvn clean package -Dmaven.test.skip=true
 
@@ -200,13 +200,16 @@ npm run dev
 
 ### 2.5 方式二：人工部署（生产部署）
 
-部署期无需单独部署前端：执行内嵌构建后（首次执行会由 `frontend-maven-plugin` 下载内置 Node；），前端产物打入 API jar，`java -jar` 启动即同时提供页面与接口（无需 Nginx，也无需服务端 History 回退）：
+部署期无需单独部署前端：先执行 `npm run build` 构建前端，再执行 `npm run sync:dist`（清理 `xxl-ai-api` 旧静态资源并复制最新产物），然后打包 API jar，`java -jar` 启动即同时提供页面与接口（无需 Nginx，也无需服务端 History 回退）：
 
 ```
-# 1、构建含前端的内嵌 jar（默认 mvn package 仅构建 API，不触发前端）
-mvn -pl xxl-ai-api -am package -Pembed-ui
+# 1、构建前端并同步产物到后端静态资源目录
+cd xxl-ai-ui && npm install && npm run build && npm run sync:dist && cd ..
 
-# 2、启动服务（页面与接口同在 8080）
+# 2、打包含前端的内嵌 jar
+mvn clean package
+
+# 3、启动服务（页面与接口同在 8080）
 java -jar xxl-ai-api/target/xxl-ai-api-*.jar
 ```
 
@@ -219,19 +222,21 @@ java -jar xxl-ai-api/target/xxl-ai-api-*.jar
 支持 Docker Compose 一键部署（api 镜像直接打包"已内嵌前端"的 jar，页面与接口同在 8080）：
 
 ```
-
 # 第一步：代码clone本部 + 前往仓库目录
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：全量构建（api 内嵌前端；同时生成 sample 等模块 jar，供各镜像打包）
-mvn clean package -Dmaven.test.skip=true -Pembed-ui
+# 第二步：构建前端并同步产物（npm run build 构建 dist，npm run sync:dist 复制到 xxl-ai-api 静态资源目录）
+cd xxl-ai-ui && npm install && npm run build && npm run sync:dist && cd ..
 
-# 第三步：进入 docker 目录，支持自定义 .env 配置（如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
+# 第三步：构建后端
+mvn clean package
+
+# 第四步：进入 docker 目录（支持自定义 .env 配置，如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
 cd ./docker/
 cat .env
 
-# 第四步：启动/停止项目
+# 第五步：启动/停止项目
 docker compose up -d
 docker compose down
 ```
@@ -398,7 +403,7 @@ xxl-ai/
 │   └── .env                                   # 部署环境变量
 │
 ├── xxl-ai-api/                              # 后端API服务（8080；部署期内嵌前端产物，单包单端口）
-│   ├── pom.xml                                # Maven配置（继承父工程；-Pembed-ui 内嵌前端）
+│   ├── pom.xml                                # Maven配置（继承父工程；前端产物经 xxl-ai-ui 的 sync:dist 同步内嵌）
 │   ├── Dockerfile                             # 容器构建配置
 │   └── src/main/
 │       ├── java/com/xxl/ai/api/
@@ -438,7 +443,7 @@ xxl-ai/
 
 补充说明：
 - 构建：后端模块在仓库根目录执行 `mvn clean package` 即可一键编译全部 Maven 模块；前端模块进入 `xxl-ai-ui` 目录执行 `npm install`、`npm run dev` 即可本地启动；
-- 部署：前端产物内嵌进 `xxl-ai-api` 单包发布（`mvn -pl xxl-ai-api -am package -Pembed-ui`），页面与接口同在 8080；前端工程 `xxl-ai-ui` 仅用于开发（示例 MCP 服务 `xxl-ai-sample` 为可选联调组件）；
+- 部署：前端产物内嵌进 `xxl-ai-api` 单包发布（先 `cd xxl-ai-ui && npm run build && npm run sync:dist` 构建并同步产物到后端静态资源目录，再 `mvn clean package`），页面与接口同在 8080；前端工程 `xxl-ai-ui` 开发期 `npm run dev`，示例 MCP 服务 `xxl-ai-sample` 为可选联调组件；
 - 扩展：新增业务模块时，可在各模块 `business` 扩展包中开发，并配套放置 Mapper 映射文件、模板文件及配置文件。
 
 ### 5.2、开发分离 / 部署合并运行模式
@@ -651,21 +656,24 @@ xxl-ai.chat.history.limit=50        # 附加给模型的最近历史消息条数
 - 9、【部署】**Docker Compose 一键部署**：支持 Docker Compose 一键部署应用（mysql + redis + milvus + api/ui）。
 
 Docker Compose部署脚本：
-```
 
+```
 # 第一步：代码clone本部 + 前往仓库目录
 git clone https://github.com/xuxueli/xxl-ai.git
 cd ./xxl-ai
 
-# 第二步：构建含前端的内嵌 jar（前端产物内嵌，无需单独构建前端）
-mvn -pl xxl-ai-api -am package -Pembed-ui
+# 第二步：构建前端并同步产物（npm run build 构建 dist，npm run sync:dist 复制到 xxl-ai-api 静态资源目录）
+cd xxl-ai-ui && npm install && npm run build && npm run sync:dist && cd ..
 
-# 第三步：进入 docker 目录，支持自定义 .env 配置
+# 第三步：构建后端
+mvn clean package
+
+# 第四步：进入 docker 目录（支持自定义 .env 配置，如修改 MYSQL_PATH 配置设置 Mysql 数据持久化目录）
 cd ./docker/
 cat .env
 
-# 第四步：启动/停止项目
-docker compose up -d --build
+# 第五步：启动/停止项目
+docker compose up -d
 docker compose down
 ```
 
@@ -675,7 +683,11 @@ docker compose down
 - 3、【优化】供应商模型请求参数属性优化，支持格式检测与合法性检测；
 - 4、【新增】I18N 模块重构：前后端国际化逻辑优化，统一后端控制；标准化国际化资源文件结构，支持多语言配置，并优化前端国际化加载逻辑；
 - 5、【优化】项目部署优化：研发环节前后端分离，部署期前端产物内嵌进后端 Jar，单进程单端口对外；
-- 6、【ING】Desk版本：提供客户端版本，基于electron + vue + pi建设，内置多供应商、SKILL/MCP工具、知识库/记忆等能力，支持跨平台一键安装及应用。
+- 6、【ING】Desk版本：
+  - 技术栈：electron + vue3 + vite + typescript；
+  - 兼容性：跨平台一键安装及应用；
+  - 软件配置：规范化目录存储，基础配置、会话数据、技能/工具、工作空间及会话，自定义会话目录及权限控制；
+  - 功能：多供应商、SKILL/MCP工具、知识库/记忆; 项目空间、会话管理；
 
 
 ### v1.2.0 Release Notes[ING]
