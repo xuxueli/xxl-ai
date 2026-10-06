@@ -44,9 +44,10 @@ body {
     border-right-color 0.2s ease;
 }
 
-/* 折叠为窄图标栏（宽度收窄，内部按 collapsed 类隐藏文字/列表） */
+/* 折叠时侧栏整体隐藏（宽度收为 0），由右侧顶部标题栏的折叠按钮展开 */
 .desk-sidebar.collapsed {
-  width: 56px;
+  width: 0;
+  border-right-color: transparent;
 }
 
 .desk-main {
@@ -56,6 +57,32 @@ body {
   flex-direction: column;
   min-width: 0;
   background: var(--desk-bg);
+}
+
+/* 侧栏折叠/展开按钮：置于右侧各页面顶部标题栏左侧（全局共用） */
+.sidebar-toggle {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--desk-text-tertiary);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-toggle:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
 }
 
 /* --- 滚动条 --- */
@@ -75,7 +102,7 @@ body {
 
 /* --- Markdown 渲染 --- */
 .markdown-body {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.75;
   word-break: break-word;
 }

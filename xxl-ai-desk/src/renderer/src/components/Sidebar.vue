@@ -34,7 +34,7 @@ async function onSelect(id: string): Promise<void> {
 
 async function onRename(id: string, title: string): Promise<void> {
   try {
-    const { value } = await ElMessageBox.prompt(t('chat.rename'), t('chat.rename'), {
+    const { value } = await ElMessageBox.prompt(t('chat.renamePrompt'), t('chat.rename'), {
       inputValue: title,
       confirmButtonText: t('common.confirm'),
       cancelButtonText: t('common.cancel')
@@ -111,14 +111,6 @@ function goSettings(): void {
         <el-icon><Setting /></el-icon>
         <span class="foot-label">{{ t('settings.title') }}</span>
       </el-button>
-      <!-- 折叠/展开侧栏（原主题切换按钮位置） -->
-      <button
-        class="icon-btn"
-        :title="layout.sidebarCollapsed ? t('chat.expandSidebar') : t('chat.collapseSidebar')"
-        @click="layout.toggleSidebar"
-      >
-        <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
-      </button>
     </div>
   </aside>
 </template>
@@ -130,33 +122,9 @@ function goSettings(): void {
   -webkit-app-region: drag;
 }
 
-/* macOS：顶部留出系统红黄绿按钮高度，品牌行整体下移 */
+/* macOS：顶部让出系统红黄绿按钮，并使品牌 Logo 顶部与右侧正文区顶部对齐 */
 .sidebar-head.mac {
-  padding-top: 34px;
-}
-
-.icon-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--desk-text-tertiary);
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-}
-
-.icon-btn:hover {
-  background: var(--desk-primary-soft);
-  color: var(--desk-text);
+  padding-top: var(--desk-header-height);
 }
 
 .brand {

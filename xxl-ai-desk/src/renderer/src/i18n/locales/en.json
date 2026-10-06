@@ -42,6 +42,7 @@
     "suggestion2": "Help me make a study plan",
     "suggestion3": "Explain what an MCP tool is",
     "rename": "Rename",
+    "renamePrompt": "Enter a new chat title",
     "deleteSession": "Delete chat",
     "deleteConfirm": "Delete this chat and all of its messages?",
     "noModel": "No model configured yet. Add a provider and model in Settings.",

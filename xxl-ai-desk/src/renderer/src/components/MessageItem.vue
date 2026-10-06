@@ -118,7 +118,7 @@ async function copyContent(): Promise<void> {
   color: var(--desk-bubble-user-text);
   padding: 12px 16px;
   border-radius: 18px 18px 4px 18px;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;

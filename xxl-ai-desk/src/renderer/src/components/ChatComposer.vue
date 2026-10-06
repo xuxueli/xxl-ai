@@ -57,7 +57,6 @@ function onKeydown(event: KeyboardEvent): void {
         </el-button>
       </div>
     </div>
-    <div class="composer-hint">{{ t('app.name') }}</div>
   </div>
 </template>
 
@@ -83,19 +82,11 @@ function onKeydown(event: KeyboardEvent): void {
   background: transparent;
   box-shadow: none;
   padding: 8px 0;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--desk-text);
 }
 
 .composer-actions {
   flex-shrink: 0;
-}
-
-.composer-hint {
-  max-width: 880px;
-  margin: 10px auto 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--desk-text-tertiary);
 }
 </style>

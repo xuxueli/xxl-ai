@@ -3,12 +3,14 @@ import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '../../../stores/settings'
+import { useLayoutStore } from '../../../stores/layout'
 import { t } from '../../../i18n'
 import type { ProviderDTO } from '../../../../../shared/ipc'
 
 /* 设置页：通用设置 + 供应商管理 */
 const router = useRouter()
 const settings = useSettingsStore()
+const layout = useLayoutStore()
 const activeTab = ref('general')
 
 /* --- 通用设置 --- */
@@ -216,7 +218,17 @@ function back(): void {
 
 <template>
   <div class="settings-page">
-    <header class="settings-header">
+    <header
+      class="settings-header"
+      :class="{ 'mac-collapsed': settings.platform === 'darwin' && layout.sidebarCollapsed }"
+    >
+      <button
+        class="sidebar-toggle"
+        :title="layout.sidebarCollapsed ? t('chat.expandSidebar') : t('chat.collapseSidebar')"
+        @click="layout.toggleSidebar"
+      >
+        <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
+      </button>
       <el-button text @click="back">
         <el-icon><ArrowLeft /></el-icon>
         {{ t('settings.back') }}
@@ -455,7 +467,7 @@ function back(): void {
 }
 
 .settings-header {
-  height: 60px;
+  height: var(--desk-header-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -464,6 +476,11 @@ function back(): void {
   border-bottom: 1px solid var(--desk-border);
   /* 顶栏可拖拽移动窗口（返回按钮除外） */
   -webkit-app-region: drag;
+}
+
+/* 侧栏折叠后标题栏顶到窗口最左侧：macOS 下为红黄绿按钮预留宽度，避免与折叠按钮重叠 */
+.settings-header.mac-collapsed {
+  padding-left: 80px;
 }
 
 .settings-header :deep(.el-button) {

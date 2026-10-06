@@ -7,6 +7,7 @@ import ChatComposer from '../../../components/ChatComposer.vue'
 import EmptyState from '../../../components/EmptyState.vue'
 import { useChatStore } from '../../../stores/chat'
 import { useSettingsStore } from '../../../stores/settings'
+import { useLayoutStore } from '../../../stores/layout'
 import { api } from '../../../api'
 import { t } from '../../../i18n'
 
@@ -14,6 +15,7 @@ import { t } from '../../../i18n'
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
+const layout = useLayoutStore()
 const scrollRef = ref<HTMLElement | null>(null)
 
 const hasMessages = computed(() => chat.messages.length > 0)
@@ -68,8 +70,20 @@ async function onModelChange(value: string): Promise<void> {
 
 <template>
   <div class="chat-page">
-    <header class="chat-header">
-      <div class="chat-title">{{ title }}</div>
+    <header
+      class="chat-header"
+      :class="{ 'mac-collapsed': settings.platform === 'darwin' && layout.sidebarCollapsed }"
+    >
+      <div class="chat-header-left">
+        <button
+          class="sidebar-toggle"
+          :title="layout.sidebarCollapsed ? t('chat.expandSidebar') : t('chat.collapseSidebar')"
+          @click="layout.toggleSidebar"
+        >
+          <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
+        </button>
+        <div class="chat-title">{{ title }}</div>
+      </div>
       <div class="chat-model">
         <el-select
           :model-value="settings.settings.providerId"
@@ -128,7 +142,7 @@ async function onModelChange(value: string): Promise<void> {
 }
 
 .chat-header {
-  height: 60px;
+  height: var(--desk-header-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -140,9 +154,22 @@ async function onModelChange(value: string): Promise<void> {
   -webkit-app-region: drag;
 }
 
+/* 侧栏折叠后标题栏顶到窗口最左侧：macOS 下为红黄绿按钮预留宽度，避免与折叠按钮重叠 */
+.chat-header.mac-collapsed {
+  padding-left: 80px;
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .chat-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

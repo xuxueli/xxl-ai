@@ -42,6 +42,7 @@
     "suggestion2": "帮我制定一个学习计划",
     "suggestion3": "解释一下什么是 MCP 工具",
     "rename": "重命名",
+    "renamePrompt": "请输入新的会话标题",
     "deleteSession": "删除会话",
     "deleteConfirm": "确定删除该会话及其全部消息？",
     "noModel": "尚未配置模型，请前往设置添加供应商与模型",
