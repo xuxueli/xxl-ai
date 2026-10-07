@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
+import { useProjectStore } from './project'
 import { useSettingsStore } from './settings'
 import type { ChatEvent, SessionDTO, StoredMessage } from '../../../shared/ipc'
 import type { UiMessage } from '../types'
@@ -62,9 +63,22 @@ export const useChatStore = defineStore('chat', () => {
     sessions.value = await api.session.list()
   }
 
+  /* 重新加载会话并校正当前会话（项目级联删除后调用） */
+  async function reloadSessions(): Promise<void> {
+    await loadSessions()
+    if (currentId.value && !sessions.value.some((item) => item.id === currentId.value)) {
+      currentId.value = ''
+      messages.value = []
+    }
+  }
+
   /* 选择会话并加载消息 */
   async function selectSession(id: string): Promise<void> {
     currentId.value = id
+    const target = sessions.value.find((item) => item.id === id)
+    if (target) {
+      useProjectStore().selectProject(target.projectId)
+    }
     loading.value = true
     try {
       const stored = await api.session.messages(id)
@@ -76,11 +90,14 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 新建会话 */
-  async function createSession(): Promise<SessionDTO> {
+  /* 新建会话（归属当前选中项目） */
+  async function createSession(projectId?: string): Promise<SessionDTO> {
     const settings = useSettingsStore()
+    const project = useProjectStore()
+    const targetProjectId = projectId || project.currentId
     const session = await api.session.create({
       title: '新对话',
+      projectId: targetProjectId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
       systemPrompt: settings.settings.systemPrompt
@@ -107,8 +124,10 @@ export const useChatStore = defineStore('chat', () => {
     if (currentId.value === id) {
       currentId.value = ''
       messages.value = []
-      if (sessions.value.length > 0) {
-        await selectSession(sessions.value[0].id)
+      /* 优先定位有归属项目的会话（无归属的历史会话不展示） */
+      const next = sessions.value.find((item) => item.projectId)
+      if (next) {
+        await selectSession(next.id)
       }
     }
   }
@@ -119,6 +138,19 @@ export const useChatStore = defineStore('chat', () => {
     const target = sessions.value.find((item) => item.id === id)
     if (target) {
       target.title = title
+    }
+  }
+
+  /* 切换当前会话使用的供应商与模型 */
+  async function updateSessionModel(providerId: string, modelId: string): Promise<void> {
+    if (!currentId.value) {
+      return
+    }
+    const updated = await api.session.update(currentId.value, { providerId, modelId })
+    const target = sessions.value.find((item) => item.id === updated.id)
+    if (target) {
+      target.providerId = updated.providerId
+      target.modelId = updated.modelId
     }
   }
 
@@ -188,6 +220,10 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
     if (!currentId.value) {
+      /* 强要求：新建会话必须先选择项目 */
+      if (!useProjectStore().currentId) {
+        return
+      }
       await createSession()
     }
     const sessionId = currentId.value
@@ -231,11 +267,13 @@ export const useChatStore = defineStore('chat', () => {
     loading,
     currentSession,
     loadSessions,
+    reloadSessions,
     selectSession,
     createSession,
     startNewChat,
     removeSession,
     renameSession,
+    updateSessionModel,
     send,
     abort,
     bind

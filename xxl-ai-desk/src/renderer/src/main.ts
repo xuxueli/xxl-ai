@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import {
+  ArrowDown,
   ArrowLeft,
   Calendar,
   CaretBottom,
@@ -13,10 +14,14 @@ import {
   CopyDocument,
   Cpu,
   Delete,
+  Edit,
   EditPen,
   Expand,
   Fold,
+  Folder,
+  FolderOpened,
   Loading,
+  MoreFilled,
   Plus,
   Promotion,
   Refresh,
@@ -37,6 +42,7 @@ const app = createApp(App)
 
 /* 按需注册图标（避免全量引入整套图标，减小打包体积） */
 const icons = {
+  ArrowDown,
   ArrowLeft,
   Calendar,
   CaretBottom,
@@ -48,10 +54,14 @@ const icons = {
   CopyDocument,
   Cpu,
   Delete,
+  Edit,
   EditPen,
   Expand,
   Fold,
+  Folder,
+  FolderOpened,
   Loading,
+  MoreFilled,
   Plus,
   Promotion,
   Refresh,

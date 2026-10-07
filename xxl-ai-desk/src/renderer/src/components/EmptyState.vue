@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { t } from '../i18n'
+import { useSettingsStore } from '../stores/settings'
 import logo from '../assets/favicon.ico'
 
 /* 空态欢迎页：标题 + 示例建议 */
 defineEmits<{ pick: [text: string] }>()
+
+const settings = useSettingsStore()
 
 const suggestions = [
   { key: 'chat.suggestion1', icon: 'ChatDotRound' },
@@ -15,7 +18,7 @@ const suggestions = [
 <template>
   <div class="empty-state">
     <img class="empty-logo" :src="logo" alt="logo" />
-    <h1 class="empty-title">{{ t('chat.emptyTitle') }}</h1>
+    <h1 class="empty-title">{{ settings.settings.slogan || t('chat.emptyTitle') }}</h1>
     <p class="empty-subtitle">{{ t('chat.emptySubtitle') }}</p>
     <div class="suggestions">
       <div

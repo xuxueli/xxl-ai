@@ -22,10 +22,28 @@ export interface ProviderModelQuery {
   headers?: Record<string, string>
 }
 
-/* 会话 */
+/* 项目：1:1 强绑定一个本地磁盘目录 */
+export interface ProjectDTO {
+  id: string
+  name: string
+  path: string
+  addTime: string
+  updateTime: string
+}
+
+/* 新建项目入参（path 缺省时由主进程弹出目录选择对话框） */
+export interface ProjectCreateInput {
+  name?: string
+  path?: string
+  /* 目录选择对话框标题（由渲染进程按语言注入） */
+  dialogTitle?: string
+}
+
+/* 会话（归属某项目） */
 export interface SessionDTO {
   id: string
   title: string
+  projectId: string
   providerId: string
   modelId: string
   systemPrompt: string
@@ -51,6 +69,9 @@ export interface AppSettings {
   providerId: string
   modelId: string
   systemPrompt: string
+  /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
+  appName: string
+  slogan: string
 }
 
 /* 对话流式事件（主 → 渲染） */
@@ -92,6 +113,13 @@ export interface DeskApi {
     remove(id: string): Promise<void>
     remoteModels(input: ProviderModelQuery): Promise<string[]>
   }
+  project: {
+    list(): Promise<ProjectDTO[]>
+    create(input?: ProjectCreateInput): Promise<ProjectDTO | null>
+    rename(id: string, name: string): Promise<ProjectDTO>
+    remove(id: string): Promise<void>
+    reveal(id: string): Promise<void>
+  }
   session: {
     list(): Promise<SessionDTO[]>
     create(input?: Partial<SessionDTO>): Promise<SessionDTO>
@@ -120,6 +148,11 @@ export const IPC = {
   providerSave: 'desk:provider:save',
   providerRemove: 'desk:provider:remove',
   providerRemoteModels: 'desk:provider:remote-models',
+  projectList: 'desk:project:list',
+  projectCreate: 'desk:project:create',
+  projectRename: 'desk:project:rename',
+  projectRemove: 'desk:project:remove',
+  projectReveal: 'desk:project:reveal',
   sessionList: 'desk:session:list',
   sessionCreate: 'desk:session:create',
   sessionUpdate: 'desk:session:update',

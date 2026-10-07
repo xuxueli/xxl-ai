@@ -8,14 +8,15 @@ import EmptyState from '../../../components/EmptyState.vue'
 import { useChatStore } from '../../../stores/chat'
 import { useSettingsStore } from '../../../stores/settings'
 import { useLayoutStore } from '../../../stores/layout'
-import { api } from '../../../api'
+import { useProjectStore } from '../../../stores/project'
 import { t } from '../../../i18n'
 
-/* 对话主区：模型切换 + 消息流 + 输入框 */
+/* 对话主区：消息流 + 输入框（项目/模型切换在输入框内） */
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
 const layout = useLayoutStore()
+const project = useProjectStore()
 const scrollRef = ref<HTMLElement | null>(null)
 
 const hasMessages = computed(() => chat.messages.length > 0)
@@ -43,28 +44,16 @@ async function onSend(text: string): Promise<void> {
     router.push('/settings')
     return
   }
+  /* 强要求：新建对话必须先选择项目 */
+  if (!chat.currentId && !project.currentId) {
+    ElMessage.warning(t('project.needProject'))
+    return
+  }
   await chat.send(text)
 }
 
 async function onPick(text: string): Promise<void> {
   await onSend(text)
-}
-
-async function onProviderChange(value: string): Promise<void> {
-  await settings.selectProvider(value)
-  if (chat.currentId) {
-    await api.session.update(chat.currentId, {
-      providerId: value,
-      modelId: settings.settings.modelId
-    })
-  }
-}
-
-async function onModelChange(value: string): Promise<void> {
-  await settings.saveSettings({ modelId: value })
-  if (chat.currentId) {
-    await api.session.update(chat.currentId, { modelId: value })
-  }
 }
 </script>
 
@@ -83,36 +72,6 @@ async function onModelChange(value: string): Promise<void> {
           <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
         </button>
         <div class="chat-title">{{ title }}</div>
-      </div>
-      <div class="chat-model">
-        <el-select
-          :model-value="settings.settings.providerId"
-          size="small"
-          class="provider-select"
-          :placeholder="t('settings.selectProvider')"
-          @update:model-value="onProviderChange"
-        >
-          <el-option
-            v-for="provider in settings.enabledProviders"
-            :key="provider.id"
-            :label="provider.name"
-            :value="provider.id"
-          />
-        </el-select>
-        <el-select
-          :model-value="settings.settings.modelId"
-          size="small"
-          class="model-select"
-          :placeholder="t('settings.selectModel')"
-          @update:model-value="onModelChange"
-        >
-          <el-option
-            v-for="model in settings.currentModels"
-            :key="model"
-            :label="model"
-            :value="model"
-          />
-        </el-select>
       </div>
     </header>
 
@@ -173,21 +132,6 @@ async function onModelChange(value: string): Promise<void> {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.chat-model {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  -webkit-app-region: no-drag;
-}
-
-.provider-select {
-  width: 168px;
-}
-
-.model-select {
-  width: 200px;
 }
 
 .chat-body {

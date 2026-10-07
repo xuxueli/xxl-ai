@@ -14,10 +14,20 @@ export const providerTable = sqliteTable('desk_provider', {
   updateTime: text('update_time').notNull().default('')
 })
 
-/* 会话表：一次会话绑定一个供应商与模型，并保存系统指令 */
+/* 项目表：1:1 强绑定本地磁盘目录，会话归属项目之下 */
+export const projectTable = sqliteTable('desk_project', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().default(''),
+  path: text('path').notNull().default(''),
+  addTime: text('add_time').notNull().default(''),
+  updateTime: text('update_time').notNull().default('')
+})
+
+/* 会话表：一次会话绑定一个供应商与模型，并保存系统指令；归属某项目 */
 export const sessionTable = sqliteTable('desk_session', {
   id: text('id').primaryKey(),
   title: text('title').notNull().default(''),
+  projectId: text('project_id').notNull().default(''),
   providerId: text('provider_id').notNull().default(''),
   modelId: text('model_id').notNull().default(''),
   systemPrompt: text('system_prompt').notNull().default(''),

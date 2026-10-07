@@ -10,6 +10,11 @@ const props = defineProps<{ message: UiMessage }>()
 const html = computed(() => renderMarkdown(props.message.content))
 const thinkingOpen = ref(false)
 
+/* 生成中且暂无任何输出（思考/正文）时，展示「正在思考…」滚动指示 */
+const waiting = computed(
+  () => Boolean(props.message.pending) && !props.message.content && !props.message.thinking
+)
+
 /* 每条消息在鼠标悬浮时展示的时间文案（当天仅时分，跨天补充月日） */
 const timeText = computed(() => formatTime(props.message.addTime))
 
@@ -42,9 +47,13 @@ async function copyContent(): Promise<void> {
 
 <template>
   <div class="message" :class="message.role">
-    <div v-if="message.role === 'assistant'" class="avatar assistant-avatar">AI</div>
-
     <div class="message-body">
+      <!-- 等待首个输出：正在思考…（三点滚动），有思考/正文后自动隐藏 -->
+      <div v-if="waiting" class="waiting">
+        <span class="waiting-label">{{ t('chat.thinkingPending') }}</span>
+        <span class="waiting-dots"><span></span><span></span><span></span></span>
+      </div>
+
       <!-- 思考过程 -->
       <div v-if="message.thinking" class="thinking">
         <div class="thinking-toggle" @click="thinkingOpen = !thinkingOpen">
@@ -78,17 +87,13 @@ async function copyContent(): Promise<void> {
       <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}</div>
       <div v-else class="markdown-body" :class="{ 'is-error': message.error }" v-html="html"></div>
 
-      <!-- 悬浮操作：复制（左）+ 发送时间（右），输入与返回两侧均展示 -->
+      <!-- 悬浮操作：发送时间（左）+ 复制（紧跟其后）；助手左对齐、用户右对齐 -->
       <div v-if="!message.pending" class="message-actions">
+        <span class="message-time">{{ timeText }}</span>
         <el-tooltip :content="t('common.copy')">
           <el-icon class="action" @click="copyContent"><CopyDocument /></el-icon>
         </el-tooltip>
-        <span class="message-time">{{ timeText }}</span>
       </div>
-    </div>
-
-    <div v-if="message.role === 'user'" class="avatar user-avatar">
-      <el-icon><User /></el-icon>
     </div>
   </div>
 </template>
@@ -96,34 +101,11 @@ async function copyContent(): Promise<void> {
 <style scoped lang="scss">
 .message {
   display: flex;
-  gap: 14px;
   padding: 14px 0;
 }
 
 .message.user {
   justify-content: flex-end;
-}
-
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.assistant-avatar {
-  background: var(--desk-primary);
-  color: var(--desk-primary-contrast);
-}
-
-.user-avatar {
-  background: var(--desk-bubble-assistant);
-  color: var(--desk-text-secondary);
 }
 
 .message-body {
@@ -150,6 +132,51 @@ async function copyContent(): Promise<void> {
 
 .markdown-body.is-error {
   color: var(--desk-danger);
+}
+
+.waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--desk-text-tertiary);
+  font-size: 14px;
+}
+
+.waiting-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 12px;
+}
+
+.waiting-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: waiting-scroll 1.2s infinite ease-in-out;
+}
+
+.waiting-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.waiting-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes waiting-scroll {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.25;
+  }
+
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .thinking {
@@ -215,10 +242,14 @@ async function copyContent(): Promise<void> {
   margin-top: 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   opacity: 0;
   transition: opacity 0.15s ease;
+}
+
+.message.user .message-actions {
+  justify-content: flex-end;
 }
 
 .message:hover .message-actions {

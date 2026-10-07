@@ -207,6 +207,41 @@ html.dark .el-button--primary {
   --el-button-active-text-color: var(--desk-primary-contrast);
 }
 
-html.dark .el-radio-button__original-radio:checked + .el-radio-button__inner {
-  color: var(--desk-primary-contrast);
+/* --- 主色对比修正 + 分段选中态（主题/语言），与保存按钮同色系、深浅主题均适用 --- */
+.el-radio-button {
+  --el-radio-button-checked-bg-color: var(--desk-segment-bg);
+  --el-radio-button-checked-text-color: var(--desk-segment-text);
+  --el-radio-button-checked-border-color: var(--desk-segment-border);
+}
+
+/* --- 开关激活色：柔和中性灰，非纯黑，且与关闭态可区分 --- */
+.el-switch {
+  --el-switch-on-color: var(--desk-switch-on);
+}
+
+/* --- 浅色主按钮：弱化黑色，全局统一柔和观感 --- */
+.el-button--primary:not(.is-text):not(.is-link) {
+  --el-button-bg-color: var(--desk-btn-bg);
+  --el-button-border-color: var(--desk-btn-bg);
+  --el-button-text-color: var(--desk-btn-text);
+  --el-button-hover-bg-color: var(--desk-btn-bg-hover);
+  --el-button-hover-border-color: var(--desk-btn-bg-hover);
+  --el-button-hover-text-color: var(--desk-btn-text);
+  --el-button-active-bg-color: var(--desk-btn-bg-hover);
+  --el-button-active-border-color: var(--desk-btn-bg-hover);
+  --el-button-active-text-color: var(--desk-btn-text);
+  --el-button-disabled-bg-color: var(--desk-btn-bg);
+  --el-button-disabled-border-color: var(--desk-btn-bg);
+  --el-button-disabled-text-color: var(--desk-text-tertiary);
+}
+
+/* --- 模型选择下拉：供应商为分组标题、模型缩进，体现两级层次 --- */
+.model-dropdown .provider-group {
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  cursor: default;
+}
+
+.model-dropdown .model-choice {
+  padding-left: 24px;
 }

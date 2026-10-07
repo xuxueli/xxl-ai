@@ -11,7 +11,9 @@ export const useSettingsStore = defineStore('settings', () => {
     language: 'zh',
     providerId: '',
     modelId: '',
-    systemPrompt: ''
+    systemPrompt: '',
+    appName: '',
+    slogan: ''
   })
   const providers = ref<ProviderDTO[]>([])
   const loaded = ref(false)

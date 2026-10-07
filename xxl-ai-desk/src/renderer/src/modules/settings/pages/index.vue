@@ -1,42 +1,79 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '../../../stores/settings'
 import { useLayoutStore } from '../../../stores/layout'
 import { t } from '../../../i18n'
-import type { ProviderDTO } from '../../../../../shared/ipc'
+import logo from '../../../assets/favicon.ico'
+import type { AppSettings, ProviderDTO } from '../../../../../shared/ipc'
 
-/* 设置页：通用设置 + 供应商管理 */
+/* 设置页：常规 + 个性化 + 供应商管理 */
+const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
 const layout = useLayoutStore()
 const activeTab = ref('general')
+/* 支持从对话页「+新建供应商」跳转直达供应商 TAB */
+if (typeof route.query.tab === 'string' && route.query.tab) {
+  activeTab.value = route.query.tab
+}
 
-/* --- 通用设置 --- */
-const theme = ref(settings.settings.theme)
-const language = ref(settings.settings.language)
-const systemPrompt = ref(settings.settings.systemPrompt)
+/* --- 常规：主题 / 语言切换后立即生效（无需保存） --- */
+const theme = computed<AppSettings['theme']>({
+  get: () => settings.settings.theme,
+  set: (value) => {
+    void settings.saveSettings({ theme: value })
+  }
+})
+const language = computed<AppSettings['language']>({
+  get: () => settings.settings.language,
+  set: (value) => {
+    void settings.saveSettings({ language: value })
+  }
+})
 /* 运行时数据目录（可编辑，保存后需重启生效） */
 const dataDirInput = ref('')
 
 function syncGeneral(): void {
-  theme.value = settings.settings.theme
-  language.value = settings.settings.language
-  systemPrompt.value = settings.settings.systemPrompt
   dataDirInput.value = settings.dataDir
 }
 
 watch(() => settings.loaded, syncGeneral)
 onMounted(syncGeneral)
 
-async function saveGeneral(): Promise<void> {
+/* --- 个性化：名称 / Slogan / 自定义指令（失焦即保存） --- */
+const appName = ref('')
+const slogan = ref('')
+const systemPrompt = ref('')
+
+function syncPersonalization(): void {
+  appName.value = settings.settings.appName || t('app.name')
+  slogan.value = settings.settings.slogan || t('chat.emptyTitle')
+  systemPrompt.value = settings.settings.systemPrompt
+}
+
+watch(() => settings.loaded, syncPersonalization)
+onMounted(syncPersonalization)
+
+/* 自定义指令默认值（与主进程 DEFAULTS 保持一致，用于「恢复默认」） */
+const DEFAULT_SYSTEM_PROMPT =
+  '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。可以使用工具时请主动调用。'
+
+async function savePersonalization(): Promise<void> {
   await settings.saveSettings({
-    theme: theme.value,
-    language: language.value,
+    appName: appName.value,
+    slogan: slogan.value,
     systemPrompt: systemPrompt.value
   })
   ElMessage.success(t('common.saved'))
+}
+
+/* 恢复默认：名称/Slogan 回内置文案，自定义指令回内置默认 */
+function restorePersonalization(): void {
+  appName.value = t('app.name')
+  slogan.value = t('chat.emptyTitle')
+  systemPrompt.value = DEFAULT_SYSTEM_PROMPT
 }
 
 /* --- 运行时数据目录 --- */
@@ -243,57 +280,18 @@ function back(): void {
           <el-tab-pane :label="t('settings.general')" name="general">
             <el-form label-position="top" class="settings-form">
               <el-form-item :label="t('settings.theme')">
-                <el-radio-group v-model="theme">
+                <el-radio-group v-model="theme" class="soft-radio">
                   <el-radio-button value="light">{{ t('settings.themeLight') }}</el-radio-button>
                   <el-radio-button value="dark">{{ t('settings.themeDark') }}</el-radio-button>
                   <el-radio-button value="system">{{ t('settings.themeSystem') }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
               <el-form-item :label="t('settings.language')">
-                <el-radio-group v-model="language">
+                <el-radio-group v-model="language" class="soft-radio">
                   <el-radio-button value="zh">中文</el-radio-button>
                   <el-radio-button value="en">English</el-radio-button>
                 </el-radio-group>
               </el-form-item>
-              <el-form-item :label="t('settings.systemPrompt')">
-                <el-input
-                  v-model="systemPrompt"
-                  type="textarea"
-                  :rows="4"
-                  :placeholder="t('settings.systemPromptPlaceholder')"
-                />
-              </el-form-item>
-              <el-form-item :label="t('settings.currentModel')">
-                <div class="model-row">
-                  <el-select
-                    :model-value="settings.settings.providerId"
-                    class="provider-select"
-                    :placeholder="t('settings.selectProvider')"
-                    @update:model-value="settings.selectProvider"
-                  >
-                    <el-option
-                      v-for="provider in settings.enabledProviders"
-                      :key="provider.id"
-                      :label="provider.name"
-                      :value="provider.id"
-                    />
-                  </el-select>
-                  <el-select
-                    :model-value="settings.settings.modelId"
-                    class="model-select"
-                    :placeholder="t('settings.selectModel')"
-                    @update:model-value="(value: string) => settings.saveSettings({ modelId: value })"
-                  >
-                    <el-option
-                      v-for="model in settings.currentModels"
-                      :key="model"
-                      :label="model"
-                      :value="model"
-                    />
-                  </el-select>
-                </div>
-              </el-form-item>
-              <el-button type="primary" @click="saveGeneral">{{ t('common.save') }}</el-button>
             </el-form>
 
             <!-- 运行时数据目录：查看 / 修改 / 打开 -->
@@ -316,6 +314,38 @@ function back(): void {
               </div>
               <div class="field-hint">{{ t('settings.dbFile') }}: {{ settings.dbFile }}</div>
             </div>
+          </el-tab-pane>
+
+          <!-- 个性化 -->
+          <el-tab-pane :label="t('settings.personalization')" name="personalization">
+            <el-form label-position="top" class="settings-form">
+              <el-form-item :label="t('settings.name')">
+                <el-input
+                  v-model="appName"
+                  clearable
+                  :placeholder="t('settings.namePlaceholder')"
+                />
+              </el-form-item>
+              <el-form-item :label="t('settings.slogan')">
+                <el-input
+                  v-model="slogan"
+                  clearable
+                  :placeholder="t('settings.sloganPlaceholder')"
+                />
+              </el-form-item>
+              <el-form-item :label="t('settings.customInstruction')">
+                <el-input
+                  v-model="systemPrompt"
+                  type="textarea"
+                  :rows="5"
+                  :placeholder="t('settings.customInstructionPlaceholder')"
+                />
+              </el-form-item>
+              <div class="form-actions">
+                <el-button type="primary" @click="savePersonalization">{{ t('common.save') }}</el-button>
+                <el-button @click="restorePersonalization">{{ t('settings.restoreDefault') }}</el-button>
+              </div>
+            </el-form>
           </el-tab-pane>
 
           <!-- 供应商 -->
@@ -381,6 +411,44 @@ function back(): void {
                 <el-empty :description="t('common.empty')" />
               </template>
             </el-table>
+          </el-tab-pane>
+
+          <!-- 关于我们 -->
+          <el-tab-pane :label="t('settings.about')" name="about">
+            <div class="about">
+              <div class="about-brand">
+                <img class="about-logo" :src="logo" alt="logo" />
+                <div class="about-name">{{ t('app.name') }}</div>
+              </div>
+              <div class="about-list">
+                <div class="about-row">
+                  <span class="about-label">{{ t('settings.version') }}</span>
+                  <span class="about-value">{{ settings.version }}</span>
+                </div>
+                <div class="about-row">
+                  <span class="about-label">{{ t('settings.github') }}</span>
+                  <a
+                    class="about-link"
+                    href="https://github.com/xuxueli/xxl-ai"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    https://github.com/xuxueli/xxl-ai
+                  </a>
+                </div>
+                <div class="about-row">
+                  <span class="about-label">{{ t('settings.docs') }}</span>
+                  <a
+                    class="about-link"
+                    href="https://www.xuxueli.com/xxl-ai/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    https://www.xuxueli.com/xxl-ai/
+                  </a>
+                </div>
+              </div>
+            </div>
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -523,15 +591,16 @@ function back(): void {
   max-width: 640px;
 }
 
+/* 表单底部操作按钮（个性化：保存 / 恢复默认） */
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .model-row {
   display: flex;
   gap: 12px;
   width: 100%;
-}
-
-.provider-select,
-.model-select {
-  width: 240px;
 }
 
 .provider-toolbar {
@@ -616,7 +685,7 @@ function back(): void {
 
 .data-dir-title {
   font-size: 14px;
-  font-weight: 600;
+  color: var(--el-text-color-regular);
   margin-bottom: 6px;
 }
 
@@ -642,5 +711,78 @@ function back(): void {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+/* 关于我们 */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+}
+
+.about-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  box-shadow: var(--desk-shadow);
+}
+
+.about-name {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.about-list {
+  border: 1px solid var(--desk-border);
+  border-radius: var(--desk-radius-sm);
+  overflow: hidden;
+  background: var(--desk-bg-elevated);
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.about-row + .about-row {
+  border-top: 1px solid var(--desk-border);
+}
+
+.about-label {
+  color: var(--desk-text-secondary);
+  flex-shrink: 0;
+}
+
+.about-value {
+  color: var(--desk-text);
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.about-link {
+  color: var(--desk-primary);
+  text-decoration: none;
+  word-break: break-all;
+  text-align: right;
+}
+
+.about-link:hover {
+  text-decoration: underline;
 }
 </style>

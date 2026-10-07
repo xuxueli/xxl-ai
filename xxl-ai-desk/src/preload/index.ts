@@ -6,6 +6,7 @@ import type {
   DeskApi,
   ProviderDTO,
   ProviderModelQuery,
+  ProjectCreateInput,
   SessionDTO,
   StoredMessage
 } from '../shared/ipc'
@@ -30,6 +31,13 @@ const api: DeskApi = {
     remove: (id: string) => ipcRenderer.invoke(IPC.providerRemove, id),
     remoteModels: (input: ProviderModelQuery) =>
       ipcRenderer.invoke(IPC.providerRemoteModels, input)
+  },
+  project: {
+    list: () => ipcRenderer.invoke(IPC.projectList),
+    create: (input?: ProjectCreateInput) => ipcRenderer.invoke(IPC.projectCreate, input),
+    rename: (id: string, name: string) => ipcRenderer.invoke(IPC.projectRename, id, name),
+    remove: (id: string) => ipcRenderer.invoke(IPC.projectRemove, id),
+    reveal: (id: string) => ipcRenderer.invoke(IPC.projectReveal, id)
   },
   session: {
     list: () => ipcRenderer.invoke(IPC.sessionList),

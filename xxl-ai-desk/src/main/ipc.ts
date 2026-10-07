@@ -4,6 +4,7 @@ import type {
   AppSettings,
   ProviderDTO,
   ProviderModelQuery,
+  ProjectCreateInput,
   RuntimeInfo,
   SessionDTO,
   StoredMessage
@@ -32,6 +33,13 @@ import {
   replaceMessages,
   updateSession
 } from './services/sessionService'
+import {
+  createProject,
+  deleteProject,
+  getProject,
+  listProjects,
+  renameProject
+} from './services/projectService'
 import { abortAgent, evictAgent, getAgent, runPrompt, type HostEvent } from './agent/host'
 import type { ProviderModelConfig } from './agent/models'
 
@@ -118,6 +126,37 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.providerRemoteModels, (_event, input: ProviderModelQuery) =>
     fetchRemoteModels(input)
   )
+
+  /* --- 项目（1:1 绑定本地目录） --- */
+  ipcMain.handle(IPC.projectList, () => listProjects())
+  ipcMain.handle(IPC.projectCreate, async (_event, input?: ProjectCreateInput) => {
+    /* 未显式传入路径时，弹出系统目录选择对话框（取消返回 null） */
+    let path = input?.path?.trim() ?? ''
+    if (!path) {
+      const result = await dialog.showOpenDialog({
+        title: input?.dialogTitle || '选择项目目录',
+        properties: ['openDirectory', 'createDirectory']
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return null
+      }
+      path = result.filePaths[0]
+    }
+    return createProject({ name: input?.name, path })
+  })
+  ipcMain.handle(IPC.projectRename, (_event, id: string, name: string) => renameProject(id, name))
+  ipcMain.handle(IPC.projectRemove, (_event, id: string) => {
+    /* 级联删除前先清理项目下会话的运行时 Agent 缓存 */
+    const removed = deleteProject(id)
+    removed.forEach((sessionId) => evictAgent(sessionId))
+  })
+  ipcMain.handle(IPC.projectReveal, (_event, id: string) => {
+    /* 在系统文件管理器中展示项目目录（macOS Finder / Windows 资源管理器 / Linux 文件管理器） */
+    const project = getProject(id)
+    if (project) {
+      shell.showItemInFolder(project.path)
+    }
+  })
 
   /* --- 会话 --- */
   ipcMain.handle(IPC.sessionList, () => listSessions())

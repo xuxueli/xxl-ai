@@ -62,6 +62,28 @@ function buildRequestHeaders(
 }
 
 /*
+ * 判断是否为本地/内网地址：本地/内网服务（如 Ollama、LM Studio、vLLM）通常不需要 API Key。
+ */
+function isLocalBaseUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase()
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host === 'host.docker.internal' ||
+      host.endsWith('.local') ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    )
+  } catch {
+    return false
+  }
+}
+
+/*
  * 将已配置的供应商转换为 Pi 的 Models 集合。
  * 统一按 OpenAI 兼容协议（openai-completions）接入，覆盖 DeepSeek / Ollama / OpenCode 等。
  * 自定义请求Header（含 {session} 占位）挂到每个模型上，由 Pi 在请求时合并。
@@ -78,6 +100,8 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
     const requestHeaders = buildRequestHeaders(config.headers, config.sessionId)
     const hasHeaders = Object.keys(requestHeaders).length > 0
     const baseUrl = normalizeBaseUrl(config.baseUrl)
+    /* 本地/内网服务免 Key：Pi 对空 Key 会直接报错，补占位值（本地服务通常忽略 Authorization） */
+    const apiKey = config.apiKey || (isLocalBaseUrl(baseUrl) ? 'not-required' : '')
 
     const list: Model<'openai-completions'>[] = config.models.map((modelId) => ({
       id: modelId,
@@ -101,7 +125,7 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
         auth: {
           apiKey: {
             name: config.name,
-            resolve: async () => ({ auth: { apiKey: config.apiKey } })
+            resolve: async () => ({ auth: { apiKey } })
           }
         },
         models: list,

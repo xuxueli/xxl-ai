@@ -23,6 +23,15 @@
   --desk-radius: 16px;
   --desk-radius-lg: 22px;
   --desk-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  /* 分段选中态（主题/语言）与浅色主按钮（弱化黑色，观感柔和） */
+  --desk-segment-bg: #e6e6e6;
+  --desk-segment-text: #1a1a1a;
+  --desk-segment-border: #d8d8d8;
+  --desk-btn-bg: #e6e6e6;
+  --desk-btn-bg-hover: #d8d8d8;
+  --desk-btn-text: #1a1a1a;
+  /* 开关激活色：柔和中性灰，避免纯黑且与关闭态有区分 */
+  --desk-switch-on: #9a9a9a;
 
   /* Element Plus 主题对齐（黑白灰） */
   --el-color-primary: #0d0d0d;
@@ -54,6 +63,14 @@
   --desk-bubble-assistant: #262626;
   --desk-danger: #f2555a;
   --desk-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  /* 深色主题：选中态/主按钮取中灰底 + 浅色字，保证与未选中有区分度 */
+  --desk-segment-bg: #3a3a3a;
+  --desk-segment-text: #ffffff;
+  --desk-segment-border: #4a4a4a;
+  --desk-btn-bg: #3a3a3a;
+  --desk-btn-bg-hover: #484848;
+  --desk-btn-text: #f2f2f2;
+  --desk-switch-on: #a8a8a8;
 
   --el-color-primary: #e8e8e8;
   --el-color-primary-light-3: #f4f4f4;

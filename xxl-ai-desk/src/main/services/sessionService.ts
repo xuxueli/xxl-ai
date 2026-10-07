@@ -11,6 +11,7 @@ function toSessionDTO(row: SessionRow): SessionDTO {
   return {
     id: row.id,
     title: row.title,
+    projectId: row.projectId,
     providerId: row.providerId,
     modelId: row.modelId,
     systemPrompt: row.systemPrompt,
@@ -50,6 +51,7 @@ export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
   const record = {
     id: input.id || randomUUID(),
     title: input.title || '新对话',
+    projectId: input.projectId || '',
     providerId: input.providerId || '',
     modelId: input.modelId || '',
     systemPrompt: input.systemPrompt || '',
@@ -70,6 +72,7 @@ export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDT
   const record = {
     ...existing,
     title: patch.title ?? existing.title,
+    projectId: patch.projectId ?? existing.projectId,
     providerId: patch.providerId ?? existing.providerId,
     modelId: patch.modelId ?? existing.modelId,
     systemPrompt: patch.systemPrompt ?? existing.systemPrompt,

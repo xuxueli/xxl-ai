@@ -8,7 +8,9 @@ const DEFAULTS: AppSettings = {
   language: 'zh',
   providerId: '',
   modelId: '',
-  systemPrompt: '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。可以使用工具时请主动调用。'
+  systemPrompt: '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。可以使用工具时请主动调用。',
+  appName: '',
+  slogan: ''
 }
 
 /* 读取全部设置（缺省值兜底） */
@@ -20,7 +22,9 @@ export function getSettings(): AppSettings {
     language: (map.get('language') as AppSettings['language']) || DEFAULTS.language,
     providerId: map.get('providerId') || DEFAULTS.providerId,
     modelId: map.get('modelId') || DEFAULTS.modelId,
-    systemPrompt: map.get('systemPrompt') || DEFAULTS.systemPrompt
+    systemPrompt: map.get('systemPrompt') ?? DEFAULTS.systemPrompt,
+    appName: map.get('appName') ?? DEFAULTS.appName,
+    slogan: map.get('slogan') ?? DEFAULTS.slogan
   }
 }
 
