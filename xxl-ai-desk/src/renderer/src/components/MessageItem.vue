@@ -6,6 +6,7 @@ import type { UiMessage } from '../types'
 
 /* 单条消息：用户气泡 / 助手 Markdown + 思考 + 工具调用 */
 const props = defineProps<{ message: UiMessage }>()
+const emit = defineEmits<{ edit: [content: string] }>()
 
 const html = computed(() => renderMarkdown(props.message.content))
 const thinkingOpen = ref(false)
@@ -42,6 +43,11 @@ async function copyContent(): Promise<void> {
     return
   }
   await navigator.clipboard.writeText(props.message.content)
+}
+
+/* 编辑（仅用户消息）：把内容回填到输入框由父组件处理 */
+function editContent(): void {
+  emit('edit', props.message.content)
 }
 </script>
 
@@ -92,6 +98,10 @@ async function copyContent(): Promise<void> {
         <span class="message-time">{{ timeText }}</span>
         <el-tooltip :content="t('common.copy')">
           <el-icon class="action" @click="copyContent"><CopyDocument /></el-icon>
+        </el-tooltip>
+        <!-- 仅用户消息：编辑后重新回答（内容回填输入框） -->
+        <el-tooltip v-if="message.role === 'user'" :content="t('common.edit')">
+          <el-icon class="action" @click="editContent"><EditPen /></el-icon>
         </el-tooltip>
       </div>
     </div>

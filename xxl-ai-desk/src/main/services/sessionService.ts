@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { and, asc, eq, max } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { getDb } from '../db'
 import { messageTable, sessionTable } from '../db/schema'
 import type { SessionDTO, StoredMessage } from '../../shared/ipc'
@@ -100,33 +100,6 @@ export function listMessages(sessionId: string): StoredMessage[] {
   return rows.map(toMessageDTO)
 }
 
-/* 追加一条消息，返回自增序号 */
-export function appendMessage(
-  sessionId: string,
-  role: string,
-  content: string,
-  data: string
-): void {
-  const db = getDb()
-  const row = db
-    .select({ value: max(messageTable.seq) })
-    .from(messageTable)
-    .where(eq(messageTable.sessionId, sessionId))
-    .get()
-  const seq = (row?.value ?? 0) + 1
-  db.insert(messageTable)
-    .values({
-      id: randomUUID(),
-      sessionId,
-      seq,
-      role,
-      content,
-      data,
-      addTime: new Date().toISOString()
-    })
-    .run()
-}
-
 /* 用 Agent 完整消息覆盖会话消息（保持与运行时一致） */
 export function replaceMessages(
   sessionId: string,
@@ -153,14 +126,4 @@ export function replaceMessages(
 /* 清空会话消息 */
 export function clearMessages(sessionId: string): void {
   getDb().delete(messageTable).where(eq(messageTable.sessionId, sessionId)).run()
-}
-
-/* 判断某条消息是否存在（内部使用） */
-export function hasMessage(sessionId: string, role: string): boolean {
-  const row = getDb()
-    .select()
-    .from(messageTable)
-    .where(and(eq(messageTable.sessionId, sessionId), eq(messageTable.role, role)))
-    .get()
-  return Boolean(row)
 }

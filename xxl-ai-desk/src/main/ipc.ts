@@ -40,7 +40,7 @@ import {
   listProjects,
   renameProject
 } from './services/projectService'
-import { abortAgent, evictAgent, getAgent, runPrompt, type HostEvent } from './agent/host'
+import { abortAgent, evictAgent, getAgent, resetAgents, runPrompt, type HostEvent } from './agent/host'
 import type { ProviderModelConfig } from './agent/models'
 
 /* 将 Agent 消息内容归一化为纯文本（用于列表预览与检索） */
@@ -119,9 +119,15 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   /* --- 供应商 --- */
   ipcMain.handle(IPC.providerList, () => listProviders())
-  ipcMain.handle(IPC.providerSave, (_event, dto: Partial<ProviderDTO>) => saveProvider(dto))
+  ipcMain.handle(IPC.providerSave, (_event, dto: Partial<ProviderDTO>) => {
+    const saved = saveProvider(dto)
+    /* 供应商配置（含 API Key）变更后，清空运行时缓存，使下一次对话立即生效 */
+    resetAgents()
+    return saved
+  })
   ipcMain.handle(IPC.providerRemove, (_event, id: string) => {
     deleteProvider(id)
+    resetAgents()
   })
   ipcMain.handle(IPC.providerRemoteModels, (_event, input: ProviderModelQuery) =>
     fetchRemoteModels(input)

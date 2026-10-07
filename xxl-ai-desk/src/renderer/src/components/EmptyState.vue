@@ -46,16 +46,16 @@ const suggestions = [
 }
 
 .empty-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+  width: 51px;
+  height: 51px;
+  border-radius: 14px;
   object-fit: contain;
   margin-bottom: 24px;
   box-shadow: var(--desk-shadow);
 }
 
 .empty-title {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 600;
   margin: 0 0 10px;
 }

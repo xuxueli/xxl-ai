@@ -73,11 +73,3 @@ export function getDb(): BetterSQLite3Database<typeof schema> {
   }
   return database
 }
-
-/* 获取原生连接（事务/关闭等场景） */
-export function getSqlite(): Database.Database {
-  if (!sqlite) {
-    throw new Error('数据库尚未初始化')
-  }
-  return sqlite
-}

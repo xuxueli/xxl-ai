@@ -18,6 +18,7 @@ const settings = useSettingsStore()
 const layout = useLayoutStore()
 const project = useProjectStore()
 const scrollRef = ref<HTMLElement | null>(null)
+const composerRef = ref()
 
 const hasMessages = computed(() => chat.messages.length > 0)
 const canChat = computed(() => settings.enabledProviders.length > 0)
@@ -55,6 +56,11 @@ async function onSend(text: string): Promise<void> {
 async function onPick(text: string): Promise<void> {
   await onSend(text)
 }
+
+/* 编辑用户消息：回填输入框并聚焦 */
+function onEditMessage(content: string): void {
+  composerRef.value?.editText(content)
+}
 </script>
 
 <template>
@@ -84,11 +90,18 @@ async function onPick(text: string): Promise<void> {
           v-for="message in chat.messages"
           :key="message.id"
           :message="message"
+          @edit="onEditMessage"
         />
       </div>
     </div>
 
-    <ChatComposer :streaming="chat.streaming" :disabled="!canChat" @submit="onSend" @stop="chat.abort" />
+    <ChatComposer
+      ref="composerRef"
+      :streaming="chat.streaming"
+      :disabled="!canChat"
+      @submit="onSend"
+      @stop="chat.abort"
+    />
   </div>
 </template>
 

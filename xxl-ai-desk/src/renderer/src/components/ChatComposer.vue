@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
@@ -16,6 +16,15 @@ const project = useProjectStore()
 const chat = useChatStore()
 const settings = useSettingsStore()
 const text = ref('')
+const inputRef = ref()
+
+/* 编辑历史消息：回填内容并聚焦输入框（供对话页调用） */
+function editText(content: string): void {
+  text.value = content
+  nextTick(() => inputRef.value?.focus())
+}
+
+defineExpose({ editText })
 
 /* 已存在会话时锁定为所属项目（项目不可改）；新建对话时可自由选择 */
 const locked = computed(() => Boolean(chat.currentId))
@@ -92,6 +101,7 @@ function onKeydown(event: KeyboardEvent): void {
   <div class="composer">
     <div class="composer-box">
       <el-input
+        ref="inputRef"
         v-model="text"
         type="textarea"
         :autosize="{ minRows: 1, maxRows: 8 }"

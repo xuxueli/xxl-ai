@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useChatStore } from '../stores/chat'
@@ -16,35 +16,108 @@ const chat = useChatStore()
 const settings = useSettingsStore()
 const project = useProjectStore()
 const layout = useLayoutStore()
-const keyword = ref('')
 /* 项目展开状态（默认收起；选中/新建时自动展开） */
 const expanded = ref<Record<string, boolean>>({})
 
-/* 项目 → 其下会话（保持会话按更新时间倒序） */
+/* 搜索面板状态与关键字 */
+const searchVisible = ref(false)
+const searchKeyword = ref('')
+const paletteInputRef = ref()
+
+/* 排序方式：名称 / 更新时间（默认更新时间倒序） */
+const sortBy = ref<'time' | 'name'>('time')
+
+/* 项目 → 其下会话 */
 function sessionsOf(projectId: string): SessionDTO[] {
   return chat.sessions.filter((item) => item.projectId === projectId)
 }
 
-/* 搜索：无关键字展示全部项目；有关键字时项目名或会话标题命中才保留，且仅展示命中的会话 */
-const filteredGroups = computed(() => {
-  const key = keyword.value.trim().toLowerCase()
-  if (!key) {
-    return project.projects.map((item) => ({ project: item, sessions: sessionsOf(item.id) }))
+/* 按当前排序方式排序的会话 */
+function sortedSessionsOf(projectId: string): SessionDTO[] {
+  const list = sessionsOf(projectId)
+  if (sortBy.value === 'name') {
+    return [...list].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh'))
   }
-  return project.projects
-    .map((item) => {
-      const sessions = sessionsOf(item.id).filter((session) =>
-        (session.title || '').toLowerCase().includes(key)
-      )
-      const hit = item.name.toLowerCase().includes(key) || sessions.length > 0
-      return hit ? { project: item, sessions } : null
-    })
-    .filter((item): item is { project: ProjectDTO; sessions: SessionDTO[] } => item !== null)
+  return [...list].sort((a, b) => b.updateTime.localeCompare(a.updateTime))
+}
+
+/* 按当前排序方式排序的项目 */
+const sortedProjects = computed(() => {
+  const list = [...project.projects]
+  if (sortBy.value === 'name') {
+    return list.sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+  }
+  return list.sort((a, b) => b.updateTime.localeCompare(a.updateTime))
 })
 
-/* 搜索时全部展开，否则按展开状态 */
+/* 项目分组列表（一级项目 + 二级会话） */
+const projectGroups = computed(() =>
+  sortedProjects.value.map((item) => ({ project: item, sessions: sortedSessionsOf(item.id) }))
+)
+
+/* 切换排序方式 */
+function onSortCommand(command: string): void {
+  if (command === 'name' || command === 'time') {
+    sortBy.value = command
+  }
+}
+
+/* 项目名（会话结果右侧展示归属） */
+function projectNameOf(projectId: string): string {
+  return project.projects.find((item) => item.id === projectId)?.name ?? ''
+}
+
+/* 是否已输入关键字 */
+const hasKeyword = computed(() => searchKeyword.value.trim().length > 0)
+
+/* 关键字匹配：会话（按标题），最多展示 50 条 */
+const matchedSessions = computed(() => {
+  const key = searchKeyword.value.trim().toLowerCase()
+  if (!key) {
+    return []
+  }
+  return chat.sessions
+    .filter((item) => (item.title || '').toLowerCase().includes(key))
+    .slice(0, 50)
+})
+
+/* 未输入时固定展示最近在用的 5 条会话；输入后展示搜索结果 */
+const visibleSessions = computed(() =>
+  hasKeyword.value ? matchedSessions.value : chat.sessions.slice(0, 5)
+)
+
+/* 展开状态 */
 function isExpanded(projectId: string): boolean {
-  return keyword.value.trim() ? true : Boolean(expanded.value[projectId])
+  return Boolean(expanded.value[projectId])
+}
+
+/* 打开搜索面板（居中弹框） */
+function openSearch(): void {
+  searchKeyword.value = ''
+  searchVisible.value = true
+  nextTick(() => paletteInputRef.value?.focus())
+}
+
+/* 关闭搜索面板 */
+function closeSearch(): void {
+  searchVisible.value = false
+}
+
+/* 选中结果：定位并关闭 */
+function onPickSession(sessionId: string): void {
+  void onSelect(sessionId)
+  closeSearch()
+}
+
+/* 推荐入口：新建会话 / 设置 */
+function onNewFromPalette(): void {
+  onNew()
+  closeSearch()
+}
+
+function onSettingsFromPalette(): void {
+  goSettings()
+  closeSearch()
 }
 
 /* 点击项目：选中并折叠/展开 */
@@ -171,17 +244,45 @@ async function onDelete(id: string): Promise<void> {
 function goSettings(): void {
   router.push('/settings')
 }
+
+/* 拖拽右边缘调整侧栏宽度（拖拽期间禁用过渡与选中） */
+function startResize(event: MouseEvent): void {
+  event.preventDefault()
+  const startX = event.clientX
+  const startWidth = layout.sidebarWidth
+  const onMove = (e: MouseEvent): void => {
+    layout.setSidebarWidth(startWidth + (e.clientX - startX))
+  }
+  const onUp = (): void => {
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+    document.body.classList.remove('resizing')
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+  document.body.classList.add('resizing')
+}
 </script>
 
 <template>
-  <aside class="desk-sidebar" :class="{ collapsed: layout.sidebarCollapsed }">
+  <aside
+    class="desk-sidebar"
+    :class="{ collapsed: layout.sidebarCollapsed }"
+    :style="{ width: layout.sidebarCollapsed ? '0px' : `${layout.sidebarWidth}px` }"
+  >
+    <!-- 右边缘拖拽手柄：调整侧栏宽度 -->
+    <div v-if="!layout.sidebarCollapsed" class="sidebar-resizer" @mousedown="startResize"></div>
+
     <div class="sidebar-head" :class="{ mac: settings.platform === 'darwin' }">
       <div class="brand">
         <img class="brand-logo" :src="logo" alt="logo" />
         <div class="brand-text">
           <div class="brand-name">{{ settings.settings.appName || t('app.name') }}</div>
-          <div class="brand-tag">v{{ settings.version }}</div>
         </div>
+        <!-- 搜索入口：位于 Logo 区域右侧，打开命令面板 -->
+        <el-icon class="brand-search" :title="t('common.search')" @click="openSearch">
+          <Search />
+        </el-icon>
       </div>
       <div class="new-btn" @click="onNew">
         <el-icon class="new-icon"><Edit /></el-icon>
@@ -189,24 +290,36 @@ function goSettings(): void {
       </div>
     </div>
 
-    <div class="sidebar-search">
-      <el-input v-model="keyword" :placeholder="t('chat.searchSession')" clearable>
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-    </div>
-
-    <!-- 「项目:」标题：悬浮显示 + 号，点击新建项目（选择本地目录） -->
+    <!-- 「项目:」标题：右侧 排序（...）与 + 新建项目，鼠标悬浮展示 -->
     <div class="project-head">
       <span class="project-label">{{ t('project.label') }}:</span>
-      <el-icon class="project-add" :title="t('project.new')" @click="onCreateProject">
-        <Plus />
-      </el-icon>
+      <span class="project-head-actions">
+        <el-dropdown trigger="click" popper-class="sort-dropdown" @command="onSortCommand">
+          <el-icon class="project-icon-btn" :title="t('common.actions')"><MoreFilled /></el-icon>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled class="sort-group">
+                {{ t('project.sortBy') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="name">
+                {{ t('project.sortName') }}
+                <el-icon v-if="sortBy === 'name'" class="sort-check"><CircleCheck /></el-icon>
+              </el-dropdown-item>
+              <el-dropdown-item command="time">
+                {{ t('project.sortTime') }}
+                <el-icon v-if="sortBy === 'time'" class="sort-check"><CircleCheck /></el-icon>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-icon class="project-icon-btn" :title="t('project.new')" @click="onCreateProject">
+          <Plus />
+        </el-icon>
+      </span>
     </div>
 
     <el-scrollbar class="sidebar-list">
-      <div v-for="group in filteredGroups" :key="group.project.id" class="project-group">
+      <div v-for="group in projectGroups" :key="group.project.id" class="project-group">
         <div
           class="project-item"
           :class="{ active: group.project.id === project.currentId }"
@@ -218,9 +331,6 @@ function goSettings(): void {
           </el-icon>
           <span class="project-name" :title="group.project.path">{{ group.project.name }}</span>
           <span class="project-actions" @click.stop>
-            <el-icon class="op" :title="t('project.rename')" @click="onRenameProject(group.project)">
-              <EditPen />
-            </el-icon>
             <el-dropdown trigger="click" @command="(command: string) => onProjectCommand(command, group.project)">
               <el-icon class="op" :title="t('common.actions')"><MoreFilled /></el-icon>
               <template #dropdown>
@@ -231,6 +341,9 @@ function goSettings(): void {
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
+            <el-icon class="op" :title="t('project.rename')" @click="onRenameProject(group.project)">
+              <EditPen />
+            </el-icon>
           </span>
         </div>
 
@@ -253,7 +366,7 @@ function goSettings(): void {
           </div>
         </div>
       </div>
-      <el-empty v-if="filteredGroups.length === 0" :description="t('project.empty')" :image-size="60" />
+      <el-empty v-if="projectGroups.length === 0" :description="t('project.empty')" :image-size="60" />
     </el-scrollbar>
 
     <div class="sidebar-foot">
@@ -262,6 +375,56 @@ function goSettings(): void {
         <span class="foot-label">{{ t('settings.title') }}</span>
       </el-button>
     </div>
+
+    <!-- 搜索命令面板：项目/会话关键字搜索 + 推荐入口 -->
+    <teleport to="body">
+      <div v-if="searchVisible" class="palette-mask" @mousedown.self="closeSearch">
+        <div class="palette" @mousedown.stop>
+          <div class="palette-input">
+            <el-icon class="palette-input-icon"><Search /></el-icon>
+            <input
+              ref="paletteInputRef"
+              v-model="searchKeyword"
+              class="palette-input-field"
+              :placeholder="t('project.searchPlaceholder')"
+              @keydown.esc="closeSearch"
+            />
+          </div>
+
+          <div class="palette-body">
+            <template v-if="visibleSessions.length > 0">
+              <div class="palette-section">
+                {{ hasKeyword ? t('chat.sessions') : t('chat.recentSessions') }}
+              </div>
+              <div
+                v-for="item in visibleSessions"
+                :key="item.id"
+                class="palette-item"
+                @click="onPickSession(item.id)"
+              >
+                <el-icon class="palette-item-icon"><ChatLineRound /></el-icon>
+                <span class="palette-item-title">{{ item.title || t('chat.newChat') }}</span>
+                <span class="palette-item-meta">{{ projectNameOf(item.projectId) }}</span>
+              </div>
+            </template>
+
+            <div v-if="hasKeyword && matchedSessions.length === 0" class="palette-empty">
+              {{ t('common.empty') }}
+            </div>
+
+            <div class="palette-section">{{ t('project.recommend') }}</div>
+            <div class="palette-item" @click="onNewFromPalette">
+              <el-icon class="palette-item-icon"><Edit /></el-icon>
+              <span class="palette-item-title">{{ t('chat.newChatAction') }}</span>
+            </div>
+            <div class="palette-item" @click="onSettingsFromPalette">
+              <el-icon class="palette-item-icon"><Setting /></el-icon>
+              <span class="palette-item-title">{{ t('settings.title') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </aside>
 </template>
 
@@ -272,6 +435,23 @@ function goSettings(): void {
   -webkit-app-region: drag;
 }
 
+/* 右边缘拖拽手柄：调整侧栏宽度 */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-resizer:hover,
+body.resizing .sidebar-resizer {
+  background: var(--desk-primary-soft);
+}
+
 /* macOS：顶部让出系统红黄绿按钮，并使品牌 Logo 顶部与右侧正文区顶部对齐 */
 .sidebar-head.mac {
   padding-top: var(--desk-header-height);
@@ -280,6 +460,9 @@ function goSettings(): void {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  /* 与「新建对话」按钮内图标左侧对齐（按钮内左内边距 12px） */
+  padding-left: 12px;
   gap: 10px;
   min-width: 0;
   margin-bottom: 16px;
@@ -291,29 +474,34 @@ function goSettings(): void {
 }
 
 .brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .brand-name {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 32px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.brand-tag {
-  font-size: 12px;
-  color: var(--desk-text-tertiary);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Logo 区域右侧搜索入口 */
+.brand-search {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--desk-text-secondary);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: color 0.15s ease;
+}
+
+.brand-search:hover {
+  color: var(--desk-primary);
 }
 
 /* 新建对话：与会话条目同款列表行（同字号/内边距/圆角），悬浮高亮 */
@@ -339,11 +527,7 @@ function goSettings(): void {
   flex-shrink: 0;
 }
 
-.sidebar-search {
-  padding: 0 16px 10px;
-}
-
-/* 「项目:」分组标题：默认隐藏 + 号，悬浮标题行时显示 */
+/* 「项目:」分组标题：右侧搜索/新建入口 */
 .project-head {
   display: flex;
   align-items: center;
@@ -357,20 +541,135 @@ function goSettings(): void {
   color: var(--desk-text-tertiary);
 }
 
-.project-add {
-  font-size: 14px;
-  color: var(--desk-text-secondary);
-  cursor: pointer;
+/* 排序/新建入口：默认隐藏，悬浮「项目:」标题行时展示 */
+.project-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   visibility: hidden;
-  transition: color 0.15s ease;
 }
 
-.project-head:hover .project-add {
+.project-head:hover .project-head-actions {
   visibility: visible;
 }
 
-.project-add:hover {
+.project-icon-btn {
+  font-size: 14px;
+  color: var(--desk-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.project-icon-btn:hover {
   color: var(--desk-primary);
+}
+
+/* --- 搜索命令面板（居中弹框 + 遮罩） --- */
+.palette-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.palette {
+  width: 640px;
+  max-width: calc(100vw - 40px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--desk-bg);
+  border: 1px solid var(--desk-border);
+  border-radius: var(--desk-radius-sm);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.palette-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--desk-border);
+  color: var(--desk-text-tertiary);
+}
+
+.palette-input-field {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--desk-text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.palette-input-field::placeholder {
+  color: var(--desk-text-tertiary);
+}
+
+.palette-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.palette-section {
+  padding: 8px 10px 4px;
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--desk-text-secondary);
+  font-size: 14px;
+  transition: background 0.12s ease;
+}
+
+.palette-item:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+}
+
+.palette-item-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.palette-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-item-meta {
+  flex-shrink: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+}
+
+.palette-empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--desk-text-tertiary);
+  text-align: center;
 }
 
 .sidebar-list {
@@ -504,13 +803,13 @@ function goSettings(): void {
 
 .desk-sidebar.collapsed .brand {
   justify-content: center;
+  padding-left: 0;
   margin-bottom: 12px;
 }
 
 .desk-sidebar.collapsed .brand-text,
 .desk-sidebar.collapsed .new-btn-label,
 .desk-sidebar.collapsed .foot-label,
-.desk-sidebar.collapsed .sidebar-search,
 .desk-sidebar.collapsed .project-head,
 .desk-sidebar.collapsed .sidebar-list {
   display: none;
