@@ -74,12 +74,70 @@ function contentToText(message: unknown): string {
 }
 
 /* 将底层异常翻译为可读提示：明确指向具体供应商与模型 */
-function describeError(raw: string, providerName: string, modelId: string): string {  const message = (raw || '').trim()
+function describeError(raw: string, providerName: string, modelId: string): string {
+  const message = (raw || '').trim()
   if (/api key/i.test(message)) {
     return `供应商「${providerName}」未配置 API Key，无法调用模型「${modelId}」，请在「设置」中补全后重试`
   }
   const suffix = message ? `：${message}` : ''
   return `模型「${modelId}」（供应商「${providerName}」）调用失败${suffix}`
+}
+
+/*
+ * 解析会话运行时目标：会话已绑定的供应商/模型若已被删除或停用，
+ * 返回明确的错误提示要求用户重新选择（不做静默切换，避免用户不知情地换了模型）。
+ * 仅当会话未指定模型时才回退到设置默认模型/供应商首个模型。
+ */
+function resolveRuntimeTarget(
+  session: SessionDTO,
+  settings: AppSettings
+): { provider: ProviderDTO; model: string } | { error: string } {
+  /* 供应商：会话已指定则必须仍存在且启用；未指定时回退设置默认供应商 */
+  const providerId = session.providerId || settings.providerId
+  const provider = providerId ? getProvider(providerId) : null
+  if (!provider) {
+    return { error: '模型供应商不存在或已被删除，请在会话中重新选择模型' }
+  }
+  if (!provider.enabled) {
+    return { error: `供应商「${provider.name}」已停用，请在会话中重新选择模型` }
+  }
+  /* 模型：会话已指定则必须仍在供应商模型列表内，否则提示更换 */
+  if (session.modelId) {
+    if (!provider.models.includes(session.modelId)) {
+      return { error: `模型「${session.modelId}」不存在或已被删除，请在会话中重新选择模型` }
+    }
+    return { provider, model: session.modelId }
+  }
+  /* 未指定模型：回退设置默认模型，其次供应商首个模型 */
+  const fallback =
+    settings.modelId && provider.models.includes(settings.modelId)
+      ? settings.modelId
+      : (provider.models[0] ?? '')
+  if (!fallback) {
+    return { error: '请为供应商配置至少一个模型' }
+  }
+  return { provider, model: fallback }
+}
+
+/*
+ * 失败轮次落库：保留历史消息并追加「用户提问 + 错误提示助手消息」，
+ * 使发送失败在重载页面/切换会话后仍可见（避免前端回读消息时把错误提示覆盖丢失）。
+ */
+function persistFailureRound(sessionId: string, text: string, tip: string): void {
+  const existing = listMessages(sessionId).map((message) => ({
+    role: message.role,
+    content: message.content,
+    data: message.data
+  }))
+  replaceMessages(sessionId, [
+    ...existing,
+    { role: 'user', content: text, data: JSON.stringify({ role: 'user', content: text }) },
+    {
+      role: 'assistant',
+      content: tip,
+      data: JSON.stringify({ role: 'assistant', stopReason: 'error', errorMessage: tip })
+    }
+  ])
 }
 
 /* 模式说明：拼接到系统指令末尾，引导模型按当前模式行事（Plan 只读规划，Build 读写实施） */
@@ -233,12 +291,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     let providerName = ''
     let modelId = ''
     let contextReady = false
+    /* 本轮是否已完整落库；异常兜底据此避免重复追加失败轮次 */
+    let committed = false
     const emit = (event: HostEvent): void => {
       const payload =
         event.type === 'error' && contextReady
           ? { ...event, message: describeError(event.message, providerName, modelId) }
           : event
       window?.webContents.send(IPC.chatEvent, { sessionId, ...payload })
+    }
+    /* 失败兜底：把「用户提问 + 可读错误提示」落库并下发，避免重载/切换会话后提示丢失 */
+    const fail = (raw: string): void => {
+      const tip = contextReady ? describeError(raw, providerName, modelId) : raw
+      if (!committed) {
+        persistFailureRound(sessionId, text, tip)
+      }
+      emit({ type: 'error', message: tip })
     }
 
     try {
@@ -249,18 +317,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       }
 
       const settings = getSettings()
-      const providerId = session.providerId || settings.providerId
-      const provider = providerId ? getProvider(providerId) : null
-      if (!provider) {
-        emit({ type: 'error', message: '请先在设置中添加并启用模型供应商' })
+      /* 会话引用的供应商/模型若已删除或停用，直接提示用户重新选择，不做静默切换 */
+      const target = resolveRuntimeTarget(session, settings)
+      if ('error' in target) {
+        fail(target.error)
         return
       }
-
-      const model = session.modelId || settings.modelId || provider.models[0]
-      if (!model) {
-        emit({ type: 'error', message: '请为供应商配置至少一个模型' })
-        return
-      }
+      const { provider, model } = target
 
       providerName = provider.name
       modelId = model
@@ -312,6 +375,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
           return { role, content, data: JSON.stringify(message) }
         })
       replaceMessages(sessionId, serialized)
+      committed = true
 
       /* 首次对话自动以提问作为会话标题 */
       const current = getSession(sessionId)
@@ -319,7 +383,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         updateSession(sessionId, { title: text.slice(0, 24) })
       }
     } catch (error) {
-      emit({ type: 'error', message: (error as Error).message })
+      /* 运行时构建/执行异常（如模型未找到）：清缓存避免复用失败的 Agent，并落库错误提示 */
+      evictAgent(sessionId)
+      fail((error as Error).message)
     }
   })
 
