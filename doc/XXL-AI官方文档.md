@@ -688,16 +688,19 @@ docker compose down
   - 兼容性：跨平台一键安装及应用；
   - 软件配置：规范化目录存储，基础配置、会话数据、技能/工具、工作空间及会话，自定义会话目录及权限控制；
   - 功能：
-    - 多供应商
-    - 项目、会话管理；【TODO】
-    - SKILL/MCP工具; 【TODO】
-    - 权限控制；Plan、Build；项目外，审批；【TODO】
+    - 供应商模型；
+    - 个性化设置：
+    - 项目几会话管理；
+    - Plan/Build模式：限制只读、读写操作；项目外操作管控；
+    - 终端：支持终端命令行操作；
+    - 侧边栏：浏览器、文件
 
 
 ### v1.2.0 Release Notes[ING]
 - 1、【TODO】OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。
 - 2、【TODO】Memory：支持跨会话记忆、记忆内容主动沉淀更新、上下文检索及注入等。
 - 3、【TODO】可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
+- 4、【TODO】Desk版本：支持SKILL/MCP工具；
 
 
 ### TODO LIST

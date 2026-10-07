@@ -11,28 +11,115 @@ function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
-/* 持久化消息 → UI 消息 */
-function toUiMessage(message: StoredMessage): UiMessage | null {
-  if (message.role !== 'user' && message.role !== 'assistant') {
+/* 持久化的 Pi 原始消息结构（仅取渲染所需字段） */
+interface RawPart {
+  type?: string
+  text?: string
+  thinking?: string
+  redacted?: boolean
+  id?: string
+  name?: string
+}
+interface RawMessage {
+  role?: string
+  content?: RawPart[]
+  stopReason?: string
+  errorMessage?: string
+  toolCallId?: string
+  isError?: boolean
+}
+
+/* 安全解析持久化的原始消息 JSON */
+function parseData(data: string): RawMessage | null {
+  try {
+    return JSON.parse(data) as RawMessage
+  } catch {
     return null
   }
-  /* 解析原始数据，恢复失败标记（切换会话/重启后仍显示错误样式） */
-  let failed = false
-  try {
-    const parsed = JSON.parse(message.data) as { stopReason?: string }
-    failed = parsed?.stopReason === 'error'
-  } catch {
-    /* 数据缺失或非法时按正常消息处理 */
+}
+
+/*
+ * 持久化消息集合 → UI 消息（按「轮次」折叠）。
+ *   - 一轮对话中 Agent 会分多次产出 assistant 片段（工具调用轮），并伴随 toolResult；
+ *   - 折叠为「一条用户消息 + 一条助手消息」：合并正文/思考/工具，剔除空白片段，
+ *     避免出现多条消息与空白气泡。
+ */
+function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
+  /* 先收集工具执行结果，用于回填工具调用状态 */
+  const toolStatus = new Map<string, 'done' | 'error'>()
+  for (const record of stored) {
+    if (record.role !== 'toolResult') continue
+    const raw = parseData(record.data)
+    if (raw?.toolCallId) {
+      toolStatus.set(raw.toolCallId, raw.isError ? 'error' : 'done')
+    }
   }
-  return {
-    id: message.id,
-    role: message.role === 'user' ? 'user' : 'assistant',
-    content: message.content,
-    thinking: '',
-    tools: [],
-    addTime: message.addTime,
-    error: failed
+
+  const result: UiMessage[] = []
+  for (const record of stored) {
+    if (record.role === 'user') {
+      result.push({
+        id: record.id,
+        role: 'user',
+        content: record.content,
+        thinking: '',
+        tools: [],
+        addTime: record.addTime
+      })
+      continue
+    }
+    if (record.role !== 'assistant') continue
+
+    const raw = parseData(record.data)
+    const parts = Array.isArray(raw?.content) ? raw.content : []
+    const text = record.content ?? ''
+    const thinking = parts
+      .filter((part) => part.type === 'thinking' && !part.redacted)
+      .map((part) => part.thinking ?? '')
+      .join('')
+    const calls = parts.filter((part) => part.type === 'toolCall')
+    const failed = raw?.stopReason === 'error'
+
+    const last = result[result.length - 1]
+    if (last && last.role === 'assistant') {
+      /* 合并到本轮已存在的助手消息 */
+      if (text) {
+        last.content = last.content ? `${last.content}\n\n${text}` : text
+      }
+      if (thinking) {
+        last.thinking += thinking
+      }
+      for (const call of calls) {
+        last.tools.push({
+          id: call.id ?? uid(),
+          name: call.name ?? 'tool',
+          status: toolStatus.get(call.id ?? '') ?? 'done'
+        })
+      }
+      if (failed) {
+        last.error = true
+      }
+      continue
+    }
+
+    /* 空白且无工具/思考的助手片段：跳过，避免空白气泡 */
+    if (!text && !thinking && calls.length === 0 && !failed) continue
+
+    result.push({
+      id: record.id,
+      role: 'assistant',
+      content: text,
+      thinking,
+      tools: calls.map((call) => ({
+        id: call.id ?? uid(),
+        name: call.name ?? 'tool',
+        status: toolStatus.get(call.id ?? '') ?? 'done'
+      })),
+      addTime: record.addTime,
+      error: failed
+    })
   }
+  return result
 }
 
 /* 会话与对话状态 */
@@ -40,23 +127,77 @@ export const useChatStore = defineStore('chat', () => {
   const sessions = ref<SessionDTO[]>([])
   const currentId = ref('')
   const messages = ref<UiMessage[]>([])
-  const streaming = ref(false)
   const loading = ref(false)
   let unbind: (() => void) | null = null
+
+  /* 正在生成的会话集合（响应式）：支持多会话并发生成、互不阻塞 */
+  const streamingIds = ref<Record<string, boolean>>({})
+  /* 各会话的当前流式目标（sessionId → 本地助手消息 id） */
+  const streamTargets = new Map<string, string>()
+  /* 各会话的增量缓冲与节流定时器 */
+  interface StreamBuffer {
+    delta: string
+    thinking: string
+    timer: ReturnType<typeof setTimeout> | null
+  }
+  const streamBuffers = new Map<string, StreamBuffer>()
+  const FLUSH_INTERVAL = 80
+
+  /* 当前会话是否正在生成（组件据此展示停止/禁用发送；其它会话不受影响） */
+  const streaming = computed(() => Boolean(currentId.value && streamingIds.value[currentId.value]))
+
+  /* 取（或创建）某会话的增量缓冲 */
+  function bufferOf(sessionId: string): StreamBuffer {
+    let buffer = streamBuffers.get(sessionId)
+    if (!buffer) {
+      buffer = { delta: '', thinking: '', timer: null }
+      streamBuffers.set(sessionId, buffer)
+    }
+    return buffer
+  }
+
+  /* 定位某会话正在流式的助手消息（响应式代理） */
+  function streamAssistant(sessionId: string): UiMessage | undefined {
+    const id = streamTargets.get(sessionId)
+    if (!id) {
+      return undefined
+    }
+    return messages.value.find((item) => item.id === id)
+  }
+
+  /* 刷新某会话缓冲的增量；该会话未展示时丢弃（完成后按持久化结果回读） */
+  function flushBuffers(sessionId: string): void {
+    const buffer = streamBuffers.get(sessionId)
+    if (!buffer) {
+      return
+    }
+    if (buffer.timer !== null) {
+      clearTimeout(buffer.timer)
+      buffer.timer = null
+    }
+    if (currentId.value === sessionId) {
+      const assistant = streamAssistant(sessionId)
+      if (assistant) {
+        if (buffer.delta) assistant.content += buffer.delta
+        if (buffer.thinking) assistant.thinking += buffer.thinking
+      }
+    }
+    buffer.delta = ''
+    buffer.thinking = ''
+  }
+
+  /* 调度某会话的节流刷新 */
+  function scheduleFlush(sessionId: string): void {
+    const buffer = bufferOf(sessionId)
+    if (buffer.timer !== null) {
+      return
+    }
+    buffer.timer = setTimeout(() => flushBuffers(sessionId), FLUSH_INTERVAL)
+  }
 
   const currentSession = computed(
     () => sessions.value.find((item) => item.id === currentId.value) ?? null
   )
-
-  /* 获取最后一条助手消息（响应式代理） */
-  function lastAssistant(): UiMessage | undefined {
-    for (let index = messages.value.length - 1; index >= 0; index -= 1) {
-      if (messages.value[index].role === 'assistant') {
-        return messages.value[index]
-      }
-    }
-    return undefined
-  }
 
   /* 加载会话列表 */
   async function loadSessions(): Promise<void> {
@@ -82,9 +223,21 @@ export const useChatStore = defineStore('chat', () => {
     loading.value = true
     try {
       const stored = await api.session.messages(id)
-      messages.value = stored
-        .map(toUiMessage)
-        .filter((item): item is UiMessage => item !== null)
+      const list = mapStoredMessages(stored)
+      /* 该会话仍在生成中：补一个占位助手消息，使后续增量继续流入（避免切回即空白） */
+      const targetId = streamTargets.get(id)
+      if (streamingIds.value[id] && targetId && !list.some((item) => item.id === targetId)) {
+        list.push({
+          id: targetId,
+          role: 'assistant',
+          content: '',
+          thinking: '',
+          tools: [],
+          addTime: new Date().toISOString(),
+          pending: true
+        })
+      }
+      messages.value = list
     } finally {
       loading.value = false
     }
@@ -111,9 +264,7 @@ export const useChatStore = defineStore('chat', () => {
 
   /* 进入新对话草稿态：不立即落库，首次发送时才创建会话（避免空对话被反复创建） */
   function startNewChat(): void {
-    if (streaming.value) {
-      return
-    }
+    /* 允许在其它会话生成时进入新对话草稿：各会话生成状态相互独立 */
     currentId.value = ''
     messages.value = []
   }
@@ -167,52 +318,71 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 处理主进程推送的对话事件 */
+  /* 处理主进程推送的对话事件（按会话路由，多会话并发生成互不干扰） */
   function handleEvent(event: ChatEvent): void {
-    if (event.sessionId !== currentId.value) {
-      return
-    }
-    const assistant = lastAssistant()
-    if (!assistant) {
-      return
-    }
+    const sessionId = event.sessionId
+    const visible = currentId.value === sessionId
     switch (event.type) {
       case 'delta':
-        assistant.content += event.text ?? ''
+      case 'thinking': {
+        /* 缓冲增量，节流刷新（不触发逐 token 重渲染） */
+        const buffer = bufferOf(sessionId)
+        if (event.type === 'delta') {
+          buffer.delta += event.text ?? ''
+        } else {
+          buffer.thinking += event.text ?? ''
+        }
+        scheduleFlush(sessionId)
         break
-      case 'thinking':
-        assistant.thinking += event.text ?? ''
+      }
+      case 'tool_start': {
+        if (visible) {
+          streamAssistant(sessionId)?.tools.push({
+            id: event.toolCallId ?? uid(),
+            name: event.toolName ?? 'tool',
+            status: 'running',
+            args: undefined
+          })
+        }
         break
-      case 'tool_start':
-        assistant.tools.push({
-          id: event.toolCallId ?? uid(),
-          name: event.toolName ?? 'tool',
-          status: 'running',
-          args: undefined
-        })
-        break
+      }
       case 'tool_end': {
-        const tool = assistant.tools.find((item) => item.id === event.toolCallId)
-        if (tool) {
-          tool.status = event.isError ? 'error' : 'done'
+        if (visible) {
+          const tool = streamAssistant(sessionId)?.tools.find((item) => item.id === event.toolCallId)
+          if (tool) {
+            tool.status = event.isError ? 'error' : 'done'
+          }
         }
         break
       }
       case 'error': {
-        /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
-        if (!assistant.error) {
-          const tip = event.message ?? '请求失败'
-          assistant.content = assistant.content ? `${assistant.content}\n\n${tip}` : tip
+        flushBuffers(sessionId)
+        if (visible) {
+          const assistant = streamAssistant(sessionId)
+          /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
+          if (assistant && !assistant.error) {
+            const tip = event.message ?? '请求失败'
+            assistant.content = assistant.content ? `${assistant.content}\n\n${tip}` : tip
+          }
+          if (assistant) {
+            assistant.error = true
+            assistant.pending = false
+          }
         }
-        assistant.error = true
-        assistant.pending = false
-        streaming.value = false
+        delete streamingIds.value[sessionId]
         break
       }
-      case 'done':
-        assistant.pending = false
-        streaming.value = false
+      case 'done': {
+        flushBuffers(sessionId)
+        if (visible) {
+          const assistant = streamAssistant(sessionId)
+          if (assistant) {
+            assistant.pending = false
+          }
+        }
+        delete streamingIds.value[sessionId]
         break
+      }
       default:
         break
     }
@@ -241,8 +411,7 @@ export const useChatStore = defineStore('chat', () => {
     }
     const sessionId = currentId.value
 
-    messages.value.push({ id: uid(), role: 'user', content, thinking: '', tools: [], addTime: new Date().toISOString() })
-    messages.value.push({
+    const assistantMessage: UiMessage = {
       id: uid(),
       role: 'assistant',
       content: '',
@@ -250,23 +419,38 @@ export const useChatStore = defineStore('chat', () => {
       tools: [],
       addTime: new Date().toISOString(),
       pending: true
-    })
-    streaming.value = true
+    }
+    /* 记录该会话的流式目标与缓冲（多会话各自独立） */
+    streamTargets.set(sessionId, assistantMessage.id)
+    const buffer = bufferOf(sessionId)
+    buffer.delta = ''
+    buffer.thinking = ''
+
+    messages.value.push({ id: uid(), role: 'user', content, thinking: '', tools: [], addTime: new Date().toISOString() })
+    messages.value.push(assistantMessage)
+    streamingIds.value[sessionId] = true
 
     try {
       await api.chat.send({ sessionId, text: content })
     } finally {
-      streaming.value = false
-      const assistant = lastAssistant()
-      if (assistant) {
-        assistant.pending = false
-      }
-      /* 落库后回读，使 UI 消息ID与数据库一致（便于编辑/删除） */
-      if (currentId.value) {
-        const stored = await api.session.messages(currentId.value)
-        messages.value = stored
-          .map(toUiMessage)
-          .filter((item): item is UiMessage => item !== null)
+      flushBuffers(sessionId)
+      delete streamingIds.value[sessionId]
+      /* 本轮是否仍为该会话的当前流（避免被同一会话的新一轮取代） */
+      const active = streamTargets.get(sessionId) === assistantMessage.id
+      if (active) {
+        /* 仅当该会话仍在展示时回读替换，避免覆盖其它会话；否则待下次进入时按库回读 */
+        if (currentId.value === sessionId) {
+          const assistant = streamAssistant(sessionId)
+          if (assistant) {
+            assistant.pending = false
+          }
+          const stored = await api.session.messages(sessionId)
+          if (currentId.value === sessionId && streamTargets.get(sessionId) === assistantMessage.id) {
+            messages.value = mapStoredMessages(stored)
+          }
+        }
+        streamTargets.delete(sessionId)
+        streamBuffers.delete(sessionId)
       }
       await loadSessions()
     }

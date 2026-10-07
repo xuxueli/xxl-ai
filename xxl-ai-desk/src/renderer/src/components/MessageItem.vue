@@ -94,8 +94,9 @@ function removeMessage(): void {
         </div>
       </div>
 
-      <!-- 正文 -->
+      <!-- 正文：流式期间用纯文本渲染（避免逐段重解析 Markdown 卡顿），完成后再转 Markdown -->
       <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}</div>
+      <div v-else-if="message.pending" class="streaming-plain">{{ message.content }}</div>
       <div v-else class="markdown-body" :class="{ 'is-error': message.error }" v-html="html"></div>
 
       <!-- 悬浮操作：发送时间（左）+ 复制（紧跟其后）；助手左对齐、用户右对齐 -->
@@ -150,6 +151,14 @@ function removeMessage(): void {
 
 .markdown-body.is-error {
   color: var(--desk-danger);
+}
+
+/* 流式纯文本：保留换行，行距与 Markdown 一致，避免跳动 */
+.streaming-plain {
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .waiting {
