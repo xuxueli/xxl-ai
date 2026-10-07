@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '../api'
 import { useProjectStore } from './project'
 import { useSettingsStore } from './settings'
-import type { ChatEvent, SessionDTO, StoredMessage } from '../../../shared/ipc'
+import type { ChatMode, ChatEvent, SessionDTO, StoredMessage } from '../../../shared/ipc'
 import type { UiMessage } from '../types'
 
 /* 生成 UI 消息 id */
@@ -90,8 +90,8 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 新建会话（归属当前选中项目） */
-  async function createSession(projectId?: string): Promise<SessionDTO> {
+  /* 新建会话（归属当前选中项目，默认 Build 模式） */
+  async function createSession(projectId?: string, mode: ChatMode = 'build'): Promise<SessionDTO> {
     const settings = useSettingsStore()
     const project = useProjectStore()
     const targetProjectId = projectId || project.currentId
@@ -100,6 +100,7 @@ export const useChatStore = defineStore('chat', () => {
       projectId: targetProjectId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
+      mode,
       systemPrompt: settings.settings.systemPrompt
     })
     sessions.value = [session, ...sessions.value]
@@ -151,6 +152,18 @@ export const useChatStore = defineStore('chat', () => {
     if (target) {
       target.providerId = updated.providerId
       target.modelId = updated.modelId
+    }
+  }
+
+  /* 切换当前会话的对话模式（plan 只读 / build 读写） */
+  async function updateSessionMode(mode: ChatMode): Promise<void> {
+    if (!currentId.value) {
+      return
+    }
+    const updated = await api.session.update(currentId.value, { mode })
+    const target = sessions.value.find((item) => item.id === updated.id)
+    if (target) {
+      target.mode = updated.mode
     }
   }
 
@@ -213,8 +226,8 @@ export const useChatStore = defineStore('chat', () => {
     unbind = api.chat.onEvent(handleEvent)
   }
 
-  /* 发送消息 */
-  async function send(text: string): Promise<void> {
+  /* 发送消息（新建会话时按传入模式创建，默认 Build） */
+  async function send(text: string, mode: ChatMode = 'build'): Promise<void> {
     const content = text.trim()
     if (!content || streaming.value) {
       return
@@ -224,7 +237,7 @@ export const useChatStore = defineStore('chat', () => {
       if (!useProjectStore().currentId) {
         return
       }
-      await createSession()
+      await createSession(undefined, mode)
     }
     const sessionId = currentId.value
 
@@ -291,6 +304,7 @@ export const useChatStore = defineStore('chat', () => {
     removeSession,
     renameSession,
     updateSessionModel,
+    updateSessionMode,
     removeMessages,
     send,
     abort,

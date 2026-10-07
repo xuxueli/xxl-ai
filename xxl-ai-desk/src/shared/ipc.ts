@@ -39,6 +39,9 @@ export interface ProjectCreateInput {
   dialogTitle?: string
 }
 
+/* 对话模式：plan 只读只规划；build 全量读写（默认） */
+export type ChatMode = 'plan' | 'build'
+
 /* 会话（归属某项目） */
 export interface SessionDTO {
   id: string
@@ -46,6 +49,7 @@ export interface SessionDTO {
   projectId: string
   providerId: string
   modelId: string
+  mode: ChatMode
   systemPrompt: string
   addTime: string
   updateTime: string
@@ -83,6 +87,28 @@ export interface ChatEvent {
   toolCallId?: string
   isError?: boolean
   message?: string
+}
+
+/* 终端创建入参：cwd 为工作目录（通常为项目目录），缺省回退用户主目录 */
+export interface TerminalCreateInput {
+  cwd?: string
+  cols?: number
+  rows?: number
+}
+
+/* 终端实例信息 */
+export interface TerminalDTO {
+  id: string
+  cwd: string
+  shell: string
+}
+
+/* 终端流事件（主 → 渲染）：data 为输出片段，exit 为进程退出 */
+export interface TerminalEvent {
+  id: string
+  type: 'data' | 'exit'
+  data?: string
+  exitCode?: number
 }
 
 /* 运行时信息（版本 / 平台 / 数据目录） */
@@ -135,6 +161,13 @@ export interface DeskApi {
     abort(sessionId: string): Promise<void>
     onEvent(cb: (event: ChatEvent) => void): () => void
   }
+  terminal: {
+    create(input?: TerminalCreateInput): Promise<TerminalDTO>
+    write(id: string, data: string): Promise<void>
+    resize(id: string, cols: number, rows: number): Promise<void>
+    dispose(id: string): Promise<void>
+    onEvent(cb: (event: TerminalEvent) => void): () => void
+  }
 }
 
 export const IPC = {
@@ -164,5 +197,10 @@ export const IPC = {
   sessionDeleteMessages: 'desk:session:delete-messages',
   chatSend: 'desk:chat:send',
   chatAbort: 'desk:chat:abort',
-  chatEvent: 'desk:chat:event'
+  chatEvent: 'desk:chat:event',
+  terminalCreate: 'desk:terminal:create',
+  terminalWrite: 'desk:terminal:write',
+  terminalResize: 'desk:terminal:resize',
+  terminalDispose: 'desk:terminal:dispose',
+  terminalEvent: 'desk:terminal:event'
 } as const

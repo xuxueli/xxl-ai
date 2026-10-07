@@ -4,6 +4,7 @@ import log from 'electron-log/main'
 import { initDatabase } from './db'
 import { registerIpc } from './ipc'
 import { ensureSeedProviders } from './services/providerService'
+import { disposeAllTerminals } from './services/terminalService'
 import { resetAgents } from './agent/host'
 
 /* XXL-AI Desk 主进程入口：窗口、生命周期、IPC 装配 */
@@ -95,5 +96,6 @@ if (!gotLock) {
 
   app.on('before-quit', () => {
     resetAgents()
+    disposeAllTerminals()
   })
 }

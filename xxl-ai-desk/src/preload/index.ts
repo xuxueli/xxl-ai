@@ -8,7 +8,9 @@ import type {
   ProviderModelQuery,
   ProjectCreateInput,
   SessionDTO,
-  StoredMessage
+  StoredMessage,
+  TerminalCreateInput,
+  TerminalEvent
 } from '../shared/ipc'
 
 /* 预加载：以白名单方式向渲染进程暴露受控 API */
@@ -59,6 +61,18 @@ const api: DeskApi = {
       const listener = (_event: unknown, payload: ChatEvent): void => callback(payload)
       ipcRenderer.on(IPC.chatEvent, listener)
       return () => ipcRenderer.removeListener(IPC.chatEvent, listener)
+    }
+  },
+  terminal: {
+    create: (input?: TerminalCreateInput) => ipcRenderer.invoke(IPC.terminalCreate, input),
+    write: (id: string, data: string) => ipcRenderer.invoke(IPC.terminalWrite, id, data),
+    resize: (id: string, cols: number, rows: number) =>
+      ipcRenderer.invoke(IPC.terminalResize, id, cols, rows),
+    dispose: (id: string) => ipcRenderer.invoke(IPC.terminalDispose, id),
+    onEvent: (callback: (event: TerminalEvent) => void) => {
+      const listener = (_event: unknown, payload: TerminalEvent): void => callback(payload)
+      ipcRenderer.on(IPC.terminalEvent, listener)
+      return () => ipcRenderer.removeListener(IPC.terminalEvent, listener)
     }
   }
 }

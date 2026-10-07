@@ -1,6 +1,7 @@
 import type { Agent } from '@earendil-works/pi-agent-core'
 import { buildModels, type ProviderModelConfig } from './models'
 import { createBuiltinTools } from './tools'
+import type { ChatMode } from '../../shared/ipc'
 
 /* 事件回调：由主进程转发到渲染进程 */
 export type HostEvent =
@@ -17,6 +18,9 @@ export interface AgentRuntimeOptions {
   modelId: string
   systemPrompt: string
   messages?: unknown[]
+  /* 对话模式（plan 只读 / build 读写）与项目根目录（文件沙箱边界） */
+  mode: ChatMode
+  rootDir: string
 }
 
 /* 会话级 Agent 运行时缓存：同一会话复用上下文 */
@@ -29,7 +33,11 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   if (!model) {
     throw new Error(`模型未找到：${options.provider.id}/${options.modelId}`)
   }
-  const tools = await createBuiltinTools()
+  const tools = await createBuiltinTools({
+    mode: options.mode,
+    rootDir: options.rootDir,
+    sessionId: options.sessionId
+  })
   /* 历史消息随 initialState 注入：Agent 会在其前自动补上系统指令（直接覆盖 state.messages 会把系统指令冲掉） */
   const agent = new AgentClass({
     initialState: {

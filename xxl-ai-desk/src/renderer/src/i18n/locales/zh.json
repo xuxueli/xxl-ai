@@ -33,6 +33,10 @@
     "inputPlaceholder": "随心输入，Enter 发送 / Shift+Enter 换行",
     "send": "发送",
     "stop": "停止",
+    "mode": "模式",
+    "modePlan": "Plan",
+    "modeBuild": "Build",
+    "modeTip": "Plan 模式只读：仅可读取项目文件；Build 模式可读写文件并执行命令",
     "thinking": "思考过程",
     "thinkingPending": "正在思考",
     "toolCalls": "工具调用",
@@ -52,7 +56,16 @@
     "deleteMessage": "删除消息",
     "deleteMessageConfirm": "确定删除该消息？删除后将同步从对话上下文中移除。",
     "noModel": "尚未配置模型，请前往设置添加供应商与模型",
-    "goSettings": "前往设置"
+    "goSettings": "前往设置",
+    "showTerminal": "显示终端",
+    "hideTerminal": "隐藏终端",
+    "newTerminal": "新建终端",
+    "terminal": "终端",
+    "terminalExited": "终端已退出（代码 {0}）",
+    "showSidePanel": "显示侧边栏",
+    "hideSidePanel": "隐藏侧边栏",
+    "sidePanel": "侧边任务",
+    "sidePanelEmpty": "侧边任务面板占位"
   },
   "project": {
     "label": "项目",

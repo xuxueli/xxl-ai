@@ -33,6 +33,10 @@
     "inputPlaceholder": "Type anything, Enter to send / Shift+Enter for newline",
     "send": "Send",
     "stop": "Stop",
+    "mode": "Mode",
+    "modePlan": "Plan",
+    "modeBuild": "Build",
+    "modeTip": "Plan is read-only (reads project files only); Build can read/write files and run commands",
     "thinking": "Thinking",
     "thinkingPending": "Thinking",
     "toolCalls": "Tool calls",
@@ -52,7 +56,16 @@
     "deleteMessage": "Delete message",
     "deleteMessageConfirm": "Delete this message? It will also be removed from the conversation context.",
     "noModel": "No model configured yet. Add a provider and model in Settings.",
-    "goSettings": "Go to Settings"
+    "goSettings": "Go to Settings",
+    "showTerminal": "Show terminal",
+    "hideTerminal": "Hide terminal",
+    "newTerminal": "New terminal",
+    "terminal": "Terminal",
+    "terminalExited": "Terminal exited (code {0})",
+    "showSidePanel": "Show side panel",
+    "hideSidePanel": "Hide side panel",
+    "sidePanel": "Side tasks",
+    "sidePanelEmpty": "Side task panel placeholder"
   },
   "project": {
     "label": "Projects",

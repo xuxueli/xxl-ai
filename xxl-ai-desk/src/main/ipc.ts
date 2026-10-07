@@ -2,12 +2,14 @@ import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {
   AppSettings,
+  ChatMode,
   ProviderDTO,
   ProviderModelQuery,
   ProjectCreateInput,
   RuntimeInfo,
   SessionDTO,
-  StoredMessage
+  StoredMessage,
+  TerminalCreateInput
 } from '../shared/ipc'
 import { getSettings, saveSettings } from './services/settingsService'
 import {
@@ -41,7 +43,15 @@ import {
   listProjects,
   renameProject
 } from './services/projectService'
+import {
+  createTerminal,
+  disposeTerminal,
+  onTerminalEvent,
+  resizeTerminal,
+  writeTerminal
+} from './services/terminalService'
 import { abortAgent, evictAgent, getAgent, resetAgents, runPrompt, type HostEvent } from './agent/host'
+import { clearSessionPermissions } from './agent/sandbox'
 import type { ProviderModelConfig } from './agent/models'
 
 /* 将 Agent 消息内容归一化为纯文本（用于列表预览与检索） */
@@ -64,13 +74,20 @@ function contentToText(message: unknown): string {
 }
 
 /* 将底层异常翻译为可读提示：明确指向具体供应商与模型 */
-function describeError(raw: string, providerName: string, modelId: string): string {
-  const message = (raw || '').trim()
+function describeError(raw: string, providerName: string, modelId: string): string {  const message = (raw || '').trim()
   if (/api key/i.test(message)) {
     return `供应商「${providerName}」未配置 API Key，无法调用模型「${modelId}」，请在「设置」中补全后重试`
   }
   const suffix = message ? `：${message}` : ''
   return `模型「${modelId}」（供应商「${providerName}」）调用失败${suffix}`
+}
+
+/* 模式说明：拼接到系统指令末尾，引导模型按当前模式行事（Plan 只读规划，Build 读写实施） */
+function modeSystemHint(mode: ChatMode): string {
+  if (mode === 'plan') {
+    return '\n\n当前为 Plan（规划）模式：你处于只读状态，只能读取项目文件进行阅读与分析，不能写入/编辑文件或执行命令。请先给出清晰的方案与计划，待用户切换到 Build 模式后再落地实施。'
+  }
+  return '\n\n当前为 Build（构建）模式：你可以读取、写入、编辑项目文件并执行命令；文件操作限制在当前项目目录内，越界需用户确认。'
 }
 
 /* 供应商 DTO → Pi 运行时配置 */
@@ -160,9 +177,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   })
   ipcMain.handle(IPC.projectRename, (_event, id: string, name: string) => renameProject(id, name))
   ipcMain.handle(IPC.projectRemove, (_event, id: string) => {
-    /* 级联删除前先清理项目下会话的运行时 Agent 缓存 */
+    /* 级联删除前先清理项目下会话的运行时 Agent 缓存与越界白名单 */
     const removed = deleteProject(id)
-    removed.forEach((sessionId) => evictAgent(sessionId))
+    removed.forEach((sessionId) => {
+      evictAgent(sessionId)
+      clearSessionPermissions(sessionId)
+    })
   })
   ipcMain.handle(IPC.projectReveal, (_event, id: string) => {
     /* 在系统文件管理器中展示项目目录（macOS Finder / Windows 资源管理器 / Linux 文件管理器） */
@@ -184,6 +204,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   })
   ipcMain.handle(IPC.sessionRemove, (_event, id: string) => {
     evictAgent(id)
+    clearSessionPermissions(id)
     deleteSession(id)
   })
   ipcMain.handle(IPC.sessionMessages, (_event, sessionId: string): StoredMessage[] =>
@@ -191,6 +212,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   )
   ipcMain.handle(IPC.sessionClear, (_event, sessionId: string) => {
     evictAgent(sessionId)
+    clearSessionPermissions(sessionId)
     clearMessages(sessionId)
   })
   ipcMain.handle(IPC.sessionDeleteMessages, (_event, sessionId: string, ids: string[]) => {
@@ -244,8 +266,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       modelId = model
       contextReady = true
 
-      /* 自定义指令全局生效：统一取当前设置（个性化变更对旧对话同样生效） */
-      const systemPrompt = settings.systemPrompt
+      /* 对话模式与文件沙箱边界：默认 Build；根目录取会话所属项目目录（缺失时回退用户主目录） */
+      const mode = session.mode === 'plan' ? 'plan' : 'build'
+      const project = session.projectId ? getProject(session.projectId) : null
+      const rootDir = project?.path || app.getPath('home')
+
+      /* 自定义指令全局生效：统一取当前设置，并附模式说明（个性化变更对旧对话同样生效） */
+      const systemPrompt = `${settings.systemPrompt || ''}${modeSystemHint(mode)}`
       /* 历史消息不携带 system 提示：系统指令始终取当前设置，保证旧对话也随设置变更生效 */
       const history = listMessages(sessionId)
         .map((message) => {
@@ -262,7 +289,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         provider: toRuntimeConfig(provider),
         modelId,
         systemPrompt,
-        messages: history
+        messages: history,
+        mode,
+        rootDir
       })
 
       await runPrompt(agent, text, emit)
@@ -292,5 +321,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     } catch (error) {
       emit({ type: 'error', message: (error as Error).message })
     }
+  })
+
+  /* --- 终端（本地 PTY） --- */
+  ipcMain.handle(IPC.terminalCreate, (_event, input?: TerminalCreateInput) => createTerminal(input))
+  ipcMain.handle(IPC.terminalWrite, (_event, id: string, data: string) => writeTerminal(id, data))
+  ipcMain.handle(IPC.terminalResize, (_event, id: string, cols: number, rows: number) =>
+    resizeTerminal(id, cols, rows)
+  )
+  ipcMain.handle(IPC.terminalDispose, (_event, id: string) => disposeTerminal(id))
+  /* 终端输出/退出事件统一转发到渲染窗口 */
+  onTerminalEvent((event) => {
+    getWindow()?.webContents.send(IPC.terminalEvent, event)
   })
 }

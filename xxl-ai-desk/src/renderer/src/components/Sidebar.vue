@@ -303,11 +303,11 @@ function startResize(event: MouseEvent): void {
               </el-dropdown-item>
               <el-dropdown-item command="name">
                 {{ t('project.sortName') }}
-                <el-icon v-if="sortBy === 'name'" class="sort-check"><CircleCheck /></el-icon>
+                <el-icon v-if="sortBy === 'name'" class="sort-check"><Check /></el-icon>
               </el-dropdown-item>
               <el-dropdown-item command="time">
                 {{ t('project.sortTime') }}
-                <el-icon v-if="sortBy === 'time'" class="sort-check"><CircleCheck /></el-icon>
+                <el-icon v-if="sortBy === 'time'" class="sort-check"><Check /></el-icon>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>

@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
   project_id    TEXT NOT NULL DEFAULT '',
   provider_id   TEXT NOT NULL DEFAULT '',
   model_id      TEXT NOT NULL DEFAULT '',
+  mode          TEXT NOT NULL DEFAULT 'build',
   system_prompt TEXT NOT NULL DEFAULT '',
   add_time      TEXT NOT NULL DEFAULT '',
   update_time   TEXT NOT NULL DEFAULT ''
@@ -63,7 +64,24 @@ export function initDatabase(): void {
   sqlite = new Database(file)
   sqlite.pragma('journal_mode = WAL')
   sqlite.exec(DDL)
+  migrate(sqlite)
   database = drizzle(sqlite, { schema })
+}
+
+/*
+ * 兼容旧库的结构迁移：SQLite 无 ADD COLUMN IF NOT EXISTS，用 PRAGMA 检测缺失列后补列。
+ *   新增列须同时更新上方 DDL（新库直建）与此处（旧库补齐）。
+ */
+function migrate(db: Database.Database): void {
+  ensureColumn(db, 'desk_session', 'mode', "TEXT NOT NULL DEFAULT 'build'")
+}
+
+/* 检测并补充缺失列（已存在则跳过） */
+function ensureColumn(db: Database.Database, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (!columns.some((item) => item.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
 }
 
 /* 获取 Drizzle 实例 */

@@ -6,10 +6,11 @@ import { useProjectStore } from '../stores/project'
 import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
 import { t } from '../i18n'
+import type { ChatMode } from '../../../shared/ipc'
 
-/* 输入框：Enter 发送，Shift+Enter 换行；左下角选择项目与模型 */
+/* 输入框：Enter 发送，Shift+Enter 换行；左下角选择项目、模式与模型 */
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
-const emit = defineEmits<{ submit: [text: string]; stop: [] }>()
+const emit = defineEmits<{ submit: [text: string, mode: ChatMode]; stop: [] }>()
 
 const router = useRouter()
 const project = useProjectStore()
@@ -17,6 +18,8 @@ const chat = useChatStore()
 const settings = useSettingsStore()
 const text = ref('')
 const inputRef = ref()
+/* 新建对话草稿模式：会话创建时随会话落库，默认 Build */
+const draftMode = ref<ChatMode>('build')
 
 /* 编辑历史消息：回填内容并聚焦输入框（供对话页调用） */
 function editText(content: string): void {
@@ -28,14 +31,6 @@ defineExpose({ editText })
 
 /* 已存在会话时锁定为所属项目（项目不可改）；新建对话时可自由选择 */
 const locked = computed(() => Boolean(chat.currentId))
-const currentProjectId = computed(() =>
-  locked.value ? chat.currentSession?.projectId ?? '' : project.currentId
-)
-/* 当前项目名（未选择时展示占位文案） */
-const currentProjectName = computed(() => {
-  const found = project.projects.find((item) => item.id === currentProjectId.value)
-  return found?.name || t('project.selectProject')
-})
 
 /* 当前模型：已生成对话取会话配置，新建对话取默认配置 */
 const currentModelId = computed(() =>
@@ -43,17 +38,21 @@ const currentModelId = computed(() =>
 )
 const currentModelLabel = computed(() => currentModelId.value || t('settings.selectModel'))
 
-/* 选择项目；选到「新建项目」时弹出目录选择并自动生成 */
-async function onProjectChange(value: string): Promise<void> {
-  if (value === '__new__') {
-    try {
-      await project.createProject()
-    } catch (error) {
-      ElMessage.error((error as Error).message)
-    }
-    return
+/* 当前对话模式：已生成对话取会话配置，新建对话取草稿（默认 Build） */
+const currentMode = computed<ChatMode>(() =>
+  locked.value ? chat.currentSession?.mode ?? 'build' : draftMode.value
+)
+const currentModeLabel = computed(() =>
+  currentMode.value === 'plan' ? t('chat.modePlan') : t('chat.modeBuild')
+)
+
+/* 切换模式：已生成对话落库到会话，新建对话仅改草稿 */
+async function onModeChange(mode: ChatMode): Promise<void> {
+  if (locked.value) {
+    await chat.updateSessionMode(mode)
+  } else {
+    draftMode.value = mode
   }
-  project.selectProject(value)
 }
 
 /* 选择模型（命令格式 providerId::modelId）；顶部入口跳转供应商设置 */
@@ -85,7 +84,7 @@ function onSend(): void {
     ElMessage.warning(t('project.needProject'))
     return
   }
-  emit('submit', value)
+  emit('submit', value, currentMode.value)
   text.value = ''
 }
 
@@ -112,22 +111,29 @@ function onKeydown(event: KeyboardEvent): void {
       />
       <div class="composer-bar">
         <div class="composer-left">
-          <!-- 项目选择器：文件夹图标 + 项目名 + 向下角标；已生成对话不展示 -->
-          <el-dropdown v-if="!locked" trigger="click" @command="onProjectChange">
-            <span class="picker-trigger">
-              <el-icon class="picker-icon"><Folder /></el-icon>
-              <span class="picker-name">{{ currentProjectName }}</span>
+          <!-- 模式选择器：Plan（只读）/ Build（读写），默认 Build -->
+          <el-dropdown trigger="click" @command="onModeChange">
+            <span class="picker-trigger" :title="t('chat.modeTip')">
+              <el-icon class="picker-icon">
+                <Reading v-if="currentMode === 'plan'" />
+                <Tools v-else />
+              </el-icon>
+              <span class="picker-name">{{ currentModeLabel }}</span>
               <el-icon class="picker-arrow"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="__new__">+ {{ t('project.new') }}</el-dropdown-item>
                 <el-dropdown-item
-                  v-for="item in project.projects"
-                  :key="item.id"
-                  :command="item.id"
+                  command="plan"
+                  :class="{ 'mode-active': currentMode === 'plan' }"
                 >
-                  {{ item.name }}
+                  <el-icon><Reading /></el-icon>{{ t('chat.modePlan') }}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  command="build"
+                  :class="{ 'mode-active': currentMode === 'build' }"
+                >
+                  <el-icon><Tools /></el-icon>{{ t('chat.modeBuild') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -265,6 +271,20 @@ function onKeydown(event: KeyboardEvent): void {
 
 :deep(.el-dropdown) {
   outline: none;
+}
+
+/* 模式下拉：当前项高亮；下拉项图标与文案留白 */
+:deep(.el-dropdown-menu__item.mode-active) {
+  color: var(--desk-primary);
+  font-weight: 600;
+}
+
+:deep(.el-dropdown-menu__item.mode-active .el-icon) {
+  color: var(--desk-primary);
+}
+
+:deep(.el-dropdown-menu__item .el-icon) {
+  margin-right: 6px;
 }
 
 .composer-actions {
