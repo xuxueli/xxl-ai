@@ -15,10 +15,12 @@ onMounted(async () => {
   await settings.load()
   await project.loadProjects()
   await chat.loadSessions()
-  /* 默认定位首个有归属项目的会话（无归属的历史会话不展示） */
-  const first = chat.sessions.find((item) => item.projectId)
-  if (first) {
-    await chat.selectSession(first.id)
+  /* 默认进入最后一条对话（最近更新优先）；无对话则进入新建对话 */
+  const last = chat.sessions[0]
+  if (last) {
+    await chat.selectSession(last.id)
+  } else {
+    chat.startNewChat()
   }
 })
 </script>

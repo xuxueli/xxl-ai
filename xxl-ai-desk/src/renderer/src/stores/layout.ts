@@ -24,6 +24,22 @@ export const useLayoutStore = defineStore('layout', () => {
     Number.isFinite(stored) && stored >= MIN_WIDTH && stored <= MAX_WIDTH ? stored : DEFAULT_WIDTH
   )
 
+  /* 右侧侧栏（侧边任务）宽度约束与默认值 */
+  const RIGHT_PANEL_DEFAULT_WIDTH = 320
+  const RIGHT_PANEL_MIN_WIDTH = 240
+  const RIGHT_PANEL_MAX_WIDTH = 720
+  const RIGHT_PANEL_STORAGE_KEY = 'desk-right-panel-width'
+
+  /* 右侧侧栏宽度（持久化到 localStorage，下次启动沿用） */
+  const storedRight = Number(localStorage.getItem(RIGHT_PANEL_STORAGE_KEY))
+  const rightPanelWidth = ref(
+    Number.isFinite(storedRight) &&
+      storedRight >= RIGHT_PANEL_MIN_WIDTH &&
+      storedRight <= RIGHT_PANEL_MAX_WIDTH
+      ? storedRight
+      : RIGHT_PANEL_DEFAULT_WIDTH
+  )
+
   /* 切换侧栏折叠状态 */
   function toggleSidebar(): void {
     sidebarCollapsed.value = !sidebarCollapsed.value
@@ -46,14 +62,23 @@ export const useLayoutStore = defineStore('layout', () => {
     localStorage.setItem(STORAGE_KEY, String(next))
   }
 
+  /* 设置右侧侧栏宽度（夹取到合理区间并持久化） */
+  function setRightPanelWidth(width: number): void {
+    const next = Math.min(RIGHT_PANEL_MAX_WIDTH, Math.max(RIGHT_PANEL_MIN_WIDTH, Math.round(width)))
+    rightPanelWidth.value = next
+    localStorage.setItem(RIGHT_PANEL_STORAGE_KEY, String(next))
+  }
+
   return {
     sidebarCollapsed,
     sidebarWidth,
     terminalVisible,
     rightPanelVisible,
+    rightPanelWidth,
     toggleSidebar,
     toggleTerminal,
     toggleRightPanel,
-    setSidebarWidth
+    setSidebarWidth,
+    setRightPanelWidth
   }
 })

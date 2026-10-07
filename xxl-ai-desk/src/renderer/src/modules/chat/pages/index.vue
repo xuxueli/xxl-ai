@@ -26,24 +26,6 @@ const hasMessages = computed(() => chat.messages.length > 0)
 const canChat = computed(() => settings.enabledProviders.length > 0)
 const title = computed(() => chat.currentSession?.title || t('chat.newChat'))
 
-/* 新建对话：项目选择器挪到输入框外部（左上角），已有会话时隐藏 */
-const showProjectPicker = computed(() => !chat.currentId)
-const currentProjectName = computed(
-  () => project.projects.find((item) => item.id === project.currentId)?.name || t('project.selectProject')
-)
-
-/* 选择项目；选到「新建项目」时弹出目录选择并自动生成 */
-async function onProjectChange(value: string): Promise<void> {
-  if (value === '__new__') {
-    try {
-      await project.createProject()
-    } catch (error) {
-      ElMessage.error((error as Error).message)
-    }
-    return
-  }
-  project.selectProject(value)
-}
 /* 终端标签名与工作目录：优先当前会话所属项目，回落当前选择项目 */
 const terminalProject = computed(() => {
   const id = chat.currentSession?.projectId || project.currentId
@@ -62,6 +44,25 @@ watch(
     }
   }
 )
+
+/* 拖拽右侧栏左边缘调整宽度（拖拽期间禁用过渡与文本选中） */
+function startPanelResize(event: MouseEvent): void {
+  event.preventDefault()
+  const startX = event.clientX
+  const startWidth = layout.rightPanelWidth
+  const onMove = (e: MouseEvent): void => {
+    /* 左边缘：向左拖动（clientX 变小）即变宽 */
+    layout.setRightPanelWidth(startWidth - (e.clientX - startX))
+  }
+  const onUp = (): void => {
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+    document.body.classList.remove('resizing')
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+  document.body.classList.add('resizing')
+}
 
 function scrollToBottom(): void {
   nextTick(() => {
@@ -92,8 +93,11 @@ async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
   await chat.send(text, mode)
 }
 
-async function onPick(text: string): Promise<void> {
-  await onSend(text)
+/* 空态示例：点击直接以该内容发起新对话 */
+const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
+
+function onPickExample(text: string): void {
+  void onSend(text)
 }
 
 /* 编辑用户消息：回填输入框并聚焦 */
@@ -178,27 +182,6 @@ async function onDeleteCurrent(): Promise<void> {
           <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
         </button>
 
-        <!-- 新建对话：项目选择器（输入框外部左上角；已有会话时隐藏） -->
-        <el-dropdown v-if="showProjectPicker" trigger="click" @command="onProjectChange">
-          <span class="project-trigger" :title="t('project.label')">
-            <el-icon class="project-icon"><Folder /></el-icon>
-            <span class="project-name">{{ currentProjectName }}</span>
-            <el-icon class="project-arrow"><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="__new__">+ {{ t('project.new') }}</el-dropdown-item>
-              <el-dropdown-item
-                v-for="item in project.projects"
-                :key="item.id"
-                :command="item.id"
-              >
-                {{ item.name }}
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-
         <div class="chat-title-wrap">
           <div class="chat-title">{{ title }}</div>
           <!-- 会话操作：重命名 / 删除（悬浮标题文案展示） -->
@@ -255,9 +238,9 @@ async function onDeleteCurrent(): Promise<void> {
 
     <!-- 工作区：左对话内容 + 右侧侧栏（侧边任务） -->
     <div class="chat-workspace">
-      <div class="chat-content">
+      <div class="chat-content" :class="{ empty: !hasMessages }">
         <div v-if="!hasMessages" class="chat-body empty">
-          <EmptyState @pick="onPick" />
+          <EmptyState />
         </div>
         <div v-else ref="scrollRef" class="chat-body">
           <div class="chat-inner">
@@ -278,10 +261,25 @@ async function onDeleteCurrent(): Promise<void> {
           @submit="onSend"
           @stop="chat.abort"
         />
+
+        <!-- 空态示例：输入框下方以文字入口平铺，点击直接发起对话 -->
+        <div v-if="!hasMessages" class="empty-examples">
+          <span class="examples-label">{{ t('chat.examplesLabel') }}</span>
+          <template v-for="(key, index) in examples" :key="key">
+            <span v-if="index > 0" class="examples-sep">{{ t('chat.examplesSep') }}</span>
+            <a class="example-link" @click="onPickExample(t(key))">{{ t(key) }}</a>
+          </template>
+        </div>
       </div>
 
-      <!-- 右侧侧栏（侧边任务）：占位面板 -->
-      <aside v-if="layout.rightPanelVisible" class="chat-side-panel">
+      <!-- 右侧侧栏（侧边任务）：可拖拽宽度的占位面板 -->
+      <aside
+        v-if="layout.rightPanelVisible"
+        class="chat-side-panel"
+        :style="{ width: `${layout.rightPanelWidth}px` }"
+      >
+        <!-- 左边缘拖拽手柄：调整侧栏宽度 -->
+        <div class="side-panel-resizer" @mousedown="startPanelResize"></div>
         <div class="side-panel-header">
           <span class="side-panel-title">{{ t('chat.sidePanel') }}</span>
           <button class="sidebar-toggle" :title="t('chat.hideSidePanel')" @click="layout.toggleRightPanel">
@@ -337,42 +335,6 @@ async function onDeleteCurrent(): Promise<void> {
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-/* 新建对话：左上角项目选择器（输入框外部；顶栏为拖拽区需排除） */
-.project-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 220px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: var(--desk-text-secondary);
-  font-size: 13px;
-  outline: none;
-  -webkit-app-region: no-drag;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.project-trigger:hover {
-  color: var(--desk-text);
-  background: var(--desk-primary-soft);
-}
-
-.project-trigger .project-icon,
-.project-trigger .project-arrow {
-  flex-shrink: 0;
-  font-size: 13px;
-}
-
-.project-trigger .project-name {
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 右上角开关组：终端 / 右侧侧栏显隐 */
@@ -455,13 +417,21 @@ async function onDeleteCurrent(): Promise<void> {
   flex-direction: column;
 }
 
+/* 空态：标题/项目选择、输入框与示例作为一组整体垂直居中（整体略上移） */
+.chat-content.empty {
+  justify-content: center;
+  padding-bottom: 10vh;
+}
+
 .chat-body {
   flex: 1;
   overflow-y: auto;
   padding: 24px 32px;
 }
 
+/* 空态体：仅占内容高度，便于与输入框整体居中 */
 .chat-body.empty {
+  flex: 0 0 auto;
   display: flex;
   padding: 0;
 }
@@ -471,14 +441,77 @@ async function onDeleteCurrent(): Promise<void> {
   margin: 0 auto;
 }
 
-/* 右侧侧栏（侧边任务）：占位面板 */
+/* 空态示例：与输入框同宽居中，纯文字入口（无背景框） */
+.empty-examples {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 880px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0 32px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--desk-text-tertiary);
+}
+
+.examples-label {
+  color: var(--desk-text-tertiary);
+}
+
+.examples-sep {
+  color: var(--desk-text-tertiary);
+  margin: 0 2px;
+}
+
+.example-link {
+  color: var(--desk-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.example-link:hover {
+  color: var(--desk-primary);
+  text-decoration: underline;
+}
+
+/* 右侧侧栏（侧边任务）：可拖拽宽度的占位面板 */
 .chat-side-panel {
-  width: 300px;
+  position: relative;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--desk-border);
   background: var(--desk-sidebar);
+}
+
+/* 左边缘拖拽手柄：与左侧会话栏保持同宽（5px），视觉条细；下方 ::after 提供更宽命中区 */
+.side-panel-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  -webkit-app-region: no-drag;
+}
+
+/* 透明命中区：视觉条保持 5px，实际可抓取范围更宽（近分割线即可拖动） */
+.side-panel-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -2px;
+  width: 16px;
+  height: 100%;
+}
+
+.side-panel-resizer:hover,
+body.resizing .side-panel-resizer {
+  background: var(--desk-primary-soft);
 }
 
 .side-panel-header {

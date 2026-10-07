@@ -24,8 +24,8 @@ const searchVisible = ref(false)
 const searchKeyword = ref('')
 const paletteInputRef = ref()
 
-/* 排序方式：名称 / 更新时间（默认更新时间倒序） */
-const sortBy = ref<'time' | 'name'>('time')
+/* 排序方式：名称 / 更新时间（默认按名称排序） */
+const sortBy = ref<'time' | 'name'>('name')
 
 /* 项目 → 其下会话 */
 function sessionsOf(projectId: string): SessionDTO[] {
