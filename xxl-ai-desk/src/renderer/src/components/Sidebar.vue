@@ -335,9 +335,15 @@ function startResize(event: MouseEvent): void {
               <el-icon class="op" :title="t('common.actions')"><MoreFilled /></el-icon>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="rename">{{ t('project.rename') }}</el-dropdown-item>
-                  <el-dropdown-item command="reveal">{{ revealLabel }}</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>{{ t('project.delete') }}</el-dropdown-item>
+                  <el-dropdown-item command="rename">
+                    <el-icon><EditPen /></el-icon>{{ t('project.rename') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="reveal">
+                    <el-icon><FolderOpened /></el-icon>{{ revealLabel }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>
+                    <el-icon><Delete /></el-icon>{{ t('project.delete') }}
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -430,7 +436,7 @@ function startResize(event: MouseEvent): void {
 
 <style scoped lang="scss">
 .sidebar-head {
-  padding: 10px 14px 12px;
+  padding: 10px 16px 12px;
   /* macOS 隐藏标题栏后，顶部区域需可拖拽移动窗口（系统红黄绿按钮不受影响） */
   -webkit-app-region: drag;
 }
@@ -461,8 +467,6 @@ body.resizing .sidebar-resizer {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  /* 与「新建对话」按钮内图标左侧对齐（按钮内左内边距 12px） */
-  padding-left: 12px;
   gap: 10px;
   min-width: 0;
   margin-bottom: 16px;
@@ -509,7 +513,7 @@ body.resizing .sidebar-resizer {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 0;
   border-radius: 10px;
   cursor: pointer;
   color: var(--desk-text-secondary);
@@ -686,7 +690,7 @@ body.resizing .sidebar-resizer {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 6px 10px 6px 6px;
   border-radius: 10px;
   cursor: pointer;
   color: var(--desk-text-secondary);

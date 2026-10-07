@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import MessageItem from '../../../components/MessageItem.vue'
 import ChatComposer from '../../../components/ChatComposer.vue'
 import EmptyState from '../../../components/EmptyState.vue'
@@ -61,6 +61,52 @@ async function onPick(text: string): Promise<void> {
 function onEditMessage(content: string): void {
   composerRef.value?.editText(content)
 }
+
+/* 会话操作下拉命令分发 */
+function onChatCommand(command: string): void {
+  if (command === 'rename') {
+    void onRenameCurrent()
+  } else if (command === 'delete') {
+    void onDeleteCurrent()
+  }
+}
+
+/* 重命名当前会话 */
+async function onRenameCurrent(): Promise<void> {
+  const session = chat.currentSession
+  if (!session) {
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('', t('chat.renameSession'), {
+      inputValue: session.title,
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel')
+    })
+    await chat.renameSession(session.id, value || session.title)
+  } catch {
+    /* 取消 */
+  }
+}
+
+/* 删除当前会话 */
+async function onDeleteCurrent(): Promise<void> {
+  const session = chat.currentSession
+  if (!session) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(t('chat.deleteConfirm'), t('chat.deleteSession'), {
+      type: 'warning',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel')
+    })
+    await chat.removeSession(session.id)
+    ElMessage.success(t('common.deleted'))
+  } catch {
+    /* 取消 */
+  }
+}
 </script>
 
 <template>
@@ -77,7 +123,28 @@ function onEditMessage(content: string): void {
         >
           <el-icon><Expand v-if="layout.sidebarCollapsed" /><Fold v-else /></el-icon>
         </button>
-        <div class="chat-title">{{ title }}</div>
+        <div class="chat-title-wrap">
+          <div class="chat-title">{{ title }}</div>
+          <!-- 会话操作：重命名 / 删除（悬浮标题文案展示） -->
+          <el-dropdown
+            v-if="chat.currentId"
+            trigger="click"
+            popper-class="chat-title-dropdown"
+            @command="onChatCommand"
+          >
+            <el-icon class="chat-title-more" :title="t('common.actions')"><MoreFilled /></el-icon>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="rename">
+                  <el-icon><EditPen /></el-icon>{{ t('chat.renameSession') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="delete" divided>
+                  <el-icon><Delete /></el-icon>{{ t('chat.deleteSession') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </div>
     </header>
 
@@ -138,6 +205,16 @@ function onEditMessage(content: string): void {
   min-width: 0;
 }
 
+/* 标题 + 操作：仅悬浮标题文案区域时显示「...」 */
+.chat-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  /* 顶栏为窗口拖拽区，此处排除拖拽，保证 :hover 正常触发与图标可点击 */
+  -webkit-app-region: no-drag;
+}
+
 .chat-title {
   font-size: 14px;
   font-weight: 600;
@@ -145,6 +222,26 @@ function onEditMessage(content: string): void {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 会话操作用「...」：默认隐藏，悬浮标题文案时展示（顶栏为拖拽区，需排除以保证可点击） */
+.chat-title-more {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--desk-text-tertiary);
+  cursor: pointer;
+  outline: none;
+  visibility: hidden;
+  transition: color 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+.chat-title-wrap:hover .chat-title-more {
+  visibility: visible;
+}
+
+.chat-title-more:hover {
+  color: var(--desk-text);
 }
 
 .chat-body {

@@ -269,3 +269,12 @@ html.dark .el-button--primary {
   font-size: 13px;
   color: var(--desk-primary);
 }
+
+/* --- 下拉菜单选项：字体与左侧菜单文案一致，首图标与文字留白 --- */
+.el-dropdown-menu__item {
+  font-size: 14px;
+}
+
+.el-dropdown-menu__item > .el-icon:first-child {
+  margin-right: 8px;
+}

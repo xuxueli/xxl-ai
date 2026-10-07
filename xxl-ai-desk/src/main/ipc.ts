@@ -115,7 +115,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   /* --- 设置 --- */
   ipcMain.handle(IPC.settingsGet, () => getSettings())
-  ipcMain.handle(IPC.settingsSave, (_event, patch: Partial<AppSettings>) => saveSettings(patch))
+  ipcMain.handle(IPC.settingsSave, (_event, patch: Partial<AppSettings>) => {
+    const saved = saveSettings(patch)
+    /* 自定义指令变更后清空运行时缓存，使全部会话（含旧对话）下次对话即生效 */
+    if (patch.systemPrompt !== undefined) {
+      resetAgents()
+    }
+    return saved
+  })
 
   /* --- 供应商 --- */
   ipcMain.handle(IPC.providerList, () => listProviders())
@@ -231,16 +238,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       modelId = model
       contextReady = true
 
-      const systemPrompt = session.systemPrompt || settings.systemPrompt
+      /* 自定义指令全局生效：统一取当前设置（个性化变更对旧对话同样生效） */
+      const systemPrompt = settings.systemPrompt
+      /* 历史消息不携带 system 提示：系统指令始终取当前设置，保证旧对话也随设置变更生效 */
       const history = listMessages(sessionId)
         .map((message) => {
           try {
-            return JSON.parse(message.data)
+            return JSON.parse(message.data) as { role?: string }
           } catch {
             return null
           }
         })
-        .filter((item) => item !== null)
+        .filter((item) => item !== null && item.role !== 'system')
 
       const agent = await getAgent({
         sessionId,
@@ -252,19 +261,21 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
       await runPrompt(agent, text, emit)
 
-      /* 落库：以 Agent 完整上下文覆盖会话消息，保证下次续聊一致 */
-      const serialized = agent.state.messages.map((message) => {
-        const role = (message as { role?: string }).role ?? ''
-        const stopReason = (message as { stopReason?: string }).stopReason
-        const errorMessage = (message as { errorMessage?: string }).errorMessage
-        let content = contentToText(message)
-        /* 失败消息追加可读提示落库，避免切换会话后丢失错误信息（保留已生成的部分内容） */
-        if (role === 'assistant' && stopReason === 'error') {
-          const tip = describeError(errorMessage ?? '', providerName, modelId)
-          content = content ? `${content}\n\n${tip}` : tip
-        }
-        return { role, content, data: JSON.stringify(message) }
-      })
+      /* 落库：以 Agent 完整上下文覆盖会话消息，保证下次续聊一致（剔除 system，避免固化旧指令） */
+      const serialized = agent.state.messages
+        .filter((message) => (message as { role?: string }).role !== 'system')
+        .map((message) => {
+          const role = (message as { role?: string }).role ?? ''
+          const stopReason = (message as { stopReason?: string }).stopReason
+          const errorMessage = (message as { errorMessage?: string }).errorMessage
+          let content = contentToText(message)
+          /* 失败消息追加可读提示落库，避免切换会话后丢失错误信息（保留已生成的部分内容） */
+          if (role === 'assistant' && stopReason === 'error') {
+            const tip = describeError(errorMessage ?? '', providerName, modelId)
+            content = content ? `${content}\n\n${tip}` : tip
+          }
+          return { role, content, data: JSON.stringify(message) }
+        })
       replaceMessages(sessionId, serialized)
 
       /* 首次对话自动以提问作为会话标题 */
