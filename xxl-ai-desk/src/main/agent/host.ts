@@ -30,17 +30,16 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
     throw new Error(`模型未找到：${options.provider.id}/${options.modelId}`)
   }
   const tools = await createBuiltinTools()
+  /* 历史消息随 initialState 注入：Agent 会在其前自动补上系统指令（直接覆盖 state.messages 会把系统指令冲掉） */
   const agent = new AgentClass({
     initialState: {
       systemPrompt: options.systemPrompt,
       model,
-      tools
+      tools,
+      messages: (options.messages ?? []) as never[]
     },
     streamFn: models.streamSimple.bind(models)
   })
-  if (options.messages && options.messages.length > 0) {
-    agent.state.messages = options.messages as never[]
-  }
   return agent
 }
 
