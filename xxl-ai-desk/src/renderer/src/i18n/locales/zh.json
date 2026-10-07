@@ -49,6 +49,8 @@
     "renamePrompt": "请输入新的会话标题",
     "deleteSession": "删除会话",
     "deleteConfirm": "确定删除该会话及其全部消息？",
+    "deleteMessage": "删除消息",
+    "deleteMessageConfirm": "确定删除该消息？删除后将同步从对话上下文中移除。",
     "noModel": "尚未配置模型，请前往设置添加供应商与模型",
     "goSettings": "前往设置"
   },
