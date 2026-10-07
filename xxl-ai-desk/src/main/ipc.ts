@@ -26,6 +26,7 @@ import {
 import {
   clearMessages,
   createSession,
+  deleteMessages,
   deleteSession,
   getSession,
   listMessages,
@@ -191,6 +192,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.sessionClear, (_event, sessionId: string) => {
     evictAgent(sessionId)
     clearMessages(sessionId)
+  })
+  ipcMain.handle(IPC.sessionDeleteMessages, (_event, sessionId: string, ids: string[]) => {
+    /* 删除消息后清空运行时缓存，使对话上下文与存储一致 */
+    evictAgent(sessionId)
+    deleteMessages(sessionId, ids)
   })
 
   /* --- 对话 --- */

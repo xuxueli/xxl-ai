@@ -128,6 +128,7 @@ export interface DeskApi {
     remove(id: string): Promise<void>
     messages(sessionId: string): Promise<StoredMessage[]>
     clear(sessionId: string): Promise<void>
+    removeMessages(sessionId: string, ids: string[]): Promise<void>
   }
   chat: {
     send(input: { sessionId: string; text: string }): Promise<void>
@@ -160,6 +161,7 @@ export const IPC = {
   sessionRemove: 'desk:session:remove',
   sessionMessages: 'desk:session:messages',
   sessionClear: 'desk:session:clear',
+  sessionDeleteMessages: 'desk:session:delete-messages',
   chatSend: 'desk:chat:send',
   chatAbort: 'desk:chat:abort',
   chatEvent: 'desk:chat:event'

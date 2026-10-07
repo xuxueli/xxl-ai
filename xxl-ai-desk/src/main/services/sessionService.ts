@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { getDb } from '../db'
 import { messageTable, sessionTable } from '../db/schema'
 import type { SessionDTO, StoredMessage } from '../../shared/ipc'
@@ -126,4 +126,15 @@ export function replaceMessages(
 /* 清空会话消息 */
 export function clearMessages(sessionId: string): void {
   getDb().delete(messageTable).where(eq(messageTable.sessionId, sessionId)).run()
+}
+
+/* 删除指定的会话消息（按消息ID），与前端渲染保持一致 */
+export function deleteMessages(sessionId: string, ids: string[]): void {
+  if (ids.length === 0) {
+    return
+  }
+  getDb()
+    .delete(messageTable)
+    .where(and(eq(messageTable.sessionId, sessionId), inArray(messageTable.id, ids)))
+    .run()
 }

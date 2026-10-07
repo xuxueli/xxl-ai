@@ -62,6 +62,21 @@ function onEditMessage(content: string): void {
   composerRef.value?.editText(content)
 }
 
+/* 删除当前消息：同步删除存储与前端渲染，保持一致 */
+async function onRemoveMessage(message: { id: string }): Promise<void> {
+  try {
+    await ElMessageBox.confirm(t('chat.deleteMessageConfirm'), t('chat.deleteMessage'), {
+      type: 'warning',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel')
+    })
+    await chat.removeMessages([message.id])
+    ElMessage.success(t('common.deleted'))
+  } catch {
+    /* 取消 */
+  }
+}
+
 /* 会话操作下拉命令分发 */
 function onChatCommand(command: string): void {
   if (command === 'rename') {
@@ -158,6 +173,7 @@ async function onDeleteCurrent(): Promise<void> {
           :key="message.id"
           :message="message"
           @edit="onEditMessage"
+          @remove="onRemoveMessage(message)"
         />
       </div>
     </div>

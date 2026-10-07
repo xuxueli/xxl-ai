@@ -248,8 +248,25 @@ export const useChatStore = defineStore('chat', () => {
       if (assistant) {
         assistant.pending = false
       }
+      /* 落库后回读，使 UI 消息ID与数据库一致（便于编辑/删除） */
+      if (currentId.value) {
+        const stored = await api.session.messages(currentId.value)
+        messages.value = stored
+          .map(toUiMessage)
+          .filter((item): item is UiMessage => item !== null)
+      }
       await loadSessions()
     }
+  }
+
+  /* 删除指定消息：同步删除存储与前端渲染，并重建会话上下文 */
+  async function removeMessages(ids: string[]): Promise<void> {
+    if (!currentId.value || ids.length === 0) {
+      return
+    }
+    await api.session.removeMessages(currentId.value, ids)
+    const removed = new Set(ids)
+    messages.value = messages.value.filter((item) => !removed.has(item.id))
   }
 
   /* 中断生成 */
@@ -274,6 +291,7 @@ export const useChatStore = defineStore('chat', () => {
     removeSession,
     renameSession,
     updateSessionModel,
+    removeMessages,
     send,
     abort,
     bind

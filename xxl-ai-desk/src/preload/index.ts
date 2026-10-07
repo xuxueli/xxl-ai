@@ -48,7 +48,9 @@ const api: DeskApi = {
     remove: (id: string) => ipcRenderer.invoke(IPC.sessionRemove, id),
     messages: (sessionId: string): Promise<StoredMessage[]> =>
       ipcRenderer.invoke(IPC.sessionMessages, sessionId),
-    clear: (sessionId: string) => ipcRenderer.invoke(IPC.sessionClear, sessionId)
+    clear: (sessionId: string) => ipcRenderer.invoke(IPC.sessionClear, sessionId),
+    removeMessages: (sessionId: string, ids: string[]) =>
+      ipcRenderer.invoke(IPC.sessionDeleteMessages, sessionId, ids)
   },
   chat: {
     send: (input: { sessionId: string; text: string }) => ipcRenderer.invoke(IPC.chatSend, input),
