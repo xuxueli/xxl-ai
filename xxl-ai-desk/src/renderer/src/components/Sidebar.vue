@@ -6,6 +6,7 @@ import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
 import { useLayoutStore } from '../stores/layout'
 import { t } from '../i18n'
+import logo from '../assets/favicon.ico'
 
 /* 左侧会话栏：新建 / 搜索 / 会话列表 / 底部操作 */
 const router = useRouter()
@@ -68,7 +69,7 @@ function goSettings(): void {
   <aside class="desk-sidebar" :class="{ collapsed: layout.sidebarCollapsed }">
     <div class="sidebar-head" :class="{ mac: settings.platform === 'darwin' }">
       <div class="brand">
-        <div class="brand-logo">XXL</div>
+        <img class="brand-logo" :src="logo" alt="logo" />
         <div class="brand-text">
           <div class="brand-name">{{ t('app.name') }}</div>
           <div class="brand-tag">{{ t('app.tagline') }}</div>
@@ -143,15 +144,8 @@ function goSettings(): void {
 .brand-logo {
   width: 36px;
   height: 36px;
-  border-radius: 11px;
-  background: var(--desk-primary);
-  color: var(--desk-primary-contrast);
-  font-weight: 700;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.5px;
+  border-radius: 8px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

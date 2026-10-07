@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '../i18n'
+import logo from '../assets/favicon.ico'
 
 /* 空态欢迎页：标题 + 示例建议 */
 defineEmits<{ pick: [text: string] }>()
@@ -13,7 +14,7 @@ const suggestions = [
 
 <template>
   <div class="empty-state">
-    <div class="empty-logo">XXL</div>
+    <img class="empty-logo" :src="logo" alt="logo" />
     <h1 class="empty-title">{{ t('chat.emptyTitle') }}</h1>
     <p class="empty-subtitle">{{ t('chat.emptySubtitle') }}</p>
     <div class="suggestions">
@@ -45,13 +46,7 @@ const suggestions = [
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: var(--desk-primary);
-  color: var(--desk-primary-contrast);
-  font-weight: 700;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
   margin-bottom: 24px;
   box-shadow: var(--desk-shadow);
 }
