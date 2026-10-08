@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { api } from '../../api'
-import { t } from '../../i18n'
-
 /*
  * 右侧「浏览器」面板：基于 Electron <webview> 的内嵌浏览器，支持多标签页。
  *   - 每个标签页一个独立 webview（切换用 v-show 保留页面状态与前进/后退历史）；
  *   - 专业地址栏（含搜索兜底）、前进/后退/刷新、系统浏览器打开与更多操作；
  *   - 页面内 window.open / target=_blank 经主进程转发为新标签页。
  */
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { api } from '../../api'
+import { t } from '../../i18n'
+
 interface WebviewElement extends HTMLElement {
   loadURL(url: string): Promise<void>
   getURL(): string
@@ -32,6 +32,7 @@ interface Tab {
   canForward: boolean
 }
 
+/* 标签页自增序号，用于生成唯一 id */
 let seq = 0
 
 /* 新建标签页状态（url 非空时直接导航） */
@@ -48,6 +49,7 @@ function makeTab(url = ''): Tab {
   }
 }
 
+/* 标签页列表与当前激活标签页 id（首个标签默认激活） */
 const tabs = ref<Tab[]>([makeTab()])
 const activeId = ref(tabs.value[0].id)
 
@@ -60,6 +62,7 @@ const pendingNav = new Map<string, string>()
 /* 地址栏聚焦时不覆盖用户正在编辑的输入 */
 let inputFocused = false
 
+/* 当前激活标签页（兜底取首个） */
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeId.value) ?? tabs.value[0])
 
 /* 地址栏文本双向绑定到当前标签页 */
@@ -105,6 +108,7 @@ function tabLabel(tab: Tab): string {
   return t('panel.untitled')
 }
 
+/* 按 id 查找标签页 */
 function findTab(id: string): Tab | undefined {
   return tabs.value.find((tab) => tab.id === id)
 }
@@ -349,12 +353,14 @@ function onAddressFocus(): void {
   inputFocused = true
 }
 
+/* 地址栏失焦：恢复用导航地址刷新输入框 */
 function onAddressBlur(): void {
   inputFocused = false
 }
 
 let offOpenTab: (() => void) | null = null
 
+/* 挂载：监听主进程转发的页面内新窗口请求 */
 onMounted(() => {
   /* 页面内新窗口请求 → 新标签页 */
   offOpenTab = api.browser.onOpenTab((url) => {
@@ -362,6 +368,7 @@ onMounted(() => {
   })
 })
 
+/* 卸载：取消监听并销毁全部 webview 与缓存 */
 onBeforeUnmount(() => {
   offOpenTab?.()
   for (const view of webviews.values()) {
@@ -433,6 +440,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
+      <!-- 更多操作：在系统浏览器打开 / 刷新 -->
       <el-dropdown trigger="click" @command="onMore">
         <button class="nav-btn"><el-icon><MoreFilled /></el-icon></button>
         <template #dropdown>

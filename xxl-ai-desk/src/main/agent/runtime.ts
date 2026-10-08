@@ -21,8 +21,10 @@ interface PendingRun {
   resolve: (result: { ok: true; messages: unknown[] } | { ok: false; message: string }) => void
 }
 
+/* 运行时进程句柄与其就绪 Promise（首个 spawn 后初始化） */
 let worker: UtilityProcess | null = null
 let workerReady: Promise<UtilityProcess> | null = null
+/* 进行中的运行：sessionId → 事件回调与结算（同一会话同时只允许一轮） */
 const pendingRuns = new Map<string, PendingRun>()
 
 /* 启动（或复用）运行时进程 */

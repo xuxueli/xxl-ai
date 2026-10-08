@@ -2,8 +2,11 @@
 
 /* 工具调用状态（含入参、结果与耗时，供执行过程时间线渲染） */
 export interface ToolCallState {
+  /* 模型给出的工具调用 id（与 toolResult 关联） */
   id: string
+  /* 工具名称 */
   name: string
+  /* 调用状态：执行中 / 成功 / 失败 */
   status: 'running' | 'done' | 'error'
   /* 调用入参（模型给出的参数） */
   args?: unknown
@@ -32,8 +35,11 @@ export interface UiMessage {
   content: string
   /* 助手消息的有序片段（用户消息为空） */
   parts: MessagePart[]
+  /* 消息落库时间（ISO 字符串） */
   addTime: string
+  /* 助手消息是否仍在生成中（展示光标与禁用操作） */
   pending?: boolean
+  /* 助手消息本轮是否以错误结束（标记失败样式） */
   error?: boolean
   /* 助手消息本轮开始时间戳（展示总耗时） */
   startedAt?: number

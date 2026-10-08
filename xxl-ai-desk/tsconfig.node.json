@@ -1,25 +1,26 @@
 {
+  /* 主进程 / 预加载的 TS 类型检查配置：面向 Electron 的 Node 环境，不引入 DOM */
   "compilerOptions": {
-    "composite": true,
-    "target": "ES2022",
+    "composite": true,                     /* 供 tsconfig.json 项目引用 */
+    "target": "ES2022",                    /* 主进程/预加载运行于 Electron 的 Node 环境 */
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Bundler",         /* 由 electron-vite(Vite/Rollup) 打包解析 */
     "lib": ["ES2023"],
-    "types": ["node", "electron-vite/node"],
+    "types": ["node", "electron-vite/node"], /* 仅注入 Node 与 electron-vite 类型，不引入 DOM */
     "strict": true,
-    "noEmit": true,
+    "noEmit": true,                        /* 仅做类型检查，产物由 electron-vite 生成 */
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@main/*": ["./src/main/*"]
+      "@main/*": ["./src/main/*"]          /* 主进程路径别名，与 electron.vite.config.ts 一致 */
     }
   },
   "include": [
-    "src/main/**/*",
-    "src/preload/**/*",
-    "src/shared/**/*",
-    "electron.vite.config.ts"
+    "src/main/**/*",                       /* 主进程与 Agent 运行时 */
+    "src/preload/**/*",                    /* 预加载脚本 */
+    "src/shared/**/*",                     /* 主/预加载/渲染共享契约 */
+    "electron.vite.config.ts"              /* 构建配置本身也纳入检查 */
   ]
 }

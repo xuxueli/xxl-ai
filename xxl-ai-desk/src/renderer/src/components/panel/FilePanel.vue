@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/*
+ * 右侧「文件」面板：左为选中文件内容（可编辑代码 / 预览），右为项目目录文件树。
+ * 顶部提供保存、预览切换、打开方式下拉与「打开所在文件夹」。
+ */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
@@ -9,10 +13,6 @@ import { escapeHtml, highlightCode, languageOf } from '../../composables/useHigh
 import FileTreeNode from './FileTreeNode.vue'
 import type { FileContent, FsEntry, OpenWithApp } from '../../../../shared/ipc'
 
-/*
- * 右侧「文件」面板：左为选中文件内容（可编辑代码 / 预览），右为项目目录文件树。
- * 顶部提供保存、预览切换、打开方式下拉与「打开所在文件夹」。
- */
 const props = defineProps<{ root?: string; projectName?: string }>()
 
 /* 编辑区着色长度上限：超过则退化为纯文本，保证大文件编辑流畅 */
@@ -23,6 +23,7 @@ const childrenMap = ref<Record<string, FsEntry[]>>({})
 const expandedMap = ref<Record<string, boolean>>({})
 const loadingMap = ref<Record<string, boolean>>({})
 
+/* 过滤关键字、当前选中节点、文件内容与加载/错误态、是否预览 */
 const keyword = ref('')
 const selected = ref<FsEntry | null>(null)
 const file = ref<FileContent | null>(null)
@@ -34,6 +35,7 @@ const preview = ref(false)
 const original = ref('')
 const draft = ref('')
 const saving = ref(false)
+/* 文本域 / 行号栏 / 高亮层元素引用（用于滚动同步与按键处理） */
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const gutterRef = ref<HTMLElement | null>(null)
 const highlightRef = ref<HTMLElement | null>(null)
@@ -58,6 +60,7 @@ function parentDir(file: string): string {
   return index < 0 ? '' : normalized.slice(0, index)
 }
 
+/* 挂载：监听目录变更并探测本机「打开方式」应用 */
 onMounted(async () => {
   /* 目录变更 → 刷新对应已加载目录 */
   offFsChange = api.fs.onChange(onFsChange)
@@ -68,6 +71,7 @@ onMounted(async () => {
   }
 })
 
+/* 卸载：取消文件变更监听并注销全部目录监听 */
 onBeforeUnmount(() => {
   offFsChange?.()
   for (const dir of [...watchedDirs]) {
@@ -88,10 +92,12 @@ function extOf(name: string): string {
 /* 可预览图片扩展名 */
 const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']
 
+/* 是否为可预览的图片文件 */
 function isImageName(name: string): boolean {
   return IMAGE_EXTS.includes(extOf(name))
 }
 
+/* 当前文件的图片 / Markdown 判定、是否可预览、预览是否生效 */
 const isImage = computed(() => Boolean(file.value) && isImageName(file.value?.name ?? ''))
 const isMarkdown = computed(
   () => Boolean(file.value) && ['.md', '.markdown'].includes(extOf(file.value?.name ?? ''))
@@ -113,6 +119,7 @@ function matchNode(entry: FsEntry, word: string): boolean {
   return Boolean(kids && kids.some((child) => matchNode(child, word)))
 }
 
+/* 过滤后的根目录可见子项（无关键字时取全部） */
 const visibleRoot = computed(() => {
   const word = keyword.value.trim().toLowerCase()
   return word ? rootChildren.value.filter((entry) => matchNode(entry, word)) : rootChildren.value

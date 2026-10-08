@@ -1,10 +1,10 @@
-import { t } from '../i18n'
-import type { ToolCallState } from '../types'
-
 /*
  * 工具调用的展示视图：把底层工具名与原始参数翻译成人话，
  * 让每一步执行都能在时间线上被看懂（做了什么、对谁做）。
  */
+
+import { t } from '../i18n'
+import type { ToolCallState } from '../types'
 
 /* 工具展示视图 */
 export interface ToolView {
@@ -51,6 +51,7 @@ function detailOf(name: string, args: unknown): string {
     return ''
   }
   const record = args as Record<string, unknown>
+  /* 读取字符串格式的参数值，非字符串返回空串 */
   const pick = (key: string): string => (typeof record[key] === 'string' ? (record[key] as string) : '')
   switch (name) {
     case 'read_file':
@@ -77,8 +78,10 @@ function detailOf(name: string, args: unknown): string {
 /* 生成工具调用的展示视图 */
 export function toolView(tool: ToolCallState): ToolView {
   const key = TOOL_TITLE_KEYS[tool.name]
+  /* 未知工具回退为原始工具名，再回退通用标题 */
   const title = key ? t(`chat.tool.${key}`) : tool.name || t('chat.tool.generic')
   return {
+    /* 未知工具使用通用图标 */
     icon: TOOL_ICONS[tool.name] ?? 'Tools',
     title,
     detail: detailOf(tool.name, tool.args)

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+/* 快捷键录制输入：聚焦后按下组合键即录制并回传（Esc 取消当前录制） */
 import { ref } from 'vue'
 import { t } from '../i18n'
 import { eventToBinding, formatShortcut, isModifierKey } from '../utils/shortcut'
 
-/* 快捷键录制输入：聚焦后按下组合键即录制并回传（Esc 取消当前录制） */
 const props = defineProps<{ modelValue?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 

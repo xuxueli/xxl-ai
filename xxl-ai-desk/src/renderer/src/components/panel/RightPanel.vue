@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/*
+ * 右侧「侧边任务」面板：未选工具时展示菜单（文件 / 浏览器），
+ * 选定后承载对应面板；支持放大占满正文区与收起。
+ */
 import { computed, ref, watch } from 'vue'
 import { useLayoutStore } from '../../stores/layout'
 import { useSettingsStore } from '../../stores/settings'
@@ -7,12 +11,9 @@ import { formatShortcut } from '../../utils/shortcut'
 import FilePanel from './FilePanel.vue'
 import BrowserPanel from './BrowserPanel.vue'
 
-/*
- * 右侧「侧边任务」面板：未选工具时展示菜单（文件 / 浏览器），
- * 选定后承载对应面板；支持放大占满正文区与收起。
- */
 const props = defineProps<{ root?: string; projectName?: string }>()
 
+/* 布局与设置 store：提供面板显隐/放大状态与快捷键配置 */
 const layout = useLayoutStore()
 const settings = useSettingsStore()
 
@@ -20,6 +21,7 @@ const settings = useSettingsStore()
 const filesOpened = ref(false)
 const browserOpened = ref(false)
 
+/* 标记已打开过的工具，使其面板首次打开后保持挂载（切换用 v-show） */
 watch(
   () => layout.rightPanelTool,
   (tool) => {

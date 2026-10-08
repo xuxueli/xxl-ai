@@ -1,7 +1,8 @@
+/* 布局状态：左侧会话栏折叠/展开 + 宽度拖拽 */
+
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-/* 布局状态：左侧会话栏折叠/展开 + 宽度拖拽 */
 export const useLayoutStore = defineStore('layout', () => {
   /* 侧栏宽度约束与默认值 */
   const DEFAULT_WIDTH = 292

@@ -1,14 +1,14 @@
+/*
+ * 项目服务：项目 1:1 强绑定本地磁盘目录，会话归属项目之下。
+ *   - 目录选择对话框由 IPC 层负责，本服务只做持久化与级联清理。
+ */
+
 import { basename } from 'path'
 import { randomUUID } from 'crypto'
 import { eq, inArray } from 'drizzle-orm'
 import { getDb } from '../db'
 import { messageTable, projectTable, sessionTable } from '../db/schema'
 import type { ProjectCreateInput, ProjectDTO } from '../../shared/ipc'
-
-/*
- * 项目服务：项目 1:1 强绑定本地磁盘目录，会话归属项目之下。
- *   - 目录选择对话框由 IPC 层负责，本服务只做持久化与级联清理。
- */
 
 type ProjectRow = typeof projectTable.$inferSelect
 

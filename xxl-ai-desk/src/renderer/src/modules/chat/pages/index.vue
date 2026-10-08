@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 对话主区：消息流 + 输入框（模式/模型切换在输入框内，项目选择在空态输入框下方靠左） */
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -14,15 +15,16 @@ import { useProjectStore } from '../../../stores/project'
 import { t } from '../../../i18n'
 import type { ChatMode } from '../../../../../shared/ipc'
 
-/* 对话主区：消息流 + 输入框（模式/模型切换在输入框内，项目选择在空态输入框下方靠左） */
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
 const layout = useLayoutStore()
 const project = useProjectStore()
+/* 消息滚动容器与输入框组件引用 */
 const scrollRef = ref<HTMLElement | null>(null)
 const composerRef = ref()
 
+/* 是否有消息、是否具备对话条件（存在启用的供应商）、当前会话标题 */
 const hasMessages = computed(() => chat.messages.length > 0)
 const canChat = computed(() => settings.enabledProviders.length > 0)
 const title = computed(() => chat.currentSession?.title || t('chat.newChat'))
@@ -154,10 +156,12 @@ watch(
   }
 )
 
+/* 挂载后定位消息到底部 */
 onMounted(() => {
   nextTick(() => scrollToBottom(true))
 })
 
+/* 发送消息：校验模型与项目后交给会话 store 发起生成 */
 async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
   if (!canChat.value) {
     ElMessage.warning(t('chat.noModel'))
@@ -175,6 +179,7 @@ async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
 /* 空态示例：点击直接以该内容发起新对话 */
 const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
 
+/* 点击空态示例：以其文案直接发起对话 */
 function onPickExample(text: string): void {
   void onSend(text)
 }

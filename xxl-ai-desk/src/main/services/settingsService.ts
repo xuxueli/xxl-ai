@@ -1,3 +1,8 @@
+/*
+ * 应用设置服务：以 key-value 持久化主题、语言、默认模型、系统指令等配置。
+ *   - 读取时逐项回退默认值；保存为部分更新（upsert）。
+ */
+
 import { getDb } from '../db'
 import { settingTable } from '../db/schema'
 import { DEFAULT_SHORTCUTS, type AppSettings } from '../../shared/ipc'

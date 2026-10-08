@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/*
+ * 底部终端面板：多标签，每个标签一个本地 PTY（主进程 node-pty）+ xterm 实例。
+ * 输出经 IPC 事件流写入 xterm，输入/尺寸变化回写主进程。
+ */
 import { nextTick, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -6,10 +10,6 @@ import '@xterm/xterm/css/xterm.css'
 import { api } from '../api'
 import { t } from '../i18n'
 
-/*
- * 底部终端面板：多标签，每个标签一个本地 PTY（主进程 node-pty）+ xterm 实例。
- * 输出经 IPC 事件流写入 xterm，输入/尺寸变化回写主进程。
- */
 const props = defineProps<{ cwd?: string; title?: string; visible?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
@@ -178,6 +178,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="chat-terminal">
+    <!-- 标签栏：切换/关闭终端标签，右侧为新建与隐藏面板 -->
     <div class="terminal-header">
       <div class="terminal-tabs">
         <button
@@ -206,6 +207,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </div>
+    <!-- 终端画布：每个标签一个 xterm 容器，仅展示当前激活标签 -->
     <div class="terminal-body">
       <div
         v-for="tab in tabs"

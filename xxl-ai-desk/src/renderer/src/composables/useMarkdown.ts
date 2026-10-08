@@ -1,9 +1,10 @@
+/* Markdown 渲染 + HTML 消毒 */
+
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 import { t } from '../i18n'
 import { escapeHtml, highlightCode } from './useHighlight'
 
-/* Markdown 渲染 + HTML 消毒 */
 const md = new MarkdownIt({
   html: false,
   linkify: true,
@@ -27,10 +28,13 @@ const COPY_ICON =
 md.renderer.rules.fence = (tokens, index) => {
   const token = tokens[index]
   const info = token.info ? token.info.trim() : ''
+  /* 信息串首词为语言标识（如 ```ts） */
   const language = info.split(/\s+/)[0] ?? ''
   const code = token.content
+  /* 超长代码块跳过着色，仅做 HTML 转义 */
   const body =
     code.length > MAX_HIGHLIGHT_LENGTH ? escapeHtml(code) : highlightCode(code, language)
+  /* 头部语言标签，未知时展示 text */
   const label = language || 'text'
   return (
     '<div class="code-block">' +
@@ -44,6 +48,7 @@ md.renderer.rules.fence = (tokens, index) => {
   )
 }
 
+/* 渲染 Markdown 为消毒后的 HTML，空文本返回空串 */
 export function renderMarkdown(text: string): string {
   if (!text) {
     return ''

@@ -1,11 +1,15 @@
+/*
+ * 会话级 Agent 宿主：在运行时进程内按会话创建/缓存 Agent，执行一轮对话并回传流式事件。
+ * 模型构建与内置工具装配在此编排，是连接 Pi Agent 与主进程协议的中间层。
+ */
+
 import type { Agent } from '@earendil-works/pi-agent-core'
 import { buildModels, type ProviderModelConfig } from './models'
 import { createBuiltinTools } from './tools'
 import type { ChatMode } from '../../shared/ipc'
 import type { HostEvent } from '../../shared/agentProtocol'
 
-/* 事件回调：由运行时进程（utilityProcess）转发到主进程 */
-
+/* 创建/获取会话 Agent 所需的运行时配置 */
 export interface AgentRuntimeOptions {
   sessionId: string
   provider: ProviderModelConfig
@@ -20,6 +24,7 @@ export interface AgentRuntimeOptions {
 /* 会话级 Agent 运行时缓存：同一会话复用上下文 */
 const runtimes = new Map<string, Promise<Agent>>()
 
+/* 按配置动态加载 Pi Agent，装配模型与内置工具，注入系统提示与历史消息 */
 async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   const { Agent: AgentClass } = await import('@earendil-works/pi-agent-core')
   const models = await buildModels([{ ...options.provider, sessionId: options.sessionId }])

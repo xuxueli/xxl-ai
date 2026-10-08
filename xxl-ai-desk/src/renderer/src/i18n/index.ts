@@ -1,3 +1,4 @@
+/* 国际化：装配 zh/en 词条，语言由设置驱动 */
 import { createI18n } from 'vue-i18n'
 import zh from './locales/zh.json'
 import en from './locales/en.json'

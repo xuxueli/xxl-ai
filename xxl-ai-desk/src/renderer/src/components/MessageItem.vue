@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 单条消息：用户气泡 / 助手「执行过程时间线（思考 → 工具 → 正文）+ 最终答复」 */
 import { computed, ref } from 'vue'
 import { renderMarkdown } from '../composables/useMarkdown'
 import { onCodeCopyClick } from '../composables/useCodeCopy'
@@ -7,7 +8,6 @@ import { useNow } from '../composables/useNow'
 import { t } from '../i18n'
 import type { ToolCallState, UiMessage } from '../types'
 
-/* 单条消息：用户气泡 / 助手「执行过程时间线（思考 → 工具 → 正文）+ 最终答复」 */
 const props = defineProps<{ message: UiMessage }>()
 const emit = defineEmits<{ edit: [content: string]; remove: [] }>()
 
@@ -18,6 +18,7 @@ const now = useNow(() => Boolean(props.message.pending))
 const thinkingOpen = ref<Record<number, boolean>>({})
 const toolOpen = ref<Record<string, boolean>>({})
 
+/* 最后一个片段下标（用于判断是否处于流式跟随的尾段） */
 const lastIndex = computed(() => props.message.parts.length - 1)
 
 /* 生成中文案：尚无输出为「正在思考」，已有输出则为「正在生成」（尾部常驻活动指示） */
@@ -76,6 +77,7 @@ function thinkingExpanded(index: number): boolean {
   return thinkingOpen.value[index] ?? false
 }
 
+/* 切换指定思考片段的展开/收起 */
 function toggleThinking(index: number): void {
   thinkingOpen.value = { ...thinkingOpen.value, [index]: !thinkingExpanded(index) }
 }
@@ -89,6 +91,7 @@ function toolExpanded(tool: ToolCallState): boolean {
   return tool.status === 'running'
 }
 
+/* 切换指定工具卡片的展开/收起（覆盖默认运行态展开规则） */
 function toggleTool(tool: ToolCallState): void {
   toolOpen.value = { ...toolOpen.value, [tool.id]: !toolExpanded(tool) }
 }
@@ -102,6 +105,7 @@ function toolDuration(tool: ToolCallState): string {
   return formatDuration(end - tool.startedAt)
 }
 
+/* 复制消息正文到剪贴板 */
 async function copyContent(): Promise<void> {
   if (!props.message.content) {
     return

@@ -1,8 +1,10 @@
+# XXL-AI Desk 打包配置：Electron Builder 产物定义（win/mac/linux 安装包、asar 与原生依赖重编译）
+# 应用标识与展示名
 appId: com.xxl.ai.desk
 productName: XXL-AI Desk
 directories:
   buildResources: build
-  output: release/${version}
+  output: release/${version}          # 安装包输出目录（按版本分目录）
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -22,24 +24,27 @@ files:
   - '!**/{LICENSE,LICENCE,LICENSE.txt,LICENSE.md,CHANGELOG.md,README.md,.editorconfig,.eslintrc,.eslintrc.js,.eslintrc.cjs,.prettierrc,.prettierrc.yaml,.npmignore,.gitignore,.travis.yml,tsconfig.json}'
 # 最大压缩（dmg/AppImage 等安装包更小，代价是打包耗时略增）
 compression: maximum
+# 需解压到 asar 外的资源（原生模块等无法从 asar 内加载）
 asarUnpack:
   - resources/**
+# Windows 安装包（NSIS）
 win:
   target:
     - nsis
+# macOS 安装包（dmg + zip，zip 用于自动更新）
 mac:
   target:
     - dmg
     - zip
   category: public.app-category.productivity
   artifactName: ${productName}-${version}-${arch}.${ext}
+# Linux 安装包（AppImage + deb）
 linux:
   target:
     - AppImage
     - deb
   category: Utility
   maintainer: xuxueli
+# 安装时针对 Electron 版本重新编译原生依赖（better-sqlite3 / node-pty）
 npmRebuild: true
-# 中国大陆网络无法直连 GitHub 下载 Electron 产物，统一走 npmmirror 镜像
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
+

@@ -1,10 +1,18 @@
+/*
+ * 供应商 → Pi Models 构建：把已配置的供应商统一转换为 OpenAI 兼容的 Pi Models 集合。
+ * 含 BaseURL 归一化、{session} 请求头占位替换、本地/内网服务免 Key 兜底。
+ */
+
 import type { Model, MutableModels } from '@earendil-works/pi-ai'
 import type { ProviderModelConfig } from '../../shared/agentProtocol'
 
 /* 构建 Pi Models 所需的供应商配置：统一取自运行时协议定义 */
 export type { ProviderModelConfig }
 
+/* 请求头中的会话占位符：按实际会话 ID 替换 */
 const SESSION_PLACEHOLDER = '{session}'
+
+/* 默认计费（供应商未提供时用零值占位，不影响本地对话） */
 const DEFAULT_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 
 /*

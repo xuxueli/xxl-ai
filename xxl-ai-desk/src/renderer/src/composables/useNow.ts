@@ -1,9 +1,9 @@
-import { onBeforeUnmount, ref, watch } from 'vue'
-
 /*
  * 共享秒级时钟：仅在存在活动任务（生成中）时启动，
  * 供执行过程展示实时耗时；多个订阅者共享同一计时器，避免各自开定时器。
  */
+
+import { onBeforeUnmount, ref, watch } from 'vue'
 
 /* 全局共享的当前时间戳（毫秒） */
 const now = ref(Date.now())
@@ -34,7 +34,9 @@ function release(): void {
 
 /* 组件按活动状态订阅共享时钟，返回响应式时间戳 */
 export function useNow(active: () => boolean) {
+  /* 当前组件是否已持有订阅，避免重复获取/释放 */
   let held = false
+  /* 按活动状态同步订阅：激活即获取，失活即释放 */
   const sync = (value: boolean): void => {
     if (value && !held) {
       held = true

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 左侧会话栏：新建 / 搜索 / 项目分组（项目下挂会话）/ 底部操作 */
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -12,7 +13,6 @@ import { formatShortcut } from '../utils/shortcut'
 import logo from '../assets/favicon.ico'
 import type { ProjectDTO, QuickAction, SessionDTO } from '../../../shared/ipc'
 
-/* 左侧会话栏：新建 / 搜索 / 项目分组（项目下挂会话）/ 底部操作 */
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
@@ -203,16 +203,19 @@ async function onDeleteProject(target: ProjectDTO): Promise<void> {
   }
 }
 
+/* 新建对话并回到对话页 */
 function onNew(): void {
   chat.startNewChat()
   router.push('/')
 }
 
+/* 选中会话并回到对话页 */
 async function onSelect(id: string): Promise<void> {
   await chat.selectSession(id)
   router.push('/')
 }
 
+/* 重命名会话：弹框输入，取消或未改动则保持原值 */
 async function onRename(id: string, title: string): Promise<void> {
   try {
     const { value } = await ElMessageBox.prompt('', t('chat.renameSession'), {
@@ -226,6 +229,7 @@ async function onRename(id: string, title: string): Promise<void> {
   }
 }
 
+/* 删除会话：二次确认后移除 */
 async function onDelete(id: string): Promise<void> {
   try {
     await ElMessageBox.confirm(t('chat.deleteConfirm'), t('chat.deleteSession'), {
@@ -240,6 +244,7 @@ async function onDelete(id: string): Promise<void> {
   }
 }
 
+/* 跳转设置页 */
 function goSettings(): void {
   router.push('/settings')
 }

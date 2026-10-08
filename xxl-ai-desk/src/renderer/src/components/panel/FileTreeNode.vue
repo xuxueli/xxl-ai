@@ -1,8 +1,8 @@
 <script setup lang="ts">
+/* 文件树节点：目录懒加载可展开，文件点击选中；支持按名称关键字过滤当前已加载节点 */
 import { computed } from 'vue'
 import type { FsEntry } from '../../../../shared/ipc'
 
-/* 文件树节点：目录懒加载可展开，文件点击选中；支持按名称关键字过滤当前已加载节点 */
 const props = defineProps<{
   entry: FsEntry
   depth: number
@@ -54,6 +54,7 @@ function onClick(): void {
 
 <template>
   <div class="tree-node">
+    <!-- 节点行：目录切换展开/收起，文件触发选中 -->
     <button
       class="tree-row"
       :class="{ selected: entry.path === selectedPath }"
@@ -74,6 +75,7 @@ function onClick(): void {
       <el-icon v-if="loadingMap[entry.path]" class="tree-loading spin"><Loading /></el-icon>
     </button>
 
+    <!-- 子节点：递归渲染（过滤态仅展示命中项及其祖先） -->
     <div v-if="entry.isDir && expanded && visibleChildren.length" class="tree-children">
       <FileTreeNode
         v-for="child in visibleChildren"

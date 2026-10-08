@@ -1,3 +1,10 @@
+/*
+ * 内置工具集合（按对话模式装配）：
+ *   - 只读工具（read_file / list_directory / glob_files / search_files / get_current_time）两种模式均注册；
+ *   - 写工具（write_file / edit_file）与终端（run_command）仅 Build 模式注册。
+ * 所有文件类工具统一经 sandbox.guardPath 闸门：限制在当前项目目录内，越界弹框人工确认。
+ */
+
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { exec } from 'child_process'
 import { promises as fs } from 'fs'
@@ -5,13 +12,6 @@ import type { Dirent } from 'fs'
 import { basename, dirname, relative, resolve, sep } from 'path'
 import { guardPath, type PathAction } from './sandbox'
 import type { ChatMode } from '../../shared/ipc'
-
-/*
- * 内置工具集合（按对话模式装配）：
- *   - 只读工具（read_file / list_directory / glob_files / search_files / get_current_time）两种模式均注册；
- *   - 写工具（write_file / edit_file）与终端（run_command）仅 Build 模式注册。
- * 所有文件类工具统一经 sandbox.guardPath 闸门：限制在当前项目目录内，越界弹框人工确认。
- */
 
 /* 工具装配上下文 */
 export interface ToolContext {
@@ -93,7 +93,7 @@ function displayPath(rootDir: string, abs: string): string {
 }
 
 /*
- * 构建内置工具集合。
+ * 构建内置工具集合：只读工具常驻，写工具与终端工具仅 Build 模式注册。
  */
 export async function createBuiltinTools(context: ToolContext): Promise<AgentTool[]> {
   const { Type } = await import('@earendil-works/pi-ai')
@@ -112,6 +112,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     return { ok: true, abs: outcome.abs }
   }
 
+  /* 获取当前时间：本地日期时间，可选 IANA 时区 */
   const getCurrentTime: AgentTool = {
     name: 'get_current_time',
     label: '获取当前时间',
@@ -135,6 +136,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 读取文件：按行范围读取并加行号 */
   const readFile: AgentTool = {
     name: 'read_file',
     label: '读取文件',
@@ -164,6 +166,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 列出目录：目录优先、名称排序，标注 [dir]/[file] */
   const listDirectory: AgentTool = {
     name: 'list_directory',
     label: '列出目录',
@@ -189,6 +192,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 查找文件：按 glob 模式匹配，返回相对路径 */
   const globFiles: AgentTool = {
     name: 'glob_files',
     label: '查找文件',
@@ -212,6 +216,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 搜索内容：正则匹配，返回 文件:行号:内容 */
   const searchFiles: AgentTool = {
     name: 'search_files',
     label: '搜索内容',
@@ -268,6 +273,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 写入文件：创建或覆盖，自动创建父目录 */
   const writeFile: AgentTool = {
     name: 'write_file',
     label: '写入文件',
@@ -292,6 +298,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 编辑文件：old_string → new_string 替换，可全量替换 */
   const editFile: AgentTool = {
     name: 'edit_file',
     label: '编辑文件',
@@ -332,6 +339,7 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
     }
   }
 
+  /* 执行命令：项目目录内执行 shell 并汇总 stdout/stderr，仅 Build 模式 */
   const runCommand: AgentTool = {
     name: 'run_command',
     label: '执行命令',

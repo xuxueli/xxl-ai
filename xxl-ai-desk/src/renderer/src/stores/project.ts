@@ -1,18 +1,23 @@
+/*
+ * 项目状态：项目 1:1 绑定本地目录，会话归属项目。
+ *   - currentId 为「新建对话」的默认归属项目，点击项目/会话时同步。
+ */
+
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
 import { t } from '../i18n'
 import type { ProjectDTO } from '../../../shared/ipc'
 
-/*
- * 项目状态：项目 1:1 绑定本地目录，会话归属项目。
- *   - currentId 为「新建对话」的默认归属项目，点击项目/会话时同步。
- */
 export const useProjectStore = defineStore('project', () => {
+  /* 项目列表（最近更新优先） */
   const projects = ref<ProjectDTO[]>([])
+  /* 当前选中项目 id */
   const currentId = ref('')
+  /* 项目列表是否已首次加载 */
   const loaded = ref(false)
 
+  /* 当前项目对象（未选中为 null） */
   const currentProject = computed(
     () => projects.value.find((item) => item.id === currentId.value) ?? null
   )

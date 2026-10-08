@@ -1,3 +1,7 @@
+/*
+* 对话状态：会话列表、当前会话消息、流式生成与事件订阅
+*/
+
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
@@ -165,10 +169,15 @@ function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
 
 /* 会话与对话状态 */
 export const useChatStore = defineStore('chat', () => {
+  /* 会话列表（最近更新优先） */
   const sessions = ref<SessionDTO[]>([])
+  /* 当前选中会话 id；空串表示处于「新建对话」草稿态 */
   const currentId = ref('')
+  /* 当前会话的消息列表（UI 渲染用） */
   const messages = ref<UiMessage[]>([])
+  /* 当前会话消息加载中标记 */
   const loading = ref(false)
+  /* 对话事件监听解绑函数（避免重复绑定） */
   let unbind: (() => void) | null = null
 
   /* 正在生成的会话集合（响应式）：支持多会话并发生成、互不阻塞 */
@@ -184,6 +193,7 @@ export const useChatStore = defineStore('chat', () => {
   const streamBuffers = new Map<string, StreamBuffer>()
   /* 各会话生成中的消息数组缓存（sessionId → 消息数组）：切走后仍持续累积，切回即还原，避免空白 */
   const liveMessages = new Map<string, UiMessage[]>()
+  /* 增量刷新节流间隔（毫秒），避免逐 token 触发重渲染 */
   const FLUSH_INTERVAL = 80
 
   /* 当前会话是否正在生成（组件据此展示停止/禁用发送；其它会话不受影响） */
@@ -250,6 +260,7 @@ export const useChatStore = defineStore('chat', () => {
     buffer.timer = setTimeout(() => flushBuffers(sessionId), FLUSH_INTERVAL)
   }
 
+  /* 当前会话对象（未选中为 null） */
   const currentSession = computed(
     () => sessions.value.find((item) => item.id === currentId.value) ?? null
   )

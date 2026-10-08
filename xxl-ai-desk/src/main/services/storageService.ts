@@ -1,20 +1,21 @@
-import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
-
 /*
  * 运行时数据目录管理：
  *   默认使用系统 userData 目录；可在「通用设置」中修改（写入 userData/desk-config.json）。
  *   配置独立于 SQLite（避免数据库位置自引用），修改后需重启生效。
  */
 
+import { app } from 'electron'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { join } from 'path'
+
 /* 数据目录配置文件固定放在系统默认 userData 下，不受自定义目录影响 */
 function configFile(): string {
   return join(app.getPath('userData'), 'desk-config.json')
 }
 
+/* 数据目录配置（持久化到系统 userData 下的 desk-config.json） */
 interface DeskConfig {
-  dataDir?: string
+  dataDir?: string /* 自定义数据目录绝对路径（空表示使用默认目录） */
 }
 
 /* 读取配置文件（容错：不存在或非法时返回空配置） */

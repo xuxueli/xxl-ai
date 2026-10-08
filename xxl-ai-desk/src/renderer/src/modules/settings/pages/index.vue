@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 设置页：常规 + 个性化 + 供应商管理 */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -10,11 +11,11 @@ import { DEFAULT_SHORTCUTS } from '../../../../../shared/ipc'
 import logo from '../../../assets/favicon.ico'
 import type { AppSettings, ProviderDTO, QuickAction, ShortcutMap } from '../../../../../shared/ipc'
 
-/* 设置页：常规 + 个性化 + 供应商管理 */
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
 const layout = useLayoutStore()
+/* 当前选中的设置标签页 */
 const activeTab = ref('general')
 /* 支持从对话页「+新建供应商」跳转直达供应商 TAB */
 if (typeof route.query.tab === 'string' && route.query.tab) {
@@ -143,6 +144,7 @@ function onRelaunch(): void {
 }
 
 /* --- 供应商 --- */
+/* 供应商编辑弹窗：显隐、编辑中的 id（空即新增）与表单数据 */
 const dialogVisible = ref(false)
 const editingId = ref('')
 const form = ref({ name: '', baseUrl: '', apiKey: '', enabled: true })
@@ -150,11 +152,13 @@ const form = ref({ name: '', baseUrl: '', apiKey: '', enabled: true })
 const modelRows = ref<string[]>([''])
 /* 远程查询得到的可选模型 */
 const remoteModels = ref<string[]>([])
+/* 远程模型查询加载态、请求 Header 文本（JSON） */
 const remoteLoading = ref(false)
 const headersText = ref('{}')
 /* 请求Header 示例（含花括号，放模板文本避免 i18n 占位符解析冲突） */
 const headersExample = '{"x-opencode-session":"{session}"}'
 
+/* 打开新增供应商弹窗并重置表单 */
 function openAdd(): void {
   editingId.value = ''
   form.value = { name: '', baseUrl: '', apiKey: '', enabled: true }
@@ -164,6 +168,7 @@ function openAdd(): void {
   dialogVisible.value = true
 }
 
+/* 打开编辑供应商弹窗并回填表单 */
 function openEdit(row: ProviderDTO): void {
   editingId.value = row.id
   form.value = {
@@ -228,6 +233,7 @@ async function queryRemoteModels(): Promise<void> {
   }
 }
 
+/* 提交供应商表单：模型去重、校验请求 Header 后保存 */
 async function submitProvider(): Promise<void> {
   const models = Array.from(
     new Set(
@@ -275,6 +281,7 @@ async function submitProvider(): Promise<void> {
   ElMessage.success(t('common.saved'))
 }
 
+/* 删除供应商（二次确认） */
 async function removeProvider(row: ProviderDTO): Promise<void> {
   try {
     await ElMessageBox.confirm(t('chat.deleteConfirm'), row.name, {
@@ -289,10 +296,12 @@ async function removeProvider(row: ProviderDTO): Promise<void> {
   }
 }
 
+/* 切换供应商启用状态并立即保存 */
 async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
   await settings.saveProvider({ id: row.id, enabled: value })
 }
 
+/* 返回对话页 */
 function back(): void {
   router.push('/')
 }

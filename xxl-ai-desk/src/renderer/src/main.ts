@@ -1,3 +1,6 @@
+/*
+* 渲染进程入口：注册 Pinia/路由/i18n/Element Plus 与全局图标后挂载应用
+* */
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
@@ -102,6 +105,7 @@ for (const [name, component] of Object.entries(icons)) {
   app.component(name, component)
 }
 
+/* 装配全局插件：状态管理、路由、国际化与 Element Plus 组件库 */
 app.use(createPinia())
 app.use(router)
 app.use(i18n)

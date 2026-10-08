@@ -1,3 +1,8 @@
+/*
+ * IPC 网关：注册主进程全部 ipcMain 处理器，做参数透传与必要编排（如 chatSend 的运行时调度与落库）。
+ *   - 业务逻辑下沉 services/*；底层运行能力（Agent/终端/文件/系统外壳）由对应模块提供。
+ */
+
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {

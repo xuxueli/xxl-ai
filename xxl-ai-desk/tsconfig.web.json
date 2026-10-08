@@ -1,27 +1,28 @@
 {
+  /* 渲染进程（Web）的 TS 类型检查配置：面向浏览器 DOM 环境 + Vue/JSX */
   "compilerOptions": {
-    "composite": true,
+    "composite": true,                     /* 供 tsconfig.json 项目引用 */
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "moduleResolution": "Bundler",         /* 由 Vite 打包解析 */
+    "lib": ["ES2023", "DOM", "DOM.Iterable"], /* 渲染进程运行于浏览器环境 */
     "jsx": "preserve",
-    "types": ["vite/client"],
+    "types": ["vite/client"],              /* 注入 Vite 客户端类型（import.meta.env 等） */
     "strict": true,
-    "noEmit": true,
+    "noEmit": true,                        /* 仅做类型检查，产物由 Vite 生成 */
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@renderer/*": ["./src/renderer/src/*"],
+      "@renderer/*": ["./src/renderer/src/*"], /* 渲染进程路径别名，与 electron.vite.config.ts 一致 */
       "@/*": ["./src/renderer/src/*"]
     }
   },
   "include": [
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.vue",
-    "src/preload/*.d.ts",
-    "src/shared/**/*"
+    "src/renderer/src/**/*",               /* 渲染进程源码 */
+    "src/renderer/src/**/*.vue",           /* Vue 单文件组件 */
+    "src/preload/*.d.ts",                  /* window.desk 类型声明 */
+    "src/shared/**/*"                      /* 主/预加载/渲染共享契约 */
   ]
 }

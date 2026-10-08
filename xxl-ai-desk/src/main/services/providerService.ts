@@ -1,3 +1,9 @@
+/*
+ * 供应商服务：管理 OpenAI 兼容端点的配置（地址、密钥、模型列表等）。
+ *   - 密钥经 security 编解码后入库；模型/请求头以 JSON 文本存储。
+ *   - 首次运行播种预设供应商，供新用户开箱可用。
+ */
+
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../db'

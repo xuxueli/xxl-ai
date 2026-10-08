@@ -1,3 +1,8 @@
+/*
+ * 本地数据库初始化：better-sqlite3 + Drizzle，桌面端单文件库、无需外部服务。
+ *   - 打开数据库后执行建表 DDL，再对旧库做兼容迁移。
+ */
+
 import { mkdirSync } from 'fs'
 import { dirname } from 'path'
 import Database from 'better-sqlite3'
@@ -53,7 +58,9 @@ CREATE TABLE IF NOT EXISTS desk_setting (
 );
 `
 
+/* 原生 better-sqlite3 连接（迁移直接执行 SQL 用） */
 let sqlite: Database.Database | null = null
+/* Drizzle 实例（业务读写用） */
 let database: BetterSQLite3Database<typeof schema> | null = null
 
 /* 初始化本地数据库（应用就绪后调用） */

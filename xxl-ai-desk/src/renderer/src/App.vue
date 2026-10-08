@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 应用外壳：左侧会话栏（可折叠）+ 右侧内容区 + 全局快捷键 */
 import { onBeforeUnmount, onMounted } from 'vue'
 import Sidebar from './components/Sidebar.vue'
 import ApprovalDialog from './components/ApprovalDialog.vue'
@@ -9,7 +10,6 @@ import { useQuickAction } from './composables/useQuickAction'
 import { matchShortcut } from './utils/shortcut'
 import type { QuickAction } from '../../shared/ipc'
 
-/* 应用外壳：左侧会话栏（可折叠）+ 右侧内容区 + 全局快捷键 */
 const settings = useSettingsStore()
 const chat = useChatStore()
 const project = useProjectStore()
@@ -33,6 +33,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   }
 }
 
+/* 挂载后：注册全局快捷键，绑定对话事件并初始化设置/项目/会话，默认进入最近对话 */
 onMounted(async () => {
   window.addEventListener('keydown', onGlobalKeydown)
   chat.bind()
@@ -48,6 +49,7 @@ onMounted(async () => {
   }
 })
 
+/* 卸载前：移除全局快捷键监听，避免泄漏 */
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onGlobalKeydown)
 })

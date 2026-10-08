@@ -1,4 +1,6 @@
-/* 快捷操作快捷键工具：绑定串 ↔ 键盘事件 / 展示文案 */
+/*
+* 快捷操作快捷键工具：绑定串 ↔ 键盘事件 / 展示文案
+*/
 
 /* 是否 macOS（决定 mod 映射为 ⌘ / Ctrl） */
 export const isMac = navigator.userAgent.includes('Mac')
@@ -28,7 +30,9 @@ function modifierLabel(token: string): string {
 function keyLabel(key: string): string {
   if (key === 'space') return 'Space'
   if (ARROW_LABELS[key]) return ARROW_LABELS[key]
+  /* 单字符键统一大写展示 */
   if (key.length === 1) return key.toUpperCase()
+  /* 其余按键首字母大写展示 */
   return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
@@ -48,9 +52,11 @@ export function formatShortcut(binding?: string): string {
 function eventModifiers(event: KeyboardEvent): Set<string> {
   const mods = new Set<string>()
   if (isMac) {
+    /* mac：⌘ 映射为 mod，⌃ 映射为 ctrl */
     if (event.metaKey) mods.add('mod')
     if (event.ctrlKey) mods.add('ctrl')
   } else {
+    /* 非 mac：Ctrl 映射为 mod，Win 映射为 meta */
     if (event.ctrlKey) mods.add('mod')
     if (event.metaKey) mods.add('meta')
   }
@@ -84,9 +90,11 @@ export function matchShortcut(event: KeyboardEvent, binding?: string): boolean {
   }
   const tokens = binding.split('+').filter(Boolean)
   const key = tokens.find((token) => !MODIFIER_TOKENS.has(token))
+  /* 主键不匹配直接判否 */
   if (!key || key !== eventKey(event)) {
     return false
   }
+  /* 修饰键集合须与绑定完全一致（数量与成员均相同） */
   const expected = new Set(tokens.filter((token) => MODIFIER_TOKENS.has(token)))
   const actual = eventModifiers(event)
   if (expected.size !== actual.size) {

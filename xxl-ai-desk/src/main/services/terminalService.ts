@@ -1,3 +1,8 @@
+/*
+ * 本地终端服务：以 node-pty 启动系统 Shell 的伪终端（PTY），
+ * 输出经事件总线推送渲染进程，输入/尺寸变更由 IPC 驱动。
+ */
+
 import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { EventEmitter } from 'events'
@@ -6,17 +11,12 @@ import * as pty from 'node-pty'
 import type { IPty } from 'node-pty'
 import type { TerminalCreateInput, TerminalDTO, TerminalEvent } from '../../shared/ipc'
 
-/*
- * 本地终端服务：以 node-pty 启动系统 Shell 的伪终端（PTY），
- * 输出经事件总线推送渲染进程，输入/尺寸变更由 IPC 驱动。
- */
-
 /* 受管终端会话：id → PTY 进程 */
 interface TerminalSession {
-  id: string
-  cwd: string
-  shell: string
-  pty: IPty
+  id: string /* 终端标识 */
+  cwd: string /* 工作目录 */
+  shell: string /* 启动的 Shell 可执行路径 */
+  pty: IPty /* node-pty 伪终端进程 */
 }
 
 const sessions = new Map<string, TerminalSession>()

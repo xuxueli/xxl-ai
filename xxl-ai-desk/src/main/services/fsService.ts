@@ -1,12 +1,12 @@
-import { open, readdir, stat, writeFile as writeFileFs } from 'fs/promises'
-import { extname, isAbsolute, relative, resolve } from 'path'
-import type { FileContent, FsEntry } from '../../shared/ipc'
-
 /*
  * 本地文件系统服务（右侧「文件」面板）。
  *   - 所有读写均限定在项目根目录内，防止路径穿越访问项目外的文件。
  *   - 目录懒加载；文本文件按体积截断；图片附带 dataUrl 供内联预览。
  */
+
+import { open, readdir, stat, writeFile as writeFileFs } from 'fs/promises'
+import { extname, isAbsolute, relative, resolve } from 'path'
+import type { FileContent, FsEntry } from '../../shared/ipc'
 
 /* 文本预览体积上限（超出仅截断展示） */
 const MAX_TEXT_BYTES = 2 * 1024 * 1024

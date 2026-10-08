@@ -1,3 +1,5 @@
+/* XXL-AI Desk 主进程入口：窗口、生命周期、IPC 装配 */
+
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import log from 'electron-log/main'
@@ -9,8 +11,7 @@ import { disposeAllTerminals } from './services/terminalService'
 import { disposeAllFsWatch } from './services/fsWatchService'
 import { disposeAgentRuntime } from './agent/runtime'
 
-/* XXL-AI Desk 主进程入口：窗口、生命周期、IPC 装配 */
-
+/* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null
 
 /* 创建主窗口 */
@@ -47,6 +48,7 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
+  /* 窗口关闭：解除引用，避免后续误用已销毁窗口 */
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -78,6 +80,7 @@ if (!gotLock) {
     }
   })
 
+  /* 应用就绪：初始化数据库、播种供应商、注册 IPC、建立窗口 */
   app.whenReady().then(() => {
     log.initialize()
     initDatabase()
@@ -99,6 +102,7 @@ if (!gotLock) {
 
     createWindow()
 
+    /* macOS 点击 Dock 图标且无窗口时重新建窗 */
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createWindow()
@@ -115,6 +119,7 @@ if (!gotLock) {
     app.quit()
   })
 
+  /* 退出前回收托管运行时进程、全部终端与目录监听，避免残留 */
   app.on('before-quit', () => {
     disposeAgentRuntime()
     disposeAllTerminals()

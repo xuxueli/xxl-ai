@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* 输入框：Enter 发送，Shift+Enter 换行；左下角选择项目、模式与模型 */
 import { computed, nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -8,7 +9,6 @@ import { useSettingsStore } from '../stores/settings'
 import { t } from '../i18n'
 import type { ChatMode } from '../../../shared/ipc'
 
-/* 输入框：Enter 发送，Shift+Enter 换行；左下角选择项目、模式与模型 */
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
 const emit = defineEmits<{ submit: [text: string, mode: ChatMode]; stop: [] }>()
 
@@ -74,6 +74,7 @@ async function onModelChange(command: string): Promise<void> {
   }
 }
 
+/* 发送消息：校验内容与运行状态、要求新建对话已选项目，随后交由父组件提交 */
 function onSend(): void {
   const value = text.value.trim()
   if (!value || props.streaming || props.disabled) {
@@ -88,6 +89,7 @@ function onSend(): void {
   text.value = ''
 }
 
+/* 键盘处理：Enter 发送，Shift+Enter 保留换行 */
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()

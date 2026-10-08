@@ -1,3 +1,8 @@
+/*
+ * 会话与消息服务：管理会话（绑定项目/供应商/模型/对话模式）及其消息的持久化。
+ *   - 消息增量落库：按稳定前缀复用旧记录，仅增删尾部差异。
+ */
+
 import { randomUUID } from 'crypto'
 import { and, asc, eq, gt, inArray } from 'drizzle-orm'
 import { getDb } from '../db'
@@ -7,6 +12,7 @@ import type { SessionDTO, StoredMessage } from '../../shared/ipc'
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
 
+/* 行记录 → DTO（mode 缺省归一到 build） */
 function toSessionDTO(row: SessionRow): SessionDTO {
   return {
     id: row.id,
@@ -20,6 +26,7 @@ function toSessionDTO(row: SessionRow): SessionDTO {
   }
 }
 
+/* 行记录 → DTO */
 function toMessageDTO(row: MessageRow): StoredMessage {
   return {
     id: row.id,

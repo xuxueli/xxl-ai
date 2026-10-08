@@ -1,4 +1,5 @@
 {
+  /* 项目引用聚合入口：分别引用主进程（node）与渲染进程（web）两套 TS 配置 */
   "files": [],
   "references": [
     { "path": "./tsconfig.node.json" },

@@ -1,13 +1,13 @@
+/*
+ * 代码高亮工具：统一聊天代码块与文件编辑器的语法着色（GitHub 风格配色由样式层定义）。
+ * 仅注册常用语言（highlight.js/lib/common），控制产物体积。
+ */
+
 import hljs from 'highlight.js/lib/common'
 import dockerfile from 'highlight.js/lib/languages/dockerfile'
 
 /* Dockerfile 不在 common 语言集中，单独注册以支持 Dockerfile 高亮 */
 hljs.registerLanguage('dockerfile', dockerfile)
-
-/*
- * 代码高亮工具：统一聊天代码块与文件编辑器的语法着色（GitHub 风格配色由样式层定义）。
- * 仅注册常用语言（highlight.js/lib/common），控制产物体积。
- */
 
 /* 文件扩展名 → highlight.js 语言标识 */
 const EXT_LANGUAGE: Record<string, string> = {

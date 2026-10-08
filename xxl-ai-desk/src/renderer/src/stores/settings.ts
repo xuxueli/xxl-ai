@@ -1,11 +1,13 @@
+/* 设置与供应商状态 */
+
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
 import { setLanguage } from '../i18n'
 import type { AppSettings, ProviderDTO, ProviderModelQuery } from '../../../shared/ipc'
 
-/* 设置与供应商状态 */
 export const useSettingsStore = defineStore('settings', () => {
+  /* 应用设置（主题/语言/默认供应商与模型/系统提示词/快捷操作等） */
   const settings = ref<AppSettings>({
     theme: 'dark',
     language: 'zh',
@@ -16,21 +18,30 @@ export const useSettingsStore = defineStore('settings', () => {
     slogan: '',
     shortcuts: {}
   })
+  /* 供应商列表 */
   const providers = ref<ProviderDTO[]>([])
+  /* 设置是否已首次加载 */
   const loaded = ref(false)
   /* 运行时数据目录（含默认目录与库文件路径） */
   const dataDir = ref('')
+  /* 默认数据目录 */
   const defaultDataDir = ref('')
+  /* 当前数据库文件路径 */
   const dbFile = ref('')
+  /* 应用版本号 */
   const version = ref('')
   /* 运行平台（darwin/win32/linux），用于窗口标题栏适配 */
   const platform = ref('')
 
+  /* 已启用的供应商 */
   const enabledProviders = computed(() => providers.value.filter((item) => item.enabled))
+  /* 当前选中供应商（未选中为 null） */
   const currentProvider = computed(
     () => providers.value.find((item) => item.id === settings.value.providerId) ?? null
   )
+  /* 当前供应商可用模型列表 */
   const currentModels = computed(() => currentProvider.value?.models ?? [])
+  /* 是否具备可对话条件（已选模型或存在可用供应商） */
   const ready = computed(
     () => Boolean(currentProvider.value && settings.value.modelId) || providers.value.length > 0
   )
