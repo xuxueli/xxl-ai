@@ -1,15 +1,8 @@
 import type { Model, MutableModels } from '@earendil-works/pi-ai'
+import type { ProviderModelConfig } from '../../shared/agentProtocol'
 
-/* 构建 Pi Models 所需的供应商配置 */
-export interface ProviderModelConfig {
-  id: string
-  name: string
-  baseUrl: string
-  apiKey: string
-  headers: Record<string, string>
-  models: string[]
-  sessionId?: string
-}
+/* 构建 Pi Models 所需的供应商配置：统一取自运行时协议定义 */
+export type { ProviderModelConfig }
 
 const SESSION_PLACEHOLDER = '{session}'
 const DEFAULT_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }

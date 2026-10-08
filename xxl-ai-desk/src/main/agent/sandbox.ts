@@ -1,20 +1,29 @@
-import { BrowserWindow, dialog } from 'electron'
-import { existsSync, realpathSync } from 'fs'
-import { basename, dirname, isAbsolute, join, normalize, resolve, sep } from 'path'
-
 /*
  * 文件沙箱：把 Agent 的本地文件读写限制在当前项目目录内。
  *   - 目录内：直接放行；
- *   - 目录外：拦截并弹系统对话框人工确认（允许本次 / 本会话允许 / 拒绝），
+ *   - 目录外：拦截并转交主进程弹系统对话框人工确认（允许本次 / 本会话允许 / 拒绝），
  *     「本会话允许」记入会话级白名单，后续同路径不再重复询问。
  * 路径解析对符号链接做归一化，避免用软链接绕过目录限制。
+ *
+ * 本模块运行在 Agent 运行时进程（utilityProcess）内，不直接依赖 Electron：
+ * 越界审批通过注入的 approvalRequester 回调（跨进程请求主进程对话框）完成。
  */
 
-/* 越界访问的动作类型（文案区分用） */
-export type PathAction = 'read' | 'write'
+import { existsSync, realpathSync } from 'fs'
+import { basename, dirname, isAbsolute, join, normalize, resolve, sep } from 'path'
+import type { ApprovalChoice, ApprovalRequest, PathAction } from '../../shared/agentProtocol'
 
-/* 人工确认结果 */
-type ConfirmationChoice = 'once' | 'session' | 'deny'
+/* 越界访问的动作类型（文案区分用） */
+export type { PathAction }
+
+/* 审批询问函数：由运行时进程启动时注入；未注入时一律拒绝，避免越界静默放行 */
+type ApprovalRequester = (request: ApprovalRequest) => Promise<ApprovalChoice>
+let approvalRequester: ApprovalRequester | null = null
+
+/* 注册审批询问函数（运行时进程启动时调用一次） */
+export function setApprovalRequester(requester: ApprovalRequester | null): void {
+  approvalRequester = requester
+}
 
 /* 会话级越界白名单：sessionId → 已允许的规范化绝对路径集合 */
 const sessionAllowed = new Map<string, Set<string>>()
@@ -62,6 +71,18 @@ function isWithinRoot(root: string, abs: string): boolean {
   return abs === root || abs.startsWith(root + sep)
 }
 
+/* 请求越界审批：转交主进程弹原生对话框；未注册或异常时按拒绝处理 */
+async function requestApproval(request: ApprovalRequest): Promise<ApprovalChoice> {
+  if (!approvalRequester) {
+    return 'deny'
+  }
+  try {
+    return await approvalRequester(request)
+  } catch {
+    return 'deny'
+  }
+}
+
 /*
  * 目录内直接放行的判定与越界确认：
  *   返回 allowed=false 时，reason 为可直接回填给模型的拦截说明。
@@ -82,7 +103,8 @@ export async function guardPath(options: {
   if (sessionAllowed.get(options.sessionId)?.has(abs)) {
     return { allowed: true, abs }
   }
-  const choice = await confirmOutside({
+  const choice = await requestApproval({
+    sessionId: options.sessionId,
     tool: options.tool,
     action: options.action,
     abs,
@@ -102,36 +124,4 @@ export async function guardPath(options: {
     abs,
     reason: `已拦截：路径「${abs}」超出项目目录「${options.rootDir}」，用户拒绝本次${options.action === 'write' ? '写入' : '读取'}操作。`
   }
-}
-
-/*
- * 越界确认对话框（原生）：默认焦点落在「拒绝」，关闭窗口等同于拒绝。
- */
-async function confirmOutside(input: {
-  tool: string
-  action: PathAction
-  abs: string
-  root: string
-}): Promise<ConfirmationChoice> {
-  const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? undefined
-  const options: Electron.MessageBoxOptions = {
-    type: 'warning',
-    noLink: true,
-    title: '越界访问确认',
-    message: `工具「${input.tool}」请求${input.action === 'write' ? '写入' : '读取'}项目目录之外的文件`,
-    detail: `目标路径：${input.abs}\n项目目录：${input.root}\n\n是否允许本次操作？`,
-    buttons: ['允许本次', '本会话允许', '拒绝'],
-    defaultId: 2,
-    cancelId: 2
-  }
-  const { response } = window
-    ? await dialog.showMessageBox(window, options)
-    : await dialog.showMessageBox(options)
-  if (response === 0) {
-    return 'once'
-  }
-  if (response === 1) {
-    return 'session'
-  }
-  return 'deny'
 }

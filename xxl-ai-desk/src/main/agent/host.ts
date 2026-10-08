@@ -2,15 +2,9 @@ import type { Agent } from '@earendil-works/pi-agent-core'
 import { buildModels, type ProviderModelConfig } from './models'
 import { createBuiltinTools } from './tools'
 import type { ChatMode } from '../../shared/ipc'
+import type { HostEvent } from '../../shared/agentProtocol'
 
-/* 事件回调：由主进程转发到渲染进程 */
-export type HostEvent =
-  | { type: 'delta'; text: string }
-  | { type: 'thinking'; text: string }
-  | { type: 'tool_start'; toolCallId: string; toolName: string; args: unknown }
-  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean }
-  | { type: 'done' }
-  | { type: 'error'; message: string }
+/* 事件回调：由运行时进程（utilityProcess）转发到主进程 */
 
 export interface AgentRuntimeOptions {
   sessionId: string

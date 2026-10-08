@@ -64,20 +64,33 @@ function startPanelResize(event: MouseEvent): void {
   document.body.classList.add('resizing')
 }
 
+let scrollFrame = 0
+
+/* 滚动到底部：合并到下一动画帧执行，避免每次增量刷新都触发强制同步布局（forced reflow） */
 function scrollToBottom(): void {
-  nextTick(() => {
+  if (scrollFrame) {
+    return
+  }
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0
     if (scrollRef.value) {
       scrollRef.value.scrollTop = scrollRef.value.scrollHeight
     }
   })
 }
 
+/*
+ * 仅监听「消息条数 + 末条正文长度」：流式期间只增长最后一条，
+ * 避免此前每次刷新都对全部消息求长度（O(n)）并触发同步布局。
+ */
 watch(
-  () => chat.messages.map((message) => message.content.length).reduce((sum, len) => sum + len, 0),
-  scrollToBottom
+  () => [chat.messages.length, chat.messages[chat.messages.length - 1]?.content.length ?? 0],
+  () => scrollToBottom()
 )
 
-onMounted(scrollToBottom)
+onMounted(() => {
+  nextTick(() => scrollToBottom())
+})
 
 async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
   if (!canChat.value) {

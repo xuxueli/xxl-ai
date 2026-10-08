@@ -1,35 +1,44 @@
+/*
+ * 本地密钥编解码：按约定 apiKey 固定以「明文 base64」存储（不做加密）。
+ * 历史版本的 safeStorage 密文（enc:v1: 前缀）仍可读出，保证老数据不失效。
+ */
+
 import { safeStorage } from 'electron'
 
-/* 本地密钥加解密：优先使用系统钥匙串（safeStorage），不可用时回退明文（仅本地开发） */
+/* 历史 safeStorage 密文前缀 */
+const LEGACY_PREFIX = 'enc:v1:'
 
-const PREFIX = 'enc:v1:'
-
-/* 加密敏感字符串（如供应商 API Key），返回可直接入库的文本 */
+/* 编码敏感字符串（如供应商 API Key）：UTF-8 → base64，可直接入库 */
 export function encryptSecret(plain: string): string {
   if (!plain) {
     return ''
   }
-  try {
-    if (safeStorage.isEncryptionAvailable()) {
-      return PREFIX + safeStorage.encryptString(plain).toString('base64')
-    }
-  } catch {
-    /* 忽略并回退明文 */
-  }
-  return plain
+  return Buffer.from(plain, 'utf-8').toString('base64')
 }
 
-/* 解密敏感字符串，兼容历史明文数据 */
+/*
+ * 解码敏感字符串：
+ *   - enc:v1: 前缀：历史 safeStorage 密文，仍按钥匙串解密（仅在旧数据上生效）；
+ *   - 其余：按 base64 解码；若无法无损往返（非本方案编码的历史明文），按原值兼容。
+ */
 export function decryptSecret(value: string): string {
   if (!value) {
     return ''
   }
-  if (!value.startsWith(PREFIX)) {
-    return value
+  if (value.startsWith(LEGACY_PREFIX)) {
+    try {
+      return safeStorage.decryptString(Buffer.from(value.slice(LEGACY_PREFIX.length), 'base64'))
+    } catch {
+      return ''
+    }
   }
   try {
-    return safeStorage.decryptString(Buffer.from(value.slice(PREFIX.length), 'base64'))
+    const decoded = Buffer.from(value, 'base64').toString('utf-8')
+    if (Buffer.from(decoded, 'utf-8').toString('base64') === value) {
+      return decoded
+    }
   } catch {
-    return ''
+    /* 解析失败按历史明文兼容 */
   }
+  return value
 }

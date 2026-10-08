@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray } from 'drizzle-orm'
 import { getDb } from '../db'
 import { messageTable, sessionTable } from '../db/schema'
 import type { SessionDTO, StoredMessage } from '../../shared/ipc'
@@ -103,26 +103,58 @@ export function listMessages(sessionId: string): StoredMessage[] {
   return rows.map(toMessageDTO)
 }
 
-/* 用 Agent 完整消息覆盖会话消息（保持与运行时一致） */
+/*
+ * 用 Agent 完整消息覆盖会话消息（保持与运行时一致）。
+ *   增量落库：Agent 上下文按轮次追加，历史前缀稳定，故仅保留与库中一致的前缀（保留其 id，
+ *   避免前端整树重渲染），只删除尾部差异并追加新消息；全程单事务，避免逐条自动提交的开销。
+ */
 export function replaceMessages(
   sessionId: string,
   messages: Array<{ role: string; content: string; data: string }>
 ): void {
   const db = getDb()
-  db.delete(messageTable).where(eq(messageTable.sessionId, sessionId)).run()
+  const existing = db
+    .select()
+    .from(messageTable)
+    .where(eq(messageTable.sessionId, sessionId))
+    .orderBy(asc(messageTable.seq))
+    .all()
+
+  /* 计算稳定前缀：data 与展示 content 均一致的头部保持不动 */
+  const max = Math.min(existing.length, messages.length)
+  let common = 0
+  while (
+    common < max &&
+    existing[common].data === messages[common].data &&
+    existing[common].content === messages[common].content &&
+    existing[common].role === messages[common].role
+  ) {
+    common += 1
+  }
+
   const now = new Date().toISOString()
-  messages.forEach((message, index) => {
-    db.insert(messageTable)
-      .values({
-        id: randomUUID(),
-        sessionId,
-        seq: index + 1,
-        role: message.role,
-        content: message.content,
-        data: message.data,
-        addTime: now
-      })
-      .run()
+  db.transaction((tx) => {
+    /* 删除前缀之外的旧消息（内容变更/被截断的尾部） */
+    if (existing.length > common) {
+      tx.delete(messageTable)
+        .where(and(eq(messageTable.sessionId, sessionId), gt(messageTable.seq, common)))
+        .run()
+    }
+    /* 追加新增消息 */
+    for (let index = common; index < messages.length; index += 1) {
+      const message = messages[index]
+      tx.insert(messageTable)
+        .values({
+          id: randomUUID(),
+          sessionId,
+          seq: index + 1,
+          role: message.role,
+          content: message.content,
+          data: message.data,
+          addTime: now
+        })
+        .run()
+    }
   })
 }
 

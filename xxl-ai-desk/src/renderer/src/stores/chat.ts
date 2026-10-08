@@ -411,6 +411,12 @@ export const useChatStore = defineStore('chat', () => {
     }
     const sessionId = currentId.value
 
+    /* 首条消息：本地立即把会话标题更新为提问摘要，侧栏无需等待生成完成（后端亦同步落库） */
+    const session = sessions.value.find((item) => item.id === sessionId)
+    if (session && (session.title === '新对话' || !session.title)) {
+      session.title = content.slice(0, 24)
+    }
+
     const assistantMessage: UiMessage = {
       id: uid(),
       role: 'assistant',

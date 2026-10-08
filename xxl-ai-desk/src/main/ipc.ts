@@ -50,9 +50,14 @@ import {
   resizeTerminal,
   writeTerminal
 } from './services/terminalService'
-import { abortAgent, evictAgent, getAgent, resetAgents, runPrompt, type HostEvent } from './agent/host'
-import { clearSessionPermissions } from './agent/sandbox'
-import type { ProviderModelConfig } from './agent/models'
+import {
+  abortAgent,
+  clearSessionPermissions,
+  evictAgent,
+  resetAgents,
+  runAgent
+} from './agent/runtime'
+import type { HostEvent, ProviderModelConfig, RunAgentInput } from '../shared/agentProtocol'
 
 /* 将 Agent 消息内容归一化为纯文本（用于列表预览与检索） */
 function contentToText(message: unknown): string {
@@ -315,6 +320,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         emit({ type: 'error', message: '会话不存在' })
         return
       }
+      /* 首次对话立即以提问作为会话标题并落库：不等到生成结束，避免侧栏长时间停留在「新对话」 */
+      if (session.title === '新对话' || !session.title) {
+        updateSession(sessionId, { title: text.slice(0, 24) })
+      }
 
       const settings = getSettings()
       /* 会话引用的供应商/模型若已删除或停用，直接提示用户重新选择，不做静默切换 */
@@ -347,20 +356,26 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         })
         .filter((item) => item !== null && item.role !== 'system')
 
-      const agent = await getAgent({
+      /* 交运行时进程执行：流式事件回传渲染层，结束后回传完整上下文供落库 */
+      const runInput: RunAgentInput = {
         sessionId,
-        provider: toRuntimeConfig(provider),
+        provider: { ...toRuntimeConfig(provider), sessionId },
         modelId,
         systemPrompt,
         messages: history,
         mode,
-        rootDir
-      })
+        rootDir,
+        text
+      }
+      const result = await runAgent(runInput, emit)
+      if (!result.ok) {
+        /* 运行时构建/执行异常（如模型未找到）：错误提示落库并由主进程下发 */
+        fail(result.message)
+        return
+      }
 
-      await runPrompt(agent, text, emit)
-
-      /* 落库：以 Agent 完整上下文覆盖会话消息，保证下次续聊一致（剔除 system，避免固化旧指令） */
-      const serialized = agent.state.messages
+      /* 落库：以运行时完整上下文覆盖会话消息，保证下次续聊一致（剔除 system，避免固化旧指令） */
+      const serialized = result.messages
         .filter((message) => (message as { role?: string }).role !== 'system')
         .map((message) => {
           const role = (message as { role?: string }).role ?? ''
@@ -376,14 +391,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         })
       replaceMessages(sessionId, serialized)
       committed = true
-
-      /* 首次对话自动以提问作为会话标题 */
-      const current = getSession(sessionId)
-      if (current && (current.title === '新对话' || !current.title)) {
-        updateSession(sessionId, { title: text.slice(0, 24) })
-      }
     } catch (error) {
-      /* 运行时构建/执行异常（如模型未找到）：清缓存避免复用失败的 Agent，并落库错误提示 */
+      /* 主进程侧异常（读库/落库等）：清理运行时缓存并落库错误提示 */
       evictAgent(sessionId)
       fail((error as Error).message)
     }

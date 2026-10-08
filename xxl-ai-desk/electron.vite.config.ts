@@ -11,6 +11,15 @@ export default defineConfig({
       alias: {
         '@main': resolve('src/main')
       }
+    },
+    build: {
+      rollupOptions: {
+        /* 双入口：主进程 + Agent 运行时进程（utilityProcess） */
+        input: {
+          index: resolve('src/main/index.ts'),
+          'agent/worker': resolve('src/main/agent/worker.ts')
+        }
+      }
     }
   },
   preload: {
