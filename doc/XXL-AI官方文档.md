@@ -288,7 +288,7 @@ docker compose down
 #### 2.2.1 安装依赖
 
 ```bash
-cd xxl-ai-desk
+cd ./xxl-ai-desk
 npm install                                   # 一次性完成：postinstall 自动下载 Electron 二进制 + 重建原生模块
 ```
 
