@@ -385,4 +385,3 @@ export const useWidgetStore = defineStore('widget', () => {
 - Agent 运行时：`xxl-ai-desk/src/main/agent/{tools.ts,sandbox.ts,host.ts,runtime.ts,worker.ts}`、`src/shared/agentProtocol.ts`
 - 渲染进程样例：`src/renderer/src/stores/{project.ts,settings.ts,chat.ts}`、`src/renderer/src/modules/settings/pages/index.vue`、`src/renderer/src/api/index.ts`
 - 构建与命令：`xxl-ai-desk/package.json`（`type-check` / `build` / `dev`）、`electron.vite.config.ts`
-- 官方文档：`doc/XXL-AI-DESK官方文档.md`
