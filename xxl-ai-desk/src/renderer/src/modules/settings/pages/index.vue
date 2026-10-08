@@ -57,8 +57,7 @@ watch(() => settings.loaded, syncPersonalization)
 onMounted(syncPersonalization)
 
 /* 自定义指令默认值（与主进程 DEFAULTS 保持一致，用于「恢复默认」） */
-const DEFAULT_SYSTEM_PROMPT =
-  '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。可以使用工具时请主动调用。'
+const DEFAULT_SYSTEM_PROMPT = '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。'
 
 async function savePersonalization(): Promise<void> {
   await settings.saveSettings({

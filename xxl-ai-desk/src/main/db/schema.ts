@@ -23,7 +23,7 @@ export const projectTable = sqliteTable('desk_project', {
   updateTime: text('update_time').notNull().default('')
 })
 
-/* 会话表：一次会话绑定一个供应商与模型，并保存系统指令与对话模式；归属某项目 */
+/* 会话表：一次会话绑定一个供应商与模型，并保存对话模式；归属某项目 */
 export const sessionTable = sqliteTable('desk_session', {
   id: text('id').primaryKey(),
   title: text('title').notNull().default(''),
@@ -31,7 +31,6 @@ export const sessionTable = sqliteTable('desk_session', {
   providerId: text('provider_id').notNull().default(''),
   modelId: text('model_id').notNull().default(''),
   mode: text('mode').notNull().default('build'),
-  systemPrompt: text('system_prompt').notNull().default(''),
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')
 })

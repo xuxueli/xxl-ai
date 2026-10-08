@@ -15,7 +15,6 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     providerId: row.providerId,
     modelId: row.modelId,
     mode: row.mode === 'plan' ? 'plan' : 'build',
-    systemPrompt: row.systemPrompt,
     addTime: row.addTime,
     updateTime: row.updateTime
   }
@@ -56,7 +55,6 @@ export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
     providerId: input.providerId || '',
     modelId: input.modelId || '',
     mode: input.mode === 'plan' ? 'plan' : 'build',
-    systemPrompt: input.systemPrompt || '',
     addTime: now,
     updateTime: now
   }
@@ -78,7 +76,6 @@ export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDT
     providerId: patch.providerId ?? existing.providerId,
     modelId: patch.modelId ?? existing.modelId,
     mode: patch.mode ?? existing.mode,
-    systemPrompt: patch.systemPrompt ?? existing.systemPrompt,
     updateTime: new Date().toISOString()
   }
   db.update(sessionTable).set(record).where(eq(sessionTable.id, id)).run()

@@ -246,6 +246,11 @@ html.dark .el-button--primary {
   --el-button-disabled-text-color: var(--desk-text-tertiary);
 }
 
+/* --- 按钮聚焦：Element Plus 默认 2px 深色焦点环（弹窗自动聚焦确认按钮时尤其显眼），统一去除 --- */
+.el-button:focus-visible {
+  outline: none;
+}
+
 /* --- 模型选择下拉：供应商为分组标题、模型缩进，体现两级层次 --- */
 .model-dropdown .provider-group {
   font-size: 12px;

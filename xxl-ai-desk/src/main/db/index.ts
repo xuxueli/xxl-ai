@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS desk_session (
   provider_id   TEXT NOT NULL DEFAULT '',
   model_id      TEXT NOT NULL DEFAULT '',
   mode          TEXT NOT NULL DEFAULT 'build',
-  system_prompt TEXT NOT NULL DEFAULT '',
   add_time      TEXT NOT NULL DEFAULT '',
   update_time   TEXT NOT NULL DEFAULT ''
 );
@@ -74,6 +73,8 @@ export function initDatabase(): void {
  */
 function migrate(db: Database.Database): void {
   ensureColumn(db, 'desk_session', 'mode', "TEXT NOT NULL DEFAULT 'build'")
+  /* 系统指令改为实时读取全局设置，废弃会话级 system_prompt 列 */
+  dropColumn(db, 'desk_session', 'system_prompt')
 }
 
 /* 检测并补充缺失列（已存在则跳过） */
@@ -81,6 +82,14 @@ function ensureColumn(db: Database.Database, table: string, column: string, defi
   const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
   if (!columns.some((item) => item.name === column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
+}
+
+/* 检测并删除废弃列（不存在则跳过；SQLite 3.35+ 支持 DROP COLUMN） */
+function dropColumn(db: Database.Database, table: string, column: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (columns.some((item) => item.name === column)) {
+    db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`)
   }
 }
 

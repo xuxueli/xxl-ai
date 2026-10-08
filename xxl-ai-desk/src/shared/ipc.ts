@@ -50,7 +50,6 @@ export interface SessionDTO {
   providerId: string
   modelId: string
   mode: ChatMode
-  systemPrompt: string
   addTime: string
   updateTime: string
 }

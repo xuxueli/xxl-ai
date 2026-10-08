@@ -182,6 +182,8 @@ export const useChatStore = defineStore('chat', () => {
     timer: ReturnType<typeof setTimeout> | null
   }
   const streamBuffers = new Map<string, StreamBuffer>()
+  /* 各会话生成中的消息数组缓存（sessionId → 消息数组）：切走后仍持续累积，切回即还原，避免空白 */
+  const liveMessages = new Map<string, UiMessage[]>()
   const FLUSH_INTERVAL = 80
 
   /* 当前会话是否正在生成（组件据此展示停止/禁用发送；其它会话不受影响） */
@@ -197,16 +199,24 @@ export const useChatStore = defineStore('chat', () => {
     return buffer
   }
 
+  /* 取某会话当前的消息数组：展示中的用 messages，后台生成中的用其缓存 */
+  function sessionMessages(sessionId: string): UiMessage[] | undefined {
+    if (currentId.value === sessionId) {
+      return messages.value
+    }
+    return liveMessages.get(sessionId)
+  }
+
   /* 定位某会话正在流式的助手消息（响应式代理） */
   function streamAssistant(sessionId: string): UiMessage | undefined {
     const id = streamTargets.get(sessionId)
     if (!id) {
       return undefined
     }
-    return messages.value.find((item) => item.id === id)
+    return sessionMessages(sessionId)?.find((item) => item.id === id)
   }
 
-  /* 刷新某会话缓冲的增量；该会话未展示时丢弃（完成后按持久化结果回读） */
+  /* 刷新某会话缓冲的增量：写入该会话消息数组（后台会话亦累积，供切回还原） */
   function flushBuffers(sessionId: string): void {
     const buffer = streamBuffers.get(sessionId)
     if (!buffer) {
@@ -216,18 +226,16 @@ export const useChatStore = defineStore('chat', () => {
       clearTimeout(buffer.timer)
       buffer.timer = null
     }
-    if (currentId.value === sessionId) {
-      const assistant = streamAssistant(sessionId)
-      if (assistant) {
-        /* 思考先于正文写入，维持片段发生顺序 */
-        if (buffer.thinking) {
-          appendPart(assistant, { type: 'thinking', text: buffer.thinking })
-        }
-        if (buffer.delta) {
-          appendPart(assistant, { type: 'text', text: buffer.delta })
-        }
-        refreshContent(assistant)
+    const assistant = streamAssistant(sessionId)
+    if (assistant) {
+      /* 思考先于正文写入，维持片段发生顺序 */
+      if (buffer.thinking) {
+        appendPart(assistant, { type: 'thinking', text: buffer.thinking })
       }
+      if (buffer.delta) {
+        appendPart(assistant, { type: 'text', text: buffer.delta })
+      }
+      refreshContent(assistant)
     }
     buffer.delta = ''
     buffer.thinking = ''
@@ -269,9 +277,15 @@ export const useChatStore = defineStore('chat', () => {
     }
     loading.value = true
     try {
+      /* 生成中的会话：直接还原其内存消息（含用户消息与已流出的思考/工具/正文），避免切回即空白 */
+      const live = liveMessages.get(id)
+      if (streamingIds.value[id] && live) {
+        messages.value = live
+        return
+      }
       const stored = await api.session.messages(id)
       const list = mapStoredMessages(stored)
-      /* 该会话仍在生成中：补一个占位助手消息，使后续增量继续流入（避免切回即空白） */
+      /* 生成中但无内存缓存（如应用重启后）：补一个占位助手消息，使后续增量继续流入 */
       const targetId = streamTargets.get(id)
       if (streamingIds.value[id] && targetId && !list.some((item) => item.id === targetId)) {
         list.push({
@@ -283,6 +297,7 @@ export const useChatStore = defineStore('chat', () => {
           startedAt: Date.now(),
           pending: true
         })
+        liveMessages.set(id, list)
       }
       messages.value = list
     } finally {
@@ -300,8 +315,7 @@ export const useChatStore = defineStore('chat', () => {
       projectId: targetProjectId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
-      mode,
-      systemPrompt: settings.settings.systemPrompt
+      mode
     })
     sessions.value = [session, ...sessions.value]
     currentId.value = session.id
@@ -319,6 +333,11 @@ export const useChatStore = defineStore('chat', () => {
   /* 删除会话 */
   async function removeSession(id: string): Promise<void> {
     await api.session.remove(id)
+    /* 清理该会话的生成缓存与流式状态 */
+    liveMessages.delete(id)
+    streamTargets.delete(id)
+    streamBuffers.delete(id)
+    delete streamingIds.value[id]
     sessions.value = sessions.value.filter((item) => item.id !== id)
     if (currentId.value === id) {
       currentId.value = ''
@@ -368,7 +387,6 @@ export const useChatStore = defineStore('chat', () => {
   /* 处理主进程推送的对话事件（按会话路由，多会话并发生成互不干扰） */
   function handleEvent(event: ChatEvent): void {
     const sessionId = event.sessionId
-    const visible = currentId.value === sessionId
     switch (event.type) {
       case 'delta':
       case 'thinking': {
@@ -385,62 +403,54 @@ export const useChatStore = defineStore('chat', () => {
       case 'tool_start': {
         /* 先落定已缓冲的思考/正文，保证工具片段追加在正确位置 */
         flushBuffers(sessionId)
-        if (visible) {
-          const assistant = streamAssistant(sessionId)
-          if (assistant) {
-            const tool: ToolCallState = {
-              id: event.toolCallId ?? uid(),
-              name: event.toolName ?? 'tool',
-              status: 'running',
-              args: event.args,
-              startedAt: Date.now()
-            }
-            assistant.parts.push({ type: 'tool', tool })
+        const assistant = streamAssistant(sessionId)
+        if (assistant) {
+          const tool: ToolCallState = {
+            id: event.toolCallId ?? uid(),
+            name: event.toolName ?? 'tool',
+            status: 'running',
+            args: event.args,
+            startedAt: Date.now()
           }
+          assistant.parts.push({ type: 'tool', tool })
         }
         break
       }
       case 'tool_end': {
-        if (visible) {
-          const assistant = streamAssistant(sessionId)
-          const part = assistant?.parts.find(
-            (item) => item.type === 'tool' && item.tool.id === event.toolCallId
-          )
-          if (part && part.type === 'tool') {
-            part.tool.status = event.isError ? 'error' : 'done'
-            part.tool.result = event.result ?? part.tool.result
-            part.tool.endedAt = Date.now()
-          }
+        const assistant = streamAssistant(sessionId)
+        const part = assistant?.parts.find(
+          (item) => item.type === 'tool' && item.tool.id === event.toolCallId
+        )
+        if (part && part.type === 'tool') {
+          part.tool.status = event.isError ? 'error' : 'done'
+          part.tool.result = event.result ?? part.tool.result
+          part.tool.endedAt = Date.now()
         }
         break
       }
       case 'error': {
         flushBuffers(sessionId)
-        if (visible) {
-          const assistant = streamAssistant(sessionId)
-          /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
-          if (assistant && !assistant.error) {
-            const tip = event.message ?? '请求失败'
-            appendPart(assistant, { type: 'text', text: assistant.content ? `\n\n${tip}` : tip })
-            refreshContent(assistant)
-          }
-          if (assistant) {
-            assistant.error = true
-            assistant.pending = false
-            assistant.endedAt = Date.now()
-          }
+        const assistant = streamAssistant(sessionId)
+        /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
+        if (assistant && !assistant.error) {
+          const tip = event.message ?? '请求失败'
+          appendPart(assistant, { type: 'text', text: assistant.content ? `\n\n${tip}` : tip })
+          refreshContent(assistant)
+        }
+        if (assistant) {
+          assistant.error = true
+          assistant.pending = false
+          assistant.endedAt = Date.now()
         }
         delete streamingIds.value[sessionId]
         break
       }
       case 'done': {
         flushBuffers(sessionId)
-        if (visible) {
-          const assistant = streamAssistant(sessionId)
-          if (assistant) {
-            assistant.pending = false
-            assistant.endedAt = Date.now()
-          }
+        const assistant = streamAssistant(sessionId)
+        if (assistant) {
+          assistant.pending = false
+          assistant.endedAt = Date.now()
         }
         delete streamingIds.value[sessionId]
         break
@@ -497,6 +507,8 @@ export const useChatStore = defineStore('chat', () => {
     messages.value.push({ id: uid(), role: 'user', content, parts: [], addTime: new Date().toISOString() })
     messages.value.push(assistantMessage)
     streamingIds.value[sessionId] = true
+    /* 生成中的会话消息登记到内存缓存：切走后仍持续累积，切回即还原 */
+    liveMessages.set(sessionId, messages.value)
 
     try {
       await api.chat.send({ sessionId, text: content })
@@ -519,6 +531,8 @@ export const useChatStore = defineStore('chat', () => {
         }
         streamTargets.delete(sessionId)
         streamBuffers.delete(sessionId)
+        /* 本轮已结束：内存缓存让位于持久化结果，后续切换按库回读 */
+        liveMessages.delete(sessionId)
       }
       await loadSessions()
     }
