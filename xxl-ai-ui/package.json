@@ -1,6 +1,6 @@
 {
   "name": "XXL-AI",
-  "version": "1.0.1-SNAPSHOT",
+  "version": "1.1.0",
   "private": true,
   "description": "XXL-AI | AI应用开发平台",
   "repository": "git@github.com:xuxueli/xxl-ai.git",
@@ -34,11 +34,11 @@
     "fuse.js": "7.5.0",
     "js-beautify": "2.0.3",
     "js-cookie": "3.0.8",
-    "marked": "18.0.14",
+    "marked": "18.1.0",
     "nprogress": "0.2.0",
     "pinia": "4.0.3",
     "vue": "3.5.43",
-    "vue-router": "5.3.1",
+    "vue-router": "5.4.0",
     "vuedraggable": "4.1.0"
   },
   "devDependencies": {
@@ -50,7 +50,7 @@
     "@types/nprogress": "0.2.3",
     "@types/sortablejs": "1.15.9",
     "@vitejs/plugin-vue": "6.0.9",
-    "eslint": "10.11.0",
+    "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-vue": "10.11.1",
     "fast-glob": "3.3.3",
@@ -58,10 +58,10 @@
     "prettier": "3.9.9",
     "sass-embedded": "1.105.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.0",
-    "vite": "8.3.2",
+    "typescript-eslint": "8.71.1",
+    "vite": "8.3.3",
     "vite-plugin-svg-icons": "2.0.1",
-    "vue-tsc": "3.3.11"
+    "vue-tsc": "3.3.12"
   },
   "overrides": {
     "quill": "2.0.3"

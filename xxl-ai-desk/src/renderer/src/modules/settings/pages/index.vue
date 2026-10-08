@@ -420,7 +420,7 @@ function back(): void {
             </div>
             <el-table :data="settings.providers" style="width: 100%">
               <el-table-column prop="name" :label="t('settings.providerName')" min-width="140" />
-              <el-table-column prop="baseUrl" :label="t('settings.baseUrl')" min-width="220" />
+              <el-table-column prop="baseUrl" :label="t('settings.baseUrl')" min-width="220" :show-overflow-tooltip="true" />
               <el-table-column :label="t('settings.models')" min-width="200">
                 <template #default="{ row }">
                   <el-tooltip

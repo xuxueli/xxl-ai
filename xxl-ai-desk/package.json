@@ -1,6 +1,6 @@
 {
   "name": "xxl-ai-desk",
-  "version": "1.0.0-SNAPSHOT",
+  "version": "1.1.0",
   "private": true,
   "description": "XXL-AI Desk | AI Agent 桌面客户端",
   "author": "xuxueli",
@@ -20,8 +20,8 @@
     "postinstall": "electron-builder install-app-deps && node scripts/fix-node-pty-perms.cjs"
   },
   "dependencies": {
-    "@earendil-works/pi-agent-core": "1.0.0",
-    "@earendil-works/pi-ai": "1.0.0",
+    "@earendil-works/pi-agent-core": "1.1.0",
+    "@earendil-works/pi-ai": "1.1.0",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.3",
     "electron-log": "5.4.4",
@@ -30,13 +30,13 @@
   "devDependencies": {
     "@element-plus/icons-vue": "2.3.2",
     "@types/better-sqlite3": "9.6.0",
-    "@types/markdown-it": "14.1.2",
+    "@types/markdown-it": "14.2.0",
     "@types/node": "26.6.4",
     "@vitejs/plugin-vue": "6.0.9",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",
     "dompurify": "3.4.16",
-    "electron": "44.5.1",
+    "electron": "44.7.0",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "element-plus": "2.14.7",
@@ -45,10 +45,10 @@
     "pinia": "4.0.3",
     "sass-embedded": "1.105.1",
     "typescript": "6.0.3",
-    "vite": "7.3.6",
+    "vite": "7.3.7",
     "vue": "3.5.43",
-    "vue-i18n": "11.4.12",
-    "vue-router": "5.3.1",
-    "vue-tsc": "3.3.11"
+    "vue-i18n": "11.4.13",
+    "vue-router": "5.4.0",
+    "vue-tsc": "3.3.12"
   }
 }

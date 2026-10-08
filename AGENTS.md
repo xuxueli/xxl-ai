@@ -18,7 +18,7 @@ XXL-AI 是 AI应用开发平台，采用 Monorepo 统一托管「后端服务」
 
 ## 二、 Skill 速查
 
-Skill 位于 `.agents/skills/xxl-ai/SKILL.md`，描述了「新增/改造一个业务模块」的完整落位与模板；本项目已内置可复现的执行环境会自动发现并加载匹配的 Skill。启动项目前先看第三节，写代码前先加载 Skill。
+本项目按交付形态提供两个 Skill：云版 `xxl-ai`（`.agents/skills/xxl-ai/SKILL.md`，服务 `xxl-ai-api` + `xxl-ai-ui`）与本地版 `xxl-ai-desk`（`.agents/skills/xxl-ai-desk/SKILL.md`，服务 Electron 桌面客户端 `xxl-ai-desk`），分别描述对应模式「新增/改造一个业务模块」的完整落位与模板；本项目已内置可复现的执行环境会自动发现并加载匹配的 Skill。启动项目前先看第三节，写代码前先加载对应模式的 Skill。
 
 ## 三、快速开始
 
@@ -169,7 +169,7 @@ com/xxl/ai/api/business/harness          ← 运行时支撑层：无 controller
 4. **联调验证**：起后端 + 前端，验证菜单可见、CRUD 可用、权限生效。
 5. **规范复核**：对照第六节规范与 Skill 内「校验清单」过一遍再提交。
 
-> 标准动作在开发前加载对应模式 Skill：`xxl-ai`。
+> 标准动作在开发前加载对应模式 Skill：云版 `xxl-ai`、本地版（Desk）`xxl-ai-desk`。
 
 ## 六、代码规范
 

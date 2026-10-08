@@ -60,9 +60,14 @@ XXL-AI Desk 是 XXL-AI 的**本地版（桌面端 / 客户端版本）**：面�
 
 ```bash
 cd xxl-ai-desk
-npm install                                   # 安装依赖（含 Electron 二进制与原生模块）
-node node_modules/electron/install.js         # 如安装时用了 --ignore-scripts，补下载 Electron
-npx electron-builder install-app-deps         # 重建 better-sqlite3（N-API）
+npm install                                   # 一次性完成：下载 Electron 二进制 + postinstall 自动重建原生模块
+```
+
+> `postinstall` 已自动执行 `electron-builder install-app-deps`（重建 better-sqlite3 / node-pty）与 `scripts/fix-node-pty-perms.cjs`；`electron` 包安装时也会自行下载二进制。**仅当使用 `--ignore-scripts` 安装或下载失败时**，才需补执行：
+
+```bash
+node node_modules/electron/install.js         # 补下载 Electron 二进制
+npx electron-builder install-app-deps         # 补重建原生模块
 ```
 
 ### 2.2 开发与构建
