@@ -24,3 +24,12 @@ auto-imports.d.ts
 .specify
 specs
 xxl-ai-spec
+
+# for desk
+xxl-ai-desk/out/
+xxl-ai-desk/release/
+xxl-ai-desk/*.log
+xxl-ai-desk/*.local
+xxl-ai-desk/*.sqlite
+xxl-ai-desk/*.sqlite3
+xxl-ai-desk/data/
