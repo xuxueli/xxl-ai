@@ -10,7 +10,7 @@ import { useLayoutStore } from '../stores/layout'
 import { useQuickAction } from '../composables/useQuickAction'
 import { t } from '../i18n'
 import { formatShortcut } from '../utils/shortcut'
-import logo from '../assets/favicon.ico'
+import logo from '../assets/icon.png'
 import type { ProjectDTO, QuickAction, SessionDTO } from '../../../shared/ipc'
 
 const router = useRouter()

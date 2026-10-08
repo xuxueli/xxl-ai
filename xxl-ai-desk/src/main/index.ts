@@ -1,6 +1,7 @@
 /* XXL-AI Desk 主进程入口：窗口、生命周期、IPC 装配 */
 
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, nativeImage, shell } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import log from 'electron-log/main'
 import { IPC } from '../shared/ipc'
@@ -14,10 +15,19 @@ import { disposeAgentRuntime } from './agent/runtime'
 /* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null
 
+/* 运行期应用图标路径：开发期取渲染层图标源 src/renderer/src/assets/icon.png；打包后取 resources/icon.png（由 electron-builder extraResources 注入） */
+function resolveAppIconPath(): string | null {
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(app.getAppPath(), 'src', 'renderer', 'src', 'assets', 'icon.png')
+  return existsSync(iconPath) ? iconPath : null
+}
+
 /* 创建主窗口 */
 function createWindow(): void {
   /* macOS：隐藏标题栏但保留系统红黄绿按钮，内容铺满整个窗口；其它平台沿用系统默认边框 */
   const isMac = process.platform === 'darwin'
+  const appIconPath = resolveAppIconPath()
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -33,7 +43,9 @@ function createWindow(): void {
           /* 红黄绿窗口按钮垂直居中于右侧标题栏高度（45px），水平位置与侧栏左内边距对齐 */
           trafficLightPosition: { x: 14, y: 16 }
         }
-      : {}),
+      : appIconPath
+        ? { icon: appIconPath }
+        : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -47,6 +59,11 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
+
+  /* macOS：dev 期运行原装 Electron，Dock 图标仍为 Electron 默认，需显式覆盖（打包后 bundle 已是自定义 icns，属冗余设置） */
+  if (isMac && appIconPath) {
+    app.dock?.setIcon(nativeImage.createFromPath(appIconPath))
+  }
 
   /* 窗口关闭：解除引用，避免后续误用已销毁窗口 */
   mainWindow.on('closed', () => {

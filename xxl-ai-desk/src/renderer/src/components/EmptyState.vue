@@ -2,7 +2,7 @@
 /* 空态欢迎页：Logo + 标题（项目选择已移至输入框下方、靠左） */
 import { t } from '../i18n'
 import { useSettingsStore } from '../stores/settings'
-import logo from '../assets/favicon.ico'
+import logo from '../assets/icon.png'
 
 const settings = useSettingsStore()
 </script>

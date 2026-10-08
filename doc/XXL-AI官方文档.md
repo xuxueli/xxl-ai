@@ -768,6 +768,7 @@ docker compose down
 - 3、【TODO】可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
 - 4、【TODO】Desk版本：支持SKILL/MCP工具；
 - 5、【TODO】Desk版本：支持浏览器工具操作；
+- 6、【TODO】Desk版本：自动更新；
 
 
 ### TODO LIST

@@ -8,7 +8,7 @@ import { useLayoutStore } from '../../../stores/layout'
 import { t } from '../../../i18n'
 import ShortcutInput from '../../../components/ShortcutInput.vue'
 import { DEFAULT_SHORTCUTS } from '../../../../../shared/ipc'
-import logo from '../../../assets/favicon.ico'
+import logo from '../../../assets/icon.png'
 import type { AppSettings, ProviderDTO, QuickAction, ShortcutMap } from '../../../../../shared/ipc'
 
 const route = useRoute()

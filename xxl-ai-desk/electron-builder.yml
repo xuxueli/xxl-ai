@@ -3,7 +3,6 @@
 appId: com.xxl.ai.desk
 productName: XXL-AI Desk
 directories:
-  buildResources: build
   output: release/${version}          # 安装包输出目录（按版本分目录）
 files:
   - '!**/.vscode/*'
@@ -14,7 +13,6 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   # 排除构建产物与输出目录（否则 release 会被递归打包进 asar）
   - '!release/**'
-  - '!build/**'
   - '!dist/**'
   - '!*.log'
   - '!**/*.{log,tmp,tsbuildinfo}'
@@ -27,18 +25,22 @@ compression: maximum
 # 需解压到 asar 外的资源（原生模块等无法从 asar 内加载）
 asarUnpack:
   - resources/**
+# 运行期资源：把应用图标注入到打包产物的 resources/icon.png，供主进程按 process.resourcesPath 读取
+extraResources:
+  - from: src/renderer/src/assets/icon.png
+    to: icon.png
 # Windows 安装包（NSIS）；icon 同时用于 exe、桌面/开始菜单快捷方式与任务栏
 win:
   target:
     - nsis
-  icon: build/icon.png
+  icon: src/renderer/src/assets/icon.png
 # macOS 安装包（dmg + zip，zip 用于自动更新）；icon 同时用于 App、Dock 与 DMG 卷
 mac:
   target:
     - dmg
     - zip
   category: public.app-category.productivity
-  icon: build/icon.png
+  icon: src/renderer/src/assets/icon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
 # Linux 安装包（AppImage + deb）
 linux:
@@ -47,7 +49,7 @@ linux:
     - deb
   category: Utility
   maintainer: xuxueli
-  icon: build/icon.png
+  icon: src/renderer/src/assets/icon.png
 # 安装时针对 Electron 版本重新编译原生依赖（better-sqlite3 / node-pty）
 npmRebuild: true
 
