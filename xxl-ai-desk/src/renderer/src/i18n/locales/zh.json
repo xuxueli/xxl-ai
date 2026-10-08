@@ -41,6 +41,7 @@
     "thinkingPending": "正在思考",
     "thinkingActive": "正在思考…",
     "thinkingDone": "已完成思考",
+    "generating": "正在生成",
     "tool": {
       "readFile": "读取文件",
       "writeFile": "写入文件",
@@ -83,7 +84,17 @@
     "showSidePanel": "显示侧边栏",
     "hideSidePanel": "隐藏侧边栏",
     "sidePanel": "侧边任务",
-    "sidePanelEmpty": "侧边任务面板占位"
+    "sidePanelEmpty": "侧边任务面板占位",
+    "approvalTitle": "越界访问确认",
+    "approvalRead": "读取",
+    "approvalWrite": "写入",
+    "approvalMessage": "工具「{0}」请求{1}项目目录之外的文件",
+    "approvalPath": "目标路径",
+    "approvalRoot": "项目目录",
+    "approvalQuestion": "是否允许本次操作？",
+    "approvalOnce": "允许本次",
+    "approvalSession": "本会话允许",
+    "approvalDeny": "拒绝"
   },
   "project": {
     "label": "项目",
@@ -159,6 +170,7 @@
     "openDir": "打开目录",
     "restoreDefault": "恢复默认",
     "relaunch": "重启应用",
+    "relaunchDevTip": "开发模式下无法自动重启，请手动重新运行 npm run dev",
     "dbFile": "数据库文件",
     "dataDirSaved": "数据目录已保存，重启后生效",
     "about": "关于我们",

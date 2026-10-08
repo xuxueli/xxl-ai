@@ -96,6 +96,18 @@ function resetDataDir(): void {
   dataDirInput.value = settings.defaultDataDir
 }
 
+/* 重启应用：开发模式下 electron-vite 的 dev server 会随进程退出关闭，自动重启会白屏，故仅提示 */
+function onRelaunch(): void {
+  if (import.meta.env.DEV) {
+    ElMessageBox.alert(t('settings.relaunchDevTip'), t('settings.relaunch'), {
+      confirmButtonText: t('common.confirm'),
+      type: 'info'
+    }).catch(() => {})
+    return
+  }
+  void settings.relaunch()
+}
+
 /* --- 供应商 --- */
 const dialogVisible = ref(false)
 const editingId = ref('')
@@ -309,7 +321,7 @@ function back(): void {
                 <el-button type="primary" @click="saveDataDir">{{ t('common.save') }}</el-button>
                 <el-button @click="resetDataDir">{{ t('settings.restoreDefault') }}</el-button>
                 <el-button @click="settings.openDataDir()">{{ t('settings.openDir') }}</el-button>
-                <el-button @click="settings.relaunch()">{{ t('settings.relaunch') }}</el-button>
+                <el-button @click="onRelaunch">{{ t('settings.relaunch') }}</el-button>
               </div>
               <div class="field-hint">{{ t('settings.dbFile') }}: {{ settings.dbFile }}</div>
             </div>

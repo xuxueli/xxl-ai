@@ -36,7 +36,8 @@ import {
   Setting,
   Tools,
   User,
-  VideoPause
+  VideoPause,
+  WarningFilled
 } from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
@@ -84,7 +85,8 @@ const icons = {
   Setting,
   Tools,
   User,
-  VideoPause
+  VideoPause,
+  WarningFilled
 }
 for (const [name, component] of Object.entries(icons)) {
   app.component(name, component)

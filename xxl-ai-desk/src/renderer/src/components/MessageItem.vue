@@ -19,9 +19,9 @@ const toolOpen = ref<Record<string, boolean>>({})
 
 const lastIndex = computed(() => props.message.parts.length - 1)
 
-/* 生成中且尚无任何输出（思考/工具/正文）时，展示「正在思考」滚动指示 */
-const waiting = computed(
-  () => Boolean(props.message.pending) && props.message.parts.length === 0
+/* 生成中文案：尚无输出为「正在思考」，已有输出则为「正在生成」（尾部常驻活动指示） */
+const pendingLabel = computed(() =>
+  props.message.parts.length === 0 ? t('chat.thinkingPending') : t('chat.generating')
 )
 
 /* 每条消息在鼠标悬浮时展示的时间文案（当天仅时分，跨天补充月日） */
@@ -131,12 +131,6 @@ function removeMessage(): void {
 
       <!-- 助手消息：按发生顺序渲染执行过程时间线 + 最终答复 -->
       <template v-else>
-        <!-- 等待首个输出：正在思考…（三点滚动） -->
-        <div v-if="waiting" class="waiting">
-          <span class="waiting-label">{{ t('chat.thinkingPending') }}</span>
-          <span class="waiting-dots"><span></span><span></span><span></span></span>
-        </div>
-
         <div class="timeline">
           <template v-for="(part, index) in message.parts" :key="index">
             <!-- 思考片段 -->
@@ -194,6 +188,12 @@ function removeMessage(): void {
               ></div>
             </template>
           </template>
+        </div>
+
+        <!-- 生成中：尾部常驻活动指示，明确「仍在运行」，避免看似卡住 -->
+        <div v-if="message.pending" class="generating">
+          <span class="generating-dots"><span></span><span></span><span></span></span>
+          <span class="generating-label">{{ pendingLabel }}</span>
         </div>
 
         <!-- 本轮耗时（仅流式轮次可见） -->
@@ -431,6 +431,25 @@ function removeMessage(): void {
   word-break: break-word;
 }
 
+/* 流式正文末尾的闪烁光标：强化「正在输出」的感知 */
+.step-text.streaming-plain::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  border-radius: 1px;
+  background: var(--desk-primary);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .markdown-body.is-error {
   color: var(--desk-danger);
 }
@@ -442,22 +461,24 @@ function removeMessage(): void {
   color: var(--desk-text-tertiary);
 }
 
-.waiting {
+/* 生成中的尾部活动指示：小三点 + 文案，常驻直至本轮结束 */
+.generating {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  margin-top: 6px;
   color: var(--desk-text-tertiary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
-.waiting-dots {
+.generating-dots {
   display: inline-flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 3px;
   height: 12px;
 }
 
-.waiting-dots span {
+.generating-dots span {
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -465,11 +486,11 @@ function removeMessage(): void {
   animation: waiting-scroll 1.2s infinite ease-in-out;
 }
 
-.waiting-dots span:nth-child(2) {
+.generating-dots span:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.waiting-dots span:nth-child(3) {
+.generating-dots span:nth-child(3) {
   animation-delay: 0.4s;
 }
 

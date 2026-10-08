@@ -32,7 +32,7 @@ export type PathAction = 'read' | 'write'
 /* 越界审批结果：允许本次 / 本会话允许 / 拒绝 */
 export type ApprovalChoice = 'once' | 'session' | 'deny'
 
-/* 越界审批请求（运行时进程 → 主进程，由主进程弹原生对话框） */
+/* 越界审批请求（运行时进程 → 主进程 → 渲染进程，由渲染进程弹应用内对话框） */
 export interface ApprovalRequest {
   sessionId: string
   tool: string

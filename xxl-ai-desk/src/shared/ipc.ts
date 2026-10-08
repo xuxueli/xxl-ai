@@ -92,6 +92,18 @@ export interface ChatEvent {
   message?: string
 }
 
+/* 越界审批选择：允许本次 / 本会话允许 / 拒绝 */
+export type ChatApprovalChoice = 'once' | 'session' | 'deny'
+
+/* 越界审批请求（主进程 → 渲染进程，由渲染进程弹应用内对话框） */
+export interface ChatApprovalPrompt {
+  requestId: string
+  tool: string
+  action: 'read' | 'write'
+  abs: string
+  root: string
+}
+
 /* 终端创建入参：cwd 为工作目录（通常为项目目录），缺省回退用户主目录 */
 export interface TerminalCreateInput {
   cwd?: string
@@ -163,6 +175,9 @@ export interface DeskApi {
     send(input: { sessionId: string; text: string }): Promise<void>
     abort(sessionId: string): Promise<void>
     onEvent(cb: (event: ChatEvent) => void): () => void
+    /* 越界审批：主进程推送请求，渲染进程回传选择 */
+    onApproval(cb: (prompt: ChatApprovalPrompt) => void): () => void
+    respondApproval(requestId: string, choice: ChatApprovalChoice): Promise<void>
   }
   terminal: {
     create(input?: TerminalCreateInput): Promise<TerminalDTO>
@@ -201,6 +216,8 @@ export const IPC = {
   chatSend: 'desk:chat:send',
   chatAbort: 'desk:chat:abort',
   chatEvent: 'desk:chat:event',
+  chatApprovalRequest: 'desk:chat:approval-request',
+  chatApprovalRespond: 'desk:chat:approval-respond',
   terminalCreate: 'desk:terminal:create',
   terminalWrite: 'desk:terminal:write',
   terminalResize: 'desk:terminal:resize',

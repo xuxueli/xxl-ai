@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {
   AppSettings,
+  ChatApprovalChoice,
+  ChatApprovalPrompt,
   ChatEvent,
   DeskApi,
   ProviderDTO,
@@ -61,7 +63,14 @@ const api: DeskApi = {
       const listener = (_event: unknown, payload: ChatEvent): void => callback(payload)
       ipcRenderer.on(IPC.chatEvent, listener)
       return () => ipcRenderer.removeListener(IPC.chatEvent, listener)
-    }
+    },
+    onApproval: (callback: (prompt: ChatApprovalPrompt) => void) => {
+      const listener = (_event: unknown, payload: ChatApprovalPrompt): void => callback(payload)
+      ipcRenderer.on(IPC.chatApprovalRequest, listener)
+      return () => ipcRenderer.removeListener(IPC.chatApprovalRequest, listener)
+    },
+    respondApproval: (requestId: string, choice: ChatApprovalChoice) =>
+      ipcRenderer.invoke(IPC.chatApprovalRespond, requestId, choice)
   },
   terminal: {
     create: (input?: TerminalCreateInput) => ipcRenderer.invoke(IPC.terminalCreate, input),

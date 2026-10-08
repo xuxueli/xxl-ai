@@ -41,6 +41,7 @@
     "thinkingPending": "Thinking",
     "thinkingActive": "Thinking…",
     "thinkingDone": "Thought",
+    "generating": "Generating",
     "tool": {
       "readFile": "Read file",
       "writeFile": "Write file",
@@ -83,7 +84,17 @@
     "showSidePanel": "Show side panel",
     "hideSidePanel": "Hide side panel",
     "sidePanel": "Side tasks",
-    "sidePanelEmpty": "Side task panel placeholder"
+    "sidePanelEmpty": "Side task panel placeholder",
+    "approvalTitle": "Outside access",
+    "approvalRead": "read",
+    "approvalWrite": "write",
+    "approvalMessage": "Tool \"{0}\" requests to {1} a file outside the project directory",
+    "approvalPath": "Target path",
+    "approvalRoot": "Project directory",
+    "approvalQuestion": "Allow this operation?",
+    "approvalOnce": "Allow once",
+    "approvalSession": "Allow for session",
+    "approvalDeny": "Deny"
   },
   "project": {
     "label": "Projects",
@@ -159,6 +170,7 @@
     "openDir": "Open folder",
     "restoreDefault": "Restore default",
     "relaunch": "Restart app",
+    "relaunchDevTip": "Auto-restart is unavailable in development. Please run npm run dev again manually.",
     "dbFile": "Database file",
     "dataDirSaved": "Data directory saved. Restart to apply.",
     "about": "About",

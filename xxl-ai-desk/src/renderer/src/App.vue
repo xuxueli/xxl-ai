@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import Sidebar from './components/Sidebar.vue'
+import ApprovalDialog from './components/ApprovalDialog.vue'
 import { useSettingsStore } from './stores/settings'
 import { useChatStore } from './stores/chat'
 import { useProjectStore } from './stores/project'
@@ -31,5 +32,7 @@ onMounted(async () => {
     <div class="desk-main">
       <RouterView />
     </div>
+    <!-- 越界访问审批：全局应用内对话框 -->
+    <ApprovalDialog />
   </div>
 </template>

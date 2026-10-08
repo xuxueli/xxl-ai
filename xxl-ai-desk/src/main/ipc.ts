@@ -59,7 +59,8 @@ import {
   resetAgents,
   runAgent
 } from './agent/runtime'
-import type { HostEvent, ProviderModelConfig, RunAgentInput } from '../shared/agentProtocol'
+import { resolveApproval } from './agent/approval'
+import type { ApprovalChoice, HostEvent, ProviderModelConfig, RunAgentInput } from '../shared/agentProtocol'
 
 /* 将 Agent 消息内容归一化为纯文本（用于列表预览与检索） */
 function contentToText(message: unknown): string {
@@ -192,6 +193,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     await shell.openPath(getDataDir())
   })
   ipcMain.handle(IPC.appRelaunch, () => {
+    /*
+     * 开发模式：electron-vite 的 dev server 会随本进程退出而关闭，
+     * app.relaunch 拉起的新进程无渲染服务可加载（白屏），故此处兜底不重启（渲染层已做样式化提示）。
+     */
+    if (!app.isPackaged) {
+      console.warn('[relaunch] 开发模式下不执行自动重启，请手动重新运行 npm run dev')
+      return
+    }
     /* app.exit 不触发 before-quit，需先手动回收运行时进程与终端，避免残留 */
     disposeAgentRuntime()
     disposeAllTerminals()
@@ -292,6 +301,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   /* --- 对话 --- */
   ipcMain.handle(IPC.chatAbort, async (_event, sessionId: string) => {
     await abortAgent(sessionId)
+  })
+
+  /* 越界审批：渲染进程回传选择，唤醒等待中的 confirmOutside */
+  ipcMain.handle(IPC.chatApprovalRespond, (_event, requestId: string, choice: ApprovalChoice) => {
+    resolveApproval(requestId, choice)
   })
 
   ipcMain.handle(IPC.chatSend, async (_event, input: { sessionId: string; text: string }) => {

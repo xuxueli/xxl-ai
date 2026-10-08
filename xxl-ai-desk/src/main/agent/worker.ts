@@ -80,7 +80,7 @@ function emitEvent(sessionId: string, event: HostEvent): void {
 }
 
 /*
- * 越界审批：转发主进程弹原生对话框，等待 approval-response 回传。
+ * 越界审批：转发主进程弹应用内对话框，等待 approval-response 回传。
  * requestId 用于并发审批场景下的请求配对。
  */
 setApprovalRequester(
