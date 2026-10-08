@@ -85,6 +85,10 @@ export interface ChatEvent {
   text?: string
   toolName?: string
   toolCallId?: string
+  /* 工具调用入参（tool_start） */
+  args?: unknown
+  /* 工具返回文本（tool_end） */
+  result?: string
   isError?: boolean
   message?: string
 }

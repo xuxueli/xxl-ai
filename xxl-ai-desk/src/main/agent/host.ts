@@ -104,7 +104,8 @@ export async function runPrompt(
           type: 'tool_end',
           toolCallId: event.toolCallId,
           toolName: event.toolName,
-          isError: event.isError
+          isError: event.isError,
+          result: toolResultText(event.result)
         })
         break
       default:
@@ -125,6 +126,28 @@ export async function runPrompt(
   } finally {
     unsubscribe()
   }
+}
+
+/* 汇总工具结果为纯文本（仅取文本内容块，供 UI 展开查看） */
+function toolResultText(result: unknown): string {
+  const content = (result as { content?: unknown })?.content
+  if (typeof content === 'string') {
+    return content
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') {
+          return part
+        }
+        return (part as { type?: string; text?: string }).type === 'text'
+          ? ((part as { text?: string }).text ?? '')
+          : ''
+      })
+      .filter((item) => item !== '')
+      .join('\n')
+  }
+  return ''
 }
 
 /* 检查最后一轮是否以错误结束，返回错误信息（无错误返回 undefined） */

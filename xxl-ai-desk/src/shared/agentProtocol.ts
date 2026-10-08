@@ -22,7 +22,7 @@ export type HostEvent =
   | { type: 'delta'; text: string }
   | { type: 'thinking'; text: string }
   | { type: 'tool_start'; toolCallId: string; toolName: string; args: unknown }
-  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean }
+  | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; result?: string }
   | { type: 'done' }
   | { type: 'error'; message: string }
 

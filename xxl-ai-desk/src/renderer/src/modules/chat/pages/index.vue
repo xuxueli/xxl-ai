@@ -13,7 +13,7 @@ import { useProjectStore } from '../../../stores/project'
 import { t } from '../../../i18n'
 import type { ChatMode } from '../../../../../shared/ipc'
 
-/* 对话主区：消息流 + 输入框（项目/模型切换在输入框内） */
+/* 对话主区：消息流 + 输入框（模式/模型切换在输入框内，项目选择在空态输入框下方靠左） */
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
@@ -33,6 +33,24 @@ const terminalProject = computed(() => {
 })
 const terminalName = computed(() => terminalProject.value?.name || t('chat.terminal'))
 const terminalCwd = computed(() => terminalProject.value?.path || undefined)
+
+/* 空态项目选择：当前项目名（未选择时展示占位文案） */
+const currentProjectName = computed(
+  () => project.currentProject?.name || t('project.selectProject')
+)
+
+/* 选择项目；选到「新建项目」时弹出目录选择并自动生成 */
+async function onProjectChange(value: string): Promise<void> {
+  if (value === '__new__') {
+    try {
+      await project.createProject()
+    } catch (error) {
+      ElMessage.error((error as Error).message)
+    }
+    return
+  }
+  project.selectProject(value)
+}
 
 /* 终端面板首次打开后保持挂载（隐藏时仅 v-show，不销毁本地 PTY 会话） */
 const terminalOpened = ref(false)
@@ -80,11 +98,24 @@ function scrollToBottom(): void {
 }
 
 /*
- * 仅监听「消息条数 + 末条正文长度」：流式期间只增长最后一条，
- * 避免此前每次刷新都对全部消息求长度（O(n)）并触发同步布局。
+ * 仅监听「消息条数 + 末条片段数/正文长度/末段文本长度」的字符串签名：
+ * 流式期间只增长最后一条，避免对全部消息求长度触发同步布局；
+ * 思考/工具/正文任一推进都能触发吸底跟随。
  */
 watch(
-  () => [chat.messages.length, chat.messages[chat.messages.length - 1]?.content.length ?? 0],
+  () => {
+    const last = chat.messages[chat.messages.length - 1]
+    if (!last) {
+      return '0'
+    }
+    const lastPart = last.parts[last.parts.length - 1]
+    const tail = lastPart
+      ? lastPart.type === 'tool'
+        ? (lastPart.tool.result?.length ?? 0)
+        : lastPart.text.length
+      : 0
+    return `${chat.messages.length}|${last.parts.length}|${last.content.length}|${tail}`
+  },
   () => scrollToBottom()
 )
 
@@ -275,6 +306,27 @@ async function onDeleteCurrent(): Promise<void> {
           @stop="chat.abort"
         />
 
+        <!-- 空态：项目选择（输入框下方、左对齐输入框左边、固定宽度） -->
+        <div v-if="!hasMessages" class="empty-project">
+          <div class="empty-project-inner">
+            <el-dropdown trigger="click" @command="onProjectChange">
+              <span class="project-trigger" :title="t('project.label')">
+                <el-icon class="project-icon"><Folder /></el-icon>
+                <span class="project-name">{{ currentProjectName }}</span>
+                <el-icon class="project-arrow"><ArrowDown /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="__new__">+ {{ t('project.new') }}</el-dropdown-item>
+                  <el-dropdown-item v-for="item in project.projects" :key="item.id" :command="item.id">
+                    {{ item.name }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+
         <!-- 空态示例：输入框下方以文字入口平铺，点击直接发起对话 -->
         <div v-if="!hasMessages" class="empty-examples">
           <span class="examples-label">{{ t('chat.examplesLabel') }}</span>
@@ -452,6 +504,65 @@ async function onDeleteCurrent(): Promise<void> {
 .chat-inner {
   max-width: 880px;
   margin: 0 auto;
+}
+
+/* 空态项目选择：紧贴输入框下沿，宽度比输入框略窄、居中 */
+.empty-project {
+  flex-shrink: 0;
+  /* 抵消输入框容器底部 22px 内边距，使背景框紧贴输入框 */
+  margin-top: -22px;
+  padding: 0 32px 10px;
+}
+
+/* 背景框：比输入框（880px）略窄、居中；浅灰底、圆角，内容靠左 */
+.empty-project-inner {
+  max-width: 840px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 34px;
+  padding: 0 10px;
+  background: var(--desk-segment-bg);
+  border-radius: 0 0 12px 12px;
+}
+
+/* 项目选择：可点击下拉触发器，固定宽度不随项目名长短变化 */
+.project-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--desk-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.project-trigger:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+}
+
+.project-trigger .project-icon,
+.project-trigger .project-arrow {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.project-trigger .project-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 空态示例：与输入框同宽居中，纯文字入口（无背景框） */

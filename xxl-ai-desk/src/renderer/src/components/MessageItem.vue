@@ -1,23 +1,40 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { renderMarkdown } from '../composables/useMarkdown'
+import { toolArgsText, toolView } from '../composables/useToolView'
+import { useNow } from '../composables/useNow'
 import { t } from '../i18n'
-import type { UiMessage } from '../types'
+import type { ToolCallState, UiMessage } from '../types'
 
-/* 单条消息：用户气泡 / 助手 Markdown + 思考 + 工具调用 */
+/* 单条消息：用户气泡 / 助手「执行过程时间线（思考 → 工具 → 正文）+ 最终答复」 */
 const props = defineProps<{ message: UiMessage }>()
 const emit = defineEmits<{ edit: [content: string]; remove: [] }>()
 
-const html = computed(() => renderMarkdown(props.message.content))
-const thinkingOpen = ref(false)
+/* 生成中：共享秒级时钟，实时刷新耗时展示 */
+const now = useNow(() => Boolean(props.message.pending))
 
-/* 生成中且暂无任何输出（思考/正文）时，展示「正在思考…」滚动指示 */
+/* 片段索引/工具 id → 展开态覆盖（未设置时按运行态默认） */
+const thinkingOpen = ref<Record<number, boolean>>({})
+const toolOpen = ref<Record<string, boolean>>({})
+
+const lastIndex = computed(() => props.message.parts.length - 1)
+
+/* 生成中且尚无任何输出（思考/工具/正文）时，展示「正在思考」滚动指示 */
 const waiting = computed(
-  () => Boolean(props.message.pending) && !props.message.content && !props.message.thinking
+  () => Boolean(props.message.pending) && props.message.parts.length === 0
 )
 
 /* 每条消息在鼠标悬浮时展示的时间文案（当天仅时分，跨天补充月日） */
 const timeText = computed(() => formatTime(props.message.addTime))
+
+/* 本轮总耗时（仅流式轮次有时间戳，重载后不展示） */
+const turnDuration = computed(() => {
+  const { startedAt, endedAt } = props.message
+  if (!startedAt || !endedAt) {
+    return ''
+  }
+  return formatDuration(endedAt - startedAt)
+})
 
 /* 格式化发送时间：ISO 字符串 → 展示文案，非法值返回空串 */
 function formatTime(iso: string): string {
@@ -30,12 +47,62 @@ function formatTime(iso: string): string {
   }
   const pad = (value: number): string => String(value).padStart(2, '0')
   const hourMinute = `${pad(date.getHours())}:${pad(date.getMinutes())}`
-  const now = new Date()
+  const nowDate = new Date()
   const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  return sameDay ? hourMinute : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hourMinute}`
+    date.getFullYear() === nowDate.getFullYear() &&
+    date.getMonth() === nowDate.getMonth() &&
+    date.getDate() === nowDate.getDate()
+  return sameDay
+    ? hourMinute
+    : `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hourMinute}`
+}
+
+/* 耗时格式化：1s 以下用毫秒，以上用秒（保留一位小数） */
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${Math.max(0, Math.round(ms))}ms`
+  }
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+/* 是否最后一段（流式跟随时，正文用纯文本渲染，避免逐段重解析 Markdown） */
+function isLastPart(index: number): boolean {
+  return index === lastIndex.value
+}
+
+/* 思考区展开态：默认运行中的最后一段自动展开，完成后收起 */
+function thinkingExpanded(index: number): boolean {
+  const override = thinkingOpen.value[index]
+  if (override !== undefined) {
+    return override
+  }
+  return Boolean(props.message.pending) && isLastPart(index)
+}
+
+function toggleThinking(index: number): void {
+  thinkingOpen.value = { ...thinkingOpen.value, [index]: !thinkingExpanded(index) }
+}
+
+/* 工具卡片展开态：默认执行中自动展开以展示进度/参数，完成后收起 */
+function toolExpanded(tool: ToolCallState): boolean {
+  const override = toolOpen.value[tool.id]
+  if (override !== undefined) {
+    return override
+  }
+  return tool.status === 'running'
+}
+
+function toggleTool(tool: ToolCallState): void {
+  toolOpen.value = { ...toolOpen.value, [tool.id]: !toolExpanded(tool) }
+}
+
+/* 工具耗时：运行中按当前时钟实时计算，完成后取结束时间 */
+function toolDuration(tool: ToolCallState): string {
+  if (!tool.startedAt) {
+    return ''
+  }
+  const end = tool.endedAt ?? now.value
+  return formatDuration(end - tool.startedAt)
 }
 
 async function copyContent(): Promise<void> {
@@ -59,47 +126,83 @@ function removeMessage(): void {
 <template>
   <div class="message" :class="message.role">
     <div class="message-body">
-      <!-- 等待首个输出：正在思考…（三点滚动），有思考/正文后自动隐藏 -->
-      <div v-if="waiting" class="waiting">
-        <span class="waiting-label">{{ t('chat.thinkingPending') }}</span>
-        <span class="waiting-dots"><span></span><span></span><span></span></span>
-      </div>
-
-      <!-- 思考过程 -->
-      <div v-if="message.thinking" class="thinking">
-        <div class="thinking-toggle" @click="thinkingOpen = !thinkingOpen">
-          <el-icon><CaretRight v-if="!thinkingOpen" /><CaretBottom v-else /></el-icon>
-          {{ t('chat.thinking') }}
-        </div>
-        <div v-if="thinkingOpen" class="thinking-content">{{ message.thinking }}</div>
-      </div>
-
-      <!-- 工具调用 -->
-      <div v-if="message.tools.length > 0" class="tools">
-        <div class="tools-title">{{ t('chat.toolCalls') }}</div>
-        <div v-for="tool in message.tools" :key="tool.id" class="tool-chip" :class="tool.status">
-          <el-icon v-if="tool.status === 'running'" class="spin"><Loading /></el-icon>
-          <el-icon v-else-if="tool.status === 'error'"><CircleClose /></el-icon>
-          <el-icon v-else><CircleCheck /></el-icon>
-          <span class="tool-name">{{ tool.name }}</span>
-          <span class="tool-status">
-            {{
-              tool.status === 'running'
-                ? t('chat.toolRunning')
-                : tool.status === 'error'
-                  ? t('chat.toolFailed')
-                  : t('chat.toolDone')
-            }}
-          </span>
-        </div>
-      </div>
-
-      <!-- 正文：流式期间用纯文本渲染（避免逐段重解析 Markdown 卡顿），完成后再转 Markdown -->
+      <!-- 用户消息：气泡 -->
       <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}</div>
-      <div v-else-if="message.pending" class="streaming-plain">{{ message.content }}</div>
-      <div v-else class="markdown-body" :class="{ 'is-error': message.error }" v-html="html"></div>
 
-      <!-- 悬浮操作：发送时间（左）+ 复制（紧跟其后）；助手左对齐、用户右对齐 -->
+      <!-- 助手消息：按发生顺序渲染执行过程时间线 + 最终答复 -->
+      <template v-else>
+        <!-- 等待首个输出：正在思考…（三点滚动） -->
+        <div v-if="waiting" class="waiting">
+          <span class="waiting-label">{{ t('chat.thinkingPending') }}</span>
+          <span class="waiting-dots"><span></span><span></span><span></span></span>
+        </div>
+
+        <div class="timeline">
+          <template v-for="(part, index) in message.parts" :key="index">
+            <!-- 思考片段 -->
+            <div
+              v-if="part.type === 'thinking'"
+              class="step step-thinking"
+              :class="{ active: message.pending && isLastPart(index) }"
+            >
+              <button class="step-head" @click="toggleThinking(index)">
+                <el-icon class="step-icon"><Loading v-if="message.pending && isLastPart(index)" class="spin" /><Cpu v-else /></el-icon>
+                <span class="step-label">
+                  {{ message.pending && isLastPart(index) ? t('chat.thinkingActive') : t('chat.thinkingDone') }}
+                </span>
+                <el-icon class="step-chevron" :class="{ open: thinkingExpanded(index) }"><ArrowDown /></el-icon>
+              </button>
+              <div v-show="thinkingExpanded(index)" class="thinking-body">{{ part.text }}</div>
+            </div>
+
+            <!-- 工具调用片段 -->
+            <div v-else-if="part.type === 'tool'" class="step step-tool" :class="part.tool.status">
+              <button class="step-head" @click="toggleTool(part.tool)">
+                <el-icon class="step-icon"><component :is="toolView(part.tool).icon" /></el-icon>
+                <span class="step-label">{{ toolView(part.tool).title }}</span>
+                <span v-if="toolView(part.tool).detail" class="tool-detail">{{ toolView(part.tool).detail }}</span>
+                <span class="tool-state">
+                  <el-icon v-if="part.tool.status === 'running'" class="spin"><Loading /></el-icon>
+                  <el-icon v-else-if="part.tool.status === 'error'"><CircleClose /></el-icon>
+                  <el-icon v-else><CircleCheck /></el-icon>
+                </span>
+                <span v-if="toolDuration(part.tool)" class="step-time">{{ toolDuration(part.tool) }}</span>
+                <el-icon class="step-chevron" :class="{ open: toolExpanded(part.tool) }"><ArrowDown /></el-icon>
+              </button>
+              <div v-show="toolExpanded(part.tool)" class="tool-body">
+                <div v-if="toolArgsText(part.tool.args)" class="tool-block">
+                  <div class="tool-block-title">{{ t('chat.toolArgs') }}</div>
+                  <pre class="tool-pre">{{ toolArgsText(part.tool.args) }}</pre>
+                </div>
+                <div class="tool-block">
+                  <div class="tool-block-title">{{ t('chat.toolResult') }}</div>
+                  <pre class="tool-pre" :class="{ 'is-error': part.tool.status === 'error' }">{{ part.tool.result || t('chat.toolNoOutput') }}</pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- 正文片段：流式期间用纯文本，完成后转 Markdown -->
+            <template v-else-if="part.type === 'text'">
+              <div v-if="message.pending && isLastPart(index)" class="step step-text streaming-plain">
+                {{ part.text }}
+              </div>
+              <div
+                v-else
+                class="step step-text markdown-body"
+                :class="{ 'is-error': message.error && isLastPart(index) }"
+                v-html="renderMarkdown(part.text)"
+              ></div>
+            </template>
+          </template>
+        </div>
+
+        <!-- 本轮耗时（仅流式轮次可见） -->
+        <div v-if="turnDuration && !message.pending" class="turn-meta">
+          {{ t('chat.turnElapsed', [turnDuration]) }}
+        </div>
+      </template>
+
+      <!-- 悬浮操作：发送时间 + 复制/删除/编辑 -->
       <div v-if="!message.pending" class="message-actions">
         <span class="message-time">{{ timeText }}</span>
         <el-tooltip :content="t('common.copy')">
@@ -149,16 +252,194 @@ function removeMessage(): void {
   word-break: break-word;
 }
 
+/* --- 执行过程时间线：思考/工具为「过程」，正文为「答复」，按发生顺序排列 --- */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step {
+  position: relative;
+}
+
+/* 过程节点（思考/工具）：左侧竖线 + 可点击标题行 */
+.step-thinking,
+.step-tool {
+  padding-left: 12px;
+}
+
+.step-thinking::before,
+.step-tool::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--desk-border);
+}
+
+/* 运行中的过程节点：竖线与图标使用主色，强化「正在干活」的感知 */
+.step-thinking.active::before,
+.step-tool.running::before {
+  background: var(--desk-primary);
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px 3px 0;
+  border: none;
+  background: transparent;
+  color: var(--desk-text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.step-head:hover {
+  color: var(--desk-text);
+}
+
+.step-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--desk-text-tertiary);
+}
+
+.step-thinking.active .step-icon {
+  color: var(--desk-primary);
+}
+
+.step-label {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+/* 思考完成后弱化为次要文案 */
+.step-thinking:not(.active) .step-label {
+  color: var(--desk-text-tertiary);
+  font-weight: 400;
+}
+
+.step-tool .tool-detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--desk-text-tertiary);
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.tool-state {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.step-tool.done .tool-state {
+  color: #3a9d5d;
+}
+
+.step-tool.error .tool-state {
+  color: var(--desk-danger);
+}
+
+.step-tool.running .tool-state {
+  color: var(--desk-primary);
+}
+
+.step-time {
+  flex-shrink: 0;
+  color: var(--desk-text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-chevron {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  transition: transform 0.2s ease;
+}
+
+.step-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* 思考正文：弱化的斜体，展示模型推理过程 */
+.thinking-body {
+  margin: 2px 0 6px;
+  padding-left: 2px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--desk-text-tertiary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 工具展开区：参数与结果分块展示 */
+.tool-body {
+  margin: 4px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-block-title {
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  margin-bottom: 4px;
+}
+
+.tool-pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--desk-bg-elevated);
+  border: 1px solid var(--desk-border);
+  border-radius: var(--desk-radius-sm);
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--desk-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-pre.is-error {
+  color: var(--desk-danger);
+}
+
+/* 正文答复：与过程区分，正常字号与颜色 */
+.step-text {
+  font-size: 14px;
+}
+
+.step-text.streaming-plain {
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .markdown-body.is-error {
   color: var(--desk-danger);
 }
 
-/* 流式纯文本：保留换行，行距与 Markdown 一致，避免跳动 */
-.streaming-plain {
-  font-size: 14px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
+/* 本轮耗时：过程结束后的小字提示 */
+.turn-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
 }
 
 .waiting {
@@ -204,55 +485,6 @@ function removeMessage(): void {
     transform: translateY(-4px);
     opacity: 1;
   }
-}
-
-.thinking {
-  margin-bottom: 8px;
-  border-left: 2px solid var(--desk-border);
-  padding-left: 10px;
-}
-
-.thinking-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--desk-text-tertiary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.thinking-content {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--desk-text-secondary);
-  white-space: pre-wrap;
-}
-
-.tools {
-  margin-bottom: 8px;
-}
-
-.tools-title {
-  font-size: 12px;
-  color: var(--desk-text-tertiary);
-  margin-bottom: 6px;
-}
-
-.tool-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  margin: 0 6px 6px 0;
-  border-radius: 20px;
-  font-size: 12px;
-  background: var(--desk-bubble-assistant);
-  color: var(--desk-text-secondary);
-}
-
-.tool-chip.error {
-  color: var(--desk-danger);
 }
 
 .spin {

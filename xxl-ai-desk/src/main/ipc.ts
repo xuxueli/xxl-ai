@@ -45,6 +45,7 @@ import {
 } from './services/projectService'
 import {
   createTerminal,
+  disposeAllTerminals,
   disposeTerminal,
   onTerminalEvent,
   resizeTerminal,
@@ -53,6 +54,7 @@ import {
 import {
   abortAgent,
   clearSessionPermissions,
+  disposeAgentRuntime,
   evictAgent,
   resetAgents,
   runAgent
@@ -190,6 +192,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     await shell.openPath(getDataDir())
   })
   ipcMain.handle(IPC.appRelaunch, () => {
+    /* app.exit 不触发 before-quit，需先手动回收运行时进程与终端，避免残留 */
+    disposeAgentRuntime()
+    disposeAllTerminals()
     app.relaunch()
     app.exit(0)
   })

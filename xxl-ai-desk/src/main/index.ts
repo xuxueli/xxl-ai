@@ -88,10 +88,13 @@ if (!gotLock) {
     })
   })
 
+  /*
+   * 关闭全部窗口后完全退出（含 macOS）：
+   * 该应用无托盘/后台常驻能力，若沿用 macOS 默认「关窗不退出」，
+   * 应用与开发期 electron-vite 监听进程会留在后台，表现为「退出后残留 node 进程」。
+   */
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit()
-    }
+    app.quit()
   })
 
   app.on('before-quit', () => {

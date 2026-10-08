@@ -4,7 +4,7 @@ import { api } from '../api'
 import { useProjectStore } from './project'
 import { useSettingsStore } from './settings'
 import type { ChatMode, ChatEvent, SessionDTO, StoredMessage } from '../../../shared/ipc'
-import type { UiMessage } from '../types'
+import type { MessagePart, ToolCallState, UiMessage } from '../types'
 
 /* 生成 UI 消息 id */
 function uid(): string {
@@ -19,6 +19,7 @@ interface RawPart {
   redacted?: boolean
   id?: string
   name?: string
+  arguments?: unknown
 }
 interface RawMessage {
   role?: string
@@ -38,88 +39,128 @@ function parseData(data: string): RawMessage | null {
   }
 }
 
-/*
- * 持久化消息集合 → UI 消息（按「轮次」折叠）。
- *   - 一轮对话中 Agent 会分多次产出 assistant 片段（工具调用轮），并伴随 toolResult；
- *   - 折叠为「一条用户消息 + 一条助手消息」：合并正文/思考/工具，剔除空白片段，
- *     避免出现多条消息与空白气泡。
- */
-function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
-  /* 先收集工具执行结果，用于回填工具调用状态 */
-  const toolStatus = new Map<string, 'done' | 'error'>()
-  for (const record of stored) {
-    if (record.role !== 'toolResult') continue
-    const raw = parseData(record.data)
-    if (raw?.toolCallId) {
-      toolStatus.set(raw.toolCallId, raw.isError ? 'error' : 'done')
+/* 向助手消息追加片段：同类相邻文本合并，保持片段发生顺序（思考 → 工具 → 正文 交错） */
+function appendPart(message: UiMessage, part: MessagePart): void {
+  if (part.type === 'thinking' || part.type === 'text') {
+    const last = message.parts[message.parts.length - 1]
+    if (last && last.type === part.type) {
+      last.text += part.text
+      return
     }
   }
+  message.parts.push(part)
+}
 
+/* 回填助手消息正文：拼接全部正文片段（供复制、列表预览与滚动跟随） */
+function refreshContent(message: UiMessage): void {
+  message.content = message.parts
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+    .map((part) => part.text)
+    .join('\n\n')
+}
+
+/* 原始文本内容块 → 纯文本（工具结果展示用） */
+function contentToPlain(raw: RawMessage | null): string {
+  const content = raw?.content
+  if (!Array.isArray(content)) {
+    return ''
+  }
+  return content
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text ?? '')
+    .join('\n')
+}
+
+/*
+ * 持久化消息集合 → UI 消息（按「轮次」折叠，并保留片段发生顺序）。
+ *   - 一轮对话中 Agent 会分多次产出 assistant 片段（工具调用轮），并伴随 toolResult；
+ *   - 折叠为「一条用户消息 + 一条助手消息」，助手消息内部按顺序记录 思考/正文/工具 片段，
+ *     据此还原完整的执行过程，而非把思考、工具堆在一起。
+ */
+function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
   const result: UiMessage[] = []
+  /* toolCallId → 工具片段引用，供后续 toolResult 回填状态与结果 */
+  const toolParts = new Map<string, ToolCallState>()
+
   for (const record of stored) {
     if (record.role === 'user') {
       result.push({
         id: record.id,
         role: 'user',
         content: record.content,
-        thinking: '',
-        tools: [],
+        parts: [],
         addTime: record.addTime
       })
+      continue
+    }
+    /* 工具结果：回填到对应工具片段 */
+    if (record.role === 'toolResult') {
+      const raw = parseData(record.data)
+      const tool = raw?.toolCallId ? toolParts.get(raw.toolCallId) : undefined
+      if (tool) {
+        tool.status = raw?.isError ? 'error' : 'done'
+        tool.result = contentToPlain(raw)
+      }
       continue
     }
     if (record.role !== 'assistant') continue
 
     const raw = parseData(record.data)
     const parts = Array.isArray(raw?.content) ? raw.content : []
-    const text = record.content ?? ''
-    const thinking = parts
-      .filter((part) => part.type === 'thinking' && !part.redacted)
-      .map((part) => part.thinking ?? '')
-      .join('')
-    const calls = parts.filter((part) => part.type === 'toolCall')
     const failed = raw?.stopReason === 'error'
 
-    const last = result[result.length - 1]
-    if (last && last.role === 'assistant') {
-      /* 合并到本轮已存在的助手消息 */
-      if (text) {
-        last.content = last.content ? `${last.content}\n\n${text}` : text
+    /* 合并到本轮已存在的助手消息 */
+    let last = result[result.length - 1]
+    if (!last || last.role !== 'assistant') {
+      last = {
+        id: record.id,
+        role: 'assistant',
+        content: '',
+        parts: [],
+        addTime: record.addTime,
+        error: failed
       }
-      if (thinking) {
-        last.thinking += thinking
-      }
-      for (const call of calls) {
-        last.tools.push({
-          id: call.id ?? uid(),
-          name: call.name ?? 'tool',
-          status: toolStatus.get(call.id ?? '') ?? 'done'
-        })
-      }
-      if (failed) {
-        last.error = true
-      }
-      continue
+      result.push(last)
+    } else if (failed) {
+      last.error = true
     }
 
-    /* 空白且无工具/思考的助手片段：跳过，避免空白气泡 */
-    if (!text && !thinking && calls.length === 0 && !failed) continue
+    /* 按原始顺序还原片段，并累计本片段的结构化正文 */
+    let localText = ''
+    for (const part of parts) {
+      if (part.type === 'thinking' && !part.redacted && part.thinking) {
+        appendPart(last, { type: 'thinking', text: part.thinking })
+      } else if (part.type === 'text' && part.text) {
+        appendPart(last, { type: 'text', text: part.text })
+        localText += part.text
+      } else if (part.type === 'toolCall') {
+        const tool: ToolCallState = {
+          id: part.id ?? uid(),
+          name: part.name ?? 'tool',
+          status: 'done',
+          args: part.arguments,
+          startedAt: 0
+        }
+        last.parts.push({ type: 'tool', tool })
+        toolParts.set(tool.id, tool)
+      }
+    }
 
-    result.push({
-      id: record.id,
-      role: 'assistant',
-      content: text,
-      thinking,
-      tools: calls.map((call) => ({
-        id: call.id ?? uid(),
-        name: call.name ?? 'tool',
-        status: toolStatus.get(call.id ?? '') ?? 'done'
-      })),
-      addTime: record.addTime,
-      error: failed
-    })
+    /* 兜底：落库正文比结构化片段多出的部分（失败轮次追加的可读错误提示）补足展示 */
+    if (record.content && record.content !== localText) {
+      if (record.content.startsWith(localText)) {
+        const rest = record.content.slice(localText.length)
+        if (rest) {
+          appendPart(last, { type: 'text', text: rest })
+        }
+      } else if (!localText) {
+        appendPart(last, { type: 'text', text: record.content })
+      }
+    }
   }
-  return result
+
+  /* 剔除无任何内容的空助手消息（避免空白气泡） */
+  return result.filter((message) => message.role !== 'assistant' || message.parts.length > 0)
 }
 
 /* 会话与对话状态 */
@@ -178,8 +219,14 @@ export const useChatStore = defineStore('chat', () => {
     if (currentId.value === sessionId) {
       const assistant = streamAssistant(sessionId)
       if (assistant) {
-        if (buffer.delta) assistant.content += buffer.delta
-        if (buffer.thinking) assistant.thinking += buffer.thinking
+        /* 思考先于正文写入，维持片段发生顺序 */
+        if (buffer.thinking) {
+          appendPart(assistant, { type: 'thinking', text: buffer.thinking })
+        }
+        if (buffer.delta) {
+          appendPart(assistant, { type: 'text', text: buffer.delta })
+        }
+        refreshContent(assistant)
       }
     }
     buffer.delta = ''
@@ -231,9 +278,9 @@ export const useChatStore = defineStore('chat', () => {
           id: targetId,
           role: 'assistant',
           content: '',
-          thinking: '',
-          tools: [],
+          parts: [],
           addTime: new Date().toISOString(),
+          startedAt: Date.now(),
           pending: true
         })
       }
@@ -336,21 +383,33 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
       case 'tool_start': {
+        /* 先落定已缓冲的思考/正文，保证工具片段追加在正确位置 */
+        flushBuffers(sessionId)
         if (visible) {
-          streamAssistant(sessionId)?.tools.push({
-            id: event.toolCallId ?? uid(),
-            name: event.toolName ?? 'tool',
-            status: 'running',
-            args: undefined
-          })
+          const assistant = streamAssistant(sessionId)
+          if (assistant) {
+            const tool: ToolCallState = {
+              id: event.toolCallId ?? uid(),
+              name: event.toolName ?? 'tool',
+              status: 'running',
+              args: event.args,
+              startedAt: Date.now()
+            }
+            assistant.parts.push({ type: 'tool', tool })
+          }
         }
         break
       }
       case 'tool_end': {
         if (visible) {
-          const tool = streamAssistant(sessionId)?.tools.find((item) => item.id === event.toolCallId)
-          if (tool) {
-            tool.status = event.isError ? 'error' : 'done'
+          const assistant = streamAssistant(sessionId)
+          const part = assistant?.parts.find(
+            (item) => item.type === 'tool' && item.tool.id === event.toolCallId
+          )
+          if (part && part.type === 'tool') {
+            part.tool.status = event.isError ? 'error' : 'done'
+            part.tool.result = event.result ?? part.tool.result
+            part.tool.endedAt = Date.now()
           }
         }
         break
@@ -362,11 +421,13 @@ export const useChatStore = defineStore('chat', () => {
           /* 保留已生成的部分内容，并在其后追加可读错误提示（与落库内容保持一致） */
           if (assistant && !assistant.error) {
             const tip = event.message ?? '请求失败'
-            assistant.content = assistant.content ? `${assistant.content}\n\n${tip}` : tip
+            appendPart(assistant, { type: 'text', text: assistant.content ? `\n\n${tip}` : tip })
+            refreshContent(assistant)
           }
           if (assistant) {
             assistant.error = true
             assistant.pending = false
+            assistant.endedAt = Date.now()
           }
         }
         delete streamingIds.value[sessionId]
@@ -378,6 +439,7 @@ export const useChatStore = defineStore('chat', () => {
           const assistant = streamAssistant(sessionId)
           if (assistant) {
             assistant.pending = false
+            assistant.endedAt = Date.now()
           }
         }
         delete streamingIds.value[sessionId]
@@ -421,9 +483,9 @@ export const useChatStore = defineStore('chat', () => {
       id: uid(),
       role: 'assistant',
       content: '',
-      thinking: '',
-      tools: [],
+      parts: [],
       addTime: new Date().toISOString(),
+      startedAt: Date.now(),
       pending: true
     }
     /* 记录该会话的流式目标与缓冲（多会话各自独立） */
@@ -432,7 +494,7 @@ export const useChatStore = defineStore('chat', () => {
     buffer.delta = ''
     buffer.thinking = ''
 
-    messages.value.push({ id: uid(), role: 'user', content, thinking: '', tools: [], addTime: new Date().toISOString() })
+    messages.value.push({ id: uid(), role: 'user', content, parts: [], addTime: new Date().toISOString() })
     messages.value.push(assistantMessage)
     streamingIds.value[sessionId] = true
 
