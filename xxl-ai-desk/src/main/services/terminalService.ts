@@ -32,6 +32,21 @@ function defaultShell(): string {
   return process.env.SHELL || '/bin/bash'
 }
 
+/* 组装 PTY 环境变量：兜底 UTF-8 Locale，避免中文等非 ASCII 文件名显示为「?」 */
+function buildEnv(): { [key: string]: string } {
+  const env = { ...process.env } as { [key: string]: string }
+  env.TERM = 'xterm-256color'
+  /* 类 Unix：GUI 启动的进程常缺 LANG/LC_*，无 UTF-8 locale 时补默认值 */
+  if (process.platform !== 'win32') {
+    const isUtf8 = (value?: string): boolean => !!value && /utf-?8/i.test(value)
+    if (!isUtf8(env.LANG) && !isUtf8(env.LC_ALL) && !isUtf8(env.LC_CTYPE)) {
+      env.LANG = 'en_US.UTF-8'
+      env.LC_CTYPE = 'en_US.UTF-8'
+    }
+  }
+  return env
+}
+
 /* 解析工作目录：入参目录需存在且为目录，否则回退用户主目录 */
 function resolveCwd(cwd?: string): string {
   if (cwd && existsSync(cwd)) {
@@ -59,7 +74,7 @@ export function createTerminal(input?: TerminalCreateInput): TerminalDTO {
     cols,
     rows,
     cwd,
-    env: { ...process.env, TERM: 'xterm-256color' } as { [key: string]: string }
+    env: buildEnv()
   })
 
   sessions.set(id, { id, cwd, shell, pty: ptyProcess })

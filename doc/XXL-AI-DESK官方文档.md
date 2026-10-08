@@ -104,6 +104,8 @@ npm run build:linux
 - 右侧**侧边任务面板**：文件 / 浏览器面板，可放大占满正文区、拖拽宽度；
 - 对话页右下可展开**终端面板**。
 
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_01.jpg)
+
 ### 3.2 配置模型供应商
 
 进入 **设置 → 模型供应商** 新增 / 修改供应商：
@@ -112,7 +114,9 @@ npm run build:linux
 - 接口地址：OpenAI 兼容端点（如 `https://api.deepseek.com/v1`，裸地址自动补 `/v1`）；
 - API Key：本地存储；
 - 请求 Header：可选 JSON 对象，value 支持 `{session}` 占位符，对话时替换为当前会话 ID（如 OpenCode 使用 `{"x-opencode-session":"{session}"}`）；
-- 模型列表：每行一个模型 ID，如 `deepseek-chat`。
+- 模型列表：每行一个模型 ID，如 `deepseek-v4-flash`。
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_02.jpg)
 
 ### 3.3 项目与会话
 
@@ -129,26 +133,39 @@ npm run build:linux
 - 助手消息按**片段发生顺序**渲染时间线（思考 → 工具 → 正文交错），思考运行中实时展开、完成后收起；工具调用独立成行，展示动作、参数、状态与耗时，点击可展开入参 / 结果；
 - 代码块为 GitHub 风格（语言标签 + 复制），接入语法高亮。
 
-### 3.5 侧边任务与终端
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_03.jpg)
 
-- **侧边任务面板**：工具菜单含 **文件** 与 **浏览器** 两个面板，支持放大占满正文区、拖拽宽度；
-    - **文件面板**：项目目录树（懒加载 / 过滤）+ 代码编辑（行号、高亮、`⌘/Ctrl+S` 保存）+ 预览，随本地文件变更自动刷新，支持「打开所在文件夹 / 用指定应用打开」；
-    - **浏览器面板**：内嵌 `webview`，多标签、前进 / 后退 / 刷新、地址栏搜索兜底、系统浏览器打开；
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_04.jpg)
+
+### 3.5 侧边栏
+
+- **侧边栏工具菜单**：工具菜单含 **文件** 与 **浏览器** 两个面板，支持放大占满正文区、拖拽宽度；
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_05.jpg)
+
+- **文件面板**：项目目录树（懒加载 / 过滤）+ 代码编辑（行号、高亮、`⌘/Ctrl+S` 保存）+ 预览，随本地文件变更自动刷新，支持「打开所在文件夹 / 用指定应用打开」；
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_06.jpg)
+
+- **浏览器面板**：内嵌 `webview`，多标签、前进 / 后退 / 刷新、地址栏搜索兜底、系统浏览器打开；
+
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_07.jpg)
+
+### 3.6 终端
+
 - **终端面板**：基于 node-pty + xterm，支持终端命令行操作。
 
-### 3.6 设置与数据
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_08.jpg)
+
+### 3.7 设置与数据
 
 - **设置 → 常规**：主题、语言即时生效；**设置 → 个性化**：配置应用名称、Slogan、自定义指令（作为新对话系统指令）；
 - **数据目录**：默认位于系统 userData 下的 `xxl-ai-desk.sqlite`，可在设置中查看 / 浏览 / 打开 / 修改，修改后重启生效；
 - 会话 / 消息 / 供应商 / 项目 / 设置均落本地 SQLite，API Key 本地存储。
 
-### 3.7 快捷键
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_09.jpg)
 
-| 快捷键 | 功能 |
-|---|---|
-| `⌘/Ctrl + P` | 打开文件面板 |
-| `⌘/Ctrl + T` | 打开浏览器面板 |
-| `⌘/Ctrl + S` | 保存文件面板当前编辑内容 |
+![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk_10.jpg)
 
 ## 四、总体设计
 
