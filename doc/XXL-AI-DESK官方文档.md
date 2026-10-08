@@ -79,7 +79,9 @@ npm run dev                                   # 开发模式（HMR）
 npm run type-check                            # 主进程 + 渲染进程类型检查
 npm run build                                 # 类型检查 + 三进程构建
 npm run pack                                  # 免安装打包（当前平台）
-npm run build:mac | build:win | build:linux   # 打包对应平台安装包
+npm run build:mac                             # 打包对应平台安装包
+npm run build:win
+npm run build:linux
 ```
 
 启动顺序：`app.whenReady → 初始化数据库 → 预置供应商 → 注册 IPC → 创建窗口`；单实例锁防止多开争库。
