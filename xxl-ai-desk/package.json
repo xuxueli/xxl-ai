@@ -3,6 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "description": "XXL-AI Desk | AI Agent 桌面客户端",
+  "homepage": "https://github.com/xuxueli/xxl-ai",
   "author": "xuxueli",
   "license": "GPL",
   "main": "./out/main/index.js",
@@ -19,8 +20,7 @@
     "type-check:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
     "pack": "npm run build && electron-builder --dir",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:win": "npm run build && electron-builder --win",
-    "build:linux": "npm run build && electron-builder --linux",
+    "build:win": "npm run build && electron-builder --win --x64 --config.npmRebuild=false",
     "postinstall": "install-electron && electron-builder install-app-deps && node scripts/fix-node-pty-perms.cjs"
   },
   "dependencies": {
