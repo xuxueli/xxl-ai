@@ -30,16 +30,13 @@
 
 XXL-AI is an AI Agent development platform delivered in two forms — **Cloud** (web / server) and **Desk** (desktop client). They share one brand with complementary capabilities, and can be used independently or combined.
 
-- **Cloud**: a B/S multi-user AI Agent platform for teams, focusing on unified management, RBAC governance and one-click publishing.
+- **Cloud**: a B/S architecture with Agent orchestration at its core, providing standardized extensions of "MCP + SKILL + RAG", along with multi-vendor support, space isolation, RBAC permissions, and streaming conversations for rapid Agent development and deployment.
 - **Desk**: a cross-platform, local-first desktop client for individuals, focusing on direct operations on local projects and system capabilities.
 
 XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种同源同品牌、能力互补的交付形态，可按团队规模与使用场景独立选用，也可组合使用：
 
-- **云版**（Web / 服务端）：B/S 架构、面向团队的多用户 AI Agent 平台，强调统一管理、权限治理与一键发布；
+- **云版**（Web 服务端）：B/S 架构、面向团队的多用户 AI Agent 平台，强调统一管理、权限治理与一键发布；
 - **本地版**（Desk 桌面端）：跨平台桌面客户端，本地优先、开箱即用，面向个人的本地工作台，强调对本机项目与系统能力的直接操作。
-
-XXL-AI 云版支持 Agent 编排、多供应商、标准化扩展「MCP + SKILL + RAG」与工程化底座，可快速构建并一键发布 Agent；现已开放源代码，开箱即用。
-
 
 ## Documentation
 - [中文文档](https://www.xuxueli.com/xxl-ai/)

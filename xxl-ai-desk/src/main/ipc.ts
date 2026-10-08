@@ -11,6 +11,7 @@ import type {
   ProviderDTO,
   ProviderModelQuery,
   ProjectCreateInput,
+  RuntimeExecInput,
   RuntimeInfo,
   SessionDTO,
   StoredMessage,
@@ -23,6 +24,7 @@ import {
   getDefaultDataDir,
   setDataDir
 } from './services/storageService'
+import { buildRuntimePath, detectExecutable } from './services/runtimeService'
 import {
   deleteProvider,
   fetchRemoteModels,
@@ -216,6 +218,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     app.exit(0)
   })
 
+  /* 弹出可执行文件选择框（供设置中选择 Node / Python） */
+  ipcMain.handle(IPC.appSelectExecutable, async (_event, title?: string) => {
+    const result = await dialog.showOpenDialog({
+      title: title || '选择可执行文件',
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return ''
+    }
+    return result.filePaths[0]
+  })
+  /* 检测运行时可执行文件（node / python）版本 */
+  ipcMain.handle(IPC.appDetectExecutable, (_event, input: RuntimeExecInput) =>
+    detectExecutable(input)
+  )
+
   /* --- 设置 --- */
   ipcMain.handle(IPC.settingsGet, () => getSettings())
   ipcMain.handle(IPC.settingsSave, (_event, patch: Partial<AppSettings>) => {
@@ -392,6 +410,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         messages: history,
         mode,
         rootDir,
+        runtimePath: buildRuntimePath(),
         text
       }
       const result = await runAgent(runInput, emit)

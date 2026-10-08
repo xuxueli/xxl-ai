@@ -16,7 +16,10 @@ const DEFAULTS: AppSettings = {
   systemPrompt: '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。',
   appName: '',
   slogan: '',
-  shortcuts: DEFAULT_SHORTCUTS
+  shortcuts: DEFAULT_SHORTCUTS,
+  runtimeNodeMode: 'builtin',
+  runtimeNodePath: '',
+  runtimePythonPath: ''
 }
 
 /* 解析快捷键配置（JSON 存储，缺省项回退默认值） */
@@ -47,7 +50,10 @@ export function getSettings(): AppSettings {
     systemPrompt: map.get('systemPrompt') ?? DEFAULTS.systemPrompt,
     appName: map.get('appName') ?? DEFAULTS.appName,
     slogan: map.get('slogan') ?? DEFAULTS.slogan,
-    shortcuts: parseShortcuts(map.get('shortcuts'))
+    shortcuts: parseShortcuts(map.get('shortcuts')),
+    runtimeNodeMode: map.get('runtimeNodeMode') === 'custom' ? 'custom' : DEFAULTS.runtimeNodeMode,
+    runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULTS.runtimeNodePath,
+    runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULTS.runtimePythonPath
   }
 }
 

@@ -12,6 +12,9 @@ export type { ProviderModelConfig }
 /* 请求头中的会话占位符：按实际会话 ID 替换 */
 const SESSION_PLACEHOLDER = '{session}'
 
+/* 对外请求 User-Agent（覆盖 Pi 默认的 pi (os ...)，语义同平台 LlmModelFactory） */
+export const USER_AGENT = 'XXL-AI-DESK'
+
 /* 默认计费（供应商未提供时用零值占位，不影响本地对话） */
 const DEFAULT_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 
@@ -87,7 +90,8 @@ function isLocalBaseUrl(baseUrl: string): boolean {
 /*
  * 将已配置的供应商转换为 Pi 的 Models 集合。
  * 统一按 OpenAI 兼容协议（openai-completions）接入，覆盖 DeepSeek / Ollama / OpenCode 等。
- * 自定义请求Header（含 {session} 占位）挂到每个模型上，由 Pi 在请求时合并。
+ * 自定义请求Header（含 {session} 占位）挂到每个模型上，由 Pi 在请求时合并；
+ * 并统一覆盖为 USER_AGENT，标识 Desk 客户端。
  */
 export async function buildModels(configs: ProviderModelConfig[]): Promise<MutableModels> {
   const { createModels, createProvider } = await import('@earendil-works/pi-ai')
@@ -99,6 +103,8 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
 
   for (const config of configs) {
     const requestHeaders = buildRequestHeaders(config.headers, config.sessionId)
+    /* 覆盖 Pi 内置默认 User-Agent（模型 headers 优先级高于内置默认）并压过自定义同名头，统一标识 */
+    requestHeaders['User-Agent'] = USER_AGENT
     const hasHeaders = Object.keys(requestHeaders).length > 0
     const baseUrl = normalizeBaseUrl(config.baseUrl)
     /* 本地/内网服务免 Key：Pi 对空 Key 会直接报错，补占位值（本地服务通常忽略 Authorization） */

@@ -4,7 +4,13 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../api'
 import { setLanguage } from '../i18n'
-import type { AppSettings, ProviderDTO, ProviderModelQuery } from '../../../shared/ipc'
+import type {
+  AppSettings,
+  ProviderDTO,
+  ProviderModelQuery,
+  RuntimeDetectResult,
+  RuntimeExecInput
+} from '../../../shared/ipc'
 
 export const useSettingsStore = defineStore('settings', () => {
   /* 应用设置（主题/语言/默认供应商与模型/系统提示词/快捷操作等） */
@@ -16,7 +22,10 @@ export const useSettingsStore = defineStore('settings', () => {
     systemPrompt: '',
     appName: '',
     slogan: '',
-    shortcuts: {}
+    shortcuts: {},
+    runtimeNodeMode: 'builtin',
+    runtimeNodePath: '',
+    runtimePythonPath: ''
   })
   /* 供应商列表 */
   const providers = ref<ProviderDTO[]>([])
@@ -127,6 +136,16 @@ export const useSettingsStore = defineStore('settings', () => {
     await api.app.relaunch()
   }
 
+  /* 弹出可执行文件选择框（取消返回空串） */
+  async function selectExecutable(title: string): Promise<string> {
+    return api.app.selectExecutable(title)
+  }
+
+  /* 检测运行时可执行文件（node / python）版本 */
+  async function detectExecutable(input: RuntimeExecInput): Promise<RuntimeDetectResult> {
+    return api.app.detectExecutable(input)
+  }
+
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: string): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
@@ -155,6 +174,8 @@ export const useSettingsStore = defineStore('settings', () => {
     saveDataDir,
     openDataDir,
     relaunch,
+    selectExecutable,
+    detectExecutable,
     selectProvider,
     applyTheme
   }

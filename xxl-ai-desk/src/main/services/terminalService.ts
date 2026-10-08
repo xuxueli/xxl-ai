@@ -6,10 +6,16 @@
 import { app } from 'electron'
 import { randomUUID } from 'crypto'
 import { EventEmitter } from 'events'
-import { existsSync, statSync } from 'fs'
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'fs'
+import { basename, join } from 'path'
 import * as pty from 'node-pty'
 import type { IPty } from 'node-pty'
 import type { TerminalCreateInput, TerminalDTO, TerminalEvent } from '../../shared/ipc'
+import {
+  buildRuntimePath,
+  getRuntimeShellDir,
+  runtimePathPrefix
+} from './runtimeService'
 
 /* 受管终端会话：id → PTY 进程 */
 interface TerminalSession {
@@ -32,10 +38,81 @@ function defaultShell(): string {
   return process.env.SHELL || '/bin/bash'
 }
 
-/* 组装 PTY 环境变量：兜底 UTF-8 Locale，避免中文等非 ASCII 文件名显示为「?」 */
+/* shell 单引号字符串（内部单引号按 POSIX 规则转义） */
+function singleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+/* shell 双引号字符串（转义 \ " $ 反引号，用于需要展开 $PATH 的场景） */
+function doubleQuote(value: string): string {
+  return `"${value.replace(/[\\"$`]/g, (char) => `\\${char}`)}"`
+}
+
+/*
+ * 生成「命令运行环境」shell 包装脚本：
+ *   先加载用户自身配置（保留别名 / 提示符等），再按设置把运行时目录前置到 PATH。
+ *   返回启动参数与需追加的环境变量；无法识别的 shell 返回空（退化为纯环境注入）。
+ */
+function prepareRuntimeShell(shellPath: string): {
+  args: string[]
+  env: Record<string, string>
+} {
+  const name = basename(shellPath).toLowerCase()
+  const home = process.env.HOME || app.getPath('home')
+  /* 仅处理 POSIX shell：前缀目录 + 展开 $PATH，保证设置优先且保留用户其它路径 */
+  const prefix = runtimePathPrefix().join(':')
+  const exportLine = `export PATH=${doubleQuote(prefix)}:$PATH`
+
+  if (name === 'zsh') {
+    const dir = join(getRuntimeShellDir(), 'zsh')
+    mkdirSync(dir, { recursive: true })
+    /* .zshenv 转发用户配置；.zshrc 先加载用户配置再覆盖 PATH */
+    writeFileSync(
+      join(dir, '.zshenv'),
+      [
+        '# XXL-AI Desk: 转发用户 .zshenv',
+        `[ -f ${singleQuote(join(home, '.zshenv'))} ] && . ${singleQuote(join(home, '.zshenv'))}`,
+        ''
+      ].join('\n'),
+      'utf-8'
+    )
+    writeFileSync(
+      join(dir, '.zshrc'),
+      [
+        '# XXL-AI Desk: 加载用户配置后按「命令运行环境」覆盖 PATH',
+        `[ -f ${singleQuote(join(home, '.zshrc'))} ] && . ${singleQuote(join(home, '.zshrc'))}`,
+        exportLine,
+        ''
+      ].join('\n'),
+      'utf-8'
+    )
+    return { args: ['-i'], env: { ZDOTDIR: dir } }
+  }
+  if (name === 'bash') {
+    const dir = join(getRuntimeShellDir(), 'bash')
+    mkdirSync(dir, { recursive: true })
+    const rcFile = join(dir, 'bashrc')
+    writeFileSync(
+      rcFile,
+      [
+        '# XXL-AI Desk: 加载用户配置后按「命令运行环境」覆盖 PATH',
+        `[ -f ${singleQuote(join(home, '.bashrc'))} ] && . ${singleQuote(join(home, '.bashrc'))}`,
+        exportLine,
+        ''
+      ].join('\n'),
+      'utf-8'
+    )
+    return { args: ['--rcfile', rcFile, '-i'], env: {} }
+  }
+  return { args: [], env: {} }
+}
+
+/* 组装 PTY 环境变量：注入运行时 PATH（Node / Python），兜底 UTF-8 Locale */
 function buildEnv(): { [key: string]: string } {
   const env = { ...process.env } as { [key: string]: string }
   env.TERM = 'xterm-256color'
+  /* 注入设置中配置的 Node / Python 运行环境（终端面板与 Agent 执行命令保持一致） */
+  env.PATH = buildRuntimePath(env.PATH ?? '')
   /* 类 Unix：GUI 启动的进程常缺 LANG/LC_*，无 UTF-8 locale 时补默认值 */
   if (process.platform !== 'win32') {
     const isUtf8 = (value?: string): boolean => !!value && /utf-?8/i.test(value)
@@ -69,12 +146,17 @@ export function createTerminal(input?: TerminalCreateInput): TerminalDTO {
   const cols = input?.cols && input.cols > 0 ? input.cols : 80
   const rows = input?.rows && input.rows > 0 ? input.rows : 24
 
-  const ptyProcess = pty.spawn(shell, [], {
+  /* 组装环境与 shell 启动参数：按「命令运行环境」设置覆盖 PATH（加载用户配置后再前置） */
+  const env = buildEnv()
+  const shellLaunch = prepareRuntimeShell(shell)
+  Object.assign(env, shellLaunch.env)
+
+  const ptyProcess = pty.spawn(shell, shellLaunch.args, {
     name: 'xterm-256color',
     cols,
     rows,
     cwd,
-    env: buildEnv()
+    env
   })
 
   sessions.set(id, { id, cwd, shell, pty: ptyProcess })

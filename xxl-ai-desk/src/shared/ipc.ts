@@ -136,6 +136,32 @@ export interface AppSettings {
   slogan: string
   /* 快捷操作快捷键（缺省项回退 DEFAULT_SHORTCUTS） */
   shortcuts: ShortcutMap
+  /* 命令运行环境：Node 来源（builtin 内置 Electron Node / custom 自定义路径） */
+  runtimeNodeMode: 'builtin' | 'custom'
+  /* 自定义 Node 可执行文件路径（runtimeNodeMode=custom 时生效） */
+  runtimeNodePath: string
+  /* 自定义 Python 解释器路径（留空自动探测系统 python3 / python） */
+  runtimePythonPath: string
+}
+
+/* 运行时可执行文件检测入参 */
+export interface RuntimeExecInput {
+  /* 运行时类型：node / python */
+  kind: 'node' | 'python'
+  /* 可执行文件路径；node 省略时使用内置 Node，python 省略时自动探测 */
+  path?: string
+}
+
+/* 运行时可执行文件检测结果 */
+export interface RuntimeDetectResult {
+  /* 是否检测通过 */
+  ok: boolean
+  /* 解析到的版本（如 v22.9.0 / Python 3.12.4） */
+  version: string
+  /* 实际使用的可执行文件路径或命令名 */
+  path: string
+  /* 失败提示（ok=false 时） */
+  message: string
 }
 
 /* 对话流式事件（主 → 渲染） */
@@ -273,6 +299,10 @@ export interface DeskApi {
     openDataDir(): Promise<void>
     /* 重启应用使数据目录变更生效 */
     relaunch(): Promise<void>
+    /* 弹出可执行文件选择框，取消返回空串 */
+    selectExecutable(title?: string): Promise<string>
+    /* 检测运行时可执行文件（node / python）版本 */
+    detectExecutable(input: RuntimeExecInput): Promise<RuntimeDetectResult>
   }
   /* 应用设置读写 */
   settings: {
@@ -393,6 +423,8 @@ export const IPC = {
   appSelectDataDir: 'desk:app:select-data-dir',
   appOpenDataDir: 'desk:app:open-data-dir',
   appRelaunch: 'desk:app:relaunch',
+  appSelectExecutable: 'desk:app:select-executable',
+  appDetectExecutable: 'desk:app:detect-executable',
   /* 应用设置 */
   settingsGet: 'desk:settings:get',
   settingsSave: 'desk:settings:save',

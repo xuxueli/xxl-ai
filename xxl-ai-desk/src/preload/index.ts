@@ -14,6 +14,8 @@ import type {
   ProviderDTO,
   ProviderModelQuery,
   ProjectCreateInput,
+  RuntimeDetectResult,
+  RuntimeExecInput,
   SessionDTO,
   StoredMessage,
   TerminalCreateInput,
@@ -32,7 +34,13 @@ const api: DeskApi = {
     /* 在文件管理器中打开数据目录 */
     openDataDir: () => ipcRenderer.invoke(IPC.appOpenDataDir),
     /* 重启应用使变更生效 */
-    relaunch: () => ipcRenderer.invoke(IPC.appRelaunch)
+    relaunch: () => ipcRenderer.invoke(IPC.appRelaunch),
+    /* 弹出可执行文件选择框 */
+    selectExecutable: (title?: string) =>
+      ipcRenderer.invoke(IPC.appSelectExecutable, title),
+    /* 检测运行时可执行文件版本 */
+    detectExecutable: (input: RuntimeExecInput): Promise<RuntimeDetectResult> =>
+      ipcRenderer.invoke(IPC.appDetectExecutable, input)
   },
   /* 应用设置读写 */
   settings: {

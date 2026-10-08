@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '../db'
 import { providerTable } from '../db/schema'
 import { decryptSecret, encryptSecret } from '../security'
-import { normalizeBaseUrl } from '../agent/models'
+import { normalizeBaseUrl, USER_AGENT } from '../agent/models'
 import { getSettings, saveSettings } from './settingsService'
 import type { ProviderDTO, ProviderModelQuery } from '../../shared/ipc'
 
@@ -126,7 +126,8 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
     throw new Error('请先填写接口地址')
   }
 
-  const requestHeaders: Record<string, string> = { ...headers }
+  /* 统一携带 User-Agent，标识 Desk 客户端（压过自定义同名头） */
+  const requestHeaders: Record<string, string> = { ...headers, 'User-Agent': USER_AGENT }
   if (apiKey) {
     requestHeaders.Authorization = `Bearer ${apiKey}`
   }

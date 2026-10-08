@@ -69,6 +69,8 @@ export interface RunAgentInput {
   mode: ChatMode
   /* 项目根目录（文件沙箱根） */
   rootDir: string
+  /* 运行时 PATH（含设置的 Node / Python 环境，供 run_command 使用） */
+  runtimePath: string
   /* 本轮用户输入 */
   text: string
 }

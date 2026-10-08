@@ -6,6 +6,7 @@
 
 import log from 'electron-log/main'
 import { abortAgent, evictAgent, getAgent, resetAgents, runPrompt } from './host'
+import { setRuntimePath } from './tools'
 import { clearSessionPermissions, setApprovalRequester } from './sandbox'
 import type {
   ApprovalChoice,
@@ -95,6 +96,8 @@ setApprovalRequester(
 /* 执行一轮对话：流式事件回传主进程，结束后回传完整上下文（供主进程落库） */
 async function handleRun(input: RunAgentInput): Promise<void> {
   try {
+    /* 应用本轮运行时 PATH（设置中的 Node / Python 环境），供 run_command 使用 */
+    setRuntimePath(input.runtimePath)
     const agent = await getAgent({
       sessionId: input.sessionId,
       provider: input.provider,

@@ -20,6 +20,14 @@ export interface ToolContext {
   sessionId: string
 }
 
+/* 运行时 PATH（主进程随每轮对话下发，供 run_command 使用设置的 Node / Python 环境） */
+let runtimePath: string | undefined
+
+/* 设置运行时 PATH（每轮对话开始时由运行时进程调用） */
+export function setRuntimePath(value?: string): void {
+  runtimePath = value?.trim() || undefined
+}
+
 /* 遍历时跳过的目录（避免扫描依赖与版本库） */
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.svn', '.hg'])
 
@@ -354,7 +362,13 @@ export async function createBuiltinTools(context: ToolContext): Promise<AgentToo
       return new Promise<ReturnType<typeof text>>((resolvePromise) => {
         exec(
           command,
-          { cwd: rootDir, timeout: timeout && timeout > 0 ? timeout : 60000, maxBuffer: 1024 * 1024 * 8 },
+          {
+            cwd: rootDir,
+            /* 使用设置中配置的 Node / Python 运行环境 */
+            env: runtimePath ? { ...process.env, PATH: runtimePath } : process.env,
+            timeout: timeout && timeout > 0 ? timeout : 60000,
+            maxBuffer: 1024 * 1024 * 8
+          },
           (error, stdout, stderr) => {
             const parts: string[] = []
             if (stdout) {
