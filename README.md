@@ -28,15 +28,21 @@
 
 ## Introduction
 
-XXL-AI is an AI Agent development platform delivered in two forms — **Cloud** (web / server) and **Desk** (desktop client). They share one brand with complementary capabilities, and can be used independently or combined.
-
-- **Cloud**: a B/S architecture with Agent orchestration at its core, providing standardized extensions of "MCP + SKILL + RAG", along with multi-vendor support, space isolation, RBAC permissions, and streaming conversations for rapid Agent development and deployment.
-- **Desk**: a cross-platform, local-first desktop client for individuals, focusing on direct operations on local projects and system capabilities.
+XXL-AI is an AI Agent development platform delivered in two forms — **Cloud** (web / server) and **Desk** (desktop client). They share one brand with complementary capabilities, and can be used independently or combined:
 
 XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种同源同品牌、能力互补的交付形态，可按团队规模与使用场景独立选用，也可组合使用：
 
-- **云版**（Web 服务端）：B/S 架构、面向团队的多用户 AI Agent 平台，强调统一管理、权限治理与一键发布；
-- **本地版**（Desk 桌面端）：跨平台桌面客户端，本地优先、开箱即用，面向个人的本地工作台，强调对本机项目与系统能力的直接操作。
+> - **云版**：以 Agent 编排为中枢，标准化扩展「MCP + SKILL + RAG」，配套多供应商、空间隔离、RBAC 权限与流式对话等工程化底座，可快速构建并一键发布 Agent。开源、开箱即用，支持集群部署与生产落地。
+> - **本地版**：跨平台桌面客户端：面向个人的本地工作台，围绕本机项目目录提供对话、文件读写、终端命令、文件 / 浏览器侧边任务等能力；安装即用、离线可用，数据仅落本地 SQLite。
+
+| 项 | 云版（Web 服务端） | 本地版（Desk 桌面端） |
+|---|---|---|
+| 形态 | B/S Web 应用，浏览器访问 | C/S 桌面应用，一键安装（mac / win / linux） |
+| 面向 | 团队——多用户、多业务空间（Tenant） | 个人——单用户本地工作台 |
+| 定位 | Agent 编排、一键发布、权限治理 | 本地优先，直接操作本机项目与系统能力 |
+| 扩展 | MCP + SKILL + RAG，多供应商，流式对话 | 本地文件 / 终端 / 浏览器面板，Plan / Build 模式 |
+| 模块 | `xxl-ai-api` + `xxl-ai-ui`（+ `xxl-ai-sample`） | `xxl-ai-desk` |
+| 依赖 | MySQL + Redis + Milvus | 零依赖（仅本地 SQLite） |
 
 ## Documentation
 - [中文文档](https://www.xuxueli.com/xxl-ai/)
