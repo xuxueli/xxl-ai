@@ -27,16 +27,18 @@ compression: maximum
 # 需解压到 asar 外的资源（原生模块等无法从 asar 内加载）
 asarUnpack:
   - resources/**
-# Windows 安装包（NSIS）
+# Windows 安装包（NSIS）；icon 同时用于 exe、桌面/开始菜单快捷方式与任务栏
 win:
   target:
     - nsis
-# macOS 安装包（dmg + zip，zip 用于自动更新）
+  icon: build/icon.png
+# macOS 安装包（dmg + zip，zip 用于自动更新）；icon 同时用于 App、Dock 与 DMG 卷
 mac:
   target:
     - dmg
     - zip
   category: public.app-category.productivity
+  icon: build/icon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
 # Linux 安装包（AppImage + deb）
 linux:
@@ -45,6 +47,7 @@ linux:
     - deb
   category: Utility
   maintainer: xuxueli
+  icon: build/icon.png
 # 安装时针对 Electron 版本重新编译原生依赖（better-sqlite3 / node-pty）
 npmRebuild: true
 

@@ -6,6 +6,10 @@
   "author": "xuxueli",
   "license": "GPL",
   "main": "./out/main/index.js",
+  "config": {
+    "electron_mirror": "https://npmmirror.com/mirrors/electron/",
+    "electron_builder_binaries_mirror": "https://npmmirror.com/mirrors/electron-builder-binaries/"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
