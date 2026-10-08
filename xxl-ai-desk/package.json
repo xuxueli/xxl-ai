@@ -21,7 +21,7 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",
-    "postinstall": "electron-builder install-app-deps && node scripts/fix-node-pty-perms.cjs"
+    "postinstall": "install-electron && electron-builder install-app-deps && node scripts/fix-node-pty-perms.cjs"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.1.0",
