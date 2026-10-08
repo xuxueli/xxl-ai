@@ -3,6 +3,15 @@
     "name": "XXL-AI Desk",
     "tagline": "AI Agent 桌面客户端"
   },
+  "update": {
+    "title": "发现新版本",
+    "version": "新版本：v{0}",
+    "current": "当前版本：v{0}",
+    "download": "前往下载",
+    "later": "稍后再说",
+    "latest": "已是最新版本",
+    "failed": "检查更新失败：{0}"
+  },
   "common": {
     "confirm": "确定",
     "cancel": "取消",
@@ -237,6 +246,8 @@
     "detectFail": "检测失败：{0}",
     "about": "关于我们",
     "version": "版本",
+    "checkUpdate": "检查更新",
+    "autoCheckUpdate": "启动时自动检查更新",
     "github": "GitHub 仓库",
     "docs": "官方文档"
   }

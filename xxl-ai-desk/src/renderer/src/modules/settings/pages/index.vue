@@ -490,6 +490,12 @@ function back(): void {
                   <el-radio-button value="en">English</el-radio-button>
                 </el-radio-group>
               </el-form-item>
+              <el-form-item :label="t('settings.autoCheckUpdate')">
+                <el-switch
+                  :model-value="settings.settings.updateAutoCheck"
+                  @update:model-value="(value: boolean) => settings.saveSettings({ updateAutoCheck: value })"
+                />
+              </el-form-item>
             </el-form>
 
             <!-- 快捷键：为快捷操作配置全局快捷键（点击输入框录制，Esc 取消） -->
@@ -699,7 +705,16 @@ function back(): void {
               <div class="about-list">
                 <div class="about-row">
                   <span class="about-label">{{ t('settings.version') }}</span>
-                  <span class="about-value">{{ settings.version }}</span>
+                  <div class="about-version">
+                    <span class="about-value">{{ settings.version }}</span>
+                    <el-button
+                      size="small"
+                      :loading="settings.updateChecking"
+                      @click="settings.checkUpdate(true)"
+                    >
+                      {{ t('settings.checkUpdate') }}
+                    </el-button>
+                  </div>
                 </div>
                 <div class="about-row">
                   <span class="about-label">{{ t('settings.github') }}</span>
@@ -1174,6 +1189,13 @@ function back(): void {
   color: var(--desk-text);
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
   font-size: 13px;
+}
+
+/* 版本行：版本号与「检查更新」同行展示，保持间距不挤压 */
+.about-version {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .about-link {

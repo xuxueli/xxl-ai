@@ -19,7 +19,8 @@ import type {
   SessionDTO,
   StoredMessage,
   TerminalCreateInput,
-  TerminalEvent
+  TerminalEvent,
+  UpdateInfo
 } from '../shared/ipc'
 
 const api: DeskApi = {
@@ -41,6 +42,13 @@ const api: DeskApi = {
     /* 检测运行时可执行文件版本 */
     detectExecutable: (input: RuntimeExecInput): Promise<RuntimeDetectResult> =>
       ipcRenderer.invoke(IPC.appDetectExecutable, input)
+  },
+  /* 客户端更新（引导式） */
+  update: {
+    /* 检测最新版本 */
+    check: (): Promise<UpdateInfo> => ipcRenderer.invoke(IPC.updateCheck),
+    /* 用系统浏览器打开下载 / release 页面 */
+    openDownload: (url: string) => ipcRenderer.invoke(IPC.updateOpen, url)
   },
   /* 应用设置读写 */
   settings: {

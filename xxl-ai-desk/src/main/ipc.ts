@@ -25,6 +25,7 @@ import {
   setDataDir
 } from './services/storageService'
 import { buildRuntimePath, detectExecutable } from './services/runtimeService'
+import { checkForUpdate, openDownload } from './services/updateService'
 import {
   deleteProvider,
   fetchRemoteModels,
@@ -233,6 +234,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.appDetectExecutable, (_event, input: RuntimeExecInput) =>
     detectExecutable(input)
   )
+
+  /* --- 客户端更新（引导式） --- */
+  ipcMain.handle(IPC.updateCheck, () => checkForUpdate())
+  ipcMain.handle(IPC.updateOpen, (_event, url: string) => openDownload(url))
 
   /* --- 设置 --- */
   ipcMain.handle(IPC.settingsGet, () => getSettings())

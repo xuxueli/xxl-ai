@@ -3,6 +3,15 @@
     "name": "XXL-AI Desk",
     "tagline": "AI Agent desktop client"
   },
+  "update": {
+    "title": "Update available",
+    "version": "New version: v{0}",
+    "current": "Current version: v{0}",
+    "download": "Download",
+    "later": "Later",
+    "latest": "You're on the latest version",
+    "failed": "Update check failed: {0}"
+  },
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -237,6 +246,8 @@
     "detectFail": "Detection failed: {0}",
     "about": "About",
     "version": "Version",
+    "checkUpdate": "Check for updates",
+    "autoCheckUpdate": "Check for updates on startup",
     "github": "GitHub Repository",
     "docs": "Documentation"
   }

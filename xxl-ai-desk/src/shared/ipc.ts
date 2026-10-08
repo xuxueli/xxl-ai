@@ -142,6 +142,8 @@ export interface AppSettings {
   runtimeNodePath: string
   /* 自定义 Python 解释器路径（留空自动探测系统 python3 / python） */
   runtimePythonPath: string
+  /* 启动时自动检查客户端更新 */
+  updateAutoCheck: boolean
 }
 
 /* 运行时可执行文件检测入参 */
@@ -285,6 +287,24 @@ export interface RuntimeInfo {
   dbFile: string
 }
 
+/* 客户端更新信息（引导式：检测 + 前往下载） */
+export interface UpdateInfo {
+  /* 是否有新版本 */
+  hasUpdate: boolean
+  /* 当前版本 */
+  currentVersion: string
+  /* 最新版本（去 v 前缀） */
+  latestVersion: string
+  /* release 页面地址 */
+  releaseUrl: string
+  /* 匹配到的安装包直链（可能为空） */
+  downloadUrl: string
+  /* release 说明正文 */
+  notes: string
+  /* 发布时间（ISO） */
+  publishedAt: string
+}
+
 /* 预加载暴露给渲染进程的 API */
 export interface DeskApi {
   /* 应用运行时信息与数据目录 */
@@ -303,6 +323,13 @@ export interface DeskApi {
     selectExecutable(title?: string): Promise<string>
     /* 检测运行时可执行文件（node / python）版本 */
     detectExecutable(input: RuntimeExecInput): Promise<RuntimeDetectResult>
+  }
+  /* 客户端更新（引导式：检测 + 前往下载） */
+  update: {
+    /* 检测最新版本 */
+    check(): Promise<UpdateInfo>
+    /* 用系统浏览器打开下载 / release 页面 */
+    openDownload(url: string): Promise<void>
   }
   /* 应用设置读写 */
   settings: {
@@ -425,6 +452,9 @@ export const IPC = {
   appRelaunch: 'desk:app:relaunch',
   appSelectExecutable: 'desk:app:select-executable',
   appDetectExecutable: 'desk:app:detect-executable',
+  /* 客户端更新 */
+  updateCheck: 'desk:update:check',
+  updateOpen: 'desk:update:open',
   /* 应用设置 */
   settingsGet: 'desk:settings:get',
   settingsSave: 'desk:settings:save',

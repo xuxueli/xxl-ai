@@ -19,7 +19,8 @@ const DEFAULTS: AppSettings = {
   shortcuts: DEFAULT_SHORTCUTS,
   runtimeNodeMode: 'builtin',
   runtimeNodePath: '',
-  runtimePythonPath: ''
+  runtimePythonPath: '',
+  updateAutoCheck: true
 }
 
 /* 解析快捷键配置（JSON 存储，缺省项回退默认值） */
@@ -53,7 +54,8 @@ export function getSettings(): AppSettings {
     shortcuts: parseShortcuts(map.get('shortcuts')),
     runtimeNodeMode: map.get('runtimeNodeMode') === 'custom' ? 'custom' : DEFAULTS.runtimeNodeMode,
     runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULTS.runtimeNodePath,
-    runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULTS.runtimePythonPath
+    runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULTS.runtimePythonPath,
+    updateAutoCheck: map.get('updateAutoCheck') !== 'false'
   }
 }
 

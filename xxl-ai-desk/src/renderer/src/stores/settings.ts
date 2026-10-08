@@ -2,14 +2,16 @@
 
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { api } from '../api'
-import { setLanguage } from '../i18n'
+import { setLanguage, t } from '../i18n'
 import type {
   AppSettings,
   ProviderDTO,
   ProviderModelQuery,
   RuntimeDetectResult,
-  RuntimeExecInput
+  RuntimeExecInput,
+  UpdateInfo
 } from '../../../shared/ipc'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -25,7 +27,8 @@ export const useSettingsStore = defineStore('settings', () => {
     shortcuts: {},
     runtimeNodeMode: 'builtin',
     runtimeNodePath: '',
-    runtimePythonPath: ''
+    runtimePythonPath: '',
+    updateAutoCheck: true
   })
   /* 供应商列表 */
   const providers = ref<ProviderDTO[]>([])
@@ -41,6 +44,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const version = ref('')
   /* 运行平台（darwin/win32/linux），用于窗口标题栏适配 */
   const platform = ref('')
+  /* 客户端更新：检测结果（hasUpdate 时用于弹提示）与检查中状态 */
+  const updateInfo = ref<UpdateInfo | null>(null)
+  const updateChecking = ref(false)
 
   /* 已启用的供应商 */
   const enabledProviders = computed(() => providers.value.filter((item) => item.enabled))
@@ -146,6 +152,39 @@ export const useSettingsStore = defineStore('settings', () => {
     return api.app.detectExecutable(input)
   }
 
+  /* 检测客户端更新；notify 为 true（手动检查）时无更新/失败也给出提示 */
+  async function checkUpdate(notify = false): Promise<void> {
+    updateChecking.value = true
+    try {
+      const info = await api.update.check()
+      updateInfo.value = info
+      if (!info.hasUpdate && notify) {
+        ElMessage.success(t('update.latest'))
+      }
+    } catch (error) {
+      if (notify) {
+        ElMessage.error(t('update.failed', [(error as Error).message]))
+      }
+    } finally {
+      updateChecking.value = false
+    }
+  }
+
+  /* 前往下载 / release 页面并关闭提示 */
+  async function openUpdate(): Promise<void> {
+    const info = updateInfo.value
+    const url = info?.downloadUrl || info?.releaseUrl
+    if (url) {
+      await api.update.openDownload(url)
+    }
+    updateInfo.value = null
+  }
+
+  /* 稍后再说：关闭更新提示 */
+  function dismissUpdate(): void {
+    updateInfo.value = null
+  }
+
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: string): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
@@ -176,6 +215,11 @@ export const useSettingsStore = defineStore('settings', () => {
     relaunch,
     selectExecutable,
     detectExecutable,
+    updateInfo,
+    updateChecking,
+    checkUpdate,
+    openUpdate,
+    dismissUpdate,
     selectProvider,
     applyTheme
   }
