@@ -13,7 +13,8 @@ export const useSettingsStore = defineStore('settings', () => {
     modelId: '',
     systemPrompt: '',
     appName: '',
-    slogan: ''
+    slogan: '',
+    shortcuts: {}
   })
   const providers = ref<ProviderDTO[]>([])
   const loaded = ref(false)
@@ -60,7 +61,9 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /* 保存设置 */
   async function saveSettings(patch: Partial<AppSettings>): Promise<void> {
-    settings.value = await api.settings.save(patch)
+    /* 深拷贝为纯数据，避免 Vue 响应式代理无法经 IPC 结构化克隆 */
+    const payload = JSON.parse(JSON.stringify(patch)) as Partial<AppSettings>
+    settings.value = await api.settings.save(payload)
     if (patch.language) {
       setLanguage(patch.language)
     }

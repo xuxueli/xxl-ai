@@ -1,6 +1,6 @@
 import { getDb } from '../db'
 import { settingTable } from '../db/schema'
-import type { AppSettings } from '../../shared/ipc'
+import { DEFAULT_SHORTCUTS, type AppSettings } from '../../shared/ipc'
 
 /* 默认设置 */
 const DEFAULTS: AppSettings = {
@@ -10,7 +10,24 @@ const DEFAULTS: AppSettings = {
   modelId: '',
   systemPrompt: '你是 XXL-AI Desk 智能助手，回答简洁、准确、有条理。',
   appName: '',
-  slogan: ''
+  slogan: '',
+  shortcuts: DEFAULT_SHORTCUTS
+}
+
+/* 解析快捷键配置（JSON 存储，缺省项回退默认值） */
+function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
+  if (!raw) {
+    return { ...DEFAULT_SHORTCUTS }
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return { ...DEFAULT_SHORTCUTS, ...parsed }
+    }
+  } catch {
+    /* 解析失败回退默认值 */
+  }
+  return { ...DEFAULT_SHORTCUTS }
 }
 
 /* 读取全部设置（缺省值兜底） */
@@ -24,18 +41,19 @@ export function getSettings(): AppSettings {
     modelId: map.get('modelId') || DEFAULTS.modelId,
     systemPrompt: map.get('systemPrompt') ?? DEFAULTS.systemPrompt,
     appName: map.get('appName') ?? DEFAULTS.appName,
-    slogan: map.get('slogan') ?? DEFAULTS.slogan
+    slogan: map.get('slogan') ?? DEFAULTS.slogan,
+    shortcuts: parseShortcuts(map.get('shortcuts'))
   }
 }
 
-/* 保存部分设置（key-value upsert） */
+/* 保存部分设置（key-value upsert；对象值序列化为 JSON 文本） */
 export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   const db = getDb()
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined || value === null) {
       continue
     }
-    const text = String(value)
+    const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
     db.insert(settingTable)
       .values({ key, value: text })
       .onConflictDoUpdate({ target: settingTable.key, set: { value: text } })

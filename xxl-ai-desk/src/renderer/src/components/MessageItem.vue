@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { renderMarkdown } from '../composables/useMarkdown'
+import { onCodeCopyClick } from '../composables/useCodeCopy'
 import { toolArgsText, toolView } from '../composables/useToolView'
 import { useNow } from '../composables/useNow'
 import { t } from '../i18n'
@@ -70,13 +71,9 @@ function isLastPart(index: number): boolean {
   return index === lastIndex.value
 }
 
-/* 思考区展开态：默认运行中的最后一段自动展开，完成后收起 */
+/* 思考区展开态：默认收起，避免生成时思考内容持续刷屏；用户点击可展开查看 */
 function thinkingExpanded(index: number): boolean {
-  const override = thinkingOpen.value[index]
-  if (override !== undefined) {
-    return override
-  }
-  return Boolean(props.message.pending) && isLastPart(index)
+  return thinkingOpen.value[index] ?? false
 }
 
 function toggleThinking(index: number): void {
@@ -175,18 +172,14 @@ function removeMessage(): void {
               </div>
             </div>
 
-            <!-- 正文片段：流式期间用纯文本，完成后转 Markdown -->
-            <template v-else-if="part.type === 'text'">
-              <div v-if="message.pending && isLastPart(index)" class="step step-text streaming-plain">
-                {{ part.text }}
-              </div>
-              <div
-                v-else
-                class="step step-text markdown-body"
-                :class="{ 'is-error': message.error && isLastPart(index) }"
-                v-html="renderMarkdown(part.text)"
-              ></div>
-            </template>
+            <!-- 正文片段：流式期间即实时渲染 Markdown（节流刷新，避免逐 token 重解析） -->
+            <div
+              v-else-if="part.type === 'text'"
+              class="step step-text markdown-body"
+              :class="{ 'is-error': message.error && isLastPart(index) }"
+              v-html="renderMarkdown(part.text)"
+              @click="onCodeCopyClick"
+            ></div>
           </template>
         </div>
 
@@ -405,13 +398,13 @@ function removeMessage(): void {
   padding: 10px 12px;
   max-height: 320px;
   overflow: auto;
-  background: var(--desk-bg-elevated);
-  border: 1px solid var(--desk-border);
-  border-radius: var(--desk-radius-sm);
+  background: var(--desk-code-bg);
+  border: 1px solid var(--desk-code-border);
+  border-radius: 8px;
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
   font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--desk-text-secondary);
+  line-height: 1.65;
+  color: var(--desk-code-text);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -423,31 +416,6 @@ function removeMessage(): void {
 /* 正文答复：与过程区分，正常字号与颜色 */
 .step-text {
   font-size: 14px;
-}
-
-.step-text.streaming-plain {
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* 流式正文末尾的闪烁光标：强化「正在输出」的感知 */
-.step-text.streaming-plain::after {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 15px;
-  margin-left: 2px;
-  vertical-align: -2px;
-  border-radius: 1px;
-  background: var(--desk-primary);
-  animation: caret-blink 1s steps(1) infinite;
-}
-
-@keyframes caret-blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 .markdown-body.is-error {

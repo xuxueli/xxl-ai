@@ -5,8 +5,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '../../../stores/settings'
 import { useLayoutStore } from '../../../stores/layout'
 import { t } from '../../../i18n'
+import ShortcutInput from '../../../components/ShortcutInput.vue'
+import { DEFAULT_SHORTCUTS } from '../../../../../shared/ipc'
 import logo from '../../../assets/favicon.ico'
-import type { AppSettings, ProviderDTO } from '../../../../../shared/ipc'
+import type { AppSettings, ProviderDTO, QuickAction, ShortcutMap } from '../../../../../shared/ipc'
 
 /* 设置页：常规 + 个性化 + 供应商管理 */
 const route = useRoute()
@@ -41,6 +43,38 @@ function syncGeneral(): void {
 
 watch(() => settings.loaded, syncGeneral)
 onMounted(syncGeneral)
+
+/* --- 常规：快捷操作快捷键（点击录制，修改后立即保存） --- */
+const quickActions: { id: QuickAction; label: string }[] = [
+  { id: 'newChat', label: 'chat.newChatAction' },
+  { id: 'settings', label: 'settings.title' },
+  { id: 'terminal', label: 'chat.terminal' },
+  { id: 'files', label: 'panel.files' },
+  { id: 'browser', label: 'panel.browser' }
+]
+const shortcuts = ref<ShortcutMap>({})
+
+function syncShortcuts(): void {
+  shortcuts.value = { ...DEFAULT_SHORTCUTS, ...settings.settings.shortcuts }
+}
+
+watch(() => settings.loaded, syncShortcuts)
+onMounted(syncShortcuts)
+
+/* 修改单个快捷键：合并后立即保存（传普通对象，避免 IPC 无法克隆 Vue 响应式代理） */
+function onShortcutChange(id: QuickAction, binding: string): void {
+  const next: ShortcutMap = { ...shortcuts.value, [id]: binding }
+  shortcuts.value = next
+  void settings.saveSettings({ shortcuts: { ...next } })
+}
+
+/* 恢复默认快捷键并保存 */
+function resetShortcuts(): void {
+  const next: ShortcutMap = { ...DEFAULT_SHORTCUTS }
+  shortcuts.value = next
+  void settings.saveSettings({ shortcuts: { ...next } })
+  ElMessage.success(t('common.saved'))
+}
 
 /* --- 个性化：名称 / Slogan / 自定义指令（失焦即保存） --- */
 const appName = ref('')
@@ -304,6 +338,22 @@ function back(): void {
                 </el-radio-group>
               </el-form-item>
             </el-form>
+
+            <!-- 快捷键：为快捷操作配置全局快捷键（点击输入框录制，Esc 取消） -->
+            <div class="shortcuts">
+              <div class="shortcuts-title">{{ t('settings.shortcuts') }}</div>
+              <div class="shortcuts-tip">{{ t('settings.shortcutsTip') }}</div>
+              <div v-for="action in quickActions" :key="action.id" class="shortcut-row">
+                <span class="shortcut-label">{{ t(action.label) }}</span>
+                <ShortcutInput
+                  :model-value="shortcuts[action.id]"
+                  @update:model-value="(value: string) => onShortcutChange(action.id, value)"
+                />
+              </div>
+              <div class="shortcut-actions">
+                <el-button @click="resetShortcuts">{{ t('settings.shortcutReset') }}</el-button>
+              </div>
+            </div>
 
             <!-- 运行时数据目录：查看 / 修改 / 打开 -->
             <div class="data-dir">
@@ -685,6 +735,43 @@ function back(): void {
 .model-editor .model-actions {
   display: flex;
   gap: 8px;
+}
+
+/* 快捷键：快捷操作快捷键配置 */
+.shortcuts {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--desk-border);
+}
+
+.shortcuts-title {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  margin-bottom: 6px;
+}
+
+.shortcuts-tip {
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  margin-bottom: 12px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 640px;
+  height: 40px;
+}
+
+.shortcut-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--desk-text);
+}
+
+.shortcut-actions {
+  margin-top: 12px;
 }
 
 /* 运行时数据目录 */

@@ -6,6 +6,7 @@ import MessageItem from '../../../components/MessageItem.vue'
 import ChatComposer from '../../../components/ChatComposer.vue'
 import EmptyState from '../../../components/EmptyState.vue'
 import TerminalPanel from '../../../components/TerminalPanel.vue'
+import RightPanel from '../../../components/panel/RightPanel.vue'
 import { useChatStore } from '../../../stores/chat'
 import { useSettingsStore } from '../../../stores/settings'
 import { useLayoutStore } from '../../../stores/layout'
@@ -83,9 +84,23 @@ function startPanelResize(event: MouseEvent): void {
 }
 
 let scrollFrame = 0
+/* 是否贴近底部：用户上翻阅读时不再强制吸底（避免打断查看思考内容/回翻） */
+const nearBottom = ref(true)
 
-/* 滚动到底部：合并到下一动画帧执行，避免每次增量刷新都触发强制同步布局（forced reflow） */
-function scrollToBottom(): void {
+/* 用户滚动：按距底部距离更新 nearBottom（80px 阈值） */
+function handleScroll(): void {
+  const el = scrollRef.value
+  if (!el) {
+    return
+  }
+  nearBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+}
+
+/* 滚动到底部：合并到下一动画帧执行；非强制且用户已上翻时不吸底 */
+function scrollToBottom(force = false): void {
+  if (!force && !nearBottom.value) {
+    return
+  }
   if (scrollFrame) {
     return
   }
@@ -97,30 +112,50 @@ function scrollToBottom(): void {
   })
 }
 
+/* 点击「回到底部」：恢复吸底并跳到底部 */
+function goBottom(): void {
+  nearBottom.value = true
+  scrollToBottom(true)
+}
+
 /*
- * 仅监听「消息条数 + 末条片段数/正文长度/末段文本长度」的字符串签名：
- * 流式期间只增长最后一条，避免对全部消息求长度触发同步布局；
- * 思考/工具/正文任一推进都能触发吸底跟随。
+ * 末条「片段数/正文长度/末段文本长度」签名：思考/工具/正文任一推进都能感知；
+ * 流式推进仅在贴近底部时跟随，用户上翻后不强拉到底。
  */
+const streamSignature = computed(() => {
+  const last = chat.messages[chat.messages.length - 1]
+  if (!last) {
+    return '0'
+  }
+  const lastPart = last.parts[last.parts.length - 1]
+  const tail = lastPart
+    ? lastPart.type === 'tool'
+      ? (lastPart.tool.result?.length ?? 0)
+      : lastPart.text.length
+    : 0
+  return `${chat.messages.length}|${last.parts.length}|${last.content.length}|${tail}`
+})
+
+/* 新消息（用户提问 / 新增回复）：强制吸底 */
 watch(
+  () => chat.messages.length,
+  () => scrollToBottom(true)
+)
+
+/* 流式内容增长：仅在贴近底部时跟随 */
+watch(streamSignature, () => scrollToBottom())
+
+/* 切换会话：重置吸底状态并定位到底部 */
+watch(
+  () => chat.currentId,
   () => {
-    const last = chat.messages[chat.messages.length - 1]
-    if (!last) {
-      return '0'
-    }
-    const lastPart = last.parts[last.parts.length - 1]
-    const tail = lastPart
-      ? lastPart.type === 'tool'
-        ? (lastPart.tool.result?.length ?? 0)
-        : lastPart.text.length
-      : 0
-    return `${chat.messages.length}|${last.parts.length}|${last.content.length}|${tail}`
-  },
-  () => scrollToBottom()
+    nearBottom.value = true
+    nextTick(() => scrollToBottom(true))
+  }
 )
 
 onMounted(() => {
-  nextTick(() => scrollToBottom())
+  nextTick(() => scrollToBottom(true))
 })
 
 async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
@@ -282,11 +317,16 @@ async function onDeleteCurrent(): Promise<void> {
 
     <!-- 工作区：左对话内容 + 右侧侧栏（侧边任务） -->
     <div class="chat-workspace">
-      <div class="chat-content" :class="{ empty: !hasMessages }">
+      <!-- 侧栏隐藏时正文始终显示（放大态一并隐藏）；仅「显示且放大」时让位给侧栏，避免收起后正文被留白 -->
+      <div
+        v-show="!layout.rightPanelVisible || !layout.rightPanelMaximized"
+        class="chat-content"
+        :class="{ empty: !hasMessages }"
+      >
         <div v-if="!hasMessages" class="chat-body empty">
           <EmptyState />
         </div>
-        <div v-else ref="scrollRef" class="chat-body">
+        <div v-else ref="scrollRef" class="chat-body" @scroll="handleScroll">
           <div class="chat-inner">
             <MessageItem
               v-for="message in chat.messages"
@@ -297,6 +337,16 @@ async function onDeleteCurrent(): Promise<void> {
             />
           </div>
         </div>
+
+        <!-- 上翻阅读时显示：一键回到底部并恢复自动跟随 -->
+        <button
+          v-if="hasMessages && !nearBottom"
+          class="scroll-to-bottom"
+          :title="t('chat.scrollToBottom')"
+          @click="goBottom"
+        >
+          <el-icon><ArrowDown /></el-icon>
+        </button>
 
         <ChatComposer
           ref="composerRef"
@@ -337,23 +387,20 @@ async function onDeleteCurrent(): Promise<void> {
         </div>
       </div>
 
-      <!-- 右侧侧栏（侧边任务）：可拖拽宽度的占位面板 -->
+      <!-- 右侧侧栏（侧边任务）：工具菜单 + 文件/浏览器面板，可拖拽宽度、可放大占满正文区 -->
       <aside
-        v-if="layout.rightPanelVisible"
+        v-show="layout.rightPanelVisible"
         class="chat-side-panel"
-        :style="{ width: `${layout.rightPanelWidth}px` }"
+        :class="{ maximized: layout.rightPanelMaximized }"
+        :style="layout.rightPanelMaximized ? undefined : { width: `${layout.rightPanelWidth}px` }"
       >
-        <!-- 左边缘拖拽手柄：调整侧栏宽度 -->
-        <div class="side-panel-resizer" @mousedown="startPanelResize"></div>
-        <div class="side-panel-header">
-          <span class="side-panel-title">{{ t('chat.sidePanel') }}</span>
-          <button class="sidebar-toggle" :title="t('chat.hideSidePanel')" @click="layout.toggleRightPanel">
-            <el-icon><Close /></el-icon>
-          </button>
-        </div>
-        <div class="side-panel-body">
-          <div class="panel-placeholder">{{ t('chat.sidePanelEmpty') }}</div>
-        </div>
+        <!-- 左边缘拖拽手柄：调整侧栏宽度（放大态下不可拖拽） -->
+        <div
+          v-if="!layout.rightPanelMaximized"
+          class="side-panel-resizer"
+          @mousedown="startPanelResize"
+        ></div>
+        <RightPanel :root="terminalProject?.path" :project-name="terminalProject?.name" />
       </aside>
     </div>
 
@@ -475,6 +522,7 @@ async function onDeleteCurrent(): Promise<void> {
 }
 
 .chat-content {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -499,6 +547,33 @@ async function onDeleteCurrent(): Promise<void> {
   flex: 0 0 auto;
   display: flex;
   padding: 0;
+}
+
+/* 回到底部按钮：悬浮于输入框上方右侧，用户上翻时出现 */
+.scroll-to-bottom {
+  position: absolute;
+  right: 32px;
+  bottom: 112px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--desk-border);
+  border-radius: 50%;
+  background: var(--desk-bg-elevated);
+  color: var(--desk-text-secondary);
+  cursor: pointer;
+  box-shadow: var(--desk-shadow);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.scroll-to-bottom:hover {
+  color: var(--desk-text);
+  border-color: var(--desk-text-tertiary);
 }
 
 .chat-inner {
@@ -601,7 +676,7 @@ async function onDeleteCurrent(): Promise<void> {
   text-decoration: underline;
 }
 
-/* 右侧侧栏（侧边任务）：可拖拽宽度的占位面板 */
+/* 右侧侧栏（侧边任务）：可拖拽宽度；放大态占满正文区 */
 .chat-side-panel {
   position: relative;
   flex-shrink: 0;
@@ -609,6 +684,11 @@ async function onDeleteCurrent(): Promise<void> {
   flex-direction: column;
   border-left: 1px solid var(--desk-border);
   background: var(--desk-sidebar);
+}
+
+.chat-side-panel.maximized {
+  flex: 1;
+  min-width: 0;
 }
 
 /* 左边缘拖拽手柄：与左侧会话栏保持同宽（5px），视觉条细；下方 ::after 提供更宽命中区 */
@@ -636,39 +716,5 @@ async function onDeleteCurrent(): Promise<void> {
 .side-panel-resizer:hover,
 body.resizing .side-panel-resizer {
   background: var(--desk-primary-soft);
-}
-
-.side-panel-header {
-  height: 40px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px 0 14px;
-  border-bottom: 1px solid var(--desk-border);
-}
-
-.side-panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--desk-text);
-}
-
-.side-panel-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px;
-}
-
-/* 面板占位内容：居中的次要提示 */
-.panel-placeholder {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--desk-text-tertiary);
 }
 </style>

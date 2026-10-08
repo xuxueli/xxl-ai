@@ -65,6 +65,22 @@ export interface StoredMessage {
   addTime: string
 }
 
+/* 快捷操作标识（命令面板「快捷操作」区块，同时支持全局快捷键触发） */
+export type QuickAction = 'newChat' | 'settings' | 'terminal' | 'files' | 'browser'
+
+/* 快捷操作 → 快捷键绑定：键名小写、以 + 连接，mod 表示平台主修饰键（macOS ⌘ / 其他 Ctrl） */
+export type ShortcutMap = Partial<Record<QuickAction, string>>
+
+/* 快捷键默认值（主进程与渲染进程共用；mod = 平台主修饰键，macOS ⌘ / 其他 Ctrl）
+ * 取值按助记字母：新建 N、设置 S、终端 T、文件 F、浏览器 B */
+export const DEFAULT_SHORTCUTS: ShortcutMap = {
+  newChat: 'mod+n',
+  settings: 'mod+s',
+  terminal: 'mod+t',
+  files: 'mod+f',
+  browser: 'mod+b'
+}
+
 /* 应用设置 */
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
@@ -75,6 +91,8 @@ export interface AppSettings {
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string
+  /* 快捷操作快捷键（缺省项回退 DEFAULT_SHORTCUTS） */
+  shortcuts: ShortcutMap
 }
 
 /* 对话流式事件（主 → 渲染） */
@@ -124,6 +142,34 @@ export interface TerminalEvent {
   type: 'data' | 'exit'
   data?: string
   exitCode?: number
+}
+
+/* 文件树节点（目录懒加载，children 由前端按需请求） */
+export interface FsEntry {
+  name: string
+  path: string
+  isDir: boolean
+}
+
+/* 文件读取结果（文本预览；图片附带 dataUrl 供内联预览） */
+export interface FileContent {
+  path: string
+  name: string
+  /* 文本内容（二进制文件为空串） */
+  content: string
+  size: number
+  /* 因体积超限被截断 */
+  truncated: boolean
+  /* 判定为二进制（不可文本预览） */
+  binary: boolean
+  /* 图片预览数据 URL（仅可预览图片提供） */
+  dataUrl?: string
+}
+
+/* 可用「打开方式」应用（由主进程探测本机常见编辑器，供下拉选择） */
+export interface OpenWithApp {
+  name: string
+  path: string
 }
 
 /* 运行时信息（版本 / 平台 / 数据目录） */
@@ -186,6 +232,28 @@ export interface DeskApi {
     dispose(id: string): Promise<void>
     onEvent(cb: (event: TerminalEvent) => void): () => void
   }
+  /* 本地文件系统（右侧「工具 → 文件」面板使用，限定在项目目录内） */
+  fs: {
+    list(root: string, dir: string): Promise<FsEntry[]>
+    read(root: string, path: string): Promise<FileContent>
+    write(root: string, path: string, content: string): Promise<void>
+    /* 监听目录变更（本地增删文件后自动刷新）；onChange 返回取消订阅函数 */
+    watch(dir: string): Promise<void>
+    unwatch(dir: string): Promise<void>
+    onChange(cb: (dir: string) => void): () => void
+  }
+  /* 系统外壳能力（外部打开 / 打开所在文件夹 / 在文件管理器中显示 / 用指定应用打开） */
+  shell: {
+    openExternal(url: string): Promise<void>
+    openPath(path: string): Promise<void>
+    reveal(path: string): Promise<void>
+    openWithApps(): Promise<OpenWithApp[]>
+    openWith(appPath: string, file: string): Promise<void>
+  }
+  /* 内嵌浏览器（右侧「工具 → 浏览器」面板）：主进程把新窗口请求转发为「新标签页」 */
+  browser: {
+    onOpenTab(cb: (url: string) => void): () => void
+  }
 }
 
 export const IPC = {
@@ -222,5 +290,18 @@ export const IPC = {
   terminalWrite: 'desk:terminal:write',
   terminalResize: 'desk:terminal:resize',
   terminalDispose: 'desk:terminal:dispose',
-  terminalEvent: 'desk:terminal:event'
+  terminalEvent: 'desk:terminal:event',
+  fsList: 'desk:fs:list',
+  fsRead: 'desk:fs:read',
+  fsWrite: 'desk:fs:write',
+  fsWatch: 'desk:fs:watch',
+  fsUnwatch: 'desk:fs:unwatch',
+  fsChange: 'desk:fs:change',
+  shellOpenExternal: 'desk:shell:open-external',
+  shellOpenPath: 'desk:shell:open-path',
+  shellReveal: 'desk:shell:reveal',
+  shellOpenWithApps: 'desk:shell:open-with-apps',
+  shellOpenWith: 'desk:shell:open-with',
+  /* 内嵌浏览器新窗口请求 → 渲染层新标签页 */
+  browserOpenTab: 'desk:browser:open-tab'
 } as const

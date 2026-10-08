@@ -6,6 +6,9 @@ import type {
   ChatApprovalPrompt,
   ChatEvent,
   DeskApi,
+  FileContent,
+  FsEntry,
+  OpenWithApp,
   ProviderDTO,
   ProviderModelQuery,
   ProjectCreateInput,
@@ -82,6 +85,37 @@ const api: DeskApi = {
       const listener = (_event: unknown, payload: TerminalEvent): void => callback(payload)
       ipcRenderer.on(IPC.terminalEvent, listener)
       return () => ipcRenderer.removeListener(IPC.terminalEvent, listener)
+    }
+  },
+  fs: {
+    list: (root: string, dir: string): Promise<FsEntry[]> =>
+      ipcRenderer.invoke(IPC.fsList, root, dir),
+    read: (root: string, path: string): Promise<FileContent> =>
+      ipcRenderer.invoke(IPC.fsRead, root, path),
+    write: (root: string, path: string, content: string) =>
+      ipcRenderer.invoke(IPC.fsWrite, root, path, content),
+    watch: (dir: string) => ipcRenderer.invoke(IPC.fsWatch, dir),
+    unwatch: (dir: string) => ipcRenderer.invoke(IPC.fsUnwatch, dir),
+    onChange: (callback: (dir: string) => void) => {
+      const listener = (_event: unknown, dir: string): void => callback(dir)
+      ipcRenderer.on(IPC.fsChange, listener)
+      return () => ipcRenderer.removeListener(IPC.fsChange, listener)
+    }
+  },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke(IPC.shellOpenExternal, url),
+    openPath: (path: string) => ipcRenderer.invoke(IPC.shellOpenPath, path),
+    reveal: (path: string) => ipcRenderer.invoke(IPC.shellReveal, path),
+    openWithApps: (): Promise<OpenWithApp[]> => ipcRenderer.invoke(IPC.shellOpenWithApps),
+    openWith: (appPath: string, file: string) =>
+      ipcRenderer.invoke(IPC.shellOpenWith, appPath, file)
+  },
+  browser: {
+    /* 内嵌浏览器：guest 新窗口请求 → 渲染层新标签页 */
+    onOpenTab: (callback: (url: string) => void) => {
+      const listener = (_event: unknown, url: string): void => callback(url)
+      ipcRenderer.on(IPC.browserOpenTab, listener)
+      return () => ipcRenderer.removeListener(IPC.browserOpenTab, listener)
     }
   }
 }

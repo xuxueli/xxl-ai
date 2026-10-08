@@ -6,9 +6,11 @@ import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
 import { useProjectStore } from '../stores/project'
 import { useLayoutStore } from '../stores/layout'
+import { useQuickAction } from '../composables/useQuickAction'
 import { t } from '../i18n'
+import { formatShortcut } from '../utils/shortcut'
 import logo from '../assets/favicon.ico'
-import type { ProjectDTO, SessionDTO } from '../../../shared/ipc'
+import type { ProjectDTO, QuickAction, SessionDTO } from '../../../shared/ipc'
 
 /* 左侧会话栏：新建 / 搜索 / 项目分组（项目下挂会话）/ 底部操作 */
 const router = useRouter()
@@ -18,6 +20,8 @@ const project = useProjectStore()
 const layout = useLayoutStore()
 /* 项目展开状态（默认收起；选中/新建时自动展开） */
 const expanded = ref<Record<string, boolean>>({})
+/* 快捷操作执行器（命令面板「快捷操作」） */
+const runQuickAction = useQuickAction()
 
 /* 搜索面板状态与关键字 */
 const searchVisible = ref(false)
@@ -109,14 +113,9 @@ function onPickSession(sessionId: string): void {
   closeSearch()
 }
 
-/* 推荐入口：新建会话 / 设置 */
-function onNewFromPalette(): void {
-  onNew()
-  closeSearch()
-}
-
-function onSettingsFromPalette(): void {
-  goSettings()
+/* 快捷操作：执行并关闭命令面板 */
+function onQuickAction(action: QuickAction): void {
+  runQuickAction(action)
   closeSearch()
 }
 
@@ -418,14 +417,39 @@ function startResize(event: MouseEvent): void {
               {{ t('common.empty') }}
             </div>
 
-            <div class="palette-section">{{ t('project.recommend') }}</div>
-            <div class="palette-item" @click="onNewFromPalette">
+            <div class="palette-section">{{ t('project.quickActions') }}</div>
+            <div class="palette-item" @click="onQuickAction('newChat')">
               <el-icon class="palette-item-icon"><Edit /></el-icon>
               <span class="palette-item-title">{{ t('chat.newChatAction') }}</span>
+              <span class="palette-item-meta">{{ formatShortcut(settings.settings.shortcuts?.newChat) }}</span>
             </div>
-            <div class="palette-item" @click="onSettingsFromPalette">
+            <div class="palette-item" @click="onQuickAction('settings')">
               <el-icon class="palette-item-icon"><Setting /></el-icon>
               <span class="palette-item-title">{{ t('settings.title') }}</span>
+              <span class="palette-item-meta">{{ formatShortcut(settings.settings.shortcuts?.settings) }}</span>
+            </div>
+            <div class="palette-item" @click="onQuickAction('terminal')">
+              <svg class="palette-item-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+                <path d="M7.5 10l2.5 2.5-2.5 2.5" />
+                <path d="M12.5 15H17" />
+              </svg>
+              <span class="palette-item-title">{{ t('chat.terminal') }}</span>
+              <span class="palette-item-meta">{{ formatShortcut(settings.settings.shortcuts?.terminal) }}</span>
+            </div>
+            <div class="palette-item" @click="onQuickAction('files')">
+              <el-icon class="palette-item-icon"><Folder /></el-icon>
+              <span class="palette-item-title">{{ t('panel.files') }}</span>
+              <span class="palette-item-meta">{{ formatShortcut(settings.settings.shortcuts?.files) }}</span>
+            </div>
+            <div class="palette-item" @click="onQuickAction('browser')">
+              <svg class="palette-item-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18" />
+                <path d="M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9z" />
+              </svg>
+              <span class="palette-item-title">{{ t('panel.browser') }}</span>
+              <span class="palette-item-meta">{{ formatShortcut(settings.settings.shortcuts?.browser) }}</span>
             </div>
           </div>
         </div>
@@ -649,6 +673,18 @@ body.resizing .sidebar-resizer {
 .palette-item-icon {
   flex-shrink: 0;
   font-size: 15px;
+}
+
+/* 内联 SVG 图标（终端 / 浏览器）：随条目文字色着色 */
+.palette-item-svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .palette-item-title {

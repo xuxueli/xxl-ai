@@ -1,10 +1,12 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import log from 'electron-log/main'
+import { IPC } from '../shared/ipc'
 import { initDatabase } from './db'
 import { registerIpc } from './ipc'
 import { ensureSeedProviders } from './services/providerService'
 import { disposeAllTerminals } from './services/terminalService'
+import { disposeAllFsWatch } from './services/fsWatchService'
 import { disposeAgentRuntime } from './agent/runtime'
 
 /* XXL-AI Desk 主进程入口：窗口、生命周期、IPC 装配 */
@@ -35,7 +37,9 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      /* 右侧「浏览器」面板使用 <webview> 内嵌网页 */
+      webviewTag: true
     }
   })
 
@@ -79,6 +83,20 @@ if (!gotLock) {
     initDatabase()
     ensureSeedProviders()
     registerIpc(() => mainWindow)
+
+    /*
+     * 内嵌浏览器（<webview> guest）：把「新窗口」请求转成渲染层的新标签页。
+     * 不设置将默认拦截 window.open / target=_blank，表现为点击无反应。
+     */
+    app.on('web-contents-created', (_event, contents) => {
+      if (contents.getType() === 'webview') {
+        contents.setWindowOpenHandler(({ url }) => {
+          mainWindow?.webContents.send(IPC.browserOpenTab, url)
+          return { action: 'deny' }
+        })
+      }
+    })
+
     createWindow()
 
     app.on('activate', () => {
@@ -100,5 +118,6 @@ if (!gotLock) {
   app.on('before-quit', () => {
     disposeAgentRuntime()
     disposeAllTerminals()
+    disposeAllFsWatch()
   })
 }

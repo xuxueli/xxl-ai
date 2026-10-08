@@ -158,26 +158,32 @@ body.resizing .desk-sidebar {
 }
 
 .markdown-body code {
-  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-family: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, 'Cascadia Code', Menlo, Consolas,
+    'Liberation Mono', monospace;
   font-size: 0.88em;
-  background: var(--desk-primary-soft);
-  padding: 0.15em 0.4em;
+  background: var(--desk-code-inline-bg);
+  padding: 0.16em 0.42em;
   border-radius: 6px;
 }
 
+/* 代码块：主题化底色/边框，等宽字体，横向滚动 */
 .markdown-body pre {
-  background: #0d1117;
-  color: #e6edf3;
+  background: var(--desk-code-bg);
+  color: var(--desk-code-text);
+  border: 1px solid var(--desk-code-border);
   padding: 14px 16px;
   border-radius: var(--desk-radius-sm);
   overflow-x: auto;
   margin: 0.8em 0;
+  line-height: 1.65;
 }
 
 .markdown-body pre code {
   background: transparent;
   padding: 0;
+  border-radius: 0;
   color: inherit;
+  font-size: 13px;
 }
 
 .markdown-body blockquote {
@@ -198,6 +204,165 @@ body.resizing .desk-sidebar {
   border: 1px solid var(--desk-border);
   padding: 6px 10px;
   text-align: left;
+}
+
+/* --- 代码高亮（GitHub 主题）：聊天代码块与文件编辑器共用同一套 token 配色 --- */
+.hljs {
+  color: var(--desk-code-text);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--code-red);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--code-purple);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-variable {
+  color: var(--code-blue);
+}
+
+.hljs-meta .hljs-string,
+.hljs-regexp,
+.hljs-string {
+  color: var(--code-string);
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--code-orange);
+}
+
+.hljs-name,
+.hljs-selector-pseudo,
+.hljs-selector-tag {
+  color: var(--code-green);
+}
+
+.hljs-code {
+  color: var(--code-comment);
+}
+
+.hljs-subst,
+.hljs-params,
+.hljs-punctuation {
+  color: var(--code-subst);
+}
+
+.hljs-section {
+  color: var(--code-blue);
+  font-weight: 700;
+}
+
+.hljs-bullet {
+  color: var(--code-yellow);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+.hljs-addition {
+  color: var(--code-green);
+  background: rgba(46, 160, 67, 0.15);
+}
+
+.hljs-deletion {
+  color: var(--code-red);
+  background: rgba(248, 81, 73, 0.15);
+}
+
+/* --- 聊天代码块：GitHub 风格「语言标签 + 复制按钮」头部 --- */
+.markdown-body .code-block {
+  margin: 0.8em 0;
+  border: 1px solid var(--desk-code-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--desk-code-bg);
+}
+
+.markdown-body .code-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 8px 0 14px;
+  background: var(--desk-bg-elevated);
+  border-bottom: 1px solid var(--desk-code-border);
+}
+
+.markdown-body .code-lang {
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--desk-text-tertiary);
+  text-transform: lowercase;
+}
+
+.markdown-body .code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--desk-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.markdown-body .code-copy:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+}
+
+.markdown-body .code-copy.copied {
+  color: #2da44e;
+}
+
+.markdown-body .code-block pre {
+  margin: 0;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.markdown-body .code-block pre code {
+  font-size: 12.5px;
+  line-height: 1.65;
 }
 
 /* --- 通用工具类 --- */

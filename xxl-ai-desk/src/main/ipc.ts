@@ -51,6 +51,9 @@ import {
   resizeTerminal,
   writeTerminal
 } from './services/terminalService'
+import { listDir, readFile, writeFile } from './services/fsService'
+import { initFsWatch, unwatchDir, watchDir } from './services/fsWatchService'
+import { listOpenWithApps, openWith } from './services/openWithService'
 import {
   abortAgent,
   clearSessionPermissions,
@@ -428,4 +431,26 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   onTerminalEvent((event) => {
     getWindow()?.webContents.send(IPC.terminalEvent, event)
   })
+
+  /* --- 本地文件系统（右侧「文件」面板；限定项目目录内） --- */
+  ipcMain.handle(IPC.fsList, (_event, root: string, dir: string) => listDir(root, dir))
+  ipcMain.handle(IPC.fsRead, (_event, root: string, path: string) => readFile(root, path))
+  ipcMain.handle(IPC.fsWrite, (_event, root: string, path: string, content: string) =>
+    writeFile(root, path, content)
+  )
+  /* 目录监听：本地增删文件后推送变更，渲染层刷新对应目录 */
+  initFsWatch((dir) => getWindow()?.webContents.send(IPC.fsChange, dir))
+  ipcMain.handle(IPC.fsWatch, (_event, dir: string) => watchDir(dir))
+  ipcMain.handle(IPC.fsUnwatch, (_event, dir: string) => unwatchDir(dir))
+
+  /* --- 系统外壳能力 --- */
+  ipcMain.handle(IPC.shellOpenExternal, (_event, url: string) => shell.openExternal(url))
+  ipcMain.handle(IPC.shellOpenPath, (_event, path: string) => shell.openPath(path))
+  ipcMain.handle(IPC.shellReveal, (_event, path: string) => {
+    shell.showItemInFolder(path)
+  })
+  ipcMain.handle(IPC.shellOpenWithApps, () => listOpenWithApps())
+  ipcMain.handle(IPC.shellOpenWith, (_event, appPath: string, file: string) =>
+    openWith(appPath, file)
+  )
 }

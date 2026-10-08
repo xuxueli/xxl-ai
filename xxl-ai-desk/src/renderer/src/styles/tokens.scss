@@ -18,6 +18,23 @@
   --desk-bubble-user-text: #0d0d0d;
   --desk-bubble-assistant: #f4f4f4;
   --desk-danger: #d93025;
+  /* 代码块：浅色主题用浅灰底 + 深色字（参考 GitHub Light） */
+  --desk-code-bg: #f6f8fa;
+  --desk-code-text: #1f2328;
+  --desk-code-border: #d0d7de;
+  --desk-code-inline-bg: rgba(27, 31, 36, 0.06);
+  /* 文本选区（GitHub 浅色） */
+  --desk-selection: rgba(84, 174, 255, 0.4);
+  /* 语法高亮 token 色（参考 GitHub Light） */
+  --code-red: #cf222e;
+  --code-purple: #8250df;
+  --code-blue: #0550ae;
+  --code-string: #0a3069;
+  --code-orange: #953800;
+  --code-comment: #6e7781;
+  --code-green: #116329;
+  --code-yellow: #735c0f;
+  --code-subst: #1f2328;
   /* 右侧顶部标题栏高度（左侧 Logo 顶部与之下的正文区顶部对齐） */
   --desk-header-height: 45px;
   --desk-radius-sm: 10px;
@@ -64,6 +81,23 @@
   --desk-bubble-user-text: #ececec;
   --desk-bubble-assistant: #262626;
   --desk-danger: #f2555a;
+  /* 代码块：深色主题用深灰底 + 浅色字（参考 GitHub Dark） */
+  --desk-code-bg: #161b22;
+  --desk-code-text: #e6edf3;
+  --desk-code-border: #30363d;
+  --desk-code-inline-bg: rgba(110, 118, 129, 0.4);
+  /* 文本选区（GitHub 深色） */
+  --desk-selection: rgba(56, 139, 253, 0.4);
+  /* 语法高亮 token 色（参考 GitHub Dark） */
+  --code-red: #ff7b72;
+  --code-purple: #d2a8ff;
+  --code-blue: #79c0ff;
+  --code-string: #a5d6ff;
+  --code-orange: #ffa657;
+  --code-comment: #8b949e;
+  --code-green: #7ee787;
+  --code-yellow: #f2cc60;
+  --code-subst: #e6edf3;
   --desk-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
   /* 深色主题：选中态/主按钮取中灰底 + 浅色字，保证与未选中有区分度 */
   --desk-segment-bg: #3a3a3a;

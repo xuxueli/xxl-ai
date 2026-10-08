@@ -18,6 +18,18 @@ export const useLayoutStore = defineStore('layout', () => {
   /* 右侧侧栏（侧边任务）是否展示（默认隐藏） */
   const rightPanelVisible = ref(false)
 
+  /* 右侧侧栏当前工具：'' 表示未选择（展示工具菜单），files/browser 为具体面板 */
+  const rightPanelTool = ref<'' | 'files' | 'browser'>('')
+
+  /* 右侧侧栏是否放大占满正文区 */
+  const rightPanelMaximized = ref(false)
+
+  /* 各工具的默认面板宽度（首次打开时套用，之后沿用用户拖拽宽度） */
+  const RIGHT_PANEL_TOOL_WIDTH: Record<'files' | 'browser', number> = {
+    files: 560,
+    browser: 480
+  }
+
   /* 侧栏宽度（持久化到 localStorage，下次启动沿用） */
   const stored = Number(localStorage.getItem(STORAGE_KEY))
   const sidebarWidth = ref(
@@ -50,9 +62,29 @@ export const useLayoutStore = defineStore('layout', () => {
     terminalVisible.value = !terminalVisible.value
   }
 
-  /* 切换右侧侧栏显隐 */
+  /* 打开底部终端面板（已打开则保持） */
+  function openTerminal(): void {
+    terminalVisible.value = true
+  }
+
+  /* 切换右侧侧栏显隐（保留放大态，重新打开时维持全屏） */
   function toggleRightPanel(): void {
     rightPanelVisible.value = !rightPanelVisible.value
+  }
+
+  /* 打开右侧侧栏并定位到指定工具（宽度不足时套用该工具默认宽度） */
+  function openRightPanelTool(tool: 'files' | 'browser'): void {
+    const defaultWidth = RIGHT_PANEL_TOOL_WIDTH[tool]
+    if (!rightPanelVisible.value || rightPanelWidth.value < defaultWidth) {
+      setRightPanelWidth(defaultWidth)
+    }
+    rightPanelTool.value = tool
+    rightPanelVisible.value = true
+  }
+
+  /* 切换右侧侧栏放大态（放大后占满正文区） */
+  function toggleRightPanelMaximized(): void {
+    rightPanelMaximized.value = !rightPanelMaximized.value
   }
 
   /* 设置侧栏宽度（夹取到合理区间并持久化） */
@@ -74,10 +106,15 @@ export const useLayoutStore = defineStore('layout', () => {
     sidebarWidth,
     terminalVisible,
     rightPanelVisible,
+    rightPanelTool,
+    rightPanelMaximized,
     rightPanelWidth,
     toggleSidebar,
     toggleTerminal,
+    openTerminal,
     toggleRightPanel,
+    openRightPanelTool,
+    toggleRightPanelMaximized,
     setSidebarWidth,
     setRightPanelWidth
   }
