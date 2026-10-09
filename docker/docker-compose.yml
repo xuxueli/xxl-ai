@@ -1,17 +1,15 @@
 # docker-compose version
-version: '3.8'
 
 services:
 
-  # ==================== 核心存储 ====================
+  # ==================== 核心存储：mysql + redis ====================
 
   mysql:
     image: mysql:8.4
     container_name: xxl-ai-mysql
     environment:
-      # 1、数据库密码设置，需要与系统中配置一致：
+      # 数据库设置：密码、实例名称
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # 2、数据库实例名称，需要与系统中配置一致；
       MYSQL_DATABASE: xxl_ai
       TZ: Asia/Shanghai
     ports:
@@ -34,16 +32,16 @@ services:
       - xxl-ai-network
 
   redis:
-    image: redis:7.4
+    image: redis:8.2
     container_name: xxl-ai-redis
     environment:
-      # 4、Redis访问密码，需要与上文 xxl-ai-api 中配置保持一致（默认空密码，如设置请同步配置 REDIS_PASSWORD）；
+      # Redis设置：访问密码
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     ports:
       - "6379:6379"
     volumes:
-      # 5、Redis持久化目录位置，建议自定义：
+      # Redis配置：持久化目录
       - ${REDIS_PATH}/data:/data
     healthcheck:
       test: ["CMD-SHELL", "if [ -z \"$$REDIS_PASSWORD\" ]; then redis-cli ping; else redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping; fi"]
@@ -52,7 +50,7 @@ services:
     networks:
       - xxl-ai-network
 
-  # ==================== 向量数据库（Milvus：etcd + minio + milvus） ====================
+  # ==================== 向量数据库：etcd + minio + milvus ====================
   etcd:
     image: quay.io/coreos/etcd:v3.5.25
     container_name: xxl-ai-etcd
@@ -63,44 +61,58 @@ services:
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
       - ${MILVUS_PATH}/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
       - xxl-ai-network
 
   minio:
-    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    image: milvusdb/minio:RELEASE.2024-12-18T13-15-44Z
     container_name: xxl-ai-minio
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
     ports:
       - "9001:9001"
       - "9000:9000"
     volumes:
       - ${MILVUS_PATH}/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
       - xxl-ai-network
 
   milvus:
-    image: milvusdb/milvus:v2.6.23
+    image: milvusdb/milvus:v3.0.2
     container_name: xxl-ai-milvus
+    # 说明：以 root 运行，避免数据卷属主非 milvus 时的权限问题
+    user: "0:0"
     command: ["milvus", "run", "standalone"]
     security_opt:
       - seccomp:unconfined
     environment:
+      MINIO_REGION: us-east-1
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
-      MINIO_ACCESS_KEY_ID: minioadmin
-      MINIO_SECRET_ACCESS_KEY: minioadmin
-      MINIO_BUCKET_NAME: milvus
     volumes:
       - ${MILVUS_PATH}/milvus:/var/lib/milvus
     ports:
       - "19530:19530"
       - "9091:9091"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
     depends_on:
       - etcd
       - minio
@@ -108,18 +120,18 @@ services:
       - xxl-ai-network
 
   attu:
-    image: zilliz/attu:v2.6
+    image: zilliz/attu:v3.0.1
     container_name: xxl-ai-attu
     ports:
       - "3030:3000"
     environment:
-      MILVUS_URL: milvus:19530
+      MILVUS_ADDRESS: milvus:19530
     depends_on:
       - milvus
     networks:
       - xxl-ai-network
 
-  # ==================== API 服务 ====================
+  # ==================== 业务系统：api + sample ====================
 
   xxl-ai-api:
     # 6、本地Build设置
@@ -149,8 +161,6 @@ services:
         condition: service_healthy
     networks:
       - xxl-ai-network
-
-  # ==================== 示例 MCP 服务 ====================
 
   xxl-ai-sample:
     image: xuxueli/xxl-ai-sample:local
