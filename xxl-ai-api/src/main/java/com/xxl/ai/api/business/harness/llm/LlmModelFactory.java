@@ -152,6 +152,20 @@ public class LlmModelFactory {
     }
 
     /**
+     * 清理指定模型的缓存：单个模型元数据变更时调用，精准淘汰，避免影响同供应商下其他模型
+     */
+    public void evictModel(long supplierId, long modelId) {
+        String prefix = supplierId + ":" + modelId + ":";
+        String exact = supplierId + ":" + modelId;
+        synchronized (chatModelCache) {
+            chatModelCache.keySet().removeIf(key -> key.equals(exact) || key.startsWith(prefix));
+        }
+        synchronized (embeddingModelCache) {
+            embeddingModelCache.keySet().removeIf(key -> key.equals(exact) || key.startsWith(prefix));
+        }
+    }
+
+    /**
      * 构建 User-Agent 定制器：以 OkHttp 拦截器覆盖语义重写请求 User-Agent
      *
      * spring-ai 默认注入 {@code User-Agent: spring-ai-openai}，且其 customHeaders 为「追加」语义

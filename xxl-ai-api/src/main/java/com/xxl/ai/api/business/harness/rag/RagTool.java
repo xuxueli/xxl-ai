@@ -44,7 +44,7 @@ import java.util.Map;
  *  - 清理：按 docId 元数据过滤删除 / 失效向量存储缓存
  *  - Advisor：为对话装配 QuestionAnswerAdvisor 上下文注入
  *
- * 面向业务提供「知识库ID」与「知识库实体」两套入口；集合名 kb_base_{baseId}，实例按知识库ID缓存复用。
+ * 面向业务提供「知识库ID」与「知识库实体」两套入口；集合名 kb_base_{baseId}，实例按知识库ID+模型引用指纹缓存复用。
  *
  * @author xxl-ai 2026-09-12
  */
@@ -76,7 +76,7 @@ public class RagTool {
     @Resource
     private KnowledgeDocMapper knowledgeDocMapper;
 
-    /** 向量存储缓存（baseId → MilvusVectorStore，模型配置变更/删除时主动失效） */
+    /** 向量存储缓存（baseId:modelHashCode → MilvusVectorStore，模型配置变更/删除时主动失效） */
     private final Map<String, MilvusVectorStore> vectorStoreCache = Collections.synchronizedMap(new LRUCache<>());
     /** Milvus 客户端（懒加载单例） */
     private volatile MilvusServiceClient milvusClient;
@@ -141,7 +141,11 @@ public class RagTool {
      * 失效知识库向量存储缓存（知识库删除或嵌入模型配置变更时调用，避免旧模型被复用）
      */
     public void evict(long baseId) {
-        vectorStoreCache.remove(String.valueOf(baseId));
+        String prefix = baseId + ":";
+        String exact = String.valueOf(baseId);
+        synchronized (vectorStoreCache) {
+            vectorStoreCache.keySet().removeIf(k -> k.equals(exact) || k.startsWith(prefix));
+        }
     }
 
     // ==================== 面向知识库实体的向量操作 ====================
@@ -303,15 +307,18 @@ public class RagTool {
     }
 
     /**
-     * 获取（或构建）知识库向量存储实例（按知识库ID缓存复用）
+     * 获取（或构建）知识库向量存储实例（按知识库ID + 嵌入模型引用指纹缓存复用，模型变更自动失效重建）
      */
     private MilvusVectorStore vectorStore(KnowledgeBase knowledgeBase, EmbeddingModel embeddingModel) {
         long baseId = knowledgeBase.getId();
-        String key = String.valueOf(baseId);
+        String key = baseId + ":" + System.identityHashCode(embeddingModel);
         MilvusVectorStore cached = vectorStoreCache.get(key);
         if (cached != null) {
             return cached;
         }
+        // 当发生新实例构建（例如模型变更）时，先清除该 baseId 历史残留的旧向量存储实例
+        evict(baseId);
+
         MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), embeddingModel)
                 .databaseName(database)
                 .collectionName(collectionName(baseId))

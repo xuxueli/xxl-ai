@@ -98,17 +98,18 @@ public class SupplierModelServiceImpl implements SupplierModelService {
                 return Response.ofFail("模型已被Agent使用，禁止删除");
             }
         }
-        Set<Long> supplierIds = ids.stream()
+        List<SupplierModel> toDeleteModels = ids.stream()
                 .map(supplierModelMapper::load)
                 .filter(java.util.Objects::nonNull)
-                .map(SupplierModel::getSupplierId)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
         // delete model
         int ret = supplierModelMapper.deleteByIds(ids);
         if (ret > 0) {
-            // evict cache
-            supplierIds.forEach(llmModelFactory::evictSupplier);
+            // evict cache 精准失效单个模型
+            for (SupplierModel model : toDeleteModels) {
+                llmModelFactory.evictModel(model.getSupplierId(), model.getId());
+            }
         }
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
     }
@@ -133,8 +134,8 @@ public class SupplierModelServiceImpl implements SupplierModelService {
         }
         int ret = supplierModelMapper.update(supplierModel);
         if (ret > 0) {
-            // evict cache
-            llmModelFactory.evictSupplier(supplierModel.getSupplierId());
+            // evict cache 精准失效单个模型
+            llmModelFactory.evictModel(supplierModel.getSupplierId(), supplierModel.getId());
         }
         return ret > 0 ? Response.ofSuccess() : Response.ofFail();
     }
