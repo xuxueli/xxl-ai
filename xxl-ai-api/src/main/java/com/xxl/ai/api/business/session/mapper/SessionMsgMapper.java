@@ -18,7 +18,7 @@ public interface SessionMsgMapper {
 
     int insert(SessionMsg sessionMsg);
 
-    /** 回填助手消息生成结果（内容/思考/状态） */
+    /** 回填助手消息生成结果（内容、思考、状态） */
     int updateAssistant(@Param("id") long id,
                         @Param("content") String content,
                         @Param("reasoning") String reasoning,
@@ -57,5 +57,11 @@ public interface SessionMsgMapper {
 
     /** 首页：各 Agent 会话消息量占比 [{name, value}]（按消息量倒序） */
     List<Map<String, Object>> agentShare(@Param("days") int days);
+
+    /** 首页：每日会话消息量趋势（近 days 天，按当前空间隔离） */
+    List<Map<String, Object>> trendListBySpace(@Param("spaceId") long spaceId, @Param("days") int days);
+
+    /** 首页：各 Agent 会话消息量占比（近 days 天，按当前空间隔离） */
+    List<Map<String, Object>> agentShareBySpace(@Param("spaceId") long spaceId, @Param("days") int days);
 
 }

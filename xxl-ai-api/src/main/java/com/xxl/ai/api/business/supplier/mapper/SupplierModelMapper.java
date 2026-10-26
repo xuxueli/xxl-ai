@@ -41,4 +41,7 @@ public interface SupplierModelMapper {
     /** 首页：统计供应商模型总数 */
     int countAll();
 
+    /** 首页：统计当前空间下的供应商模型数 */
+    int countBySpaceId(@Param("spaceId") long spaceId);
+
 }
