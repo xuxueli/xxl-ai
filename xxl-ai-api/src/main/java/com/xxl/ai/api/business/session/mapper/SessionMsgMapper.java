@@ -18,11 +18,12 @@ public interface SessionMsgMapper {
 
     int insert(SessionMsg sessionMsg);
 
-    /** 回填助手消息生成结果（内容、思考、状态） */
+    /** 回填助手消息生成结果（内容、思考、状态、全链路追踪扩展JSON） */
     int updateAssistant(@Param("id") long id,
                         @Param("content") String content,
                         @Param("reasoning") String reasoning,
-                        @Param("status") int status);
+                        @Param("status") int status,
+                        @Param("extJson") String extJson);
 
     int deleteBySessionId(@Param("sessionId") long sessionId);
 
