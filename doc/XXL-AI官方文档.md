@@ -1237,8 +1237,8 @@ xxl-ai-desk/
 **macOS 提示「文件损坏」的临时处理**：当前 macOS 包未做代码签名与公证，在其他电脑安装时会被 Gatekeeper 打上隔离标记，提示「XXL-AI-Desk 已损坏，无法打开，你应该将它移到废纸篓」。但是，实际上文件并未损坏，去除隔离标记即可：
 
 ```
-# 1、把 App 拖入 /Applications（先不要双击运行）
-# 2、终端去除隔离标记（sudo 需输入密码）
+# 1、双击安装软件、把 App 拖入 /Applications（先不启动运行）；
+# 2、终端去除隔离标记（sudo 需输入密码），如下命令操作后，双击 App 启用运行使用；
 sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"
 ```
 
@@ -1645,7 +1645,7 @@ docker compose down
 - 16、【体验】会话区域体验优化：会话区域布局、交互调整，体验性升级； 
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是因为 macOS Gatekeeper 对未签名的应用做了隔离标记，用户可以通过终端命令去除隔离标记来解决问题。
-> 操作处理：1、把 App 拖入 /Applications（先不要双击运行）；2、终端去除隔离标记（sudo 需输入密码）：`sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"`
+> 操作处理：1、双击安装软件、把 App 拖入 /Applications（先不启动运行）；2、终端去除隔离标记（sudo 需输入密码）：`sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"`；3、双击 App 启用运行使用；
 
 **【云版（Web 服务端）】**
 
@@ -1654,6 +1654,9 @@ docker compose down
 - 3、【优化】Agent模型变更实效性：模型对象定期过期刷新（5min），并结合Agent配置指纹信息（更新时间MD5）主动更新；
 - 4、【优化】Markdown渲染优化：字体、代码高亮、表格、列表、引用、公式渲染优化；
 - 5、【优化】Thinking渲染优化：单次思考过程渲染限定最大高度，滚动吸底展示最新内容；
+
+### v1.4.1 Release Notes[ING]
+
 
 ### TODO LIST
 - 1、AI 能力增强：
