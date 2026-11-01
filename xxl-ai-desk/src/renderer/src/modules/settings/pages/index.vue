@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 设置页：按左侧子菜单分类渲染「常规 / 个性化 / 供应商 / 关于」。
+ * 设置页：按左侧子菜单分类渲染「常规 / 个性化 / 供应商 / 运行设置 / 关于」。
  * 分类内容由 components 下各职责组件承载，本页只负责外壳与 TAB 路由。
  * @author xuxueli 2026-10-25
  */
@@ -9,7 +9,7 @@ import { useSettingsStore } from '@renderer/stores/settings'
 import { t } from '@renderer/i18n'
 import GeneralSettings from '../components/GeneralSettings.vue'
 import DataDirSettings from '../components/DataDirSettings.vue'
-import RuntimeSettings from '../components/RuntimeSettings.vue'
+import CommandRuntimeSettings from '../components/CommandRuntimeSettings.vue'
 import DeveloperSettings from '../components/DeveloperSettings.vue'
 import PersonalizationSettings from '../components/PersonalizationSettings.vue'
 import ProviderSettings from '../components/ProviderSettings.vue'
@@ -32,18 +32,18 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
           <el-tab-pane :label="t('settings.general')" name="general">
             <GeneralSettings />
           </el-tab-pane>
-          <el-tab-pane :label="t('settings.advancedTab')" name="advanced">
-            <div class="settings-pane">
-              <DataDirSettings />
-              <RuntimeSettings />
-              <DeveloperSettings />
-            </div>
-          </el-tab-pane>
           <el-tab-pane :label="t('settings.personalization')" name="personalization">
             <PersonalizationSettings />
           </el-tab-pane>
           <el-tab-pane :label="t('settings.providers')" name="providers">
             <ProviderSettings />
+          </el-tab-pane>
+          <el-tab-pane :label="t('settings.runtimeTab')" name="runtime">
+            <div class="settings-pane">
+              <DataDirSettings />
+              <CommandRuntimeSettings />
+              <DeveloperSettings />
+            </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.about')" name="about">
             <AboutSettings />

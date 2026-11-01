@@ -436,7 +436,7 @@
     "dbFile": "数据库文件",
     "dataDirSaved": "数据目录已保存，重启后生效",
     "runtimeTitle": "命令运行环境",
-    "advancedTab": "高级设置",
+    "runtimeTab": "运行设置",
     "runtimeTip": "Agent 执行命令与终端面板使用的 Node / Python；Node 默认使用内置（Electron），Python 留空则自动探测系统解释器。",
     "runtimeSource": "来源",
     "runtimePath": "路径",

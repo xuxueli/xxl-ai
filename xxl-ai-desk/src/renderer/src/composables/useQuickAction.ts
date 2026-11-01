@@ -3,6 +3,7 @@
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@renderer/stores/chat'
 import { DRAFT_SESSION_KEY, useWorkspaceStore } from '@renderer/stores/workspace'
+import { SECTION_ENTRY } from '@renderer/config/nav'
 import type { QuickAction } from '@shared/ipc'
 
 export function useQuickAction(): (action: QuickAction) => void {
@@ -20,6 +21,12 @@ export function useQuickAction(): (action: QuickAction) => void {
       /* 新建对话并回到对话页 */
       chat.startNewChat()
       router.push('/')
+    } else if (action === 'agent') {
+      /* 打开 Agent 板块 */
+      router.push(SECTION_ENTRY.agent)
+    } else if (action === 'plugin') {
+      /* 打开插件中心 */
+      router.push(SECTION_ENTRY.plugin)
     } else if (action === 'settings') {
       /* 打开设置页 */
       router.push('/settings')

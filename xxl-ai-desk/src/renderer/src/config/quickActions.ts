@@ -20,6 +20,8 @@ export interface QuickActionItem {
 /* 快捷操作列表（顺序即命令面板与设置页展示顺序） */
 export const QUICK_ACTIONS: QuickActionItem[] = [
   { id: 'newChat', labelKey: 'chat.newChatAction', icon: 'Edit' },
+  { id: 'agent', labelKey: 'agent.title', icon: 'MagicStick' },
+  { id: 'plugin', labelKey: 'plugin.title', icon: 'SetUp' },
   { id: 'settings', labelKey: 'settings.title', icon: 'Setting' },
   { id: 'terminal', labelKey: 'workspace.terminal', svg: 'terminal' },
   { id: 'files', labelKey: 'panel.files', icon: 'Folder' },

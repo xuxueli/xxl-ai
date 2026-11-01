@@ -436,7 +436,7 @@
     "dbFile": "Database file",
     "dataDirSaved": "Data directory saved. Restart to apply.",
     "runtimeTitle": "Command environment",
-    "advancedTab": "Advanced",
+    "runtimeTab": "Runtime",
     "runtimeTip": "Node / Python used by the agent's command execution and the terminal panel. Node defaults to the built-in one (Electron); leave Python empty to auto-detect the system interpreter.",
     "runtimeSource": "Source",
     "runtimePath": "Path",

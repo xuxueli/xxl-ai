@@ -72,8 +72,9 @@ export function getSettings(): AppSettings {
     builtinToolBrowserEnabled: map.get('builtinToolBrowserEnabled') !== 'false',
     builtinToolFsEnabled: map.get('builtinToolFsEnabled') !== 'false',
     builtinToolShellEnabled: map.get('builtinToolShellEnabled') !== 'false',
-    builtinToolGeneralEnabled: map.get('builtinToolGeneralEnabled') !== 'false',
-    builtinToolInteractionEnabled: map.get('builtinToolInteractionEnabled') !== 'false',
+    /* 通用工具 / 人机交互默认关闭：未写入过配置时按 false 处理 */
+    builtinToolGeneralEnabled: map.get('builtinToolGeneralEnabled') === 'true',
+    builtinToolInteractionEnabled: map.get('builtinToolInteractionEnabled') === 'true',
     agentMemoryEnabled: map.get('agentMemoryEnabled') === 'true',
     developerMode: map.get('developerMode') === 'true'
   }
