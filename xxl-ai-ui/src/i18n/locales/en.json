@@ -469,6 +469,8 @@
       "copyCode": "Copy code",
       "copySuccess": "Copied",
       "imageLoadFailed": "Image failed to load",
+      "mediaLoadFailed": "Media failed to load, click to open",
+      "mediaUnsupported": "This format is not supported by the browser, click to download",
       "roleUser": "User",
       "roleAssistant": "Assistant"
     },

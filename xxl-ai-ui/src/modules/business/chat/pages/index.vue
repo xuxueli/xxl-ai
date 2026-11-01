@@ -84,13 +84,9 @@
         <span class="chat-intro">{{ agent?.intro || '' }}</span>
       </div>
       <div class="chat-main">
-        <div class="chat-body" ref="chatBodyRef" @scroll="handleScroll">
+        <div class="chat-body" :class="{ 'has-floating-input': !!currentSessionId }" ref="chatBodyRef" @scroll="handleScroll">
           <template v-if="currentSessionId">
             <div v-for="(msg, index) in messages" :key="index" class="msg-row" :class="msg.role">
-              <div class="msg-avatar">
-                <el-icon v-if="msg.role === 'assistant'"><ChatDotRound /></el-icon>
-                <el-icon v-else><User /></el-icon>
-              </div>
               <div class="msg-body">
                 <div class="msg-bubble">
                   <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
@@ -107,16 +103,17 @@
                       :ref="(el) => bindReasoningBody(index, el)"
                       class="msg-reasoning-body"
                       @scroll="handleReasoningScroll(index, $event)"
-                      >{{ msg.reasoning }}</div
                     >
+                      {{ msg.reasoning }}
+                    </div>
                   </div>
                   <!-- 回复内容：生成失败（status=2，含主动终止）且无内容时不再显示"思考中" -->
                   <span v-if="!msg.content && msg.status !== 2" class="msg-streaming"
                     >{{ t('business.chat.thinkingStreaming') }}<span class="streaming-dots"><span></span><span></span><span></span></span
                   ></span>
                   <!-- 访客输入：纯文本；模型返回：Markdown 渲染（净化防XSS） -->
-                  <MarkdownView v-if="msg.role === 'assistant'" class="msg-content" :content="msg.content" />
-                  <span v-else class="msg-content">{{ msg.content }}</span>
+                  <MarkdownView v-if="msg.role === 'assistant'" :content="msg.content" />
+                  <span v-else>{{ msg.content }}</span>
                   <!-- 异常消息状态提示：生成失败 -->
                   <div v-if="msg.role === 'assistant' && msg.status === 2" class="msg-status-tip">
                     <span>{{ t('business.chat.failed') }}</span>
@@ -152,28 +149,35 @@
           <el-empty v-else :description="t('business.chat.selectSession')" :image-size="80" />
         </div>
         <!-- 回到底部按钮：用户上翻阅读时显示，点击平滑吸底并恢复自动跟随 -->
-        <button v-if="currentSessionId && !nearBottom" class="scroll-to-bottom" :title="t('business.chat.scrollToBottom')" @click="goBottom">
+        <button
+          v-if="currentSessionId && !nearBottom"
+          class="scroll-to-bottom"
+          :title="t('business.chat.scrollToBottom')"
+          @click="goBottom"
+        >
           <el-icon><ArrowDown /></el-icon>
         </button>
       </div>
       <div class="chat-input" v-if="currentSessionId">
-        <el-input
-          v-model="inputText"
-          type="textarea"
-          :rows="3"
-          resize="none"
-          :placeholder="t('business.chat.inputPlaceholder')"
-          :disabled="!currentSessionId || sending"
-          @keydown.enter.exact.prevent="handleSend"
-        />
-        <div class="input-footer">
-          <span class="input-tip">{{ t('business.chat.enterTip') }}</span>
-          <el-button v-if="sending" type="danger" plain @click="handleStop">
-            {{ t('business.chat.stop') }}
-          </el-button>
-          <el-button v-else type="primary" @click="handleSend">
-            {{ t('business.chat.send') }}
-          </el-button>
+        <div class="chat-input-inner">
+          <el-input
+            v-model="inputText"
+            type="textarea"
+            :rows="3"
+            resize="none"
+            :placeholder="t('business.chat.inputPlaceholder')"
+            :disabled="sending"
+            @keydown.enter.exact.prevent="handleSend"
+          />
+          <div class="input-footer">
+            <span class="input-tip">{{ t('business.chat.enterTip') }}</span>
+            <el-button v-if="sending" type="danger" plain @click="handleStop">
+              {{ t('business.chat.stop') }}
+            </el-button>
+            <el-button v-else type="primary" @click="handleSend">
+              {{ t('business.chat.send') }}
+            </el-button>
+          </div>
         </div>
       </div>
     </main>
@@ -261,7 +265,7 @@ async function init() {
   const queryParam = Array.isArray(route.query.sessionId) ? route.query.sessionId[0] : (route.query.sessionId as string | undefined)
   const targetSessionId = Number(sessionParam ?? queryParam)
   if (Number.isInteger(targetSessionId) && targetSessionId > 0 && sessionList.value.some((c) => c.id === targetSessionId)) {
-    selectSession(targetSessionId)
+    void selectSession(targetSessionId)
   } else {
     newChat.value = true
   }
@@ -317,9 +321,10 @@ async function selectSession(sessionId: number) {
   newChat.value = false
   syncUrlSessionId(sessionId)
   messages.value = []
-  const res = await listMsg(sessionId)
-  messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
-  await scrollToBottom()
+  await loadMessages(sessionId)
+  // 进入会话（含刷新）默认定位到底部，并等待图片等资源加载完成后再校准
+  await jumpToBottom()
+  pinBottomAfterAssets()
   // 存在生成中的助手消息（如刷新页面/切换对话后）：自动断点续传并展开思考区
   const pending = messages.value.find((m) => m.role === 'assistant' && m.status === 0 && m.id != null)
   if (pending) {
@@ -328,13 +333,18 @@ async function selectSession(sessionId: number) {
   }
 }
 
+/** 拉取会话消息，并重置前端流式展示状态 */
+async function loadMessages(sessionId: number) {
+  const res = await listMsg(sessionId)
+  messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
+}
+
 /** 重新加载当前对话消息（终止后回显后端已落库的终止内容，避免占位一直显示"思考中"） */
 async function reloadMessages() {
   const sessionId = currentSessionId.value
   if (!sessionId) return
-  const res = await listMsg(sessionId)
-  messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
-  await scrollToBottom()
+  await loadMessages(sessionId)
+  await followBottom()
 }
 
 /**
@@ -351,12 +361,12 @@ async function resumeGenerating(msg: SessionMsgItem) {
         const m = messages.value[idx]
         if (m) m.reasoning = (m.reasoning || '') + chunk
         stickReasoning(idx)
-        scrollToBottom()
+        followBottom()
       },
       (chunk) => {
         const m = messages.value[idx]
         if (m) m.content += chunk
-        scrollToBottom()
+        followBottom()
       },
       // 续传过程中生成失败：同样回读后端失败态消息，终止"思考中"占位
       () => reloadMessages()
@@ -365,7 +375,7 @@ async function resumeGenerating(msg: SessionMsgItem) {
     // 续传失败保留已展示内容
   } finally {
     sending.value = false
-    await scrollToBottom()
+    await followBottom()
   }
 }
 
@@ -407,12 +417,35 @@ function deleteSession(session: Session) {
         currentSessionId.value = undefined
         messages.value = []
       }
-      loadSessionList()
+      void loadSessionList()
     })
     .catch(() => {})
 }
 
 // --------------------------------- 消息发送（SSE） ---------------------------------
+
+/**
+ * 确保存在可写入的会话
+ *   - 新建状态下首次发送才创建对话（左侧列表新增、右侧展示正文）；
+ *   - 创建失败返回 null，并结束发送态。
+ */
+async function ensureSession(): Promise<number | null> {
+  if (currentSessionId.value) return currentSessionId.value
+  try {
+    const res = await createSession(uuid.value, visitorId.value)
+    const session = res.data
+    currentSessionId.value = session.id
+    newChat.value = false
+    syncUrlSessionId(session.id)
+    // 新对话置顶（列表按 id 倒序）
+    sessionList.value.unshift(session)
+    return session.id
+  } catch (e) {
+    modal.msgError(t('business.chat.sendFail'))
+    sending.value = false
+    return null
+  }
+}
 
 /** 发送消息（新建状态下首次发送才创建对话；空内容/纯空格提示） */
 async function handleSend() {
@@ -425,29 +458,15 @@ async function handleSend() {
   inputText.value = ''
   sending.value = true
 
-  // 新建状态：首次发送才创建对话（左侧新增对话，右侧展示正文）
-  if (!currentSessionId.value) {
-    try {
-      const res = await createSession(uuid.value, visitorId.value)
-      const sessionId = res.data.id
-      currentSessionId.value = sessionId
-      newChat.value = false
-      syncUrlSessionId(sessionId)
-      // 新对话置顶（列表按 id 倒序）
-      sessionList.value.unshift(res.data)
-    } catch (e) {
-      modal.msgError(t('business.chat.sendFail'))
-      sending.value = false
-      return
-    }
-  }
+  const sessionId = await ensureSession()
+  if (sessionId == null) return
 
   // 本地追加用户消息
   const now = new Date().toISOString()
-  const userMsg: SessionMsgItem = { sessionId: currentSessionId.value, role: 'user', content, showThinking: false, addTime: now }
+  const userMsg: SessionMsgItem = { sessionId, role: 'user', content, showThinking: false, addTime: now }
   messages.value.push(userMsg)
   const assistantMsg: SessionMsgItem = {
-    sessionId: currentSessionId.value,
+    sessionId,
     role: 'assistant',
     content: '',
     reasoning: '',
@@ -455,41 +474,39 @@ async function handleSend() {
     addTime: now
   }
   const assistantIdx = messages.value.push(assistantMsg) - 1
-  await scrollToBottom()
+  await jumpToBottom()
 
   try {
     await sendMessage(
-      { uuid: uuid.value, visitorId: visitorId.value, sessionId: currentSessionId.value as number, content },
+      { uuid: uuid.value, visitorId: visitorId.value, sessionId, content },
       (chunk) => {
         // 经响应式代理累加思考过程，触发视图逐段更新
         const msg = messages.value[assistantIdx]
         if (msg) msg.reasoning += chunk
         stickReasoning(assistantIdx)
-        scrollToBottom()
+        followBottom()
       },
       (chunk) => {
         // 经响应式代理累加回复内容，触发视图逐段更新并按 Markdown 渲染
         const msg = messages.value[assistantIdx]
         if (msg) msg.content += chunk
-        scrollToBottom()
+        followBottom()
       },
       // 生成失败：参考终止逻辑，从后端回读失败态消息（status=2 + 失败提示），终止"思考中"占位
       () => reloadMessages()
     )
-    // 流结束后再次滚到底：Markdown 块（代码/表格等）渲染完成后高度变化
-    await scrollToBottom()
-    requestAnimationFrame(() => scrollToBottom())
+    // 流结束后再次校准：Markdown 块（代码/表格等）渲染完成后高度变化
+    await followBottom()
+    requestAnimationFrame(() => followBottom())
   } catch (e) {
     modal.msgError(t('business.chat.sendFail'))
   } finally {
     sending.value = false
     // 首条消息后后端自动生成了对话标题（首次提问内容，超50字截断补"..."），本地同步刷新左侧标题
-    if (currentSessionId.value) {
-      const session = sessionList.value.find((c) => c.id === currentSessionId.value)
-      if (session) {
-        const title = content.trim()
-        session.title = title.length > 50 ? title.slice(0, 47) + '...' : title
-      }
+    const session = sessionList.value.find((c) => c.id === sessionId)
+    if (session) {
+      const title = content.trim()
+      session.title = title.length > 50 ? title.slice(0, 47) + '...' : title
     }
   }
 }
@@ -603,9 +620,53 @@ function handleScroll() {
   nearBottom.value = distance < 80
 }
 
-/** 回到对话底部（用户点击按钮，快速平滑吸底并恢复自动跟随） */
+/** 回到对话底部（用户点击「回到底部」按钮，平滑滚动并恢复自动跟随） */
 function goBottom() {
-  scrollToBottom(true)
+  const el = chatBodyRef.value
+  if (!el) return
+  nearBottom.value = true
+  smoothScrollBottom(el)
+}
+
+/**
+ * 自动跟随底部：仅当用户停留在底部附近时瞬时吸底
+ *   - 流式输出逐 chunk 保持贴底，不打断用户上翻阅读。
+ */
+async function followBottom() {
+  if (!nearBottom.value) return
+  await jumpToBottom()
+}
+
+/**
+ * 立即定位到底部（进入/切换会话、发送消息、刷新恢复）
+ *   - 不依赖 nearBottom：这些场景应强制贴底。
+ */
+async function jumpToBottom() {
+  nearBottom.value = true
+  await nextTick()
+  const el = chatBodyRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+/**
+ * 资源加载完成后校准吸底
+ *   - 刷新进入会话时，Markdown 图片 / 字体等异步加载会撑高正文，首次渲染的滚动高度不完整；
+ *   - 仅在用户仍停留在底部附近时校准，避免打断上翻阅读。
+ */
+function pinBottomAfterAssets() {
+  const body = chatBodyRef.value
+  if (!body) return
+  const pin = () => {
+    if (nearBottom.value) void jumpToBottom()
+  }
+  // 再等一帧，确保首屏布局稳定
+  requestAnimationFrame(pin)
+  body.querySelectorAll('img').forEach((img) => {
+    if (!img.complete) img.addEventListener('load', pin, { once: true })
+  })
+  if (document.readyState !== 'complete') {
+    window.addEventListener('load', pin, { once: true })
+  }
 }
 
 /**
@@ -629,24 +690,6 @@ function smoothScrollBottom(el: HTMLElement) {
     }
   }
   requestAnimationFrame(tick)
-}
-
-/**
- * 滚动到底部
- *   - force=true（按钮点击）：忽略当前滚动位置，快速平滑吸底；
- *   - force=false（流式自动跟随）：仅当前贴近底部时瞬时吸底，逐 chunk 保持贴底且不打断用户上翻阅读。
- */
-async function scrollToBottom(force = false) {
-  await nextTick()
-  const el = chatBodyRef.value
-  if (!el) return
-  if (!force && !nearBottom.value) return
-  if (force) {
-    smoothScrollBottom(el)
-  } else {
-    el.scrollTop = el.scrollHeight
-  }
-  nearBottom.value = true
 }
 
 // --------------------------------- page init ---------------------------------
@@ -818,10 +861,16 @@ onMounted(() => {
 }
 
 .chat-panel {
+  /* 对话内容列宽：页面变宽时保持最大宽度，页面变窄时随容器收缩 */
+  --chat-column-width: 860px;
+  /* 底部浮动输入框预留高度：正文底部留白与回到底部按钮共用 */
+  --chat-input-reserve: 180px;
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: #fff;
 }
 
 .chat-header {
@@ -891,14 +940,20 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 24px;
+  background: #fff;
 }
 
-/* 回到底部按钮（右下角悬浮，圆胶囊提升点击区域与观感） */
+/* 底部输入框为浮层时，预留其高度避免遮挡最后一条消息 */
+.chat-body.has-floating-input {
+  padding-bottom: var(--chat-input-reserve);
+}
+
+/* 回到底部按钮（内容列右侧悬浮，圆胶囊提升点击区域与观感） */
 .scroll-to-bottom {
   position: absolute;
-  right: 26px;
-  bottom: 26px;
+  right: max(26px, calc((100% - var(--chat-column-width)) / 2 + 8px));
+  bottom: calc(var(--chat-input-reserve) - 24px);
   z-index: 10;
   width: 38px;
   height: 38px;
@@ -950,7 +1005,7 @@ onMounted(() => {
 
 .chat-new-inner {
   width: 100%;
-  max-width: 720px;
+  max-width: var(--chat-column-width);
   /* 向上挪动：居中基础上通过下边距上移 */
   margin-bottom: 20vh;
 }
@@ -977,10 +1032,51 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* 新建对话与底部输入框：圆角 */
-:deep(.chat-new .el-textarea__inner),
-:deep(.chat-input .el-textarea__inner) {
+/* 新建对话输入框：圆角 */
+:deep(.chat-new .el-textarea__inner) {
   border-radius: 12px;
+}
+
+/* 底部输入框：浮层内卡片式输入，宽度与内容列保持一致 */
+.chat-input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  justify-content: center;
+  padding: 12px 24px 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 32%);
+  pointer-events: none;
+}
+
+.chat-input-inner {
+  width: 100%;
+  max-width: var(--chat-column-width);
+  padding: 10px 12px 8px;
+  background: #f7f8fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+
+  &:focus-within {
+    background: #fff;
+    border-color: var(--el-color-primary);
+  }
+}
+
+:deep(.chat-input .el-textarea__inner) {
+  padding: 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
 }
 
 .chat-new-footer {
@@ -997,8 +1093,10 @@ onMounted(() => {
 
 .msg-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  /* 内容列整体居中：宽屏保持最大宽度，窄屏随容器收缩 */
+  width: 100%;
+  max-width: var(--chat-column-width);
+  margin: 0 auto 20px;
 
   &.assistant {
     justify-content: flex-start;
@@ -1008,49 +1106,43 @@ onMounted(() => {
     justify-content: flex-end;
   }
 
-  .msg-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--el-color-primary-light-8);
-    color: var(--el-color-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 16px;
-  }
-
-  &.user .msg-avatar {
-    background: #e2e9f3;
-    color: #5591e8;
-  }
-
   .msg-body {
     display: flex;
     flex-direction: column;
-    max-width: 76%;
+    min-width: 0;
+  }
+
+  /* 模型回复：宽度占满内容列，左对齐 */
+  &.assistant .msg-body {
+    flex: 1;
+    max-width: 100%;
+  }
+
+  /* 用户输入：靠右对齐，最宽不超过内容列的 80% */
+  &.user .msg-body {
+    align-items: flex-end;
+    max-width: 80%;
   }
 
   .msg-bubble {
     max-width: 100%;
-    padding: 10px 14px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.75;
     word-break: break-word;
     white-space: pre-wrap;
   }
 
   &.assistant .msg-bubble {
-    background: #fff;
-    border: 1px solid #e4e7ed;
+    padding: 0;
+    background: transparent;
     color: #303133;
   }
 
   &.user .msg-bubble {
-    background: var(--el-color-primary);
-    color: #fff;
+    padding: 10px 16px;
+    background: #e8f0fe;
+    color: #303133;
   }
 
   /* 发送时间：默认隐藏，鼠标悬浮展示 */
@@ -1179,12 +1271,6 @@ onMounted(() => {
     transform: translateY(-4px);
     opacity: 1;
   }
-}
-
-.chat-input {
-  background: #fff;
-  border-top: 1px solid #e4e7ed;
-  padding: 12px 20px;
 }
 
 .input-footer {

@@ -68,9 +68,37 @@ const LANGUAGE_ALIAS: Record<string, string> = {
   none: ''
 }
 
-/* 视频 / 音频扩展名：用于把媒体链接渲染为原生播放器 */
-const VIDEO_EXTENSION = /\.(?:mp4|webm|ogv|mov|m4v|mkv)(?:[?#].*)?$/i
-const AUDIO_EXTENSION = /\.(?:mp3|wav|ogg|oga|m4a|aac|flac|opus)(?:[?#].*)?$/i
+/* 媒体类型定义：扩展名 → 容器 MIME（HLS 需由播放器组件挂载解析） */
+interface MediaInfo {
+  kind: 'video' | 'audio'
+  mime: string
+  hls?: boolean
+}
+
+/* 扩展名白名单：命中即渲染原生播放器（HLS 单独交由 hls.js 挂载） */
+const MEDIA_EXTENSIONS: Record<string, MediaInfo> = {
+  mp4: { kind: 'video', mime: 'video/mp4' },
+  m4v: { kind: 'video', mime: 'video/mp4' },
+  webm: { kind: 'video', mime: 'video/webm' },
+  ogv: { kind: 'video', mime: 'video/ogg' },
+  mov: { kind: 'video', mime: 'video/quicktime' },
+  mkv: { kind: 'video', mime: 'video/x-matroska' },
+  m3u8: { kind: 'video', mime: 'application/vnd.apple.mpegurl', hls: true },
+  mp3: { kind: 'audio', mime: 'audio/mpeg' },
+  wav: { kind: 'audio', mime: 'audio/wav' },
+  ogg: { kind: 'audio', mime: 'audio/ogg' },
+  oga: { kind: 'audio', mime: 'audio/ogg' },
+  m4a: { kind: 'audio', mime: 'audio/mp4' },
+  aac: { kind: 'audio', mime: 'audio/aac' },
+  flac: { kind: 'audio', mime: 'audio/flac' },
+  opus: { kind: 'audio', mime: 'audio/ogg' }
+}
+
+/* 可内嵌的平台播放器域名：仅白名单，避免任意网页被嵌入 */
+const EMBED_HOSTS = ['player.bilibili.com', 'www.youtube-nocookie.com']
+
+/* 内嵌 iframe 的 sandbox 能力：脚本 + 同源（播放器必需），不放行顶层跳转与表单 */
+const EMBED_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow-popups'
 
 /* 高亮结果缓存：流式刷新会重复高亮同一段代码 */
 const HIGHLIGHT_CACHE = new Map<string, string>()
@@ -150,29 +178,155 @@ function highlightAuto(code: string): string {
   return value
 }
 
-/* 媒体类型识别：视频 / 音频 / 非媒体 */
-function mediaKindOf(src: string): 'video' | 'audio' | '' {
-  const value = (src ?? '').trim()
-  if (!value) {
+/* 从 URL 路径取扩展名（忽略查询串与锚点） */
+function extensionOfPath(value: string): string {
+  const path = value.split(/[?#]/)[0]
+  const match = /\.([a-z0-9]+)$/i.exec(path)
+  return match ? match[1].toLowerCase() : ''
+}
+
+/* 从查询参数取文件名扩展名（OSS 签名地址常把文件名放 disposition / filename 参数） */
+function extensionOfQuery(value: string): string {
+  const queryIndex = value.indexOf('?')
+  if (queryIndex < 0) {
     return ''
   }
-  if (VIDEO_EXTENSION.test(value)) {
-    return 'video'
-  }
-  if (AUDIO_EXTENSION.test(value)) {
-    return 'audio'
+  const params = new URLSearchParams(value.slice(queryIndex + 1))
+  for (const key of ['filename', 'file', 'name', 'response-content-disposition', 'content-disposition']) {
+    const text = params.get(key) ?? ''
+    const match = /\.([a-z0-9]+)(?:["';]|$)/i.exec(text)
+    if (match) {
+      return match[1].toLowerCase()
+    }
   }
   return ''
 }
 
-/* 媒体播放器：不自动播放，补齐控件与元数据预加载 */
-function mediaPlayer(kind: 'video' | 'audio', src: string, label: string, title?: string): string {
+/* 从文本/标题提示取扩展名（如 `[演示.mp4](签名直链)`） */
+function extensionOfHint(hints: string[]): string {
+  for (const hint of hints) {
+    const match = /\.([a-z0-9]+)(?:[?#\s"';]|$)/i.exec(hint ?? '')
+    if (match && MEDIA_EXTENSIONS[match[1].toLowerCase()]) {
+      return match[1].toLowerCase()
+    }
+  }
+  return ''
+}
+
+/* 查询参数声明的 MIME（如 response-content-type=video%2Fmp4） */
+function mediaInfoOfMimeQuery(value: string): MediaInfo | null {
+  const queryIndex = value.indexOf('?')
+  if (queryIndex < 0) {
+    return null
+  }
+  const params = new URLSearchParams(value.slice(queryIndex + 1))
+  for (const key of ['response-content-type', 'content-type', 'mime_type', 'mimetype', 'type']) {
+    const mime = (params.get(key) ?? '').toLowerCase()
+    if (mime.startsWith('video/')) {
+      return { kind: 'video', mime }
+    }
+    if (mime.startsWith('audio/')) {
+      return { kind: 'audio', mime }
+    }
+    /* 仅声明大类（type=video / audio）时按视频/音频播放器处理 */
+    if (mime === 'video' || mime === 'audio') {
+      return { kind: mime, mime: '' }
+    }
+  }
+  return null
+}
+
+/*
+ * 媒体识别：优先扩展名（URL 路径 → 查询参数 → 文本提示），其次查询参数里的 MIME。
+ * 用于兼容 OSS 无后缀签名地址等「链接本身看不出类型」的场景。
+ */
+function mediaInfoOf(src: string, hints: string[] = []): MediaInfo | null {
+  const value = (src ?? '').trim()
+  if (!value) {
+    return null
+  }
+  const extension = extensionOfPath(value) || extensionOfQuery(value) || extensionOfHint(hints)
+  if (extension && MEDIA_EXTENSIONS[extension]) {
+    return MEDIA_EXTENSIONS[extension]
+  }
+  return mediaInfoOfMimeQuery(value)
+}
+
+/* 浏览器能力检测：容器/编码不支持时直接给打开入口，避免出现黑屏播放器 */
+function canPlayMedia(info: MediaInfo): boolean {
+  if (info.hls || !info.mime || typeof document === 'undefined') {
+    return true
+  }
+  const element = info.kind === 'video' ? document.createElement('video') : document.createElement('audio')
+  return element.canPlayType(info.mime) !== ''
+}
+
+/* 媒体兜底入口：不支持或加载失败时保留原地址可点击打开 */
+function mediaFallback(src: string, label: string, hint: string): string {
+  const text = label || src
+  return (
+    '<span class="md-media-fallback">' +
+    `<a class="md-media-link" href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>` +
+    `<span class="md-media-hint">${escapeHtml(hint)}</span>` +
+    '</span>'
+  )
+}
+
+/* 媒体播放器：不自动播放，补齐控件与元数据预加载；HLS 输出 data-src 交由组件挂载 */
+function mediaPlayer(info: MediaInfo, src: string, label: string, title?: string): string {
+  if (!canPlayMedia(info)) {
+    return mediaFallback(src, label || title || src, t('business.chat.mediaUnsupported'))
+  }
   const titleAttr = title ? ` title="${escapeHtml(title)}"` : ''
   const labelAttr = label ? ` aria-label="${escapeHtml(label)}"` : ''
-  if (kind === 'video') {
+  if (info.hls) {
+    return `<video class="md-video md-hls" data-src="${escapeHtml(src)}"${titleAttr}${labelAttr} controls preload="metadata" playsinline></video>`
+  }
+  if (info.kind === 'video') {
     return `<video class="md-video" src="${escapeHtml(src)}"${titleAttr}${labelAttr} controls preload="metadata" playsinline></video>`
   }
   return `<audio class="md-audio" src="${escapeHtml(src)}"${titleAttr}${labelAttr} controls preload="metadata"></audio>`
+}
+
+/* 平台分享页 → 内嵌播放地址（B 站 BV/av 号、YouTube 视频 ID），非白名单返回空串 */
+function embedUrlOf(href: string): string {
+  let url: URL
+  try {
+    url = new URL(href, 'https://placeholder.invalid')
+  } catch {
+    return ''
+  }
+  const host = url.hostname.replace(/^www\./, '')
+  if (host === 'bilibili.com' || host === 'm.bilibili.com') {
+    const bvid = /\/video\/(BV[0-9A-Za-z]+)/.exec(url.pathname)
+    const aid = /\/video\/av(\d+)/i.exec(url.pathname)
+    const id = bvid ? `bvid=${bvid[1]}` : aid ? `aid=${aid[1]}` : ''
+    if (!id) {
+      return ''
+    }
+    const page = url.searchParams.get('p')
+    return `https://player.bilibili.com/player.html?${id}${page ? `&page=${page}` : ''}&autoplay=0`
+  }
+  let videoId = ''
+  if (host === 'youtu.be') {
+    videoId = url.pathname.slice(1)
+  } else if (host === 'youtube.com' || host === 'm.youtube.com') {
+    videoId = url.searchParams.get('v') ?? /^\/(?:embed|shorts|live)\/([\w-]+)/.exec(url.pathname)?.[1] ?? ''
+  }
+  if (!/^[\w-]{6,}$/.test(videoId)) {
+    return ''
+  }
+  return `https://www.youtube-nocookie.com/embed/${videoId}`
+}
+
+/* 内嵌播放器：iframe 仅允许白名单域名，由消毒钩子二次校验 */
+function embedPlayer(embedSrc: string, label: string): string {
+  return (
+    '<span class="md-embed">' +
+    `<iframe class="md-iframe" src="${escapeHtml(embedSrc)}" title="${escapeHtml(label || embedSrc)}" ` +
+    `loading="lazy" frameborder="0" allowfullscreen sandbox="${EMBED_SANDBOX}"></iframe>` +
+    '</span>'
+  )
 }
 
 /* 渲染增强：代码块高亮/复制、表格横向滚动、远程媒体播放器 */
@@ -212,19 +366,23 @@ class MarkdownRenderer extends Renderer {
 
   /* 图片：音视频文件渲染原生播放器，图片补懒加载与异步解码 */
   image({ href, title, text }: Tokens.Image): string {
-    const kind = mediaKindOf(href)
-    if (kind) {
-      return mediaPlayer(kind, href, text ?? '', title ?? '')
+    const info = mediaInfoOf(href, [text ?? '', title ?? ''])
+    if (info) {
+      return mediaPlayer(info, href, text ?? '', title ?? '')
     }
     const titleAttr = title ? ` title="${escapeHtml(title)}"` : ''
     return `<img class="md-image" src="${escapeHtml(href)}" alt="${escapeHtml(text ?? '')}"${titleAttr} loading="lazy" decoding="async">`
   }
 
-  /* 链接：独占指向媒体文件的链接直接渲染播放器，其余外链新窗口打开 */
+  /* 链接：平台播放页嵌入、媒体文件渲染播放器，其余外链新窗口打开 */
   link(token: Tokens.Link): string {
-    const kind = mediaKindOf(token.href)
-    if (kind) {
-      return mediaPlayer(kind, token.href, token.text ?? '', token.title ?? '')
+    const embed = embedUrlOf(token.href)
+    if (embed) {
+      return embedPlayer(embed, token.text ?? '')
+    }
+    const info = mediaInfoOf(token.href, [token.text ?? '', token.title ?? ''])
+    if (info) {
+      return mediaPlayer(info, token.href, token.text ?? '', token.title ?? '')
     }
     const html = super.link(token)
     if (/^https?:/i.test(token.href)) {
@@ -242,11 +400,48 @@ marked.use(markedKatex({ throwOnError: false, strict: 'ignore', nonStandard: tru
 
 /* KaTeX 的 MathML 标注（公式原文，供读屏使用）默认会被剔除，显式放行 */
 const PURIFY_OPTIONS = {
-  ADD_TAGS: ['annotation', 'annotation-xml'],
-  ADD_ATTR: ['controls', 'preload', 'poster', 'playsinline', 'loading', 'decoding', 'target', 'rel'],
+  ADD_TAGS: ['annotation', 'annotation-xml', 'iframe'],
+  ADD_ATTR: [
+    'controls',
+    'preload',
+    'poster',
+    'playsinline',
+    'loading',
+    'decoding',
+    'target',
+    'rel',
+    'allowfullscreen',
+    'frameborder',
+    'sandbox',
+    'referrerpolicy'
+  ],
   /* 禁止自动播放：会话内容中的媒体由用户主动点击播放 */
   FORBID_ATTR: ['autoplay']
 }
+
+/*
+ * iframe 白名单校验：仅保留平台播放器域名，其余（含原始 HTML 手写 iframe）直接移除，
+ * 并强制 sandbox / referrerpolicy，避免任意网页被嵌入会话。
+ */
+DOMPurify.addHook('afterSanitizeElements', (node) => {
+  if (node.nodeName !== 'IFRAME') {
+    return
+  }
+  const element = node as Element
+  const src = element.getAttribute('src') ?? ''
+  let host = ''
+  try {
+    host = new URL(src).hostname
+  } catch {
+    host = ''
+  }
+  if (!EMBED_HOSTS.includes(host)) {
+    element.parentNode?.removeChild(element)
+    return
+  }
+  element.setAttribute('sandbox', EMBED_SANDBOX)
+  element.setAttribute('referrerpolicy', 'no-referrer')
+})
 
 /**
  * 渲染 Markdown 为安全 HTML

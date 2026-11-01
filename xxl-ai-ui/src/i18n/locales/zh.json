@@ -469,6 +469,8 @@
       "copyCode": "复制代码",
       "copySuccess": "已复制",
       "imageLoadFailed": "图片加载失败",
+      "mediaLoadFailed": "媒体加载失败，点击打开",
+      "mediaUnsupported": "当前浏览器不支持该格式，点击下载",
       "roleUser": "用户",
       "roleAssistant": "助手"
     },
