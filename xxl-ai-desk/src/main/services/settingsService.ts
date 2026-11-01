@@ -50,6 +50,23 @@ function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
   return { ...DEFAULT_SHORTCUTS }
 }
 
+/* 布尔配置键：默认值统一从 DEFAULT_APP_SETTINGS 取，避免开关默认值两处维护 */
+type BooleanSettingKey = {
+  [K in keyof AppSettings]: AppSettings[K] extends boolean ? K : never
+}[keyof AppSettings]
+
+/* 读取布尔配置：显式 true/false 优先，缺省或非法值回退默认值 */
+function readBoolean(map: Map<string, string>, key: BooleanSettingKey): boolean {
+  const value = map.get(key)
+  if (value === 'true') {
+    return true
+  }
+  if (value === 'false') {
+    return false
+  }
+  return DEFAULT_APP_SETTINGS[key]
+}
+
 /* 读取全部设置（缺省值兜底） */
 export function getSettings(): AppSettings {
   const rows = getDb().select().from(settingTable).all()
@@ -68,15 +85,14 @@ export function getSettings(): AppSettings {
     runtimeNodeMode: map.get('runtimeNodeMode') === 'custom' ? 'custom' : DEFAULT_APP_SETTINGS.runtimeNodeMode,
     runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULT_APP_SETTINGS.runtimeNodePath,
     runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULT_APP_SETTINGS.runtimePythonPath,
-    updateAutoCheck: map.get('updateAutoCheck') !== 'false',
-    builtinToolBrowserEnabled: map.get('builtinToolBrowserEnabled') !== 'false',
-    builtinToolFsEnabled: map.get('builtinToolFsEnabled') !== 'false',
-    builtinToolShellEnabled: map.get('builtinToolShellEnabled') !== 'false',
-    /* 通用工具 / 人机交互默认关闭：未写入过配置时按 false 处理 */
-    builtinToolGeneralEnabled: map.get('builtinToolGeneralEnabled') === 'true',
-    builtinToolInteractionEnabled: map.get('builtinToolInteractionEnabled') === 'true',
-    agentMemoryEnabled: map.get('agentMemoryEnabled') === 'true',
-    developerMode: map.get('developerMode') === 'true'
+    updateAutoCheck: readBoolean(map, 'updateAutoCheck'),
+    builtinToolBrowserEnabled: readBoolean(map, 'builtinToolBrowserEnabled'),
+    builtinToolFsEnabled: readBoolean(map, 'builtinToolFsEnabled'),
+    builtinToolShellEnabled: readBoolean(map, 'builtinToolShellEnabled'),
+    builtinToolGeneralEnabled: readBoolean(map, 'builtinToolGeneralEnabled'),
+    builtinToolInteractionEnabled: readBoolean(map, 'builtinToolInteractionEnabled'),
+    agentMemoryEnabled: readBoolean(map, 'agentMemoryEnabled'),
+    developerMode: readBoolean(map, 'developerMode')
   }
 }
 

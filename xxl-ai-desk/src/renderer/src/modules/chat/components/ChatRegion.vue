@@ -295,10 +295,7 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
 /* 回到底部按钮：贴内容列右边界，位于输入框上方 6px，不遮挡输入内容 */
 .scroll-to-bottom {
   position: absolute;
-  right: max(
-    calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size)),
-    calc((100% - var(--desk-chat-width)) / 2)
-  );
+  right: max(var(--desk-chat-content-gutter), calc((100% - var(--desk-chat-width)) / 2));
   bottom: calc(100% + 6px);
   z-index: 10;
   width: 36px;
@@ -327,6 +324,5 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
   width: 100%;
   max-width: var(--desk-chat-width);
   margin: 0 auto;
-  min-width: 0;
 }
 </style>

@@ -152,10 +152,11 @@
   --desk-rail-width: var(--desk-header-height);
   --desk-sidebar-width: 240px;
   --desk-panel-header-height: 40px;
-  /* 会话内容列：正文、输入框共用同一最大宽度与左右留白 */
+  --desk-scrollbar-size: 8px;
+  /* 会话内容列：正文滚动容器两侧对称预留滚动条空间，输入框用 content-gutter 补偿后与其等宽同中心 */
   --desk-chat-width: 880px;
   --desk-chat-gutter: 32px;
-  --desk-scrollbar-size: 8px;
+  --desk-chat-content-gutter: calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size));
   --desk-radius-sm: 10px;
   --desk-radius: 16px;
   --desk-radius-lg: 22px;
