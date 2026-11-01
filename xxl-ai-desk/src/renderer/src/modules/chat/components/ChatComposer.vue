@@ -218,15 +218,17 @@ function onKeydown(event: KeyboardEvent): void {
 </template>
 
 <style scoped lang="scss">
+/* 左右留白比正文多出滚动条宽度：与正文内容列等宽、同中心 */
 .composer {
-  padding: 12px 32px 22px;
+  padding: 12px calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size)) 22px;
 }
 
 .composer-box {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: 880px;
+  width: 100%;
+  max-width: var(--desk-chat-width);
   margin: 0 auto;
   padding: 10px 10px 10px 16px;
   background: var(--desk-surface-elevated);

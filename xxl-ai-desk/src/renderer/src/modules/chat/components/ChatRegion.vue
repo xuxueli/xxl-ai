@@ -227,24 +227,26 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
       </div>
     </div>
 
-    <!-- 上翻阅读时显示：一键回到底部并恢复自动跟随 -->
-    <button
-      v-if="hasMessages && !nearBottom"
-      class="scroll-to-bottom"
-      :title="t('chat.scrollToBottom')"
-      @click="goBottom"
-    >
-      <el-icon><ArrowDown /></el-icon>
-    </button>
+    <!-- 输入框区：上翻阅读时在输入框上方悬浮「回到底部」，随输入框增高同步上移 -->
+    <div class="chat-footer">
+      <button
+        v-if="hasMessages && !nearBottom"
+        class="scroll-to-bottom"
+        :title="t('chat.scrollToBottom')"
+        @click="goBottom"
+      >
+        <el-icon><ArrowDown /></el-icon>
+      </button>
 
-    <ChatComposer
-      ref="composerRef"
-      v-model:draft="chatUiState.draft"
-      :streaming="chat.streaming"
-      :disabled="!canChat"
-      @submit="onSend"
-      @stop="chat.abort"
-    />
+      <ChatComposer
+        ref="composerRef"
+        v-model:draft="chatUiState.draft"
+        :streaming="chat.streaming"
+        :disabled="!canChat"
+        @submit="onSend"
+        @stop="chat.abort"
+      />
+    </div>
 
     <!-- 空态：项目选择与示例入口 -->
     <ChatEmptyExtras v-if="!hasMessages" @example="onSend" />
@@ -272,7 +274,9 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
 .chat-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 32px;
+  padding: 24px var(--desk-chat-gutter);
+  /* 两侧对称预留滚动条空间：出现/消失时内容列中心不偏移，与输入框保持同宽 */
+  scrollbar-gutter: stable both-edges;
 }
 
 /* 空态体：仅占内容高度，便于与输入框整体居中 */
@@ -282,11 +286,20 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
   padding: 0;
 }
 
-/* 回到底部按钮：悬浮于输入框上方右侧，用户上翻时出现 */
+/* 输入框区：作为按钮的定位容器，按钮始终悬浮在输入框上方 */
+.chat-footer {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 回到底部按钮：贴内容列右边界，位于输入框上方 6px，不遮挡输入内容 */
 .scroll-to-bottom {
   position: absolute;
-  right: 32px;
-  bottom: 112px;
+  right: max(
+    calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size)),
+    calc((100% - var(--desk-chat-width)) / 2)
+  );
+  bottom: calc(100% + 6px);
   z-index: 10;
   width: 36px;
   height: 36px;
@@ -309,8 +322,11 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
   border-color: var(--desk-text-tertiary);
 }
 
+/* 会话内容列：整体居中并限制最大宽度；容器变窄时同步收窄 */
 .chat-inner {
-  max-width: 880px;
+  width: 100%;
+  max-width: var(--desk-chat-width);
   margin: 0 auto;
+  min-width: 0;
 }
 </style>

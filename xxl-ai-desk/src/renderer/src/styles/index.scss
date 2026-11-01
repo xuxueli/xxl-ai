@@ -149,8 +149,8 @@ body.resizing-vertical {
 
 /* --- 滚动条 --- */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--desk-scrollbar-size);
+  height: var(--desk-scrollbar-size);
 }
 
 ::-webkit-scrollbar-thumb {

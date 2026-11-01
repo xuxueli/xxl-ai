@@ -73,7 +73,8 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
   flex-shrink: 0;
   /* 抵消输入框容器底部 22px 内边距，使背景框紧贴输入框 */
   margin-top: -22px;
-  padding: 0 32px 10px;
+  /* 与输入框容器相同的左右留白，保证两者同宽居中 */
+  padding: 0 calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size)) 10px;
 }
 
 /* 背景框：比输入框（880px）略窄、居中；浅灰底、圆角，内容靠左 */
@@ -131,10 +132,10 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
 .empty-examples {
   flex-shrink: 0;
   width: 100%;
-  max-width: 880px;
+  max-width: var(--desk-chat-width);
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 0 32px 24px;
+  padding: 0 calc(var(--desk-chat-gutter) + var(--desk-scrollbar-size)) 24px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

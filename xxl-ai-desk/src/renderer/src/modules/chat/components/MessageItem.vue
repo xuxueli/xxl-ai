@@ -65,21 +65,30 @@ function removeMessage(): void {
 .message {
   display: flex;
   padding: 14px 0;
+  min-width: 0;
 }
 
+/* 用户消息：贴内容列右边界 */
 .message.user {
   justify-content: flex-end;
 }
 
 .message-body {
-  max-width: min(820px, 84%);
+  max-width: 100%;
   min-width: 0;
 }
 
+/* 助手内容：占满内容列，从左边界起排，不超列宽 */
+.message:not(.user) .message-body {
+  width: 100%;
+}
+
+/* 用户气泡：按内容收缩但不超过内容列 */
 .message.user .message-body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  max-width: min(100%, 84%);
 }
 
 .user-bubble {
