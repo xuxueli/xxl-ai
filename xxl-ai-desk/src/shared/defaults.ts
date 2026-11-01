@@ -30,8 +30,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   builtinToolBrowserEnabled: true,
   builtinToolFsEnabled: true,
   builtinToolShellEnabled: true,
-  builtinToolGeneralEnabled: true,
-  builtinToolInteractionEnabled: true,
+  /* 通用工具与人机交互默认关闭，按需在「插件 → 内置工具」开启 */
+  builtinToolGeneralEnabled: false,
+  builtinToolInteractionEnabled: false,
   agentMemoryEnabled: false,
   developerMode: false
 }
