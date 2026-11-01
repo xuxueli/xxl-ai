@@ -1642,6 +1642,7 @@ docker compose down
 - 13、【优化】Markdown渲染优化：字体、代码高亮、表格、列表、引用、公式渲染优化；
 - 14、【优化】Thinking渲染优化：单次思考过程渲染限定最大高度，滚动吸底展示最新内容；
 - 15、【体验】外观主题：支持深色模式、浅色模式，以及自定义多主题设置，提升用户体验；
+- 16、【体验】会话区域体验优化：会话区域布局、交互调整，体验性升级； 
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是因为 macOS Gatekeeper 对未签名的应用做了隔离标记，用户可以通过终端命令去除隔离标记来解决问题。
 > 操作处理：1、把 App 拖入 /Applications（先不要双击运行）；2、终端去除隔离标记（sudo 需输入密码）：`sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"`
