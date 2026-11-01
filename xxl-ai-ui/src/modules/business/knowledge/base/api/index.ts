@@ -1,7 +1,7 @@
 /**
  * 知识库 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { KnowledgeBase, KnowledgeBaseListQuery, KnowledgeHit } from '../types'
 
@@ -21,7 +21,7 @@ export function addKnowledgeBase(data: KnowledgeBase): Promise<Response<string>>
 }
 
 /** 批量删除知识库 */
-export function delKnowledgeBase(ids: number[] | number): Promise<Response<string>> {
+export function delKnowledgeBase(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/knowledge/base/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

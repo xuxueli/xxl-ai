@@ -1,7 +1,7 @@
 /**
  * SKILL 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { Skill, SkillListQuery, SkillFile } from '../types'
 
@@ -16,7 +16,7 @@ export function addSkill(data: Skill): Promise<Response<string>> {
 }
 
 /** 批量删除 SKILL */
-export function delSkill(ids: number[] | number): Promise<Response<string>> {
+export function delSkill(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/skill/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

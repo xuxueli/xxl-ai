@@ -4,19 +4,12 @@
   },
   "common": {
     "add": "新增",
-    "edit": "编辑",
     "modify": "修改",
     "delete": "删除",
     "search": "搜索",
     "reset": "重置",
-    "query": "查询",
-    "clear": "清空",
     "operation": "操作",
-    "detail": "详情",
-    "view": "查看",
-    "confirm": "确认",
     "all": "全部",
-    "loading": "加载中...",
     "serialNo": "序号",
     "status": "状态",
     "remark": "备注",
@@ -27,35 +20,16 @@
     "deleteSuccess": "删除成功",
     "refresh": "刷新",
     "emptyData": "暂无数据",
-    "emptyContent": "暂无内容",
     "downloading": "正在下载数据，请稍候",
     "downloadFail": "下载文件出现错误，请联系管理员！",
     "permiRequired": "请设置操作权限标签值",
     "roleRequired": "请设置角色权限标签值",
-    "time": {
-      "justNow": "刚刚",
-      "minutesAgo": "{0}分钟前",
-      "hoursAgo": "{0}小时前",
-      "daysAgo": "{0}天前",
-      "monthDayTime": "{0}月{1}日{2}时{3}分",
-      "weekSun": "日",
-      "weekMon": "一",
-      "weekTue": "二",
-      "weekWed": "三",
-      "weekThu": "四",
-      "weekFri": "五",
-      "weekSat": "六"
-    },
     "addSuccess": "新增成功",
     "updateSuccess": "修改成功",
     "realName": "用户名称",
     "createTime": "创建时间",
     "updateTime": "更新时间",
     "addTime": "新增时间",
-    "saveSort": "保存排序",
-    "noSortChange": "未检测到排序修改",
-    "saveSortSuccess": "排序保存成功",
-    "expandCollapse": "展开/折叠",
     "close": "关闭",
     "save": "保存",
     "more": "更多",
@@ -67,16 +41,9 @@
     "titleAdd": "新增{0}",
     "titleEdit": "修改{0}",
     "noun": {
-      "charLength": "字符长度",
       "config": "配置",
-      "dataModel": "数据模型",
-      "fileFieldName": "上传文件字段名",
       "iconName": "图标名称",
       "name": "名称",
-      "prefixIconName": "前图标名称",
-      "regex": "正则",
-      "resource": "资源",
-      "suffixIconName": "后图标名称",
       "user": "用户"
     }
   },
@@ -152,9 +119,6 @@
     }
   },
   "components": {
-    "pagination": {
-      "total": "共 {0} 条 / 每页 {1} 条"
-    },
     "rightToolbar": {
       "hideSearch": "隐藏搜索",
       "showSearch": "显示搜索",
@@ -196,7 +160,6 @@
       "result": "导入结果",
       "selectFile": "请选择后缀为 “xls”或“xlsx”的文件。"
     },
-    "iconSelect": {},
     "treePanel": {
       "title": "树形结构",
       "expandAll": "展开全部",
@@ -205,18 +168,6 @@
       "collapse": "收起"
     },
     "editor": {
-      "linkTip": "请输入链接地址:",
-      "videoTip": "请输入视频地址:",
-      "text": "文本",
-      "heading1": "标题1",
-      "heading2": "标题2",
-      "heading3": "标题3",
-      "heading4": "标题4",
-      "heading5": "标题5",
-      "heading6": "标题6",
-      "fontNormal": "标准字体",
-      "fontSerif": "衬线字体",
-      "fontMono": "等宽字体",
       "imageTypeError": "图片格式错误!",
       "imageInsertFail": "图片插入失败"
     }
@@ -353,7 +304,6 @@
       "headersFormatBtn": "格式化",
       "supplier": "供应商",
       "model": "模型",
-      "modelManage": "模型管理",
       "testConnect": "连通测试",
       "confirmDelete": "是否确认删除供应商ID为\"{0}\"的数据项？",
       "modelName": "模型名称",
@@ -392,8 +342,6 @@
       "testToolTitle": "标题",
       "testToolDesc": "介绍",
       "testNoTool": "未发现可用工具",
-      "remoteConfig": "远程配置",
-      "stdioConfig": "本地进程",
       "command": "启动命令",
       "commandRequired": "本地类型必须填写启动命令（如 npx）",
       "commandPlaceholder": "如 npx",
@@ -449,6 +397,7 @@
       "docManage": "文档管理",
       "docBack": "返回知识库",
       "search": "向量检索",
+      "searchTitle": "向量检索：{0}",
       "searchQuery": "检索内容",
       "searchQueryPlaceholder": "请输入检索内容",
       "searchRequired": "请输入检索内容",
@@ -489,7 +438,6 @@
       "systemPromptPlaceholder": "请输入 Agent 系统指令",
       "publishSuccess": "发布成功",
       "unpublishSuccess": "已取消发布",
-      "copyUrl": "复制URL",
       "confirmDelete": "是否确认删除 Agent 编号为\"{0}\"的数据项？"
     },
     "chat": {
@@ -524,7 +472,6 @@
       "roleAssistant": "助手"
     },
     "session": {
-      "manage": "对话管理",
       "agent": "所属Agent",
       "sessionTitle": "标题",
       "visitorId": "访客ID",

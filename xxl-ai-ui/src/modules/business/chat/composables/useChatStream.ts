@@ -4,8 +4,9 @@
  * 发送/续传均返回可读流 reader，由本模块统一按 SSE 事件解析（stream/thinking/message/ping），
  * 中断时携带 msgId + lastEventId 自动续传（最多 3 次）；用户主动终止时不再续传。
  */
-import { ElMessage } from 'element-plus'
+import modal from '@/utils/modal'
 import { resumeStream, sendStream } from '../api'
+import { t } from '@/i18n'
 
 /** 流式增量回调 */
 export type ChatStreamHandler = (text: string) => void
@@ -146,7 +147,7 @@ async function readStream(
     }
     if (eventName === 'error') {
       if (eventId) state.lastEventId = eventId
-      ElMessage.error(data || '生成失败')
+      modal.msgError(data || t('business.chat.failed'))
       onError?.(data)
       return true
     }

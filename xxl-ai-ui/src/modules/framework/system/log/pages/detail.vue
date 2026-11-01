@@ -89,6 +89,7 @@
 <script setup lang="ts">
 import { t } from '@/i18n'
 import modal from '@/utils/modal'
+import { copyText as copyTextUtil } from '@/utils/clipboard'
 
 /**
  * 弹窗显隐：v-model:xxx + defineModel 双向绑定
@@ -125,20 +126,9 @@ const props = withDefaults(defineProps<DetailProps>(), {
 /**
  * 复制文本到剪贴板
  */
-function copyText(str: string | undefined) {
-  const text = str || ''
-  // 优先使用 Clipboard API，不支持时降级为 execCommand
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => modal.msgSuccess(t('system.log.copied')))
-  } else {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-    modal.msgSuccess(t('system.log.copied'))
-  }
+async function copyText(str: string | undefined) {
+  await copyTextUtil(str || '')
+  modal.msgSuccess(t('system.log.copied'))
 }
 </script>
 

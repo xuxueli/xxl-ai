@@ -1,7 +1,7 @@
 /**
  * 知识文档 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { KnowledgeDoc, KnowledgeDocListQuery } from '../types'
 
@@ -21,7 +21,7 @@ export function addKnowledgeDoc(data: KnowledgeDoc): Promise<Response<string>> {
 }
 
 /** 批量删除文档 */
-export function delKnowledgeDoc(ids: number[] | number): Promise<Response<string>> {
+export function delKnowledgeDoc(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/knowledge/doc/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

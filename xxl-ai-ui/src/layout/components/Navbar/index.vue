@@ -87,7 +87,6 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessageBox } from 'element-plus'
 import Breadcrumb from './Breadcrumb.vue'
 import TopBarMix from './TopBarMix.vue'
 import TopBar from './TopBar.vue'
@@ -100,6 +99,7 @@ import { useAppStore, useUserStore, useSettingsStore } from '@/store'
 import defaultSettings from '@/default-settings'
 import { nextTick } from 'vue'
 import { t } from '@/i18n'
+import modal from '@/utils/modal'
 import { SvgIcon } from '@/components'
 
 const appStore = useAppStore()
@@ -131,11 +131,8 @@ function handleCommand(command: string | number | object) {
  * 退出登录：二次确认后清除登录态并跳转首页
  */
 function logout() {
-  ElMessageBox.confirm(t('layout.nav.logoutConfirm'), t('modal.title'), {
-    confirmButtonText: t('modal.confirmButton'),
-    cancelButtonText: t('modal.cancelButton'),
-    type: 'warning'
-  })
+  modal
+    .confirm(t('layout.nav.logoutConfirm'))
     .then(() => {
       userStore.logout().then(() => {
         // Hash 模式：跳转首页需带 # 前缀，避免请求服务端路径

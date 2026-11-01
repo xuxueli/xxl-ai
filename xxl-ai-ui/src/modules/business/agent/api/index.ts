@@ -1,7 +1,7 @@
 /**
  * Agent 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { Agent, AgentListQuery } from '../types'
 
@@ -26,7 +26,7 @@ export function addAgent(data: Agent): Promise<Response<string>> {
 }
 
 /** 批量删除 Agent */
-export function delAgent(ids: number[] | number): Promise<Response<string>> {
+export function delAgent(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/agent/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

@@ -186,6 +186,7 @@ import { listSpaceByUser } from '@/modules/business/space/api'
 import type { Space } from '@/modules/business/space/types'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { useFormReset } from '@/composables/useFormReset'
+import { usePageParams } from '@/composables/usePageParams'
 import { parseTime } from '@/utils/common'
 import modal from '@/utils/modal'
 import { ElMessageBox } from 'element-plus'
@@ -279,13 +280,7 @@ function loadSpaceOptions() {
 /** 查询用户列表 */
 function getList() {
   table.value.loading = true
-  // 前端分页参数 → 后端分页参数（offset/pagesize）
-  const { pageNum, pageSize, ...rest } = queryParams.value
-  const params = {
-    ...rest,
-    offset: (pageNum - 1) * pageSize,
-    pagesize: pageSize
-  }
+  const params = usePageParams(queryParams)()
   listUser(params).then((response) => {
     table.value.list = response.data.data
     table.value.total = response.data.total

@@ -27,7 +27,8 @@ import java.util.TreeMap;
  * 按「供应商模型运行时配置」（SupplierRuntime）程序化构建 spring-ai 模型：
  *  - 对话模型：OpenAiChatModel（OpenAI 兼容协议，覆盖 Deepseek / GLM / Ollama(/v1) 等）
  *  - 嵌入模型：OpenAiEmbeddingModel（向量化）
- * 缓存条目统一记录配置指纹，配置变更即重建，无需显式驱逐失效。
+ * 对话模型按「供应商 + 模型 + 会话」缓存、条目内记录配置指纹校验有效性；
+ * 嵌入模型按需构建，实例生命周期由 RAG 向量存储缓存持有。
  *
  * @author xxl-ai 2026-09-12
  */
@@ -102,7 +103,7 @@ public class LlmModelFactory {
     /**
      * 构建嵌入模型：每次返回新实例，实例生命周期与缓存复用由调用方（RAG 向量存储）管理
      */
-    public EmbeddingModel embeddingModel(SupplierRuntime runtime) {
+    public EmbeddingModel buildEmbeddingModel(SupplierRuntime runtime) {
         OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
                 .baseUrl(normalizeBaseUrl(runtime.getBaseUrl()))
                 .apiKey(runtime.getApiKey())
@@ -119,7 +120,7 @@ public class LlmModelFactory {
 
     /**
      * 模型配置指纹：BaseURL（归一化后）/ API Key / 模型标识 / 自定义 Header 任一变化即产生新指纹，
-     * 作为缓存键的一部分使用，配置变更后无需主动失效旧缓存。
+     * 作为缓存条目的有效性依据，配置变更后无需主动失效旧缓存。
      */
     public String configFingerprint(SupplierRuntime runtime) {
         StringBuilder canonical = new StringBuilder();

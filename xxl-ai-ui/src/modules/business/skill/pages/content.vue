@@ -103,8 +103,7 @@ defineOptions({ name: 'SkillContent' })
 import { useRoute, useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import { t } from '@/i18n'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { renderMarkdown } from '@/utils/markdown'
 import {
   listSkillBySpace,
   skillFileTree,
@@ -123,12 +122,6 @@ import type { ElTree } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
-
-/** Markdown 渲染（净化防 XSS） */
-function renderMarkdown(text: string): string {
-  const html = marked.parse(text ?? '') as string
-  return DOMPurify.sanitize(html)
-}
 
 // --------------------------------- ref data ---------------------------------
 const skillId = ref(Number(route.query.skillId) || 0)

@@ -1,7 +1,7 @@
 /**
  * 供应商模型 接口封装（供应商模型管理弹窗使用）
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { RemoteModel, SupplierModel, SupplierModelListQuery } from '../types'
 
@@ -26,7 +26,7 @@ export function addSupplierModel(data: SupplierModel): Promise<Response<string>>
 }
 
 /** 批量删除模型 */
-export function delSupplierModel(ids: number[] | number): Promise<Response<string>> {
+export function delSupplierModel(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/supplier/model/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

@@ -28,7 +28,7 @@ import { updateUserPwd } from '../../api'
 import modal from '@/utils/modal'
 import tab from '@/utils/tab'
 import type { FormInstance, FormItemRule, FormRules } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
 
 /** 密码表单数据 */
 interface PwdForm {
@@ -52,7 +52,7 @@ const newPasswordRules: FormItemRule[] = [
 const pwdRef = ref<FormInstance>()
 
 // 密码表单数据
-const user = reactive<PwdForm>({
+const user = ref<PwdForm>({
   oldPassword: undefined,
   newPassword: undefined,
   confirmPassword: undefined
@@ -60,7 +60,7 @@ const user = reactive<PwdForm>({
 
 /** 校验两次密码是否一致 */
 const equalToPassword: FormItemRule['validator'] = (rule, value, callback) => {
-  if (user.newPassword !== value) {
+  if (user.value.newPassword !== value) {
     callback(new Error(t('system.user.passwordMismatch')))
   } else {
     callback()
@@ -85,11 +85,11 @@ const rules = ref<FormRules>({
 function submit() {
   pwdRef.value!.validate((valid) => {
     if (valid) {
-      updateUserPwd(user.oldPassword as string, user.newPassword as string).then((res) => {
+      updateUserPwd(user.value.oldPassword as string, user.value.newPassword as string).then((res) => {
         modal.msgSuccess(t('common.updateSuccess'))
-        user.oldPassword = undefined
-        user.newPassword = undefined
-        user.confirmPassword = undefined
+        user.value.oldPassword = undefined
+        user.value.newPassword = undefined
+        user.value.confirmPassword = undefined
       })
     }
   })

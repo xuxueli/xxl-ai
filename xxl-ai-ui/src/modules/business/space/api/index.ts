@@ -1,7 +1,7 @@
 /**
  * 业务空间 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { Space, SpaceListQuery } from '../types'
 
@@ -16,7 +16,7 @@ export function addSpace(data: Space): Promise<Response<string>> {
 }
 
 /** 批量删除空间 */
-export function delSpace(ids: number[] | number): Promise<Response<string>> {
+export function delSpace(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/space/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

@@ -8,24 +8,20 @@
 
 <script setup lang="ts">
 import { t } from '@/i18n'
-import { ElMessage } from 'element-plus'
-import { Renderer, marked, type Tokens } from 'marked'
-import DOMPurify from 'dompurify'
+import modal from '@/utils/modal'
+import { copyText } from '@/utils/clipboard'
+import { escapeHtml, renderMarkdown } from '@/utils/markdown'
+import { Renderer, type Tokens } from 'marked'
 import { computed } from 'vue'
 
 const props = defineProps<{ content: string }>()
-
-/** 转义 HTML 特殊字符（代码块内容/语言标签注入 HTML 前，防止被解释为标签） */
-function escapeHtml(text: string): string {
-  return (text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
 
 /**
  * Markdown 渲染（净化防 XSS）
  *   - 代码块：浅色主题 + 「语言标签 / 复制按钮」头部；
  *   - 代码块内容经 HTML 转义后注入，避免非法标签内容被 DOMPurify 误删。
  */
-function renderMarkdown(text: string): string {
+function buildHtml(text: string): string {
   const renderer = new Renderer()
   renderer.code = ({ text: body, lang }: Tokens.Code) => {
     const language = escapeHtml(lang || '')
@@ -33,27 +29,10 @@ function renderMarkdown(text: string): string {
     const codeHtml = escapeHtml(body)
     return `<div class="code-block"><div class="code-header"><span class="code-lang">${label}</span><span class="code-copy">${t('business.chat.copyCode')}</span></div><pre><code class="language-${language}">${codeHtml}</code></pre></div>`
   }
-  const html = marked.parse(text ?? '', { renderer, gfm: true }) as string
-  return DOMPurify.sanitize(html)
+  return renderMarkdown(text, renderer)
 }
 
-const html = computed(() => renderMarkdown(props.content))
-
-/** 复制文本：优先 navigator.clipboard，降级 textarea 方案 */
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch (e) {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-  }
-}
+const html = computed(() => buildHtml(props.content))
 
 /** 复制代码块：v-html 注入的复制按钮无法绑定 Vue 事件，用事件委托处理 */
 async function handleCopyCode(event: MouseEvent) {
@@ -62,7 +41,7 @@ async function handleCopyCode(event: MouseEvent) {
   const codeEl = (target as HTMLElement).closest('.code-block')?.querySelector('code')
   if (!codeEl) return
   await copyText(codeEl.textContent ?? '')
-  ElMessage.success(t('business.chat.copySuccess'))
+  modal.msgSuccess(t('business.chat.copySuccess'))
 }
 </script>
 

@@ -16,6 +16,7 @@ import { isHttp } from '@/utils/validate'
 import { isRelogin } from '@/utils/request'
 import { useUserStore, useRoutesStore, useSettingsStore, useSpaceStore } from '@/store'
 import defaultSettings from '@/default-settings'
+import { t } from '@/i18n'
 
 // ==================== 静态路由注册 ====================
 
@@ -46,7 +47,7 @@ export const constantRoutes = [
         name: 'Profile',
         path: '/user/profile/:activeTab?',
         component: () => import('@/modules/framework/system/user/pages/profile/index.vue'),
-        meta: { title: '个人中心', icon: 'user' }
+        meta: { title: t('layout.nav.profile'), icon: 'user' }
       }
     ]
   },
@@ -132,7 +133,9 @@ router.beforeEach(async (to, from) => {
         await Promise.all([
           useUserStore().getInfo(),
           useRoutesStore().initRoutes(),
-          useSpaceStore().loadSpaces().catch(() => {})
+          useSpaceStore()
+            .loadSpaces()
+            .catch(() => {})
         ])
 
         // b、注入动态路由：获取拍平后数据 -> 过滤 http 链接后逐条注入

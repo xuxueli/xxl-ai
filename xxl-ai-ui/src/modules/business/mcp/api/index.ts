@@ -1,7 +1,7 @@
 /**
  * MCP 服务 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { Mcp, McpListQuery, McpConnectResult } from '../types'
 
@@ -16,7 +16,7 @@ export function addMcp(data: Mcp): Promise<Response<string>> {
 }
 
 /** 批量删除 MCP */
-export function delMcp(ids: number[] | number): Promise<Response<string>> {
+export function delMcp(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/mcp/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

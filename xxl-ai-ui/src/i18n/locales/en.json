@@ -4,19 +4,12 @@
   },
   "common": {
     "add": "Add",
-    "edit": "Edit",
     "modify": "Modify",
     "delete": "Delete",
     "search": "Search",
     "reset": "Reset",
-    "query": "Query",
-    "clear": "Clear",
     "operation": "Action",
-    "detail": "Detail",
-    "view": "View",
-    "confirm": "Confirm",
     "all": "All",
-    "loading": "Loading...",
     "serialNo": "No.",
     "status": "Status",
     "remark": "Remark",
@@ -27,35 +20,16 @@
     "deleteSuccess": "Deleted successfully",
     "refresh": "Refresh",
     "emptyData": "No data",
-    "emptyContent": "No content",
     "downloading": "Downloading data, please wait",
     "downloadFail": "Failed to download the file, please contact the administrator!",
     "permiRequired": "Please set the permission label value",
     "roleRequired": "Please set the role label value",
-    "time": {
-      "justNow": "just now",
-      "minutesAgo": "{0} minutes ago",
-      "hoursAgo": "{0} hours ago",
-      "daysAgo": "{0} days ago",
-      "monthDayTime": "{0}/{1} {2}:{3}",
-      "weekSun": "Sun",
-      "weekMon": "Mon",
-      "weekTue": "Tue",
-      "weekWed": "Wed",
-      "weekThu": "Thu",
-      "weekFri": "Fri",
-      "weekSat": "Sat"
-    },
     "addSuccess": "Added successfully",
     "updateSuccess": "Updated successfully",
     "realName": "User Name",
     "createTime": "Created Time",
     "updateTime": "Update Time",
     "addTime": "Add Time",
-    "saveSort": "Save Sort",
-    "noSortChange": "No sort changes detected",
-    "saveSortSuccess": "Sort saved successfully",
-    "expandCollapse": "Expand/Collapse",
     "close": "Close",
     "save": "Save",
     "more": "More",
@@ -67,16 +41,9 @@
     "titleAdd": "Add {0}",
     "titleEdit": "Edit {0}",
     "noun": {
-      "charLength": "character length",
       "config": "Config",
-      "dataModel": "data model",
-      "fileFieldName": "upload file field name",
       "iconName": "icon name",
       "name": "a name",
-      "prefixIconName": "prefix icon name",
-      "regex": "regex",
-      "resource": "Resource",
-      "suffixIconName": "suffix icon name",
       "user": "User"
     }
   },
@@ -152,9 +119,6 @@
     }
   },
   "components": {
-    "pagination": {
-      "total": "Total {0} / {1} per page"
-    },
     "rightToolbar": {
       "hideSearch": "Hide Search",
       "showSearch": "Show Search",
@@ -196,7 +160,6 @@
       "result": "Import Result",
       "selectFile": "Please select a file with the extension \"xls\" or \"xlsx\"."
     },
-    "iconSelect": {},
     "treePanel": {
       "title": "Tree View",
       "expandAll": "Expand All",
@@ -205,18 +168,6 @@
       "collapse": "Collapse"
     },
     "editor": {
-      "linkTip": "Please enter the link address:",
-      "videoTip": "Please enter the video address:",
-      "text": "Text",
-      "heading1": "Heading 1",
-      "heading2": "Heading 2",
-      "heading3": "Heading 3",
-      "heading4": "Heading 4",
-      "heading5": "Heading 5",
-      "heading6": "Heading 6",
-      "fontNormal": "Normal",
-      "fontSerif": "Serif",
-      "fontMono": "Monospace",
       "imageTypeError": "Incorrect image format!",
       "imageInsertFail": "Failed to insert image"
     }
@@ -353,7 +304,6 @@
       "headersFormatBtn": "Format",
       "supplier": "Supplier",
       "model": "Models",
-      "modelManage": "Model Management",
       "testConnect": "Connectivity Test",
       "confirmDelete": "Are you sure to delete the supplier with ID \"{0}\"?",
       "modelName": "Model Name",
@@ -392,8 +342,6 @@
       "testToolTitle": "Title",
       "testToolDesc": "Description",
       "testNoTool": "No tools discovered",
-      "remoteConfig": "Remote",
-      "stdioConfig": "Local Process",
       "command": "Command",
       "commandRequired": "Local type requires a launch command (e.g. npx)",
       "commandPlaceholder": "e.g. npx",
@@ -449,6 +397,7 @@
       "docManage": "Documents",
       "docBack": "Back to KB",
       "search": "Vector Search",
+      "searchTitle": "Vector Search: {0}",
       "searchQuery": "Query",
       "searchQueryPlaceholder": "Enter the query text",
       "searchRequired": "Please enter the query text",
@@ -489,7 +438,6 @@
       "systemPromptPlaceholder": "Enter the agent system prompt",
       "publishSuccess": "Published",
       "unpublishSuccess": "Unpublished",
-      "copyUrl": "Copy URL",
       "confirmDelete": "Are you sure to delete the agent with ID \"{0}\"?"
     },
     "chat": {
@@ -524,7 +472,6 @@
       "roleAssistant": "Assistant"
     },
     "session": {
-      "manage": "Session Manage",
       "agent": "Agent",
       "sessionTitle": "Title",
       "visitorId": "Visitor ID",

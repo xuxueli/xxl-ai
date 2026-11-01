@@ -20,22 +20,22 @@
               <li class="list-group-item">
                 <SvgIcon icon-class="user" />
                 {{ t('system.user.account') }}
-                <div class="pull-right">{{ state.user.username }}</div>
+                <div class="pull-right">{{ user.username }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="email" />
                 {{ t('system.user.emailLabel') }}
-                <div class="pull-right">{{ state.user.email }}</div>
+                <div class="pull-right">{{ user.email }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="peoples" />
                 {{ t('system.user.roleLabel') }}
-                <div class="pull-right">{{ state.roleName }}</div>
+                <div class="pull-right">{{ roleName }}</div>
               </li>
               <li class="list-group-item">
                 <SvgIcon icon-class="date" />
                 {{ t('system.user.createDate') }}
-                <div class="pull-right">{{ state.user.addTime }}</div>
+                <div class="pull-right">{{ user.addTime }}</div>
               </li>
             </ul>
           </div>
@@ -53,7 +53,7 @@
           <el-tabs v-model="selectedTab">
             <!-- 基本资料 -->
             <el-tab-pane :label="t('system.user.basicInfo')" name="userinfo">
-              <userInfo :user="state.user" />
+              <userInfo :user="user" />
             </el-tab-pane>
 
             <!-- 修改密码 -->
@@ -75,26 +75,20 @@ import userInfo from './userInfo.vue'
 import resetPwd from './resetPwd.vue'
 import { getUserProfile } from '../../api'
 import type { User } from '../../types'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { SvgIcon } from '@/components'
 
 const route = useRoute() // 路由
 const selectedTab = ref('userinfo') // 当前选中的 tab
-const state = reactive<{
-  // 用户信息、角色数据
-  user: User
-  roleName: string
-}>({
-  user: {}, // 用户信息
-  roleName: '' // 角色名称
-})
+const user = ref<User>({}) // 用户信息
+const roleName = ref('') // 角色名称
 
 /** 获取当前登录用户个人信息 */
 function getUser() {
   getUserProfile().then((res) => {
-    state.user = res.data
-    state.roleName = (state.user.roleName as string) || ''
+    user.value = res.data
+    roleName.value = (user.value.roleName as string) || ''
   })
 }
 

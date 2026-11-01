@@ -178,13 +178,14 @@
 import { t } from '@/i18n'
 import logo from '@/assets/images/logo.png'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { createSession, deleteSession as removeSession, listSession, listMsg, loadAgentInfo, renameSession, stopStream } from '../api'
 import { useChatStream } from '../composables/useChatStream'
 import MarkdownView from '../components/MarkdownView.vue'
 import type { AgentChatInfo } from '../types'
 import type { Session, SessionMsg } from '@/modules/business/session/types'
 import { parseTime } from '@/utils/common'
+import modal from '@/utils/modal'
+import { copyText } from '@/utils/clipboard'
 import { SvgIcon } from '@/components'
 import { useFullscreen } from '@vueuse/core'
 import { nextTick, onMounted, ref } from 'vue'
@@ -278,7 +279,7 @@ function handleNewChat() {
   if (sending.value) return
   // 已在新建对话状态：提示并聚焦，不重复进入
   if (newChat.value && !currentSessionId.value) {
-    ElMessage.warning(t('business.chat.newChatAlready'))
+    modal.msgWarning(t('business.chat.newChatAlready'))
     newChatInputRef.value?.focus()
     return
   }
@@ -391,11 +392,8 @@ function cancelSessionTitle() {
 
 /** 删除对话 */
 function deleteSession(session: Session) {
-  ElMessageBox.confirm(t('business.chat.deleteSessionConfirm', [session.title]), t('modal.title'), {
-    confirmButtonText: t('modal.confirmButton'),
-    cancelButtonText: t('modal.cancelButton'),
-    type: 'warning'
-  })
+  modal
+    .confirm(t('business.chat.deleteSessionConfirm', [session.title]))
     .then(async () => {
       await removeSession(session.id)
       if (currentSessionId.value === session.id) {
@@ -413,7 +411,7 @@ function deleteSession(session: Session) {
 async function handleSend() {
   const content = inputText.value.trim()
   if (!content) {
-    ElMessage.warning(t('business.chat.questionRequired'))
+    modal.msgWarning(t('business.chat.questionRequired'))
     return
   }
   if (sending.value) return
@@ -431,7 +429,7 @@ async function handleSend() {
       // 新对话置顶（列表按 id 倒序）
       sessionList.value.unshift(res.data)
     } catch (e) {
-      ElMessage.error(t('business.chat.sendFail'))
+      modal.msgError(t('business.chat.sendFail'))
       sending.value = false
       return
     }
@@ -474,7 +472,7 @@ async function handleSend() {
     await scrollToBottom()
     requestAnimationFrame(() => scrollToBottom())
   } catch (e) {
-    ElMessage.error(t('business.chat.sendFail'))
+    modal.msgError(t('business.chat.sendFail'))
   } finally {
     sending.value = false
     // 首条消息后后端自动生成了对话标题（首次提问内容，超50字截断补"..."），本地同步刷新左侧标题
@@ -500,7 +498,7 @@ async function handleStop() {
   // 通知后端终止（失败重试），成功后再回读落库内容
   const stopped = await requestStop(sessionId)
   if (!stopped) {
-    ElMessage.error(t('business.chat.stopFail'))
+    modal.msgError(t('business.chat.stopFail'))
   }
   // 稍候重新拉取消息：回显后端已落库的内容（status=2），避免占位一直显示"思考中"
   setTimeout(() => {
@@ -540,23 +538,7 @@ async function handleVisitorCommand() {
   if (!visitorId.value) return
   const tip = t('business.chat.visitorIdTip', [visitorId.value])
   await copyText(tip)
-  ElMessage.success(t('business.chat.copySuccess'))
-}
-
-/** 复制文本：优先 navigator.clipboard，降级 textarea 方案 */
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch (e) {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-  }
+  modal.msgSuccess(t('business.chat.copySuccess'))
 }
 
 // --------------------------------- 会话消息 ---------------------------------

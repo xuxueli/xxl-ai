@@ -254,7 +254,7 @@ public class RagTool {
      *
      * @return RAG Advisor；知识库未配置嵌入模型时返回 null
      */
-    public Object buildAdvisor(KnowledgeBase kb) {
+    public Advisor buildAdvisor(KnowledgeBase kb) {
         MilvusVectorStore vectorStore = resolveVectorStore(kb);
         if (vectorStore == null) {
             return null;
@@ -326,7 +326,7 @@ public class RagTool {
      */
     private MilvusVectorStore buildVectorStore(KnowledgeBase kb, SupplierRuntime runtime, String fingerprint) {
         long baseId = kb.getId();
-        MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), llmModelFactory.embeddingModel(runtime))
+        MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), llmModelFactory.buildEmbeddingModel(runtime))
                 .databaseName(database)
                 .collectionName(collectionName(baseId))
                 .metricType(MetricType.COSINE)

@@ -1,7 +1,7 @@
 /**
  * 供应商 接口封装
  */
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { Response, PageModel } from '@/types'
 import type { Supplier, SupplierListQuery, SupplierConnect } from '../types'
 
@@ -21,7 +21,7 @@ export function addSupplier(data: Supplier): Promise<Response<string>> {
 }
 
 /** 批量删除供应商 */
-export function delSupplier(ids: number[] | number): Promise<Response<string>> {
+export function delSupplier(ids: number | number[]): Promise<Response<string>> {
   return request({ url: '/supplier/delete', method: 'post', data: Array.isArray(ids) ? ids : [ids] })
 }
 

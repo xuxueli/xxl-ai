@@ -151,7 +151,7 @@
     </el-dialog>
 
     <!-- 向量检索对话框 -->
-    <el-dialog :title="t('business.knowledge.search') + '：' + baseName" v-model="search.visible" width="760px" append-to-body>
+    <el-dialog :title="t('business.knowledge.searchTitle', [baseName])" v-model="search.visible" width="760px" append-to-body>
       <el-form :inline="true">
         <el-form-item :label="t('business.knowledge.searchQuery')" style="width: 100%">
           <el-input

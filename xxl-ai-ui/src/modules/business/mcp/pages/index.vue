@@ -208,19 +208,12 @@ import { useFormReset } from '@/composables/useFormReset'
 import { useEnumOption } from '@/composables/useEnumOption'
 import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
+import { renderMarkdown } from '@/utils/markdown'
 import { RightToolbar, Pagination } from '@/components'
 import type { FormState, TableState } from '@/types'
 import type { Mcp, McpQuery, McpConnectResult } from '../types'
 import type { FormInstance } from 'element-plus'
 import { computed, ref } from 'vue'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-
-/** Markdown 渲染（净化防 XSS） */
-function renderMarkdown(text: string): string {
-  const html = marked.parse(text ?? '') as string
-  return DOMPurify.sanitize(html)
-}
 
 const resetForm = useFormReset()
 
