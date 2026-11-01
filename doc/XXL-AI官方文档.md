@@ -1648,12 +1648,11 @@ docker compose down
 
 **【云版（Web 服务端）】**
 
-- 1、【优化】首页报表租户隔离：报表数据跨租户空间数据隔离，避免数据泄露；From PR-5；
-- 2、【优化】Milvus向量模型缓存：MilvusVectorStore 缓存Key新增模型指纹信息，避免模型变更缓存更新不及时；From PR-6；
+- 1、【调整】首页报表租户隔离：报表数据跨租户空间数据隔离，避免数据泄露；From PR-5；
+- 2、【修复】Milvus向量模型缓存：MilvusVectorStore 缓存Key新增模型指纹信息，避免模型变更缓存更新不及时；From PR-6；
 - 3、【优化】Agent模型变更实效性：模型对象定期过期刷新（5min），并结合Agent配置指纹信息（更新时间MD5）主动更新；
-- 4、【TODO】SKILL文件变更实效性：SKILL正文结合版本与指纹信息（SKILL文件更新时间MD5）主动更新；
-- 5、【TODO】Markdown渲染优化：字体、代码高亮、表格、列表、引用、公式渲染优化；
-- 6、【TODO】Thinking渲染优化：单次思考过程渲染限定最大高度，滚动吸底展示最新内容；
+- 4、【优化】Markdown渲染优化：字体、代码高亮、表格、列表、引用、公式渲染优化；
+- 5、【优化】Thinking渲染优化：单次思考过程渲染限定最大高度，滚动吸底展示最新内容；
 
 ### TODO LIST
 - 1、AI 能力增强：
@@ -1666,6 +1665,7 @@ docker compose down
 - 3、云版：
   - OpenAPI：针对搭建的Agent提供OpenAPI接口能力，通过agentId + accessToken访问，便于集成到第三方系统应用（提供内置Agent对话能力，可用于功能调试或快速集成应用）。
   - 可观测：支持Agent可观测，包括Session对话、工具/知识/记忆等Trace明细可观测等。
+  - SKILL文件变更实效性：SKILL正文结合版本与指纹信息主动更新；（双版本均校准）
 - 4、Desk版本：
   - 长程任务：SQLite；“动态规划-分步执行-验收”；失败巡检、延续执行、防止死循环；
   - 定时任务：

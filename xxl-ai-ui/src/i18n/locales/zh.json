@@ -468,6 +468,7 @@
       "expandMenu": "展开侧栏",
       "copyCode": "复制代码",
       "copySuccess": "已复制",
+      "imageLoadFailed": "图片加载失败",
       "roleUser": "用户",
       "roleAssistant": "助手"
     },

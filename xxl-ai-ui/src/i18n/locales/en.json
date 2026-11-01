@@ -468,6 +468,7 @@
       "expandMenu": "Expand sidebar",
       "copyCode": "Copy code",
       "copySuccess": "Copied",
+      "imageLoadFailed": "Image failed to load",
       "roleUser": "User",
       "roleAssistant": "Assistant"
     },

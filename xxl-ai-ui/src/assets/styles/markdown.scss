@@ -1,0 +1,115 @@
+/**
+ * Markdown 代码高亮配色（GitHub 浅色主题）
+ *
+ * 由 highlight.js 生成 token class，供 MarkdownView / 文件预览等所有 Markdown 渲染场景共用，
+ * 避免各页面重复维护配色。
+ *
+ * @author xuxueli 2026-11-01
+ */
+
+.hljs {
+  color: #24292f;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #6e7781;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: #cf222e;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: #8250df;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-variable {
+  color: #0550ae;
+}
+
+.hljs-meta .hljs-string,
+.hljs-regexp,
+.hljs-string {
+  color: #0a3069;
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color: #953800;
+}
+
+.hljs-name,
+.hljs-selector-pseudo,
+.hljs-selector-tag {
+  color: #116329;
+}
+
+.hljs-code {
+  color: #6e7781;
+}
+
+.hljs-subst,
+.hljs-params,
+.hljs-punctuation {
+  color: #24292f;
+}
+
+.hljs-section {
+  color: #0550ae;
+  font-weight: 700;
+}
+
+/* 补充 token：对象属性 / 常量 / 标签 / 转义字符，避免回落为正文色 */
+.hljs-property,
+.hljs-variable.constant_ {
+  color: #0550ae;
+}
+
+.hljs-tag {
+  color: #116329;
+}
+
+.hljs-char.escape_ {
+  color: #953800;
+}
+
+.hljs-bullet {
+  color: #953800;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+.hljs-addition {
+  color: #116329;
+  background: rgba(46, 160, 67, 0.15);
+}
+
+.hljs-deletion {
+  color: #cf222e;
+  background: rgba(248, 81, 73, 0.15);
+}

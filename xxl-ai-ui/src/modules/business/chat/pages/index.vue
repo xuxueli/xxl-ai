@@ -102,7 +102,13 @@
                       }}</span>
                       <el-icon class="reasoning-arrow" :class="{ open: msg.showThinking }"><ArrowDown /></el-icon>
                     </div>
-                    <div v-if="msg.showThinking" class="msg-reasoning-body">{{ msg.reasoning }}</div>
+                    <div
+                      v-if="msg.showThinking"
+                      :ref="(el) => bindReasoningBody(index, el)"
+                      class="msg-reasoning-body"
+                      @scroll="handleReasoningScroll(index, $event)"
+                      >{{ msg.reasoning }}</div
+                    >
                   </div>
                   <!-- 回复内容：生成失败（status=2，含主动终止）且无内容时不再显示"思考中" -->
                   <span v-if="!msg.content && msg.status !== 2" class="msg-streaming"
@@ -188,7 +194,7 @@ import modal from '@/utils/modal'
 import { copyText } from '@/utils/clipboard'
 import { SvgIcon } from '@/components'
 import { useFullscreen } from '@vueuse/core'
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, type ComponentPublicInstance } from 'vue'
 
 const { sendMessage, resumeMessage, stopMessage } = useChatStream()
 
@@ -344,6 +350,7 @@ async function resumeGenerating(msg: SessionMsgItem) {
       (chunk) => {
         const m = messages.value[idx]
         if (m) m.reasoning = (m.reasoning || '') + chunk
+        stickReasoning(idx)
         scrollToBottom()
       },
       (chunk) => {
@@ -457,6 +464,7 @@ async function handleSend() {
         // 经响应式代理累加思考过程，触发视图逐段更新
         const msg = messages.value[assistantIdx]
         if (msg) msg.reasoning += chunk
+        stickReasoning(assistantIdx)
         scrollToBottom()
       },
       (chunk) => {
@@ -529,6 +537,39 @@ async function requestStop(sessionId: number): Promise<boolean> {
 function toggleThinking(index: number) {
   const msg = messages.value[index]
   if (msg) msg.showThinking = !msg.showThinking
+  // 展开且仍在生成中：直接定位到最新内容
+  if (msg?.showThinking) stickReasoning(index)
+}
+
+/** 思考正文容器：消息下标 → 元素（生成中吸底用） */
+const reasoningBodies = new Map<number, HTMLElement>()
+/** 思考区是否跟随底部：用户上翻后暂停跟随，回到底部附近恢复 */
+const reasoningSticky = new Map<number, boolean>()
+
+/** 登记思考正文容器（v-for 中 ref 需用函数形式）；首次挂载即定位到最新内容 */
+function bindReasoningBody(index: number, el: Element | ComponentPublicInstance | null) {
+  if (el instanceof HTMLElement) {
+    reasoningBodies.set(index, el)
+    if (reasoningSticky.get(index) !== false) {
+      el.scrollTop = el.scrollHeight
+    }
+  } else {
+    reasoningBodies.delete(index)
+  }
+}
+
+/** 用户滚动思考区：据距底距离决定是否继续跟随 */
+function handleReasoningScroll(index: number, event: Event) {
+  const el = event.target as HTMLElement
+  reasoningSticky.set(index, el.scrollHeight - el.scrollTop - el.clientHeight < 24)
+}
+
+/** 思考区吸底：内容增长时始终展示最新内容（用户上翻查看时不打扰） */
+async function stickReasoning(index: number) {
+  if (reasoningSticky.get(index) === false) return
+  await nextTick()
+  const el = reasoningBodies.get(index)
+  if (el) el.scrollTop = el.scrollHeight
 }
 
 // --------------------------------- 访客信息 ---------------------------------
@@ -1070,6 +1111,10 @@ onMounted(() => {
   .msg-reasoning-body {
     margin: 0 10px 8px;
     padding-top: 6px;
+    /* 单次思考限高：超长思考在区内滚动，避免整页被持续撑高 */
+    max-height: min(360px, 42vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-top: 1px dashed #eadfcb;
     font-size: 12.5px;
     color: #8a8370;

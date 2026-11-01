@@ -290,16 +290,15 @@ VALUES
 -- 5、预设供应商模型
 INSERT INTO `xxl_ai_supplier_model` (`id`, `supplier_id`, `name`, `model`, `type`, `status`, `add_time`, `update_time`)
 VALUES
-    (1, 1, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
-    (2, 1, 'MiMo-V2.5', 'mimo-v2.5', 0, 0, NOW(), NOW()),
+    (1, 1, 'deepseek v4.1 flash', 'deepseek-v4.1-flash', 0, 0, NOW(), NOW()),
+    (2, 1, 'glm 5.3', 'glm-5.3', 0, 0, NOW(), NOW()),
     (3, 2, 'Qwen3.5-0.8B', 'qwen3.5:0.8b', 0, 0, NOW(), NOW()),
     (4, 2, 'Qwen3.5-4B', 'qwen3.5:4b', 0, 0, NOW(), NOW()),
     (5, 2, 'Qwen-Embedding-0.8B', 'qwen3-embedding:0.6b', 1, 0, NOW(), NOW()),
-    (6, 3, 'DeepSeek V4 Flash', 'deepseek-v4-flash', 0, 0, NOW(), NOW()),
-    (7, 3, 'DeepSeek V4 Pro', 'deepseek-v4-pro', 0, 0, NOW(), NOW()),
-    (8, 3, 'DeepSeek V4 Flash Vision', 'deepseek-v4-flash-vision-exp', 0, 0, NOW(), NOW()),
-    (9, 4, 'GLM-5.3-Flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
-    (10, 4, 'GLM-5.3', 'glm-5.3', 0, 0, NOW(), NOW());
+    (6, 3, 'deepseek v4.1 flash', 'deepseek-v4.1-flash', 0, 0, NOW(), NOW()),
+    (7, 3, 'deepseek v4 pro', 'deepseek-v4-pro', 0, 0, NOW(), NOW()),
+    (8, 4, 'glm 5.3 flash', 'glm-5.3-flash', 0, 0, NOW(), NOW()),
+    (9, 4, 'glm 5.3', 'glm-5.3', 0, 0, NOW(), NOW());
 
 -- 6、预设 MCP 服务（内置 Java 远程示例 + 社区本地 stdio，作为「连接测试」联调用例）
 INSERT INTO `xxl_ai_mcp` (`space_id`, `name`, `type`, `url`, `headers`, `config`, `status`, `remark`, `add_time`, `update_time`)
