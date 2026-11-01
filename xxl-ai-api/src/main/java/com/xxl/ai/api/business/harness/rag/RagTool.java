@@ -7,6 +7,8 @@ import com.xxl.ai.api.business.knowledge.model.entity.KnowledgeBase;
 import com.xxl.ai.api.business.knowledge.model.entity.KnowledgeDoc;
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.ai.api.business.supplier.service.SupplierService;
+import com.xxl.tool.cache.CacheTool;
+import com.xxl.tool.cache.iface.Cache;
 import com.xxl.tool.core.CollectionTool;
 import com.xxl.tool.core.StringTool;
 import com.xxl.tool.response.Response;
@@ -20,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
@@ -29,7 +30,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,7 +44,8 @@ import java.util.Map;
  *  - 清理：按 docId 元数据过滤删除 / 失效向量存储缓存
  *  - Advisor：为对话装配 QuestionAnswerAdvisor 上下文注入
  *
- * 面向业务提供「知识库ID」与「知识库实体」两套入口；集合名 kb_base_{baseId}，实例按知识库ID+模型引用指纹缓存复用。
+ * 面向业务提供「知识库ID」与「知识库实体」两套入口；集合名 kb_base_{baseId}，实例按知识库ID缓存复用，
+ * 缓存条目记录嵌入模型配置指纹，指纹变化（供应商连接/模型配置变更）后自动重建。
  *
  * @author xxl-ai 2026-09-12
  */
@@ -53,8 +54,10 @@ public class RagTool {
 
     private static final Logger logger = LoggerFactory.getLogger(RagTool.class);
 
-    /** 向量存储缓存上限 */
-    private static final int CACHE_MAX = 128;
+    /** 向量存储缓存容量上限 */
+    private static final int CACHE_MAX = 1000;
+    /** 向量存储缓存有效期（毫秒）：定期过期刷新，避免长期持有陈旧实例 */
+    private static final long CACHE_EXPIRE = 5 * 60 * 1000L;
     /** 默认检索数量 */
     private static final int DEFAULT_TOP_K = 5;
 
@@ -76,8 +79,10 @@ public class RagTool {
     @Resource
     private KnowledgeDocMapper knowledgeDocMapper;
 
-    /** 向量存储缓存（baseId:modelHashCode → MilvusVectorStore，模型配置变更/删除时主动失效） */
-    private final Map<String, MilvusVectorStore> vectorStoreCache = Collections.synchronizedMap(new LRUCache<>());
+    /** 向量存储缓存（baseId → 配置指纹 + MilvusVectorStore），5min 过期 */
+    private final Cache<Long, VectorStoreEntry> vectorStoreCache = CacheTool.<Long, VectorStoreEntry>newLRUCache(CACHE_MAX)
+            .expireAfterWrite(CACHE_EXPIRE)
+            .build();
     /** Milvus 客户端（懒加载单例） */
     private volatile MilvusServiceClient milvusClient;
 
@@ -128,9 +133,16 @@ public class RagTool {
             return;
         }
         if (CollectionTool.isNotEmpty(docIds)) {
+            // 向量存储只解析一次，避免逐文档重复加载模型配置；初始化失败按静默跳过处理
+            MilvusVectorStore vectorStore = null;
+            try {
+                vectorStore = resolveVectorStore(knowledgeBase);
+            } catch (Exception e) {
+                logger.warn("知识库向量存储解析失败, baseId={}, err={}", baseId, e.getMessage());
+            }
             for (Long docId : docIds) {
                 if (docId != null && docId > 0) {
-                    deleteByDoc(knowledgeBase, docId);
+                    deleteByDoc(vectorStore, docId);
                 }
             }
         }
@@ -138,14 +150,10 @@ public class RagTool {
     }
 
     /**
-     * 失效知识库向量存储缓存（知识库删除或嵌入模型配置变更时调用，避免旧模型被复用）
+     * 失效知识库向量存储缓存（知识库删除时调用）
      */
     public void evict(long baseId) {
-        String prefix = baseId + ":";
-        String exact = String.valueOf(baseId);
-        synchronized (vectorStoreCache) {
-            vectorStoreCache.keySet().removeIf(k -> k.equals(exact) || k.startsWith(prefix));
-        }
+        vectorStoreCache.remove(baseId);
     }
 
     // ==================== 面向知识库实体的向量操作 ====================
@@ -164,8 +172,8 @@ public class RagTool {
         if (StringTool.isBlank(content)) {
             throw new IllegalArgumentException("文档内容为空，无法向量化");
         }
-        EmbeddingModel embeddingModel = resolveEmbeddingModel(kb);
-        if (embeddingModel == null) {
+        MilvusVectorStore vectorStore = resolveVectorStore(kb);
+        if (vectorStore == null) {
             throw new IllegalArgumentException("知识库未配置有效的向量化模型，请先配置");
         }
         List<String> chunks = split(content, kb.getChunkSize(), kb.getChunkOverlap());
@@ -173,9 +181,8 @@ public class RagTool {
             throw new IllegalArgumentException("文档无可分片内容");
         }
         try {
-            MilvusVectorStore vectorStore = vectorStore(kb, embeddingModel);
             // 清理旧向量，支持重复向量化
-            deleteByDoc(kb, docId);
+            deleteByDoc(vectorStore, docId);
             List<Document> documents = new ArrayList<>(chunks.size());
             for (int i = 0; i < chunks.size(); i++) {
                 documents.add(buildDocument(docId, i, chunks.get(i)));
@@ -199,12 +206,11 @@ public class RagTool {
         if (StringTool.isBlank(query)) {
             throw new IllegalArgumentException("检索内容不能为空");
         }
-        EmbeddingModel embeddingModel = resolveEmbeddingModel(kb);
-        if (embeddingModel == null) {
+        MilvusVectorStore vectorStore = resolveVectorStore(kb);
+        if (vectorStore == null) {
             throw new IllegalArgumentException("知识库未配置有效的向量化模型，请先配置");
         }
         try {
-            MilvusVectorStore vectorStore = vectorStore(kb, embeddingModel);
             int limit = topK > 0 ? topK : defaultTopK(kb);
             List<Document> documents = vectorStore.similaritySearch(SearchRequest.builder()
                     .query(query)
@@ -231,16 +237,11 @@ public class RagTool {
     /**
      * 按文档ID删除向量（容错静默）
      */
-    public void deleteByDoc(KnowledgeBase kb, long docId) {
-        if (kb == null) {
-            return;
-        }
-        EmbeddingModel embeddingModel = resolveEmbeddingModel(kb);
-        if (embeddingModel == null) {
+    private void deleteByDoc(MilvusVectorStore vectorStore, long docId) {
+        if (vectorStore == null) {
             return;
         }
         try {
-            MilvusVectorStore vectorStore = vectorStore(kb, embeddingModel);
             Expression expression = new FilterExpressionBuilder().eq("docId", docId).build();
             vectorStore.delete(expression);
         } catch (Exception e) {
@@ -254,14 +255,10 @@ public class RagTool {
      * @return RAG Advisor；知识库未配置嵌入模型时返回 null
      */
     public Object buildAdvisor(KnowledgeBase kb) {
-        if (kb == null) {
+        MilvusVectorStore vectorStore = resolveVectorStore(kb);
+        if (vectorStore == null) {
             return null;
         }
-        EmbeddingModel embeddingModel = resolveEmbeddingModel(kb);
-        if (embeddingModel == null) {
-            return null;
-        }
-        MilvusVectorStore vectorStore = vectorStore(kb, embeddingModel);
         return QuestionAnswerAdvisor.builder(vectorStore)
                 .searchRequest(SearchRequest.builder().topK(defaultTopK(kb)).build())
                 .build();
@@ -281,9 +278,27 @@ public class RagTool {
     }
 
     /**
-     * 解析知识库的嵌入模型（未配置嵌入供应商/模型或配置无效时返回 null）
+     * 解析知识库向量存储：按知识库ID缓存，嵌入模型配置指纹变化后自动重建
+     *
+     * @return 向量存储；知识库未配置有效嵌入模型时返回 null
      */
-    private EmbeddingModel resolveEmbeddingModel(KnowledgeBase kb) {
+    private MilvusVectorStore resolveVectorStore(KnowledgeBase kb) {
+        SupplierRuntime runtime = loadEmbeddingRuntime(kb);
+        if (runtime == null) {
+            return null;
+        }
+        String fingerprint = llmModelFactory.configFingerprint(runtime);
+        VectorStoreEntry entry = vectorStoreCache.getIfPresent(kb.getId());
+        if (entry != null && entry.fingerprint.equals(fingerprint)) {
+            return entry.store;
+        }
+        return buildVectorStore(kb, runtime, fingerprint);
+    }
+
+    /**
+     * 加载知识库嵌入模型的运行时配置（未配置嵌入供应商/模型或配置无效时返回 null）
+     */
+    private SupplierRuntime loadEmbeddingRuntime(KnowledgeBase kb) {
         if (kb == null || kb.getEmbedSupplierId() == 0 || kb.getEmbedModelId() == 0) {
             return null;
         }
@@ -299,7 +314,7 @@ public class RagTool {
                 logger.warn("知识库嵌入模型配置错误（非嵌入模型）, baseId={}", kb.getId());
                 return null;
             }
-            return llmModelFactory.embeddingModel(runtime);
+            return runtime;
         } catch (Exception e) {
             logger.warn("知识库嵌入模型加载异常, baseId={}, err={}", kb.getId(), e.getMessage());
             return null;
@@ -307,19 +322,11 @@ public class RagTool {
     }
 
     /**
-     * 获取（或构建）知识库向量存储实例（按知识库ID + 嵌入模型引用指纹缓存复用，模型变更自动失效重建）
+     * 构建知识库向量存储并写入缓存；嵌入模型实例由向量存储持有，随缓存条目一起替换
      */
-    private MilvusVectorStore vectorStore(KnowledgeBase knowledgeBase, EmbeddingModel embeddingModel) {
-        long baseId = knowledgeBase.getId();
-        String key = baseId + ":" + System.identityHashCode(embeddingModel);
-        MilvusVectorStore cached = vectorStoreCache.get(key);
-        if (cached != null) {
-            return cached;
-        }
-        // 当发生新实例构建（例如模型变更）时，先清除该 baseId 历史残留的旧向量存储实例
-        evict(baseId);
-
-        MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), embeddingModel)
+    private MilvusVectorStore buildVectorStore(KnowledgeBase kb, SupplierRuntime runtime, String fingerprint) {
+        long baseId = kb.getId();
+        MilvusVectorStore store = MilvusVectorStore.builder(getMilvusClient(), llmModelFactory.embeddingModel(runtime))
                 .databaseName(database)
                 .collectionName(collectionName(baseId))
                 .metricType(MetricType.COSINE)
@@ -330,10 +337,9 @@ public class RagTool {
         try {
             store.afterPropertiesSet();
         } catch (Exception e) {
-            vectorStoreCache.remove(key);
             throw new IllegalStateException("向量集合初始化失败, collection=" + collectionName(baseId), e);
         }
-        vectorStoreCache.put(key, store);
+        vectorStoreCache.put(baseId, new VectorStoreEntry(fingerprint, store));
         logger.debug("向量存储构建完成, baseId={}", baseId);
         return store;
     }
@@ -406,11 +412,15 @@ public class RagTool {
     }
 
     /**
-     * 简易LRU缓存（达到上限后逐出最旧项）
+     * 向量存储缓存条目：记录构建时的嵌入模型配置指纹，指纹变化即重建
      */
-    private static class LRUCache<K, V> extends LinkedHashMap<K, V> {
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > CACHE_MAX;
+    private static class VectorStoreEntry {
+        private final String fingerprint;
+        private final MilvusVectorStore store;
+
+        private VectorStoreEntry(String fingerprint, MilvusVectorStore store) {
+            this.fingerprint = fingerprint;
+            this.store = store;
         }
     }
 

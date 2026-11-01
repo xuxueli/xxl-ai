@@ -1,7 +1,10 @@
 package com.xxl.ai.api.business.harness.llm;
 
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
+import com.xxl.tool.cache.CacheTool;
+import com.xxl.tool.cache.iface.Cache;
 import com.xxl.tool.core.StringTool;
+import com.xxl.tool.crypto.Sha256Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -14,10 +17,9 @@ import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomiz
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * LLM 模型工厂（spring-ai）
@@ -25,7 +27,7 @@ import java.util.Objects;
  * 按「供应商模型运行时配置」（SupplierRuntime）程序化构建 spring-ai 模型：
  *  - 对话模型：OpenAiChatModel（OpenAI 兼容协议，覆盖 Deepseek / GLM / Ollama(/v1) 等）
  *  - 嵌入模型：OpenAiEmbeddingModel（向量化）
- * 模型按（供应商+模型+会话）指纹缓存复用，配置变化自动重建
+ * 缓存条目统一记录配置指纹，配置变更即重建，无需显式驱逐失效。
  *
  * @author xxl-ai 2026-09-12
  */
@@ -40,13 +42,16 @@ public class LlmModelFactory {
     /** 对外请求 User-Agent（覆盖 spring-ai 默认的 spring-ai-openai） */
     private static final String USER_AGENT = "XXL-AI";
 
-    /** 模型缓存上限：超过上限时逐出最旧项 */
-    private static final int CACHE_MAX = 500;
+    /** 模型缓存容量上限 */
+    private static final int CACHE_MAX = 1000;
 
-    /** 对话模型缓存（supplierId:modelId:sessionId → 配置指纹 + ChatModel） */
-    private final Map<String, ChatModelEntry> chatModelCache = Collections.synchronizedMap(new LRUCache<>());
-    /** 嵌入模型缓存（supplierId:modelId → 配置指纹 + EmbeddingModel） */
-    private final Map<String, EmbeddingModelEntry> embeddingModelCache = Collections.synchronizedMap(new LRUCache<>());
+    /** 模型缓存有效期（毫秒）：定期过期刷新，避免长期持有陈旧实例 */
+    private static final long CACHE_EXPIRE = 5 * 60 * 1000L;
+
+    /** 对话模型缓存（supplierId:modelId:sessionId → 配置指纹 + ChatModel），5min 过期 */
+    private final Cache<String, ChatModelEntry> chatModelCache = CacheTool.<String, ChatModelEntry>newLRUCache(CACHE_MAX)
+            .expireAfterWrite(CACHE_EXPIRE)
+            .build();
 
     /**
      * 获取（或构建）对话模型，并包装为 ChatClient
@@ -59,110 +64,73 @@ public class LlmModelFactory {
     }
 
     /**
-     * 获取（或构建）对话模型：按 供应商+模型 缓存
+     * 获取（或构建）对话模型：按 供应商+模型+会话 缓存，配置指纹校验有效性
      *
      * 仅当自定义 Header 使用 {@code {session}} 占位符（需按会话隔离）时才把 sessionId 纳入缓存键，
      * 否则同一模型跨会话复用，避免每个对话都构建一个模型实例。
      */
     private OpenAiChatModel chatModel(SupplierRuntime runtime, String sessionId) {
 
-        // store key
+        // store key：仅表达「供应商 + 模型 + 会话」身份，配置是否变化由条目内指纹判断
         String sessionKey = usesSessionHeader(runtime.getHeaders()) && StringTool.isNotBlank(sessionId) ? sessionId : "";
         String key = runtime.getSupplierId() + ":" + runtime.getModelId() + ":" + sessionKey;
-        String baseUrl = normalizeBaseUrl(runtime.getBaseUrl());
-        int signature = configSignature(baseUrl, runtime);
+        String fingerprint = configFingerprint(runtime);
 
-        // load valid data
-        ChatModelEntry entry = chatModelCache.get(key);
-        if (entry != null && entry.signature == signature) {
+        // load valid data：配置未变化则复用；指纹不一致说明配置已变更，重建并覆盖旧条目
+        ChatModelEntry entry = chatModelCache.getIfPresent(key);
+        if (entry != null && entry.fingerprint.equals(fingerprint)) {
             return entry.model;
         }
 
         // build model and store
-        Map<String, String> headers = buildHeaders(runtime.getHeaders(), sessionId);
         OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(normalizeBaseUrl(runtime.getBaseUrl()))
                 .apiKey(runtime.getApiKey())
                 .model(runtime.getModelName())
-                .customHeaders(headers)
+                .customHeaders(buildHeaders(runtime.getHeaders(), sessionId))
                 .build();
         OpenAiChatModel model = OpenAiChatModel.builder()
                 .options(options)
                 .httpClientBuilderCustomizer(userAgentCustomizer())
                 .build();
-        chatModelCache.put(key, new ChatModelEntry(signature, model));
+        chatModelCache.put(key, new ChatModelEntry(fingerprint, model));
 
         logger.debug("LLM 对话模型构建完成, supplierId={}, modelId={}", runtime.getSupplierId(), runtime.getModelId());
         return model;
     }
 
     /**
-     * 获取（或构建）嵌入模型：按 供应商+模型 缓存
+     * 构建嵌入模型：每次返回新实例，实例生命周期与缓存复用由调用方（RAG 向量存储）管理
      */
     public EmbeddingModel embeddingModel(SupplierRuntime runtime) {
-
-        // store key
-        String key = runtime.getSupplierId() + ":" + runtime.getModelId();
-        String baseUrl = normalizeBaseUrl(runtime.getBaseUrl());
-        int signature = configSignature(baseUrl, runtime);
-
-        // load valid data
-        EmbeddingModelEntry entry = embeddingModelCache.get(key);
-        if (entry != null && entry.signature == signature) {
-            return entry.model;
-        }
-
-        // build model and store
-        Map<String, String> headers = buildHeaders(runtime.getHeaders(), null);
         OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(normalizeBaseUrl(runtime.getBaseUrl()))
                 .apiKey(runtime.getApiKey())
                 .model(runtime.getModelName())
-                .customHeaders(headers)
+                .customHeaders(buildHeaders(runtime.getHeaders(), null))
                 .build();
         OpenAiEmbeddingModel model = OpenAiEmbeddingModel.builder()
                 .options(options)
                 .httpClientBuilderCustomizer(userAgentCustomizer())
                 .build();
-        embeddingModelCache.put(key, new EmbeddingModelEntry(signature, model));
-
         logger.debug("LLM 嵌入模型构建完成, supplierId={}, modelId={}", runtime.getSupplierId(), runtime.getModelId());
         return model;
     }
 
     /**
-     * 配置指纹：BaseURL / API Key / 模型标识 / 自定义 Header 任一变化即重建模型，
-     * 避免供应商配置修改后仍复用旧连接配置（如 API Key 错误修正后旧会话继续失败）。
+     * 模型配置指纹：BaseURL（归一化后）/ API Key / 模型标识 / 自定义 Header 任一变化即产生新指纹，
+     * 作为缓存键的一部分使用，配置变更后无需主动失效旧缓存。
      */
-    private int configSignature(String baseUrl, SupplierRuntime runtime) {
-        return Objects.hash(baseUrl, runtime.getApiKey(), runtime.getModelName(), runtime.getHeaders());
-    }
-
-    /**
-     * 清理指定供应商的模型缓存：供应商或模型元数据变更时调用，保证下一轮对话立即生效。
-     */
-    public void evictSupplier(long supplierId) {
-        String prefix = supplierId + ":";
-        synchronized (chatModelCache) {
-            chatModelCache.keySet().removeIf(key -> key.startsWith(prefix));
+    public String configFingerprint(SupplierRuntime runtime) {
+        StringBuilder canonical = new StringBuilder();
+        canonical.append(normalizeBaseUrl(runtime.getBaseUrl())).append('\n')
+                .append(runtime.getModelName()).append('\n')
+                .append(runtime.getApiKey()).append('\n');
+        // Header 为无序 Map，按 key 排序后参与计算，保证同一配置产出的指纹稳定
+        if (runtime.getHeaders() != null) {
+            new TreeMap<>(runtime.getHeaders()).forEach((key, value) -> canonical.append(key).append('=').append(value).append('\n'));
         }
-        synchronized (embeddingModelCache) {
-            embeddingModelCache.keySet().removeIf(key -> key.startsWith(prefix));
-        }
-    }
-
-    /**
-     * 清理指定模型的缓存：单个模型元数据变更时调用，精准淘汰，避免影响同供应商下其他模型
-     */
-    public void evictModel(long supplierId, long modelId) {
-        String prefix = supplierId + ":" + modelId + ":";
-        String exact = supplierId + ":" + modelId;
-        synchronized (chatModelCache) {
-            chatModelCache.keySet().removeIf(key -> key.equals(exact) || key.startsWith(prefix));
-        }
-        synchronized (embeddingModelCache) {
-            embeddingModelCache.keySet().removeIf(key -> key.equals(exact) || key.startsWith(prefix));
-        }
+        return Sha256Tool.sha256(canonical.toString());
     }
 
     /**
@@ -240,34 +208,16 @@ public class LlmModelFactory {
         return result;
     }
 
-    /** 对话模型缓存条目：记录构建时的配置指纹 */
+    /**
+     * 对话模型缓存条目：记录构建时的配置指纹，指纹变化即重建
+     */
     private static class ChatModelEntry {
-        private final int signature;
+        private final String fingerprint;
         private final OpenAiChatModel model;
 
-        private ChatModelEntry(int signature, OpenAiChatModel model) {
-            this.signature = signature;
+        private ChatModelEntry(String fingerprint, OpenAiChatModel model) {
+            this.fingerprint = fingerprint;
             this.model = model;
-        }
-    }
-
-    /** 嵌入模型缓存条目：记录构建时的配置指纹 */
-    private static class EmbeddingModelEntry {
-        private final int signature;
-        private final OpenAiEmbeddingModel model;
-
-        private EmbeddingModelEntry(int signature, OpenAiEmbeddingModel model) {
-            this.signature = signature;
-            this.model = model;
-        }
-    }
-
-    /**
-     * 简易LRU缓存（达到上限后逐出最旧项）
-     */
-    private static class LRUCache<K, V> extends LinkedHashMap<K, V> {
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > CACHE_MAX;
         }
     }
 
