@@ -118,6 +118,10 @@
     "noModel": "尚未配置模型，请前往设置添加供应商与模型",
     "goSettings": "前往设置",
     "scrollToBottom": "回到底部",
+    "conversationRail": "会话导航",
+    "railTurnOf": "第 {0} / {1} 轮",
+    "railTurnRangeOf": "第 {0}–{1} / {2} 轮",
+    "railQuestionFallback": "第 {0} 轮提问",
     "interaction": {
       "submit": "提交",
       "cancel": "取消",

@@ -118,6 +118,10 @@
     "noModel": "No model configured yet. Add a provider and model in Settings.",
     "goSettings": "Go to Settings",
     "scrollToBottom": "Scroll to bottom",
+    "conversationRail": "Conversation navigation",
+    "railTurnOf": "Turn {0} of {1}",
+    "railTurnRangeOf": "Turns {0}–{1} of {2}",
+    "railQuestionFallback": "Question {0}",
     "interaction": {
       "submit": "Submit",
       "cancel": "Cancel",

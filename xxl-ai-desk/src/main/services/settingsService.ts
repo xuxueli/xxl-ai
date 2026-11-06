@@ -34,6 +34,16 @@ function normalizeTheme(value: string | undefined): AppSettings['themePreset'] {
     : DEFAULT_APP_SETTINGS.themePreset
 }
 
+/* 为快捷键绑定补齐 Shift（已包含则原样返回；主键保持在末尾） */
+function withShift(binding: string): string {
+  const tokens = binding.split('+').filter(Boolean)
+  if (tokens.includes('shift')) {
+    return binding
+  }
+  const key = tokens.pop()
+  return key ? [...tokens, 'shift', key].join('+') : binding
+}
+
 /* 解析快捷键配置（JSON 存储，缺省项回退默认值） */
 function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
   if (!raw) {
@@ -42,7 +52,15 @@ function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
   try {
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return { ...DEFAULT_SHORTCUTS, ...parsed }
+      const merged = { ...DEFAULT_SHORTCUTS, ...parsed }
+      /* 统一附加 Shift：避开 Cmd/Ctrl+A、Cmd/Ctrl+F、Cmd/Ctrl+S 等系统默认快捷键 */
+      for (const action of Object.keys(merged) as (keyof AppSettings['shortcuts'])[]) {
+        const binding = merged[action]
+        if (binding) {
+          merged[action] = withShift(binding)
+        }
+      }
+      return merged
     }
   } catch {
     /* 解析失败回退默认值 */

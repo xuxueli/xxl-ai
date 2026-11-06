@@ -17,15 +17,15 @@ export type ShortcutMap = Partial<Record<QuickAction, string>>
 
 /* 快捷键默认值（主进程与渲染进程共用；mod = 平台主修饰键，macOS ⌘ / 其他 Ctrl）
  * 取值按助记字母：新建 N、Agent A、插件 P、设置 S、终端 T、文件 F、浏览器 B
- * Agent / 插件使用 Shift 组合，避开输入框内 Cmd/Ctrl+A 全选等系统默认快捷键 */
+ * 统一附加 Shift，避开输入框内 Cmd/Ctrl+A 全选、Cmd/Ctrl+F 搜索、Cmd/Ctrl+S 保存等系统默认快捷键 */
 export const DEFAULT_SHORTCUTS: ShortcutMap = {
-  newChat: 'mod+n',
+  newChat: 'mod+shift+n',
   agent: 'mod+shift+a',
   plugin: 'mod+shift+p',
-  settings: 'mod+s',
-  terminal: 'mod+t',
-  files: 'mod+f',
-  browser: 'mod+b'
+  settings: 'mod+shift+s',
+  terminal: 'mod+shift+t',
+  files: 'mod+shift+f',
+  browser: 'mod+shift+b'
 }
 
 /* 外观：浅色 / 深色 / 跟随系统 */

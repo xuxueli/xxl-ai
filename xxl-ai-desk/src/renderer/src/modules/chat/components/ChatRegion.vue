@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MessageItem from './MessageItem.vue'
+import ConversationRail from './ConversationRail.vue'
 import ChatComposer from './ChatComposer.vue'
 import ChatEmptyExtras from './ChatEmptyExtras.vue'
 import EmptyState from './EmptyState.vue'
@@ -215,16 +216,21 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
     <div v-if="!hasMessages" class="chat-body empty">
       <EmptyState />
     </div>
-    <div v-else ref="scrollRef" class="chat-body" @scroll="handleScroll">
-      <div class="chat-inner">
-        <MessageItem
-          v-for="message in chat.messages"
-          :key="message.id"
-          :message="message"
-          @edit="onEditMessage"
-          @remove="onRemoveMessage(message)"
-        />
+    <div v-else class="chat-body-wrap">
+      <div ref="scrollRef" class="chat-body" @scroll="handleScroll">
+        <div class="chat-inner">
+          <MessageItem
+            v-for="message in chat.messages"
+            :key="message.id"
+            :message="message"
+            :data-message-id="message.id"
+            @edit="onEditMessage"
+            @remove="onRemoveMessage(message)"
+          />
+        </div>
       </div>
+      <!-- 轮次导航轨：悬停预览、点击 / 拖动按轮次跳转 -->
+      <ConversationRail :messages="chat.messages" :scroll-el="scrollRef" />
     </div>
 
     <!-- 输入框区：上翻阅读时在输入框上方悬浮「回到底部」，随输入框增高同步上移 -->
@@ -271,8 +277,19 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
   padding-bottom: 10vh;
 }
 
+/* 消息滚动区容器：为轮次导航轨提供定位上下文 */
+.chat-body-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
 .chat-body {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px var(--desk-chat-gutter);
   /* 两侧对称预留滚动条空间：出现/消失时内容列中心不偏移，与输入框保持同宽 */
