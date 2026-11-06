@@ -1,13 +1,15 @@
 <script setup lang="ts">
-/* 输入框：Enter 发送，Shift+Enter 换行；底部选择对话模式与模型 */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+/* 输入框：Enter 发送，Shift+Enter 换行；底部选择对话模式与模型，并支持关联项目文件 */
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '@renderer/stores/project'
 import { useChatStore } from '@renderer/stores/chat'
 import { useSettingsStore } from '@renderer/stores/settings'
 import { t } from '@renderer/i18n'
-import type { ChatMode } from '@shared/ipc'
+import ChatFilePicker from './ChatFilePicker.vue'
+import { relativeToRoot } from '../utils/path'
+import type { ChatMode, FsEntry } from '@shared/ipc'
 
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
 const emit = defineEmits<{ submit: [text: string, mode: ChatMode]; stop: [] }>()
@@ -23,6 +25,24 @@ const inputRef = ref()
 const boxRef = ref<HTMLElement | null>(null)
 /* 新建对话草稿模式：会话创建时随会话落库，默认 Build */
 const draftMode = ref<ChatMode>('build')
+/* 本轮关联文件：仅下一条消息生效，发送后清空 */
+const attachments = ref<FsEntry[]>([])
+/* 文件选择弹框显隐 */
+const pickerVisible = ref(false)
+
+/* 当前项目：已存在会话锁定归属项目，新建对话取选中项目 */
+const activeProject = computed(() => {
+  const projectId = chat.currentSession?.projectId || project.currentId
+  return project.projects.find((item) => item.id === projectId) ?? null
+})
+
+/* 切换会话 / 项目时丢弃上一轮的关联文件，避免跨会话误带 */
+watch(
+  () => `${chat.currentId}|${activeProject.value?.id ?? ''}`,
+  () => {
+    attachments.value = []
+  }
+)
 
 /* 输入框宽度变化（窗口 / 侧栏 / 工具面板调整）后重算 autosize，避免占位文案换行后高度不更新 */
 let resizeObserver: ResizeObserver | null = null
@@ -96,10 +116,36 @@ async function onModelChange(command: string): Promise<void> {
   await chat.selectModel(command.slice(0, index), command.slice(index + 2))
 }
 
+/* 发送按钮可用条件：有文本或有待关联文件 */
+const canSend = computed(() => Boolean(draft.value.trim() || attachments.value.length > 0))
+
+/* 打开文件选择弹框：必须先有归属项目（文件访问以项目为边界） */
+function openFilePicker(): void {
+  if (!activeProject.value) {
+    ElMessage.warning(t('project.needProject'))
+    return
+  }
+  pickerVisible.value = true
+}
+
+/* 合并选择结果：按路径去重，避免重复标签 */
+function onFilesSelected(files: FsEntry[]): void {
+  const known = new Set(attachments.value.map((file) => file.path))
+  attachments.value = [
+    ...attachments.value,
+    ...files.filter((file) => !known.has(file.path))
+  ]
+}
+
+/* 移除单个关联文件 */
+function removeAttachment(path: string): void {
+  attachments.value = attachments.value.filter((file) => file.path !== path)
+}
+
 /* 发送消息：校验内容与运行状态、要求新建对话已选项目，随后交由父组件提交 */
 function onSend(): void {
   const value = draft.value.trim()
-  if (!value || props.streaming || props.disabled) {
+  if (!canSend.value || props.streaming || props.disabled) {
     return
   }
   /* 强要求：新建对话必须先选择项目 */
@@ -107,8 +153,19 @@ function onSend(): void {
     ElMessage.warning(t('project.needProject'))
     return
   }
-  emit('submit', value, currentMode.value)
+  /* 关联文件以相对项目根目录的路径追加，Agent 可按需通过文件工具读取 */
+  const fileBlock =
+    attachments.value.length > 0
+      ? t('chat.attachBlock', [
+          attachments.value
+            .map((file) => `- \`${relativeToRoot(file.path, activeProject.value?.path ?? '')}\``)
+            .join('\n')
+        ])
+      : ''
+  const content = fileBlock ? (value ? `${value}\n\n${fileBlock}` : fileBlock) : value
+  emit('submit', content, currentMode.value)
   draft.value = ''
+  attachments.value = []
 }
 
 /* 键盘处理：Enter 发送，Shift+Enter 保留换行 */
@@ -133,8 +190,39 @@ function onKeydown(event: KeyboardEvent): void {
         :disabled="disabled"
         @keydown="onKeydown"
       />
+      <!-- 本轮关联文件：仅下一条消息生效，可逐个移除 -->
+      <div v-if="attachments.length" class="composer-files">
+        <span
+          v-for="file in attachments"
+          :key="file.path"
+          class="composer-file"
+          :title="file.path"
+        >
+          <el-icon class="composer-file-icon"><Document /></el-icon>
+          <span class="composer-file-name">{{ file.name }}</span>
+          <button
+            type="button"
+            class="composer-file-remove"
+            :title="t('chat.attachRemove')"
+            @click="removeAttachment(file.path)"
+          >
+            <el-icon><Close /></el-icon>
+          </button>
+        </span>
+      </div>
       <div class="composer-bar">
         <div class="composer-left">
+          <!-- 关联项目文件：弹出项目文件树，多选后随下一条消息发送 -->
+          <button
+            type="button"
+            class="attach-trigger"
+            :title="t('chat.attachFile')"
+            :disabled="disabled"
+            @click="openFilePicker"
+          >
+            <el-icon><Plus /></el-icon>
+          </button>
+
           <!-- 模式选择器：Plan（只读）/ Build（读写），默认 Build -->
           <el-dropdown trigger="click" @command="onModeChange">
             <span class="picker-trigger" :title="t('chat.modeTip')">
@@ -206,7 +294,7 @@ function onKeydown(event: KeyboardEvent): void {
             v-else
             circle
             type="primary"
-            :disabled="!draft.trim() || disabled"
+            :disabled="!canSend || disabled"
             @click="onSend"
           >
             <el-icon><Promotion /></el-icon>
@@ -214,6 +302,14 @@ function onKeydown(event: KeyboardEvent): void {
         </div>
       </div>
     </div>
+
+    <!-- 项目文件选择弹框：选择结果合并到本轮关联文件 -->
+    <ChatFilePicker
+      v-model:visible="pickerVisible"
+      :project-id="activeProject?.id ?? ''"
+      :root="activeProject?.path ?? ''"
+      @confirm="onFilesSelected"
+    />
   </div>
 </template>
 
@@ -284,6 +380,94 @@ function onKeydown(event: KeyboardEvent): void {
   align-items: center;
   gap: 2px;
   min-width: 0;
+}
+
+/* 「+」关联文件按钮：与选择器触发器保持同一视觉密度 */
+.attach-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--desk-text-secondary);
+  font-size: var(--desk-font-sm);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.attach-trigger:hover:not(:disabled) {
+  color: var(--desk-text);
+  background: var(--desk-primary-soft);
+}
+
+.attach-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 关联文件标签区：输入框与底部操作行之间自动换行 */
+.composer-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.composer-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 240px;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid var(--desk-border);
+  border-radius: 6px;
+  background: var(--desk-segment-bg);
+  color: var(--desk-text-secondary);
+  font-size: var(--desk-font-xs);
+}
+
+.composer-file-icon {
+  flex-shrink: 0;
+  font-size: var(--desk-font-xs);
+  color: var(--desk-text-tertiary);
+}
+
+.composer-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-file-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--desk-text-tertiary);
+  font-size: var(--desk-font-xs);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.composer-file-remove:hover {
+  color: var(--desk-text);
+  background: var(--desk-primary-soft);
 }
 
 /* 无边框选择器触发器：图标 + 文本 + 向下角标 */

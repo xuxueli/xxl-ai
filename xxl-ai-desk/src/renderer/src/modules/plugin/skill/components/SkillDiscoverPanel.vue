@@ -26,6 +26,14 @@ let timer: ReturnType<typeof setTimeout> | null = null
 /* 是否处于榜单视图（无检索关键字） */
 const isBoard = computed(() => skill.isBoard)
 
+/* 首屏加载（无已有数据）：展示骨架屏，避免空表格 + 遮罩的黑屏观感 */
+const isInitialLoading = computed(() => skill.discovering && skill.discoverItems.length === 0)
+
+/* 骨架行列宽：榜单视图多一列排名，与真实表头近似对齐 */
+const skeletonColumns = computed(() =>
+  isBoard.value ? ['48px', '22%', '30%', '12%', '18%'] : ['22%', '32%', '12%', '18%']
+)
+
 /* 安装量列文案：趋势榜使用「趋势安装」，避免与累计安装量混淆 */
 const installsLabel = computed(() =>
   isBoard.value && skill.discoverBoard === 'trending'
@@ -202,8 +210,22 @@ onUnmounted(() => {
     </el-alert>
 
     <div class="discover-body">
+      <!-- 首屏加载：骨架行占位，避免空表格与深色遮罩叠加 -->
+      <el-skeleton v-if="isInitialLoading" class="discover-skeleton" animated>
+        <template #template>
+          <div v-for="row in 7" :key="row" class="skeleton-row">
+            <el-skeleton-item
+              v-for="(width, col) in skeletonColumns"
+              :key="col"
+              variant="text"
+              :style="{ width }"
+            />
+          </div>
+        </template>
+      </el-skeleton>
+
       <el-empty
-        v-if="!skill.discovering && skill.discoverItems.length === 0 && !skill.discoverError"
+        v-else-if="!skill.discovering && skill.discoverItems.length === 0 && !skill.discoverError"
         :description="t('plugin.skillCenter.discoverEmpty')"
       />
 
@@ -370,6 +392,28 @@ onUnmounted(() => {
 
 .discover-body {
   min-height: 160px;
+}
+
+/* 首屏骨架：按表格行高铺开，加载完成后无缝切换到真实表格 */
+.discover-skeleton {
+  padding: 0 12px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--desk-border-soft);
+}
+
+.skeleton-row:first-child {
+  border-top: 1px solid var(--desk-border-soft);
+}
+
+.skeleton-row :deep(.el-skeleton__item) {
+  flex-shrink: 0;
 }
 
 .source-text {

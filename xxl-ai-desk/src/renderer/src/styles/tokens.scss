@@ -6,7 +6,8 @@
  *   2. 代码块 / 阴影 / 遮罩等与预设无关的外观变量；
  *   3. 尺寸、字体与 Element Plus 基础变量。
  *
- * 组件只使用 --desk-*，禁止写死颜色；新增主题只需改 theme-presets.scss。
+ * 组件只使用 --desk-*，禁止写死颜色；新增主题通常只需改 theme-presets.scss
+ * （代码块与终端选区为固定配色，不随主题变化）。
  *
  * 区域语义：
  *   chrome   顶栏 + 左侧图标栏
@@ -98,7 +99,8 @@
   --el-fill-color-blank: var(--desk-surface-content);
   --el-bg-color: var(--desk-surface-content);
   --el-bg-color-overlay: var(--desk-surface-elevated);
-  --el-mask-color: var(--desk-overlay);
+  /* 加载遮罩：取内容区表面的半透明色，避免深色蒙层把整块区域压黑（弹窗遮罩另用 --el-overlay-color-lighter） */
+  --el-mask-color: color-mix(in srgb, var(--desk-surface-content) 82%, transparent);
 
   /* Element Plus 功能色：与主题功能色保持同一色相 */
   --el-color-success: var(--theme-success);

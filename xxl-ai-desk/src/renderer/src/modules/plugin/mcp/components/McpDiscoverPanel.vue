@@ -3,7 +3,7 @@
  * 发现 MCP 面板：在线检索 mcp.so 社区 MCP 服务，支持关键字搜索、结果排序、分页加载与详情查看。
  * @author xuxueli 2026-10-24
  */
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useMcpStore } from '@renderer/stores/mcp'
 import { api } from '@renderer/api'
 import { t } from '@renderer/i18n'
@@ -20,6 +20,9 @@ const detailVisible = ref(false)
 const detailItem = ref<McpDiscoverItem | null>(null)
 /* 防抖计时器 */
 let timer: ReturnType<typeof setTimeout> | null = null
+
+/* 首屏加载（无已有数据）：展示骨架卡片，避免空列表 + 遮罩的黑屏观感 */
+const isInitialLoading = computed(() => mcp.discovering && mcp.discoverItems.length === 0)
 
 /* 防抖检索：输入 400ms 后按关键字检索首页 */
 function onKeywordChange(): void {
@@ -181,9 +184,23 @@ onUnmounted(() => {
       </div>
     </el-alert>
 
-    <div v-loading="mcp.discovering" class="discover-body">
+    <div v-loading="mcp.discovering && mcp.discoverItems.length > 0" class="discover-body">
+      <!-- 首屏加载：骨架卡片占位，避免空列表与深色遮罩叠加 -->
+      <el-skeleton v-if="isInitialLoading" animated>
+        <template #template>
+          <div class="card-grid">
+            <div v-for="row in 6" :key="row" class="discover-card skeleton-card">
+              <el-skeleton-item variant="text" style="width: 55%" />
+              <el-skeleton-item variant="text" />
+              <el-skeleton-item variant="text" style="width: 82%" />
+              <el-skeleton-item variant="text" style="width: 45%" />
+            </div>
+          </div>
+        </template>
+      </el-skeleton>
+
       <el-empty
-        v-if="!mcp.discovering && mcp.discoverItems.length === 0 && !mcp.discoverError"
+        v-else-if="!mcp.discovering && mcp.discoverItems.length === 0 && !mcp.discoverError"
         :description="t('plugin.mcpCenter.discoverEmpty')"
       />
       <div v-else class="card-grid">

@@ -14,7 +14,7 @@ export const NEW_CHAT_TITLE = ''
 /* 默认应用设置（主进程与渲染进程共用） */
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   appearance: 'light',
-  /* 默认主题 = 预设列表第一项（经典黑白），保证排序与默认值单一来源 */
+  /* 默认主题 = 预设列表第一项（经典灰），保证排序与默认值单一来源 */
   themePreset: THEME_PRESETS[0],
   language: 'zh',
   providerId: '',

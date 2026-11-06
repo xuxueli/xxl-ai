@@ -44,11 +44,26 @@ const language = computed<AppSettings['language']>({
       </el-form-item>
       <el-form-item :label="t('settings.theme')">
         <div class="theme-field">
-          <el-radio-group v-model="themePreset" class="soft-radio">
-            <el-radio-button v-for="preset in THEME_PRESETS" :key="preset" :value="preset">
-              {{ t(`settings.themePreset.${preset}`) }}
-            </el-radio-button>
-          </el-radio-group>
+          <div class="theme-grid" role="radiogroup">
+            <button
+              v-for="preset in THEME_PRESETS"
+              :key="preset"
+              type="button"
+              role="radio"
+              :aria-checked="themePreset === preset"
+              class="theme-card"
+              :class="{ active: themePreset === preset }"
+              @click="themePreset = preset"
+            >
+              <!-- 预览色块直接复用主题种子：data-palette 命中 theme-presets.scss，无需在组件内重复维护色值 -->
+              <span class="theme-preview" :data-palette="preset">
+                <span class="preview-chrome"></span>
+                <span class="preview-sidebar"></span>
+                <span class="preview-content"><span class="preview-dot"></span></span>
+              </span>
+              <span class="theme-name">{{ t(`settings.themePreset.${preset}`) }}</span>
+            </button>
+          </div>
           <div class="field-hint">{{ t('settings.themeHint') }}</div>
         </div>
       </el-form-item>
@@ -75,15 +90,93 @@ const language = computed<AppSettings['language']>({
   max-width: 640px;
 }
 
+/* Element Plus 表单内容为 flex 容器，需显式撑满，否则内部网格按内容宽度收缩 */
+.settings-form :deep(.el-form-item__content) {
+  width: 100%;
+}
+
 /* 主题选项：横向排列，窄窗口自动换行 */
 .theme-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
-.theme-field :deep(.soft-radio) {
-  flex-wrap: wrap;
+/* 主题卡片：色板预览 + 名称，10 套主题自适应多列 */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--desk-border);
+  border-radius: 9px;
+  background: var(--desk-surface-content);
+  color: var(--desk-text);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.theme-card:hover {
+  border-color: var(--desk-border-strong);
+}
+
+.theme-card.active {
+  border-color: var(--desk-primary);
+  box-shadow: 0 0 0 1px var(--desk-primary);
+}
+
+/* 预览使用自身 data-palette 的种子变量，始终展示浅色配色 */
+.theme-preview {
+  display: flex;
+  height: 38px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-chrome {
+  width: 22%;
+  background: var(--theme-chrome);
+}
+
+.preview-sidebar {
+  width: 34%;
+  background: var(--theme-sidebar);
+}
+
+.preview-content {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-content);
+}
+
+.preview-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--theme-brand);
+}
+
+.theme-name {
+  font-size: var(--desk-font-xs);
+  line-height: 1.4;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .field-hint {

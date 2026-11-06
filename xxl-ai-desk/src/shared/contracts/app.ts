@@ -32,8 +32,24 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
 export const APPEARANCES = ['light', 'dark', 'system'] as const
 export type Appearance = (typeof APPEARANCES)[number]
 
-/* 主题配色预设（顺序即设置页展示顺序，第一套为安装默认） */
-export const THEME_PRESETS = ['classic', 'indigo', 'mint', 'sunset', 'violet'] as const
+/* 主题配色预设（顺序即设置页展示顺序：中性 → 蓝 → 暖 → 青绿 → 紫，第一套为安装默认） */
+export const THEME_PRESETS = [
+  /* 中性 */
+  'classic',
+  'github',
+  /* 蓝色系 */
+  'onedark',
+  'tokyo-night',
+  'nord',
+  /* 暖色系 */
+  'kanagawa',
+  'gruvbox',
+  /* 青绿系 */
+  'mint',
+  /* 紫色系 */
+  'catppuccin',
+  'rose-pine'
+] as const
 export type ThemePreset = (typeof THEME_PRESETS)[number]
 
 /* 应用设置 */
