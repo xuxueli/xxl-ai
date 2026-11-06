@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './ipc'
-export * from './api'
+export type { GitApi } from './api'
+export type { GitChange, GitChangeStatus, GitCommitInput, GitCommitResult, GitDiffInput, GitDiffResult, GitOperationResult, GitStatus } from './contracts'

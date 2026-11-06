@@ -3,7 +3,6 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './browserUrl'
-export * from './ipc'
-export * from './api'
+export type { BrowserApi } from './api'
+export type { BrowserAction, BrowserActionRequest, BrowserActionResult, BrowserConsoleEntry, BrowserFillField, BrowserSnapshotNode, BrowserTabInfo } from './contracts'
+export { BROWSER_IPC } from './ipc'

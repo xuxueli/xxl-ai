@@ -8,7 +8,7 @@ import { logIpcError } from './utils/logger'
 
 export interface IpcContext {
   /* 注册 invoke 处理器：异常先落日志再回传渲染层 */
-  handle<T extends unknown[]>(
+  handle(
     channel: string,
     /* IPC 边界参数由渲染层传入，此处无法静态约束，交由各处理器自行校验 */
     handler: (event: IpcMainInvokeEvent, ...args: any[]) => unknown

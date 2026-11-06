@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './fsService'
-export * from './fsWatchService'
-export * from './ipc'
+export { disposeAllFsWatch } from './fsWatchService'
+export { registerFileIpc } from './ipc'

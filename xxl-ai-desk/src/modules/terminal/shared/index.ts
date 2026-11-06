@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './ipc'
-export * from './api'
+export type { TerminalApi } from './api'
+export type { TerminalAttachResult, TerminalChunk, TerminalCreateInput, TerminalDTO, TerminalEvent } from './contracts'

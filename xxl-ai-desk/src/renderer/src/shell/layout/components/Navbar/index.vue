@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 全局顶栏：贯通整窗，左侧依次为首页入口、软件名称，其后展示页面标题与操作
+ * 全局顶栏：贯通整窗，左侧依次为首页图标、软件名称，其后展示页面标题与操作
  * @author xuxueli 2026-10-18
  */
 import { computed } from 'vue'
@@ -13,7 +13,6 @@ import {
 import { ToolPanelToggle } from '@modules/toolPanel/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { useLayoutStore } from '@renderer/shell/stores/layout'
 import { NAV_SECTIONS, sectionOfPath } from '@renderer/shell/config/nav'
 import { t } from '@renderer/shell/i18n'
 
@@ -21,7 +20,6 @@ const route = useRoute()
 const router = useRouter()
 const chat = useChatStore()
 const settings = useSettingsStore()
-const layout = useLayoutStore()
 /* 搜索命令面板显隐（顶栏入口与面板共享） */
 const { visible: commandPaletteVisible } = useCommandPalette()
 
@@ -50,37 +48,15 @@ const hasTitle = computed(() => pageTitle.value.trim().length > 0)
 
 /* 软件名称：优先取用户自定义名称，未设置时回落应用默认名称 */
 const appName = computed(() => settings.settings.appName || t('app.name'))
-
-/* 回到对话模块：展开子菜单栏并进入新建对话页面 */
-function goHome(): void {
-  layout.expandSidebar()
-  chat.startNewChat()
-  void router.push('/')
-}
 </script>
 
 <template>
   <header class="desk-topbar" :class="{ mac: settings.platform === 'darwin' }">
     <div class="desk-topbar-left">
-      <!-- 首页入口：回到对话模块新建对话页（软件名称左侧）；提示即时展示 -->
-      <el-tooltip
-        :content="t('chat.newChatAction')"
-        placement="bottom"
-        effect="light"
-        popper-class="desk-tooltip"
-        :show-after="0"
-        :hide-after="0"
-        :offset="8"
-        transition=""
-      >
-        <button
-          class="icon-button home-button"
-          :aria-label="t('chat.newChatAction')"
-          @click="goHome"
-        >
-          <el-icon><HomeFilled /></el-icon>
-        </button>
-      </el-tooltip>
+      <!-- 首页图标：纯展示标识，不提供跳转与浮层 -->
+      <span class="home-icon" aria-hidden="true">
+        <el-icon><HomeFilled /></el-icon>
+      </span>
       <!-- 软件名称：原导航按钮位置 -->
       <div class="topbar-brand">{{ appName }}</div>
       <!-- 有标题时展示分隔线（｜），分隔软件名称与标题 -->
@@ -145,13 +121,16 @@ function goHome(): void {
   -webkit-app-region: no-drag;
 }
 
-/* 首页入口与软件名称：按钮内含内边距，用负外边距收紧至视觉约 6px */
-.desk-topbar-left > .icon-button {
+/* 首页图标与软件名称：图标含内边距，用负外边距收紧至视觉约 6px */
+.home-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
   margin-right: -9px;
-}
-
-/* 首页入口：默认即取深色（与悬浮一致），强化固定入口的视觉权重 */
-.home-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--desk-icon-md);
   color: var(--desk-text);
 }
 

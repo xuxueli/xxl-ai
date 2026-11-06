@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './gitService'
-export * from './ipc'
+export { disposeAllGitWatch } from './gitService'
+export { registerGitIpc } from './ipc'

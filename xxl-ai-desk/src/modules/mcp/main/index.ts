@@ -3,8 +3,6 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './service'
-export * from './runtime'
-export * from './discover'
-export * from './community/mcpSoAdapter'
-export * from './ipc'
+export { browseCategoryMcpSo, browseMcpSo, detailMcpSo, listMcpSoCategories, searchMcpSo } from './community/mcpSoAdapter'
+export { registerMcpIpc } from './ipc'
+export { buildRuntimeConfig, getMcp, listEnabledMcpServers, saveMcpHealth } from './service'

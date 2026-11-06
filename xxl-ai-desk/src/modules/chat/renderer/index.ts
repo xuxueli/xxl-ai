@@ -4,12 +4,10 @@
  * @author xuxueli 2026-10-25
  */
 
-export { default as ChatInteractionDialog } from '@modules/chat/renderer/components/interaction/InteractionDialog.vue'
-export { default as ChatSidebarPanel } from '@modules/chat/renderer/components/ChatSidebarPanel.vue'
+export { useChatStore } from './store'
+export { useChatUiStore } from './store/ui'
 export { default as ChatSearchAction } from '@modules/chat/renderer/components/ChatSearchAction.vue'
+export { default as ChatSidebarPanel } from '@modules/chat/renderer/components/ChatSidebarPanel.vue'
 export { default as ChatCommandPalette } from '@modules/chat/renderer/components/CommandPalette.vue'
+export { default as ChatInteractionDialog } from '@modules/chat/renderer/components/interaction/InteractionDialog.vue'
 export { useCommandPalette } from '@modules/chat/renderer/composables/useCommandPalette'
-
-export * from './store'
-export * from './types'
-export * from './store/ui'

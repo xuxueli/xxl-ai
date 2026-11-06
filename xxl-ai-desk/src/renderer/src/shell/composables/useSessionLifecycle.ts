@@ -5,10 +5,9 @@
  * @author xuxueli 2026-10-25
  */
 import { watch } from 'vue'
-import { useChatStore } from '@modules/chat/renderer'
+import { useChatStore, useChatUiStore } from '@modules/chat/renderer'
 import { useToolPanelStore, DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
-import { cleanupBrowserSessions } from '@modules/toolPanel/renderer'
-import { useChatUiStore } from '@modules/chat/renderer'
+import { cleanupBrowserSessions } from '@modules/browser/renderer'
 
 export function useSessionLifecycle(): { start: (validSessionIds: string[]) => void } {
   const chat = useChatStore()

@@ -3,6 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './chatService'
-export * from './sessionService'
-export * from './ipc'
+export { abortChat, discardSessionRuns } from './chatService'
+export { registerChatIpc } from './ipc'
+export { appendMessages, deleteSession, getSession, listMessages, listNewProjectMessages, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'
+export type { ProjectMessageGroup } from './sessionService'

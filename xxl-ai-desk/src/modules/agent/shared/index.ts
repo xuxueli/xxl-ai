@@ -3,7 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './agentProtocol'
-export * from './ipc'
-export * from './api'
+export type { HostEvent, ProviderModelConfig, RunAgentInput } from './agentProtocol'
+export type { AgentMemoryApi } from './api'
+export { AGENT_INSTRUCTION_MAX_CHARS, AGENT_MEMORY_MAX_CHARS, AGENT_MEMORY_MESSAGE_LIMIT } from './contracts'
+export type { AgentMemoryDTO, AgentMemorySaveInput } from './contracts'

@@ -2,7 +2,8 @@
 /* 对话页：装配会话界面（对话区 + 右侧工具面板），各区域状态按会话隔离 */
 import { computed, watch } from 'vue'
 import ChatRegion from '@modules/chat/renderer/components/ChatRegion.vue'
-import { ToolPanelLayout, useTerminalTarget } from '@modules/toolPanel/renderer'
+import { ToolPanelLayout } from '@modules/toolPanel/renderer'
+import { useTerminalTarget } from '@modules/terminal/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 

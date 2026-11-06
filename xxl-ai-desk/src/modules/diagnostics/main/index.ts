@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './diagnosticsService'
-export * from './ipc'
+export { clearTraces, purgeExpiredTraces, recordTrace } from './diagnosticsService'
+export { registerDiagnosticsIpc } from './ipc'

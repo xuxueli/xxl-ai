@@ -3,9 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts/pagination'
-export * from './contracts/quickAction'
-export * from './appInfo'
-export * from './fileTypes'
-export * from './providerUrl'
-export * from './runtimeLog'
+export type { PageResult } from './contracts/pagination'
+export type { QuickAction } from './contracts/quickAction'

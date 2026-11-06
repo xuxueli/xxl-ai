@@ -5,7 +5,6 @@
  *   - 同时生成「当前可用工具」提示，随系统指令下发给模型。
  */
 
-import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { clipToolResult, MAX_OUTPUT, type ToolContext, type ToolEntry, type ToolGroup } from '@modules/agent/worker/toolkit'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { createGeneralTools } from '@modules/agent/worker/tools/general'
@@ -59,12 +58,6 @@ export async function createBuiltinToolEntries(context: ToolContext): Promise<To
     .flat()
     .filter((entry) => entry.meta.modes.includes(context.mode))
     .map(withOutputLimit)
-}
-
-/* 构建当前模式下的 Pi 工具集合 */
-export async function createBuiltinTools(context: ToolContext): Promise<AgentTool[]> {
-  const entries = await createBuiltinToolEntries(context)
-  return entries.map((entry) => entry.tool)
 }
 
 /* 生成可用工具提示：名称 + 读写属性 + 一句话说明，避免模型臆造工具 */

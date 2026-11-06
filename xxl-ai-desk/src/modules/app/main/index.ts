@@ -3,8 +3,6 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './envService'
-export * from './updateService'
-export * from './openWithService'
-export * from './localFileProtocol'
-export * from './ipc'
+export { buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
+export { registerAppIpc } from './ipc'
+export { registerLocalFileProtocol } from './localFileProtocol'

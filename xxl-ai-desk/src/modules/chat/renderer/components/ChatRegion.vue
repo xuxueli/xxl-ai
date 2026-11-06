@@ -10,7 +10,6 @@ import ChatComposer from '@modules/chat/renderer/components/ChatComposer.vue'
 import ChatEmptyExtras from '@modules/chat/renderer/components/ChatEmptyExtras.vue'
 import EmptyState from '@modules/chat/renderer/components/EmptyState.vue'
 import { useChatStore } from '@modules/chat/renderer'
-import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import { DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
@@ -20,7 +19,6 @@ import type { ChatMode } from '@modules/chat/shared'
 
 const router = useRouter()
 const chat = useChatStore()
-const settings = useSettingsStore()
 const provider = useProviderStore()
 const project = useProjectStore()
 const chatUi = useChatUiStore()

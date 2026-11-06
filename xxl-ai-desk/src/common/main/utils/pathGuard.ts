@@ -36,11 +36,6 @@ export function isWithinRoot(root: string, target: string): boolean {
   return targetPath === rootPath || targetPath.startsWith(rootPath + sep)
 }
 
-/* 是否位于任一目录内（本地文件协议按已登记项目目录放行） */
-export function isWithinAnyRoot(roots: string[], target: string): boolean {
-  return roots.some((root) => root && isWithinRoot(root, target))
-}
-
 /* 断言目标位于根目录内：越界抛出可读错误（文件面板 / 写入等） */
 export function assertInside(root: string, target: string): void {
   if (!isWithinRoot(root, target)) {

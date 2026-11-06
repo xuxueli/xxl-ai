@@ -3,7 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './defaults'
-export * from './ipc'
-export * from './api'
+export type { SettingsApi } from './api'
+export { THEME_PRESETS } from './contracts'
+export type { AppSettings } from './contracts'
+export { NEW_CHAT_TITLE, createDefaultSettings } from './defaults'

@@ -3,8 +3,8 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './session'
-export * from './history'
-export * from './ipc'
-export * from './api'
+export type { ChatApi, SessionApi } from './api'
+export type { ChatEvent, ChatInteractionCancel, ChatInteractionPrompt, ChoiceInteractionRequest, InteractionOption, InteractionRequest, InteractionResult, PermissionInteractionRequest } from './contracts'
+export { HISTORY_MAX_MESSAGES, contentBlocks, trimHistory } from './history'
+export { CHAT_IPC } from './ipc'
+export type { ChatMode, SessionDTO, StoredMessage } from './session'

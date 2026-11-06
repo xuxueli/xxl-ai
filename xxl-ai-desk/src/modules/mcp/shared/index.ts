@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './ipc'
-export * from './api'
+export type { McpApi } from './api'
+export type { McpCategory, McpDTO, McpDiscoverDetail, McpDiscoverItem, McpDiscoverPage, McpDiscoverQuery, McpDiscoverSort, McpHealth, McpRuntimeConfig, McpTestResult, McpToolMeta, McpTransport, McpType } from './contracts'

@@ -3,4 +3,4 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './store'
+export { useSkillStore } from './store'

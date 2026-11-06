@@ -10,57 +10,6 @@ import dockerfile from 'highlight.js/lib/languages/dockerfile'
 /* Dockerfile 不在 common 语言集中，单独注册以支持 Dockerfile 高亮 */
 hljs.registerLanguage('dockerfile', dockerfile)
 
-/* 文件扩展名 → highlight.js 语言标识 */
-const EXT_LANGUAGE: Record<string, string> = {
-  '.js': 'javascript',
-  '.jsx': 'javascript',
-  '.mjs': 'javascript',
-  '.cjs': 'javascript',
-  '.ts': 'typescript',
-  '.tsx': 'typescript',
-  '.mts': 'typescript',
-  '.cts': 'typescript',
-  '.json': 'json',
-  '.html': 'xml',
-  '.htm': 'xml',
-  '.xml': 'xml',
-  '.svg': 'xml',
-  '.vue': 'xml',
-  '.css': 'css',
-  '.scss': 'scss',
-  '.less': 'less',
-  '.md': 'markdown',
-  '.markdown': 'markdown',
-  '.py': 'python',
-  '.java': 'java',
-  '.c': 'c',
-  '.h': 'c',
-  '.cpp': 'cpp',
-  '.cc': 'cpp',
-  '.hpp': 'cpp',
-  '.go': 'go',
-  '.rs': 'rust',
-  '.rb': 'ruby',
-  '.php': 'php',
-  '.sh': 'bash',
-  '.bash': 'bash',
-  '.zsh': 'bash',
-  '.yml': 'yaml',
-  '.yaml': 'yaml',
-  '.toml': 'ini',
-  '.ini': 'ini',
-  '.sql': 'sql',
-  '.kt': 'kotlin',
-  '.swift': 'swift',
-  '.lua': 'lua',
-  '.r': 'r',
-  '.cs': 'csharp',
-  '.pl': 'perl',
-  '.dockerfile': 'dockerfile',
-  '.graphql': 'graphql',
-  '.gql': 'graphql'
-}
-
 /*
  * 围栏语言别名 → highlight.js 语言标识：
  * 模型常输出 vue/tsx/svelte 等 highlight.js 未收录的标识，统一归一到可高亮的语言。
@@ -124,21 +73,6 @@ export function normalizeLanguage(language: string): string {
   const lower = (language ?? '').toLowerCase()
   const aliased = LANGUAGE_ALIAS[lower]
   return aliased === undefined ? lower : aliased
-}
-
-/* 按文件名推断语言标识（未知返回空串） */
-export function languageOf(fileName: string): string {
-  const lower = fileName.toLowerCase()
-  /* 无扩展名的常见约定文件 */
-  if (lower === 'dockerfile') {
-    return 'dockerfile'
-  }
-  if (['makefile', 'gnumakefile'].includes(lower)) {
-    return 'makefile'
-  }
-  const dot = lower.lastIndexOf('.')
-  const ext = dot >= 0 ? lower.slice(dot) : ''
-  return EXT_LANGUAGE[ext] ?? ''
 }
 
 /* 语言标识是否可用 */

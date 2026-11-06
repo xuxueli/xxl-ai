@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './projectService'
-export * from './ipc'
+export { registerProjectIpc } from './ipc'
+export { getProject, listProjects } from './projectService'

@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './browserBridge'
-export * from './ipc'
+export { disposeBrowserActions, requestBrowserAction } from './browserBridge'
+export { registerBrowserIpc } from './ipc'

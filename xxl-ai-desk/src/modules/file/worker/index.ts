@@ -3,6 +3,4 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './fs'
-export * from './fsRead'
-export * from './fsWrite'
+export { createFsTools } from './fs'

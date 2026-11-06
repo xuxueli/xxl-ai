@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './ipc'
-export * from './api'
+export type { ProjectApi } from './api'
+export type { ProjectCreateInput, ProjectDTO } from './contracts'

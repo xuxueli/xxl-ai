@@ -3,6 +3,5 @@
  * @author xuxueli 2026-10-26
  */
 
+export { useSettingsStore } from './store'
 export { default as UpdateDialog } from '@modules/settings/renderer/components/UpdateDialog.vue'
-
-export * from './store'

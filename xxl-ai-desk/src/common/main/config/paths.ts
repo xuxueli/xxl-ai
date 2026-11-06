@@ -90,8 +90,3 @@ export function setDataDir(dir: string): string {
   writeConfig(config)
   return value
 }
-
-/* 确保数据目录存在 */
-export function ensureDataDir(): void {
-  mkdirSync(getDataDir(), { recursive: true })
-}

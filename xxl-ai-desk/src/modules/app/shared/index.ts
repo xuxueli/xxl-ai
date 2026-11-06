@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './contracts'
-export * from './ipc'
-export * from './api'
+export type { AppApi, ShellApi, UpdateApi } from './api'
+export type { OpenWithApp, RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from './contracts'

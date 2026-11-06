@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './store'
-
 export { default as GitPanel } from './components/git/GitPanel.vue'
+export { createGitPanelActions } from './store'

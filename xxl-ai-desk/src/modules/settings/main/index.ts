@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export * from './settingsService'
-export * from './ipc'
+export { registerSettingsIpc } from './ipc'
+export { getSettings, saveSettings } from './settingsService'

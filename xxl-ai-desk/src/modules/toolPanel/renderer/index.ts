@@ -3,12 +3,10 @@
  * @author xuxueli 2026-10-25
  */
 
+export { DRAFT_SESSION_KEY, useToolPanelStore } from './store'
+export type { ToolPanelTab } from './store'
+export { defaultTreeWidth } from './store/state'
+export type { TerminalTabState, ToolPanelState } from './store/state'
 export { default as ToolPanelLayout } from '@modules/toolPanel/renderer/components/ToolPanelLayout.vue'
-export { default as BrowserHost } from '@modules/toolPanel/renderer/components/hosts/BrowserHost.vue'
 export { default as ToolPanelToggle } from '@modules/toolPanel/renderer/components/ToolPanelToggle.vue'
-export { useTerminalTarget } from '@modules/terminal/renderer'
-export { cleanupBrowserSessions } from '@modules/browser/renderer'
-
-export * from './store'
-
-export * from './store/state'
+export { default as BrowserHost } from '@modules/toolPanel/renderer/components/hosts/BrowserHost.vue'
