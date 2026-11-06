@@ -93,11 +93,15 @@ let offOpenTab: (() => void) | null = null
 let offActionRequest: (() => void) | null = null
 
 onMounted(() => {
-  /* 页面 window.open / Agent open_browser：写入对应会话；当前会话才展开浏览器工具 */
+  /* 页面 window.open / Agent open_browser：写入对应会话；仅会话首次打开网页时自动展开浏览器工具 */
   offOpenTab = api.browser.onOpenTab((request) => {
     const target = request.sessionId || currentKey.value
+    const sessionState = browser.sessions[target]
+    const hasPage = Boolean(
+      sessionState?.tabs.some((tab) => tab.hasPage || tab.currentUrl)
+    )
     openBrowserRequest(target, request.url, request.newTab)
-    if (target === currentKey.value) {
+    if (target === currentKey.value && !hasPage) {
       workspace.openTool(target, 'browser')
     }
   })

@@ -1,6 +1,6 @@
 /*
  * 浏览器类内置工具：在右侧「浏览器」面板打开、读取与操作页面。
- *   - 打开默认复用当前标签页，new_tab=true 时才新建；
+ *   - 打开优先复用当前标签页；new_tab=true 时才新建（仅用户明确要求或需同时保留多页时）；
  *   - 读取 / 快照 / 点击 / 填写 / 等待 / 截图 / 诊断 / 标签页统一经动作桥完成；
  *   - 交互类（悬停 / 按键 / 下拉 / 滚动）见 browserInteract.ts，结果格式化见 browserFormat.ts；
  *   - 元素 ref 由 snapshot_browser 生成，点击与填写优先使用 ref，避免猜测 CSS。
@@ -33,14 +33,14 @@ import {
 /* Pi 的 Type 构建器（从动态导入模块取类型，避免静态依赖） */
 type TypeBuilder = BrowserTypeBuilder
 
-/* 打开浏览器 / 历史导航：默认复用当前标签页，必要时新建 */
+/* 打开浏览器 / 历史导航：优先复用当前标签页，明确需要保留多个页面时才新建 */
 function createOpenBrowserTool(Type: TypeBuilder, context: ToolContext): AgentTool {
   return {
     name: 'open_browser',
     label: '打开浏览器',
     description: describe(
-      '在右侧「浏览器」面板打开网页，或对当前页面执行刷新 / 后退 / 前进。默认复用当前标签页；new_tab=true 时新建标签页。url 支持完整地址（如 http://localhost:3000）、域名（如 baidu.com）或搜索关键词',
-      'Open a web page in the right-side Browser panel, or reload / go back / go forward. Reuses the current tab by default; set new_tab=true to open a new tab. url accepts a full address, a domain, or a search keyword.'
+      '在右侧浏览器面板打开网页，或刷新 / 后退 / 前进。默认复用当前标签页，new_tab=true 时新开；url 支持完整地址、域名或搜索关键词。',
+      'Open a page in the Browser panel, or reload / go back / go forward. Reuses the current tab by default; new_tab=true opens a new tab. url accepts an address, domain, or search keywords.'
     ),
     parameters: Type.Object({
       action: Type.Optional(
@@ -54,8 +54,10 @@ function createOpenBrowserTool(Type: TypeBuilder, context: ToolContext): AgentTo
           { description: '导航动作，默认 goto；reload / back / forward 不需要 url' }
         )
       ),
-      url: Type.Optional(Type.String({ description: 'goto 时要打开的网址、域名或搜索关键词' })),
-      new_tab: Type.Optional(Type.Boolean({ description: '是否新建标签页，默认复用当前标签页' }))
+      url: Type.Optional(Type.String({ description: '网址、域名或搜索关键词' })),
+      new_tab: Type.Optional(
+        Type.Boolean({ description: '是否新开标签页，默认 false（复用当前页）' })
+      )
     }),
     /* 与其它浏览器动作串行：避免打开与读取同批并行导致读到空白页 */
     executionMode: 'sequential',

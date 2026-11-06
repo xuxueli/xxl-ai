@@ -4,6 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { t } from '@renderer/i18n'
+import { EDITOR_THEMES, type EditorThemeId } from './editorThemes'
 import type { OpenWithApp } from '@shared/ipc'
 
 defineProps<{
@@ -23,6 +24,8 @@ defineProps<{
   hasRoot: boolean
   /* 本机可用「打开方式」应用 */
   openApps: OpenWithApp[]
+  /* 当前编辑器主题 */
+  editorTheme: EditorThemeId
 }>()
 
 const emit = defineEmits<{
@@ -32,6 +35,7 @@ const emit = defineEmits<{
   reveal: []
   'open-default': []
   'open-command': [command: string]
+  'theme-command': [theme: EditorThemeId]
 }>()
 </script>
 
@@ -54,6 +58,33 @@ const emit = defineEmits<{
       </div>
     </div>
     <div class="file-actions">
+      <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
+      <el-dropdown
+        trigger="click"
+        @command="(command: string) => emit('theme-command', command as EditorThemeId)"
+      >
+        <button class="panel-btn" :title="t('panel.editorTheme')">
+          <el-icon><PictureRounded /></el-icon>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item
+              v-for="option in EDITOR_THEMES"
+              :key="option.id"
+              :command="option.id"
+            >
+              <div class="theme-option">
+                <span :class="{ 'theme-active': option.id === editorTheme }">
+                  {{ t(option.labelKey) }}
+                </span>
+                <el-icon v-if="option.id === editorTheme" class="theme-check">
+                  <Check />
+                </el-icon>
+              </div>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <button
         v-if="editable"
         class="panel-btn"
@@ -241,5 +272,24 @@ const emit = defineEmits<{
 .open-split :deep(.el-dropdown) {
   display: inline-flex;
   height: 100%;
+}
+
+/* 当前编辑器主题：加粗 + 品牌色 */
+.theme-active {
+  color: var(--desk-primary);
+  font-weight: 600;
+}
+
+/* 主题下拉项：名称居左，对勾居右 */
+.theme-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+.theme-check {
+  color: var(--desk-primary);
 }
 </style>

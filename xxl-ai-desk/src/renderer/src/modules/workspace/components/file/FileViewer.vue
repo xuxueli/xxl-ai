@@ -3,13 +3,16 @@
  * 文件查看器：文本编辑（语法高亮 + 行号 + ⌘/Ctrl+S 保存）、Markdown / 图片 / 音视频预览与只读展示。
  * @author xuxueli 2026-10-25
  */
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { MarkdownBlock } from '@renderer/components'
-import { escapeHtml, highlightCode, languageOf } from '@renderer/composables/useHighlight'
 import { toLocalFileUrl } from '@renderer/utils/localFileUrl'
 import { parentDir } from '../../utils/path'
 import { t } from '@renderer/i18n'
 import type { FileContent } from '@shared/ipc'
+import type { EditorThemeId } from './editorThemes'
+
+/* 代码编辑器按需加载：未进入编辑态时不加载 CodeMirror */
+const CodeEditor = defineAsyncComponent(() => import('./CodeEditor.vue'))
 
 const props = defineProps<{
   root?: string
@@ -25,14 +28,12 @@ const props = defineProps<{
   isVideo: boolean
   isAudio: boolean
   saving: boolean
+  /* 编辑器主题 */
+  editorTheme?: EditorThemeId
 }>()
 const draft = defineModel<string>('draft', { required: true })
 const emit = defineEmits<{ save: [] }>()
 
-/* 编辑区着色长度上限：超过则退化为纯文本，保证大文件编辑流畅 */
-const MAX_EDITOR_HIGHLIGHT = 100000
-/* 小文件同步着色：避免输入后等待节流定时器，文字实时出现 */
-const MAX_EDITOR_HIGHLIGHT_SYNC = 20000
 /* Markdown 预览渲染上限：超长文档只渲染前段，避免解析/排版阻塞界面 */
 const MAX_MARKDOWN_PREVIEW = 400000
 
@@ -62,100 +63,12 @@ const markdownPreviewContent = computed(() => {
   return content.length > MAX_MARKDOWN_PREVIEW ? content.slice(0, MAX_MARKDOWN_PREVIEW) : content
 })
 
-/* 文本域 / 行号栏 / 高亮层元素引用（用于滚动同步与按键处理） */
-const editorRef = ref<HTMLTextAreaElement | null>(null)
-const gutterRef = ref<HTMLElement | null>(null)
-const highlightRef = ref<HTMLElement | null>(null)
+/* 只读代码行数（编辑态行号由 CodeMirror 提供） */
+const lineCount = computed(() => (props.file ? props.file.content.split('\n').length : 0))
 
-/* 代码行数：编辑态取草稿，预览/只读取文件内容 */
-const lineCount = computed(() => {
-  if (!props.file) {
-    return 0
-  }
-  const text = props.editable ? draft.value : props.file.content
-  return text.split('\n').length
-})
-
-/* 高亮输入节流：连续输入时延后重算，避免逐键全量着色造成卡顿 */
-const highlightSource = ref('')
-let highlightTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(
-  draft,
-  (value, previous) => {
-    /* 首次加载或小文件立即着色，避免输入后文字延迟出现 */
-    if (previous === undefined || value.length <= MAX_EDITOR_HIGHLIGHT_SYNC) {
-      if (highlightTimer) {
-        clearTimeout(highlightTimer)
-        highlightTimer = null
-      }
-      highlightSource.value = value
-      return
-    }
-    if (highlightTimer) {
-      clearTimeout(highlightTimer)
-    }
-    highlightTimer = setTimeout(() => {
-      highlightTimer = null
-      highlightSource.value = value
-    }, 80)
-  },
-  { immediate: true }
-)
-
-onBeforeUnmount(() => {
-  if (highlightTimer) {
-    clearTimeout(highlightTimer)
-    highlightTimer = null
-  }
-})
-
-/* 编辑区语法高亮：按文件名推断语言，末尾补换行以对齐最后一行高度 */
-const highlightedDraft = computed(() => {
-  if (!props.file) {
-    return ''
-  }
-  /* 超大文件跳过着色，避免重算造成卡顿 */
-  if (highlightSource.value.length > MAX_EDITOR_HIGHLIGHT) {
-    return `${escapeHtml(highlightSource.value)}\n`
-  }
-  return `${highlightCode(highlightSource.value, languageOf(props.file.name))}\n`
-})
-
-/* 编辑器按键：⌘/Ctrl+S 保存；Tab 插入两个空格 */
-function onEditorKeydown(event: KeyboardEvent): void {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-    event.preventDefault()
-    emit('save')
-    return
-  }
-  if (event.key === 'Tab') {
-    event.preventDefault()
-    const el = editorRef.value
-    if (!el) {
-      return
-    }
-    const { selectionStart, selectionEnd } = el
-    draft.value = `${draft.value.slice(0, selectionStart)}  ${draft.value.slice(selectionEnd)}`
-    void nextTick(() => {
-      el.selectionStart = el.selectionEnd = selectionStart + 2
-    })
-  }
-}
-
-/* 编辑区滚动 → 同步行号栏与高亮层的偏移，保持内容对齐 */
-function syncGutter(): void {
-  const editor = editorRef.value
-  if (!editor) {
-    return
-  }
-  if (gutterRef.value) {
-    gutterRef.value.scrollTop = editor.scrollTop
-  }
-  if (highlightRef.value) {
-    highlightRef.value.scrollTop = editor.scrollTop
-    highlightRef.value.scrollLeft = editor.scrollLeft
-  }
+/* 透传编辑器保存事件 */
+function onSave(): void {
+  emit('save')
 }
 </script>
 
@@ -208,24 +121,16 @@ function syncGutter(): void {
         <div v-else class="viewer-empty error">{{ mediaError }}</div>
       </div>
       <div v-else-if="file.binary" class="viewer-empty">{{ t('panel.binary') }}</div>
-      <!-- 可编辑：带行号的纯文本编辑器（⌘/Ctrl+S 保存），高亮层置于文本域下方 -->
-      <div v-else-if="editable" class="editor">
-        <div ref="gutterRef" class="editor-gutter">
-          <span v-for="n in lineCount" :key="n">{{ n }}</span>
-        </div>
-        <div class="editor-code">
-          <pre ref="highlightRef" class="editor-highlight hljs" aria-hidden="true"><code v-html="highlightedDraft"></code></pre>
-          <textarea
-            ref="editorRef"
-            v-model="draft"
-            class="editor-input"
-            wrap="off"
-            spellcheck="false"
-            @scroll="syncGutter"
-            @keydown="onEditorKeydown"
-          ></textarea>
-        </div>
-      </div>
+      <!-- 可编辑：CodeMirror 6（⌘/Ctrl+S 保存、⌘/Ctrl+F 文件内查找） -->
+      <CodeEditor
+        v-else-if="editable"
+        :key="file.path"
+        v-model="draft"
+        class="viewer-editor"
+        :file-name="file.name"
+        :theme="props.editorTheme"
+        @save="onSave"
+      />
       <!-- 只读（如超大文件被截断）：纯文本展示 -->
       <div v-else class="code-scroll">
         <div class="code-inner">
@@ -324,83 +229,10 @@ function syncGutter(): void {
   white-space: pre;
 }
 
-/* 可编辑代码区：行号 + 高亮层 + 透明文本域三者叠加（GitHub 代码底色） */
-.editor {
+/* 可编辑代码区：CodeMirror 自适应剩余高度（视觉样式见 CodeEditor.vue） */
+.viewer-editor {
   flex: 1;
   min-height: 0;
-  display: flex;
-  align-items: stretch;
-  background: var(--desk-code-bg);
-}
-
-.editor-gutter {
-  flex-shrink: 0;
-  overflow: hidden;
-  min-width: 52px;
-  padding: 12px 14px 12px 16px;
-  background: var(--desk-code-bg);
-  border-right: 1px solid var(--desk-code-border);
-  text-align: right;
-  color: var(--desk-text-tertiary);
-  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
-  font-size: var(--desk-font-sm);
-  line-height: 22px;
-  font-variant-numeric: tabular-nums;
-  user-select: none;
-}
-
-.editor-gutter span {
-  display: block;
-  height: 22px;
-}
-
-/* 代码容器：高亮层与透明文本域完全重叠，保证字符逐一对齐 */
-.editor-code {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.editor-highlight,
-.editor-input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 12px 18px;
-  border: none;
-  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
-  font-size: var(--desk-font-sm);
-  line-height: 22px;
-  white-space: pre;
-  tab-size: 2;
-  overflow: auto;
-}
-
-.editor-highlight {
-  background: transparent;
-  color: var(--desk-code-text);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.editor-input {
-  outline: none;
-  resize: none;
-  background: transparent;
-  color: transparent;
-  caret-color: var(--desk-text);
-}
-
-.editor-input::placeholder {
-  color: var(--desk-text-tertiary);
-}
-
-.editor-input::selection {
-  background: var(--desk-selection);
-}
-
-.editor-code:focus-within {
-  box-shadow: inset 0 0 0 1px var(--desk-code-border);
 }
 
 /* Markdown 预览：显式 min-height 保证长文档在面板内滚动，而不是把面板撑开 */

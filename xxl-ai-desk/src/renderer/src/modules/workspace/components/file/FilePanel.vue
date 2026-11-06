@@ -14,6 +14,7 @@ import { t } from '@renderer/i18n'
 import { useWorkspaceStore } from '@renderer/stores/workspace'
 import { normalizePath, parentDir } from '../../utils/path'
 import { imageMimeOf, mediaKindOf } from '@shared/fileTypes'
+import { isEditorThemeId, type EditorThemeId } from './editorThemes'
 import FileToolbar from './FileToolbar.vue'
 import FileViewer from './FileViewer.vue'
 import FileTreePanel from './FileTreePanel.vue'
@@ -30,6 +31,24 @@ const props = defineProps<{
 /* 会话工作区 store：选中文件与预览态按会话隔离 */
 const workspace = useWorkspaceStore()
 const fileState = computed(() => workspace.sliceOf(props.sessionId).fileExplorer)
+
+/* 编辑器主题：本地持久化，跨会话共用 */
+const EDITOR_THEME_KEY = 'desk-editor-theme'
+const editorTheme = ref<EditorThemeId>(
+  isEditorThemeId(localStorage.getItem(EDITOR_THEME_KEY))
+    ? (localStorage.getItem(EDITOR_THEME_KEY) as EditorThemeId)
+    : 'auto'
+)
+
+/* 切换编辑器主题并持久化 */
+function onThemeCommand(theme: EditorThemeId): void {
+  editorTheme.value = theme
+  try {
+    localStorage.setItem(EDITOR_THEME_KEY, theme)
+  } catch {
+    /* 本地存储不可用时忽略（仅影响恢复） */
+  }
+}
 /* 文件树是否收起（收起时仅展示文件内容） */
 const treeCollapsed = computed(() => fileState.value.treeCollapsed)
 
@@ -411,12 +430,14 @@ async function menuRemove(): Promise<void> {
       :has-root="Boolean(root)"
       :tree-collapsed="treeCollapsed"
       :open-apps="openApps"
+      :editor-theme="editorTheme"
       @save="save"
       @toggle-preview="preview = !preview"
       @toggle-tree="toggleTree"
       @reveal="revealFolder"
       @open-default="openDefault"
       @open-command="onOpenCommand"
+      @theme-command="onThemeCommand"
     />
 
     <div class="file-main">
@@ -445,6 +466,7 @@ async function menuRemove(): Promise<void> {
         :is-video="isVideo"
         :is-audio="isAudio"
         :saving="saving"
+        :editor-theme="editorTheme"
         @save="save"
       />
     </div>

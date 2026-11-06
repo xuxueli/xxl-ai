@@ -205,6 +205,10 @@ function onInputKeydown(event: KeyboardEvent): void {
 
 /* 全局快捷键：⌘/Ctrl+F 唤起会话内搜索 */
 function onGlobalKeydown(event: KeyboardEvent): void {
+  /* 编辑器（如 CodeMirror 文件内查找）已处理时不抢占 */
+  if (event.defaultPrevented) {
+    return
+  }
   const modifier = event.metaKey || event.ctrlKey
   if (!modifier || event.altKey || event.shiftKey) {
     return

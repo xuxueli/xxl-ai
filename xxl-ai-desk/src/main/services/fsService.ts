@@ -12,8 +12,8 @@ import { assertInside } from '../utils/pathGuard'
 import { getProject } from './projectService'
 import type { FileContent, FsEntry } from '@shared/ipc'
 
-/* 文本预览体积上限（超出仅截断展示） */
-const MAX_TEXT_BYTES = 5 * 1024 * 1024
+/* 文本预览体积上限（超过 10MB 仅截断展示，编辑器自动进入只读） */
+const MAX_TEXT_BYTES = 10 * 1024 * 1024
 /* 图片内联预览体积上限 */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
