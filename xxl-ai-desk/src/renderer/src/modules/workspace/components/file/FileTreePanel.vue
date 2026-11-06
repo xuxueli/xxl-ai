@@ -80,20 +80,22 @@ onBeforeUnmount(() => {
   observer = null
 })
 
-/* 按文件区宽度夹取目录树宽度（10% - 90%） */
+/* 按文件区宽度夹取目录树宽度：目录树最小 150px，正文最小 150px */
 function clampTreeWidth(width: number): number {
   if (containerWidth.value === 0) {
-    return width
+    return Math.max(LAYOUT.fileTree.minWidth, width)
   }
-  const min = containerWidth.value * LAYOUT.fileTree.minRatio
-  const max = containerWidth.value * LAYOUT.fileTree.maxRatio
-  return Math.min(max, Math.max(min, width))
+  const max = Math.max(
+    LAYOUT.fileTree.minWidth,
+    containerWidth.value - LAYOUT.fileTree.contentMinWidth
+  )
+  return Math.min(max, Math.max(LAYOUT.fileTree.minWidth, width))
 }
 
 /*
- * 目录树宽度：按像素保存，展示时动态夹取。
- *   - 面板 dock / focus 切换时保持像素宽度，不随面板放大同比变宽；
- *   - 拖拽仍可达到当前文件区的 10% - 90%。
+ * 目录树宽度：按像素保存，展示时按文件区宽度动态夹取。
+ *   - 默认 240px，面板 dock / focus 切换时保持像素宽度；
+ *   - 上限为「文件区宽度 - 正文最小宽度」，不设置固定最大宽度。
  */
 const treeWidth = computed({
   get: () => clampTreeWidth(fileState.value.treeWidth),
@@ -161,12 +163,12 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
 </template>
 
 <style scoped lang="scss">
-/* 左侧文件树：宽度可拖拽，限制在文件区的 10% - 90% */
+/* 左侧文件树：宽度可拖拽，最小 150px，正文至少保留 150px */
 .file-tree {
   position: relative;
   flex-shrink: 0;
-  min-width: 10%;
-  max-width: 90%;
+  min-width: 150px;
+  max-width: calc(100% - 150px);
   display: flex;
   flex-direction: column;
   min-height: 0;

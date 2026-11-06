@@ -1,6 +1,5 @@
 /* 文件面板 UI 动作：选中文件、预览、过滤与目录展开态 */
 
-import { LAYOUT } from '@renderer/config/layout'
 import { defaultTreeWidth, type WorkspaceState } from './state'
 
 /* 文件动作依赖的会话状态读取函数 */
@@ -27,15 +26,14 @@ export function createFileExplorerActions(stateOf: StateOf) {
     stateOf(key).fileExplorer.expanded = expanded
   }
 
-  /* 设置目录树宽度（展示时由组件按 10% - 90% 动态约束） */
+  /* 设置目录树宽度（展示时按文件区宽度与正文最小宽度动态约束） */
   function setTreeWidth(key: string, width: number): void {
     stateOf(key).fileExplorer.treeWidth = Math.max(0, Math.round(width))
   }
 
-  /* 恢复目录树默认宽度：按当前工具面板宽度自适应 */
+  /* 恢复目录树默认宽度：固定 240px，展示时按可用宽度夹取 */
   function resetTreeWidth(key: string): void {
-    const state = stateOf(key)
-    state.fileExplorer.treeWidth = defaultTreeWidth(state.toolPanel.width)
+    stateOf(key).fileExplorer.treeWidth = defaultTreeWidth()
   }
 
   /* 切换文件树区域收起 / 展开 */

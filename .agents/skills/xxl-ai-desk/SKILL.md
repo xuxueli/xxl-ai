@@ -128,6 +128,7 @@ modules/settings/    pages/ · components/ · index.ts
 |---|---|
 | 跨进程 DTO / IPC 常量 / DeskApi | `shared/contracts/*.ts` + `shared/ipc.ts` |
 | 跨进程纯函数 / 常量（如文件类型、URL 归一） | `shared/*.ts` |
+| 跨进程布局常量（窗口最小宽度、顶栏高度） | `shared/*.ts`，主进程与渲染层共用 |
 | 主进程业务与编排 | `main/services/{module}Service.ts` |
 | 主进程运行时门面 / 审批 / 社区抓取 | `main/agent/host/*` |
 | Agent 工具 / 会话 / MCP | `main/agent/worker/*` |
@@ -194,6 +195,22 @@ modules/settings/    pages/ · components/ · index.ts
 - 全局 `:has(.el-overlay)` → 顶栏拖拽永久失效。
 - 加载遮罩未限制定位上下文 → 抽屉关闭按钮被遮罩吞点击。
 - 只做程序化点击测试 → 漏掉真实窗口拖拽区问题。
+
+### 2.6 布局与尺寸 [硬]
+
+- **单一数据源**：JS 侧尺寸只取 `renderer/src/config/layout.ts#LAYOUT`，CSS 侧取 `styles/tokens.scss`；同一尺寸在两处出现时，改动必须同步，并在注释标注权威方。
+- **跨进程共享尺寸**（窗口最小宽度、顶栏高度等）下沉 `shared/`，主进程直接引用常量计算，禁止写魔法数（如窗口 `minWidth`）。
+- **布局不变量**（2026-11 基线）：
+  - 图标栏 44px；按需独立于顶栏高度，不共用同一 token；
+  - 子菜单：默认 240px、最小 150px、最大由会话区约束；
+  - 工具面板：默认视口 50%、最小 150px；文件工具展开目录树时最小 300px；
+  - 会话区：最小 400px，任一面板拖动 / 窗口缩放都必须成立；
+  - 文件树：默认 240px、最小 150px；文件正文：最小 150px；
+  - 窗口最小宽度需满足上述最小值之和（当前 44 + 150 + 300 + 400 = 894，取 900）。
+- **工具面板宽度约定**：`0` 表示「自动按视口比例」，正数表示用户自定义像素；复位回到自动，不要写死旧默认值。
+- **约束只在 `config/layout.ts` 推导**：`sidebarWidthMax` / `toolPanelWidthMax` / `toolPanelMinWidth` 为纯函数；composable 只做 store 读写与响应式装配，组件内禁止重复硬编码 min/max。
+- **宽度约束双向成立**：面板上限要基于另一面板的实际宽度计算，不能只保证单侧。
+- **默认值调整优先字段级归一化**：`STORAGE_VERSION` 升级会清空全部会话工作区状态（宽度、展开态、选中文件），仅在结构不兼容时使用。
 
 ## 3. 开发流程
 
@@ -352,6 +369,18 @@ layout/index.vue（app-wrapper，纵向）
 - 不展示：MCP 工具、`read_skill` 等插件内部工具、仅服务单一业务模块的辅助 Tool；
 - 分类与工具清单按产品白名单维护，不按工具工厂输出自动展开。
 
+### 6.2 沙箱与信任边界 [硬]
+
+- **信任域只有两个**：会话项目目录（读 / 写 / 命令）与技能库 `{dataDir}/skills`（读 / 写 / 命令，完全信任）；其它目录一律走越界审批。
+- **技能库读取权限 ≠ 技能启用状态**：
+  - 技能库整库永远可读（含未启用技能、技能根目录列举），不得弹审批；
+  - 「启用」只决定提示词注入与 `read_skill` 是否可用（使用权限）；
+  - 禁止用「是否启用」限制 `read_file` / `list_directory` / 技能库读取。
+- **技能根目录由主进程每轮下发**（`RunAgentInput.skillsDir`）；工具侧禁止自行推断或拼接技能目录。
+- **越界审批只走统一闸门**：`guardPath` → `hitl` → 主进程 → 渲染层；新增文件 / 命令工具必须复用 `createGuard` / `guardPath`，禁止自写路径判断。
+- **`run_command` 的路径识别只防误操作，不是安全边界**：动态展开（`$VAR`、命令替换）、解释器（`python -c`、`sh -c`）无法覆盖；不要为它叠加脆弱的「只读命令白名单」或其它启发式解析。
+- **会话信任粒度**：当前 `sessionTrusted` 为会话级全量放行；后续扩展必须收敛为「目录 + 动作」粒度，避免一次授权放大到全部读写命令。
+
 ## 7. 校验清单
 
 - [ ] 需求目录 `xxl-ai-spec/{yyyyMMdd}-{module}/` 存在，`方案.md` 与 SQL 同步。
@@ -363,6 +392,8 @@ layout/index.vue（app-wrapper，纵向）
 - [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
 - [ ] UI 复用 tokens/外壳/列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
+- [ ] 布局尺寸变更已同步 `config/layout.ts` 与 `tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
+- [ ] 技能库读写不触发审批；`read_skill` 仍只认已启用技能；未新增脆弱的 shell 只读命令白名单。
 - [ ] 资源生命周期闭环；超时/取消/失败隔离/进程无残留。
 - [ ] `npm run type-check`、`npm run build` 通过；涉及 IPC/运行时完成端到端验证。
 - [ ] 注释与命名符合既有风格；无死代码/调试残留/测试数据。

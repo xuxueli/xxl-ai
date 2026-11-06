@@ -7,7 +7,7 @@ export const DRAFT_SESSION_KEY = '__draft__'
 
 /* 持久化键前缀与结构版本 */
 export const STORAGE_PREFIX = 'desk:workspace:'
-export const STORAGE_VERSION = 3
+export const STORAGE_VERSION = 5
 
 /* 工具面板当前工具 */
 export type WorkspaceTool = 'files' | 'browser' | 'terminal' | 'git' | 'diagnostics'
@@ -53,7 +53,7 @@ export interface FileExplorerState {
   keyword: string
   /* 目录展开态 */
   expanded: Record<string, boolean>
-  /* 目录树宽度（px，展示时按 10% - 90% 动态约束） */
+  /* 目录树宽度（px，展示时按最小 150px、正文最小 150px 动态约束） */
   treeWidth: number
   /* 是否收起文件树区域（仅展示文件内容） */
   treeCollapsed: boolean
@@ -78,7 +78,8 @@ export function createState(): WorkspaceState {
     toolPanel: {
       visible: false,
       activeTool: 'files',
-      width: LAYOUT.toolPanel.defaultWidth,
+      /* 0 表示自动：按视口 50% 计算，窗口变化时保持比例 */
+      width: 0,
       mode: 'dock'
     },
     terminalPanel: {
@@ -90,7 +91,7 @@ export function createState(): WorkspaceState {
       preview: false,
       keyword: '',
       expanded: {},
-      treeWidth: defaultTreeWidth(LAYOUT.toolPanel.defaultWidth),
+      treeWidth: LAYOUT.fileTree.defaultWidth,
       treeCollapsed: false
     },
     gitSidebarWidth: LAYOUT.git.defaultSidebarWidth,
@@ -124,25 +125,23 @@ function activeToolOf(value: unknown): WorkspaceTool {
     : 'files'
 }
 
-/*
- * 默认目录树宽度：按工具面板宽度自适应。
- *   - 目标宽度为工具面板的 45%；
- *   - 限制在 180px - 300px，面板放大时目录树保持稳定，不随面板无限变宽。
- */
-export function defaultTreeWidth(toolPanelWidth: number): number {
-  const target = Math.max(1, toolPanelWidth) * LAYOUT.fileTree.defaultRatio
-  return Math.round(
-    Math.min(
-      LAYOUT.fileTree.defaultMaxWidth,
-      Math.max(LAYOUT.fileTree.defaultMinWidth, target)
-    )
-  )
+/* 默认目录树宽度：固定像素值（展示时按文件区宽度与正文最小宽度动态夹取） */
+export function defaultTreeWidth(): number {
+  return LAYOUT.fileTree.defaultWidth
 }
 
 /* 解析目录树宽度：非法时回落默认值 */
-function treeWidthOf(value: unknown, toolPanelWidth: number): number {
+function treeWidthOf(value: unknown): number {
   const width = Number((value as { treeWidth?: unknown } | undefined)?.treeWidth)
-  return Number.isFinite(width) && width > 0 ? Math.round(width) : defaultTreeWidth(toolPanelWidth)
+  return Number.isFinite(width) && width > 0 ? Math.round(width) : defaultTreeWidth()
+}
+
+/* 解析工具面板宽度：0 表示自动比例，正数按最小宽度兜底 */
+function toolWidthOf(value: unknown): number {
+  const width = Number((value as { width?: unknown } | undefined)?.width)
+  return Number.isFinite(width) && width > 0
+    ? Math.max(LAYOUT.toolPanel.minWidth, Math.round(width))
+    : 0
 }
 
 /* 归一化持久化数据：结构非法时逐字段回落默认值 */
@@ -153,10 +152,7 @@ export function normalizeState(raw: unknown): WorkspaceState {
     toolPanel: {
       visible: boolOf(parsed.toolPanel?.visible, base.toolPanel.visible),
       activeTool: activeToolOf(parsed.toolPanel?.activeTool),
-      width: Math.max(
-        LAYOUT.toolPanel.minWidth,
-        Math.round(Number(parsed.toolPanel?.width) || base.toolPanel.width)
-      ),
+      width: toolWidthOf(parsed.toolPanel),
       mode: parsed.toolPanel?.mode === 'focus' ? 'focus' : 'dock'
     },
     terminalPanel: {
@@ -169,10 +165,7 @@ export function normalizeState(raw: unknown): WorkspaceState {
       preview: boolOf(parsed.fileExplorer?.preview, false),
       keyword: stringOf(parsed.fileExplorer?.keyword, ''),
       expanded: expandedOf(parsed.fileExplorer?.expanded),
-      treeWidth: treeWidthOf(
-        parsed.fileExplorer,
-        Number(parsed.toolPanel?.width) || base.toolPanel.width
-      ),
+      treeWidth: treeWidthOf(parsed.fileExplorer),
       treeCollapsed: boolOf(parsed.fileExplorer?.treeCollapsed, false)
     },
     gitSidebarWidth: Math.max(

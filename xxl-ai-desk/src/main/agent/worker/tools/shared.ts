@@ -112,12 +112,16 @@ export function clipToolResult<T>(
  * 技能只读放行根目录：技能库整库可读（含未启用技能与目录列举），**永不弹审批**。
  * 这是「文件读取权限」；「是否启用」只决定 Agent 能否通过 read_skill 主动使用技能，
  * 两者是不同维度，不要用启用状态去限制文件读取。
- * 文件类工具与终端只读命令共用，保证技能库读取在各工具间一致。
  */
 export function readAllowedRootsOf(context: ToolContext): string[] {
   return [
     ...new Set([context.skillsDir, ...(context.skills ?? []).map((skill) => skill.dir)])
   ].filter((dir): dir is string => Boolean(dir))
+}
+
+/* 技能库完全信任根目录：读 / 写 / 命令均直接放行（文件工具与终端共用） */
+export function skillTrustedRoots(context: ToolContext): string[] {
+  return context.skillsDir ? [context.skillsDir] : []
 }
 
 /*
@@ -128,7 +132,7 @@ export function readAllowedRootsOf(context: ToolContext): string[] {
 export function createGuard(context: ToolContext) {
   const readAllowedRoots = readAllowedRootsOf(context)
   /* 技能库为完全信任目录：Agent 可读写技能内容，不触发越界审批 */
-  const trustedRoots = context.skillsDir ? [context.skillsDir] : []
+  const trustedRoots = skillTrustedRoots(context)
   return async function guard(
     target: string | undefined,
     action: PathAction,

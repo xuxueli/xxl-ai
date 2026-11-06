@@ -7,35 +7,39 @@
 export const LAYOUT = {
   /* 左侧常驻图标栏宽度（独立于顶栏高度） */
   railWidth: 44,
-  /* 左侧子菜单栏宽度 */
-  sidebar: { default: 240, min: 100 },
-  /* 右侧工具面板宽度 / 正文最小可用宽度 */
-  toolPanel: { defaultWidth: 520, minWidth: 40, minChatWidth: 300 },
+  /* 左侧子菜单栏宽度（最大宽度由会话区最小宽度动态约束） */
+  sidebar: { default: 240, min: 150 },
+  /* 右侧工具面板：默认按视口比例、最小宽度与会话区最小宽度 */
+  toolPanel: { defaultRatio: 0.5, minWidth: 150, minChatWidth: 400 },
   /* Git 工具：左侧变更树默认宽度 */
   git: { defaultSidebarWidth: 240 },
-  /* 文件工具：目录树默认占比与默认宽度区间 / 拖拽占比上下限 */
-  fileTree: {
-    defaultRatio: 0.45,
-    defaultMinWidth: 180,
-    defaultMaxWidth: 300,
-    minRatio: 0.1,
-    maxRatio: 0.9
-  }
+  /* 文件工具：目录树默认/最小宽度与正文最小宽度 */
+  fileTree: { defaultWidth: 240, minWidth: 150, contentMinWidth: 150 }
 } as const
 
-/* 左侧子菜单栏最大宽度：为工具面板最小宽度与会话区最小宽度预留 */
-export function sidebarWidthMax(viewportWidth: number, toolDocked: boolean): number {
-  const reserved = toolDocked ? LAYOUT.toolPanel.minWidth : 0
+/* 左侧子菜单栏最大宽度：为工具面板当前宽度与会话区最小宽度预留 */
+export function sidebarWidthMax(viewportWidth: number, toolWidth: number): number {
   return Math.max(
     LAYOUT.sidebar.min,
-    viewportWidth - LAYOUT.railWidth - reserved - LAYOUT.toolPanel.minChatWidth
+    viewportWidth - LAYOUT.railWidth - toolWidth - LAYOUT.toolPanel.minChatWidth
   )
 }
 
-/* 右侧工具面板最大宽度：保障会话区最小宽度 */
-export function toolPanelWidthMax(viewportWidth: number, sidebarWidth: number): number {
+/* 右侧工具面板最大宽度：保障会话区最小宽度；minWidth 为当前工具所需的最小宽度 */
+export function toolPanelWidthMax(
+  viewportWidth: number,
+  sidebarWidth: number,
+  minWidth: number = LAYOUT.toolPanel.minWidth
+): number {
   return Math.max(
-    LAYOUT.toolPanel.minWidth,
+    minWidth,
     viewportWidth - LAYOUT.railWidth - sidebarWidth - LAYOUT.toolPanel.minChatWidth
   )
+}
+
+/* 工具面板最小宽度：文件工具展开目录树时，需同时容纳「树 + 正文」的最小宽度 */
+export function toolPanelMinWidth(fileTreeVisible: boolean): number {
+  return fileTreeVisible
+    ? LAYOUT.fileTree.minWidth + LAYOUT.fileTree.contentMinWidth
+    : LAYOUT.toolPanel.minWidth
 }

@@ -39,9 +39,9 @@ export function createPanelActions(stateOf: StateOf) {
     stateOf(key).toolPanel.width = Math.max(LAYOUT.toolPanel.minWidth, Math.round(width))
   }
 
-  /* 恢复工具面板默认宽度 */
+  /* 恢复工具面板默认宽度：0 表示按视口比例自动（50%），窗口变化时保持比例 */
   function resetToolWidth(key: string): void {
-    stateOf(key).toolPanel.width = LAYOUT.toolPanel.defaultWidth
+    stateOf(key).toolPanel.width = 0
   }
 
   /* 设置工具面板布局模式 */

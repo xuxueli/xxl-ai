@@ -242,7 +242,7 @@ function syncGutter(): void {
 <style scoped lang="scss">
 .file-viewer {
   flex: 1;
-  min-width: 0;
+  min-width: 150px;
   min-height: 0;
   display: flex;
   flex-direction: column;
