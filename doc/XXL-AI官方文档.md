@@ -1303,7 +1303,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 | 主进程 harness | `agent/host/runtimeHost.ts`（托管 / 通信）、`host/approval.ts`（审批）、`host/community/*`（mcp.so / skills.sh 抓取）、`host/skills/githubInstaller.ts` |
 | 运行时进程 | `agent/worker/tools/*`（内置工具）、`agent/worker/hitl.ts`（人机交互）、`agent/worker/mcp/*`（MCP 客户端与装配）、`agent/worker/sandbox.ts` |
 | 契约 | `shared/contracts/mcp.ts`、`shared/contracts/skill.ts`、`shared/contracts/provider.ts`、`shared/agentProtocol.ts` |
-| 渲染层 | `modules/plugin/{pages,components,skill,mcp,builtin}`、`modules/workspace/*` |
+| 渲染层 | `modules/plugin/{pages,components,skill,mcp,builtin}`、`modules/toolPanel/*` |
 
 #### 6.4.1、供应商
 
@@ -1670,32 +1670,20 @@ docker compose down
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 > 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
-6、默认配色，淡蓝色；
-
-
-- 结构化重构：单模块内聚。
-  - 会话：项目/会话、对话区、工具面板
-    （项目：项目目录，Agent，记忆开关）
-    （框左下：+文件/强制使用，模式/不限制）
-    （输右下：模型，发送/队列）
-  - 自动化：任务列表，任务类会话icon。【新5】
-    （输入：项目、时间 ）
-  - 扩展中心：
-    ——Agent：【新3】
-      默认（指令/工具配置）
-      编程：文件
-      办公：ppt、excel
-      知心朋友：
-      应用创造（创造工具）
-    ——MCP工具、Skill技能：
-    ——内置工具：+长程任务插件【新4】
-  - 应用中心：安装卸载、自定义扩展。【新2】
-    —— 笔记：目录、导航、编辑、预览。
-     （搜/换，图，本地文件。启用/新菜单）
-    —— 应用市场：启用/卸载，入口。
-    —— 创造应用：注册入口，应用目录文件。
-  - 系统设置：
-    ——项目管理：记忆开关，Agent，会话管理；【新1】
+- 12、MCP/SKILL市场：远程数据加载缓慢时，前端交互优化，避免页面黑屏等；
+- 9、【ING】主题色丰富：丰富软件主题色，提升用户体验；
+- 10、【ING】会话输入框优化：
+  - 输入框支持关联文件：新增“+“按钮功能，支持选择文件并关联到当前会话，便于Agent调用文件内容；
+  - 输入框支持输入队列：支持输入会话输入队列功能，上轮对话结束后、自动触发下一轮对话，提升操作效率；
+- 11、【ING】代码模块化重构：同一职责域代码收拢在单一模块内，对外仅暴露最小必要接口，避免跨模块散落同职责的实现细节；
+- 13、【ING】产品功能设计重构：
+  - 会话：项目/会话、对话区、工具面板；【新增1：发起会话，指定 项目 + Agent（固定）】
+  - 自动化：手动新建定时任务并关联 项目+Agent，自动化触发任务会话，会话添加任务icon后缀；【新增2】
+  - 扩展中心：在现有MCP/SKILL插件之外，新增 “Agent”功能；Agent支持自定义 指令、SKILL、MCP和内置工具等设置；【新增3】
+  - 应用中心：
+    - 笔记：支持 笔记文件目录、笔记Markdown编辑、内容目录、预览、搜索/替换、图片插入 等；
+    - 应用管理：支持 应用安装卸载、启用禁用 等；启用应用自动注册左侧菜单；
+  - 系统管理：新增 项目管理 功能，管理维护 项目记忆、项目Agent、项目会话等；【新增4】
 
 ### TODO LIST
 - 1、AI 能力增强：

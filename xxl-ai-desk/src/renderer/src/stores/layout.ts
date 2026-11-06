@@ -1,4 +1,4 @@
-/* 应用外壳布局状态：左侧栏折叠与宽度（会话内工具/终端状态见 workspace store） */
+/* 应用外壳布局状态：左侧栏折叠与宽度（会话内工具 / 终端状态见 toolPanel store） */
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'

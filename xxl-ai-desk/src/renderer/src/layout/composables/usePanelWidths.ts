@@ -4,26 +4,26 @@
  */
 import { computed } from 'vue'
 import { useLayoutStore } from '@renderer/stores/layout'
-import { useWorkspaceStore } from '@renderer/stores/workspace'
+import { useToolPanelStore } from '@renderer/stores/toolPanel'
 import { LAYOUT, sidebarWidthMax, toolPanelMinWidth, toolPanelWidthMax } from '@renderer/config/layout'
 import { useViewportWidth } from './useViewportWidth'
 
 /* 按会话返回面板状态与宽度约束 */
 export function usePanelWidths(sessionId: () => string) {
   const layout = useLayoutStore()
-  const workspace = useWorkspaceStore()
+  const toolPanelStore = useToolPanelStore()
   const viewportWidth = useViewportWidth()
 
   /* 当前会话工具面板状态 */
-  const toolPanel = computed(() => workspace.sliceOf(sessionId()).toolPanel)
-  const focused = computed(() => toolPanel.value.mode === 'focus')
+  const panel = computed(() => toolPanelStore.sliceOf(sessionId()).panel)
+  const focused = computed(() => panel.value.mode === 'focus')
   /* 工具面板是否 dock：决定侧栏是否为它预留会话区宽度 */
-  const toolDocked = computed(() => toolPanel.value.visible && !focused.value)
+  const toolDocked = computed(() => panel.value.visible && !focused.value)
 
   /* 工具面板期望宽度：宽度为 0 表示按视口比例取默认值（50%） */
   const desiredToolWidth = computed(() =>
-    toolPanel.value.width > 0
-      ? toolPanel.value.width
+    panel.value.width > 0
+      ? panel.value.width
       : Math.round(viewportWidth.value * LAYOUT.toolPanel.defaultRatio)
   )
 
@@ -34,9 +34,9 @@ export function usePanelWidths(sessionId: () => string) {
 
   /* 工具面板最小宽度：文件工具展开目录树时，需同时容纳「树 150 + 正文 150」 */
   const toolMinWidth = computed(() => {
-    const state = workspace.sliceOf(sessionId())
+    const state = toolPanelStore.sliceOf(sessionId())
     return toolPanelMinWidth(
-      state.toolPanel.activeTool === 'files' && !state.fileExplorer.treeCollapsed
+      state.panel.activeTab === 'files' && !state.fileExplorer.treeCollapsed
     )
   })
 
@@ -51,7 +51,7 @@ export function usePanelWidths(sessionId: () => string) {
         Math.max(toolMinWidth.value, desiredToolWidth.value)
       ),
     set: (value: number) =>
-      workspace.setToolWidth(
+      toolPanelStore.setPanelWidth(
         sessionId(),
         Math.min(maxToolWidth.value, Math.max(toolMinWidth.value, value))
       )
@@ -74,17 +74,17 @@ export function usePanelWidths(sessionId: () => string) {
   function resetSidebarWidth(): void {
     sidebarWidth.value = LAYOUT.sidebar.default
   }
-  function resetToolWidth(): void {
+  function resetPanelWidth(): void {
     /* 复位为「跟随视口 50%」的自动宽度，窗口变化时仍保持比例 */
-    workspace.resetToolWidth(sessionId())
+    toolPanelStore.resetPanelWidth(sessionId())
   }
 
   return {
-    toolPanel,
+    panel,
     focused,
     sidebarWidth,
     toolWidth,
     resetSidebarWidth,
-    resetToolWidth
+    resetPanelWidth
   }
 }

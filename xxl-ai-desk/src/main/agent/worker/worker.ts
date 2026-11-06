@@ -46,7 +46,7 @@ import type {
   WorkerRequest
 } from '@shared/agentProtocol'
 import { translate } from '@shared/i18n'
-import type { BrowserAction, BrowserActionResult, McpRuntimeConfig } from '@shared/ipc'
+import type { BrowserActionResult, McpRuntimeConfig } from '@shared/ipc'
 
 /* 与主进程通信的端口（utilityProcess 中始终存在） */
 const port = process.parentPort

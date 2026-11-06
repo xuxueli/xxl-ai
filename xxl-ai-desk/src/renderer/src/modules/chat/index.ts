@@ -6,8 +6,6 @@
 
 export { default as ChatInteractionDialog } from './components/interaction/InteractionDialog.vue'
 export { default as ChatSidebarPanel } from './components/ChatSidebarPanel.vue'
-export { default as ChatTopbarTitle } from './components/ChatTopbarTitle.vue'
 export { default as ChatSearchAction } from './components/ChatSearchAction.vue'
 export { default as ChatCommandPalette } from './components/CommandPalette.vue'
 export { useCommandPalette } from './composables/useCommandPalette'
-export { useSessionActions } from './composables/useSessionActions'

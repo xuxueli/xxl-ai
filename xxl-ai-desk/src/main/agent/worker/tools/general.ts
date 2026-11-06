@@ -6,7 +6,7 @@ import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { ALL_MODES, describe, text, type ToolContext, type ToolEntry } from './shared'
 
 /* 构建通用类工具 */
-export async function createGeneralTools(context: ToolContext): Promise<ToolEntry[]> {
+export async function createGeneralTools(_context: ToolContext): Promise<ToolEntry[]> {
   const { Type } = await import('@earendil-works/pi-ai')
 
   /* 获取当前时间：本地日期时间，可选 IANA 时区 */

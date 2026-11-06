@@ -1,4 +1,4 @@
-/* 会话级对话 UI 状态：输入草稿与消息滚动位置（与工作区工具/终端状态分离） */
+/* 会话级对话 UI 状态：输入草稿与消息滚动位置（与工具面板状态分离） */
 
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'

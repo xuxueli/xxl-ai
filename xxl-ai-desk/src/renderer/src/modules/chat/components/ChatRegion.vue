@@ -12,7 +12,7 @@ import EmptyState from './EmptyState.vue'
 import { useChatStore } from '@renderer/stores/chat'
 import { useSettingsStore } from '@renderer/stores/settings'
 import { useProjectStore } from '@renderer/stores/project'
-import { DRAFT_SESSION_KEY } from '@renderer/stores/workspace'
+import { DRAFT_SESSION_KEY } from '@renderer/stores/toolPanel'
 import { useChatUiStore } from '@renderer/stores/chatUi'
 import { t } from '@renderer/i18n'
 import type { ChatMode } from '@shared/ipc'
@@ -23,10 +23,10 @@ const settings = useSettingsStore()
 const project = useProjectStore()
 const chatUi = useChatUiStore()
 
-/* 当前工作区 key：真实会话 id；新建对话草稿态使用固定 key */
-const workspaceKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
-/* 当前会话的工作区切片（草稿、滚动位置） */
-const chatUiState = computed(() => chatUi.sliceOf(workspaceKey.value))
+/* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
+const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+/* 当前会话的对话 UI 切片（草稿、滚动位置） */
+const chatUiState = computed(() => chatUi.sliceOf(sessionKey.value))
 
 /* 消息滚动容器与输入框组件引用 */
 const scrollRef = ref<HTMLElement | null>(null)
@@ -52,7 +52,7 @@ function flushScrollTop(): void {
     scrollWriteTimer = null
   }
   if (scrollRef.value) {
-    chatUi.setScrollTop(workspaceKey.value, scrollRef.value.scrollTop)
+    chatUi.setScrollTop(sessionKey.value, scrollRef.value.scrollTop)
   }
 }
 
@@ -145,9 +145,9 @@ watch(
 /* 流式内容增长：仅在贴近底部时跟随 */
 watch(streamSignature, () => scrollToBottom())
 
-/* 切会话：确保目标工作区已创建，并在消息渲染后恢复各自的滚动位置 */
+/* 切会话：确保目标会话的工具面板状态已创建，并在消息渲染后恢复各自的滚动位置 */
 watch(
-  workspaceKey,
+  sessionKey,
   (key) => {
     chatUi.ensure(key)
     nearBottom.value = true

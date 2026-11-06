@@ -23,7 +23,7 @@ export const QUICK_ACTIONS: QuickActionItem[] = [
   { id: 'agent', labelKey: 'agent.title', icon: 'MagicStick' },
   { id: 'plugin', labelKey: 'plugin.title', icon: 'SetUp' },
   { id: 'settings', labelKey: 'settings.title', icon: 'Setting' },
-  { id: 'terminal', labelKey: 'workspace.terminal', svg: 'terminal' },
+  { id: 'terminal', labelKey: 'toolPanel.terminal', svg: 'terminal' },
   { id: 'files', labelKey: 'panel.files', icon: 'Folder' },
   { id: 'browser', labelKey: 'panel.browser', svg: 'browser' }
 ]

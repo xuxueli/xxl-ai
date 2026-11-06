@@ -217,7 +217,7 @@
       "scrollFailedDetail": "Scroll failed: {0}"
     }
   },
-  "workspace": {
+  "toolPanel": {
     "terminal": "Terminal",
     "newTerminal": "New terminal",
     "terminalExited": "Terminal exited (code {0})",

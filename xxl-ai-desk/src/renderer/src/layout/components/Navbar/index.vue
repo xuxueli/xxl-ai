@@ -8,10 +8,9 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ChatCommandPalette,
   ChatSearchAction,
-  ChatTopbarTitle,
   useCommandPalette
 } from '@renderer/modules/chat'
-import { WorkspacePanelToggle } from '@renderer/modules/workspace'
+import { ToolPanelToggle } from '@renderer/modules/toolPanel'
 import { useChatStore } from '@renderer/stores/chat'
 import { useSettingsStore } from '@renderer/stores/settings'
 import { useLayoutStore } from '@renderer/stores/layout'
@@ -87,15 +86,14 @@ function goHome(): void {
       <!-- 有标题时展示分隔线（｜），分隔软件名称与标题 -->
       <span v-if="hasTitle" class="topbar-sep" aria-hidden="true"></span>
       <div v-if="hasTitle" class="desk-topbar-context">
-        <ChatTopbarTitle v-if="isChat" :title="pageTitle" />
-        <div v-else class="topbar-title">{{ pageTitle }}</div>
+        <span class="topbar-title">{{ pageTitle }}</span>
       </div>
     </div>
 
-    <!-- 对话页操作：搜索（chat）+ 终端/工具面板（workspace） -->
+    <!-- 对话页操作：搜索（chat）+ 终端 / 工具面板（toolPanel） -->
     <div v-if="isChat" class="desk-topbar-actions">
       <ChatSearchAction />
-      <WorkspacePanelToggle />
+      <ToolPanelToggle />
     </div>
 
     <!-- 会话搜索命令面板：由顶栏搜索入口唤起 -->
@@ -181,6 +179,10 @@ function goHome(): void {
 
 /* 非对话页标题（插件 / 系统设置） */
 .topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--desk-font-base);
   font-weight: 500;
   color: var(--desk-text-secondary);

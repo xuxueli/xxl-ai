@@ -7,13 +7,13 @@ import { computed, ref, watch } from 'vue'
 import { api } from '@renderer/api'
 import { useProjectStore } from '../project'
 import { useSettingsStore } from '../settings'
-import { DRAFT_SESSION_KEY, useWorkspaceStore } from '../workspace'
+import { DRAFT_SESSION_KEY, useToolPanelStore } from '../toolPanel'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from './lastSession'
 import { mapStoredMessages, uid } from './messageMapping'
 import { createChatStream } from './stream'
 import { NEW_CHAT_TITLE } from '@shared/ipc'
-import type { ChatMode, ChatEvent, SessionDTO } from '@shared/ipc'
-import type { ToolCallState, UiMessage } from '@renderer/types'
+import type { ChatMode, SessionDTO } from '@shared/ipc'
+import type { UiMessage } from '@renderer/types'
 
 /* 会话与对话状态 */
 export const useChatStore = defineStore('chat', () => {
@@ -128,8 +128,8 @@ export const useChatStore = defineStore('chat', () => {
     sessions.value = [session, ...sessions.value]
     currentId.value = session.id
     messages.value = []
-    /* 草稿工作区迁移给新建会话：切回该会话时保留开新对话前的面板状态 */
-    useWorkspaceStore().adoptDraft(session.id)
+    /* 草稿工具面板迁移给新建会话：切回该会话时保留开新对话前的面板状态 */
+    useToolPanelStore().adoptDraft(session.id)
     return session
   }
 
@@ -138,8 +138,8 @@ export const useChatStore = defineStore('chat', () => {
     /* 允许在其它会话生成时进入新对话草稿：各会话生成状态相互独立 */
     currentId.value = ''
     messages.value = []
-    /* 确保草稿工作区已创建（含本地持久化恢复） */
-    useWorkspaceStore().ensure(DRAFT_SESSION_KEY)
+    /* 确保草稿工具面板状态已创建（含本地持久化恢复） */
+    useToolPanelStore().ensure(DRAFT_SESSION_KEY)
   }
 
   /* 删除会话 */
@@ -149,7 +149,7 @@ export const useChatStore = defineStore('chat', () => {
     stream.discard(id)
     delete streamingIds.value[id]
     sessions.value = sessions.value.filter((item) => item.id !== id)
-    /* 该会话的工作区/浏览器/对话 UI 资源由 useSessionLifecycle 统一回收 */
+    /* 该会话的工具面板 / 浏览器 / 对话 UI 资源由 useSessionLifecycle 统一回收 */
     /* 清除「最后会话」记录：避免下次启动定位到已删除的会话 */
     clearLastSessionId(id)
     if (currentId.value === id) {

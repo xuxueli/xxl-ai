@@ -9,18 +9,18 @@ import SidebarContent from './SidebarContent.vue'
 import PanelResizer from '../PanelResizer/index.vue'
 import { useLayoutStore } from '@renderer/stores/layout'
 import { useChatStore } from '@renderer/stores/chat'
-import { DRAFT_SESSION_KEY } from '@renderer/stores/workspace'
+import { DRAFT_SESSION_KEY } from '@renderer/stores/toolPanel'
 import { usePanelWidths } from '@renderer/layout/composables/usePanelWidths'
 import { t } from '@renderer/i18n'
 
 const layout = useLayoutStore()
 const chat = useChatStore()
 
-/* 当前工作区 key：真实会话 id；新建对话草稿态使用固定 key */
-const workspaceKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+/* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
+const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
 
 /* 侧栏宽度：按窗口、工具面板与会话区最小宽度动态约束 */
-const { sidebarWidth, resetSidebarWidth } = usePanelWidths(() => workspaceKey.value)
+const { sidebarWidth, resetSidebarWidth } = usePanelWidths(() => sessionKey.value)
 </script>
 
 <template>

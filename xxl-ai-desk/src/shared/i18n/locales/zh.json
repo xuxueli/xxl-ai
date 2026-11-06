@@ -217,7 +217,7 @@
       "scrollFailedDetail": "滚动失败：{0}"
     }
   },
-  "workspace": {
+  "toolPanel": {
     "terminal": "终端",
     "newTerminal": "新建终端",
     "terminalExited": "终端已退出（代码 {0}）",

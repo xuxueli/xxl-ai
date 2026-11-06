@@ -56,10 +56,10 @@ src/
     │   └── utils/              布局域单消费者工具（persistedWidth）
     ├── composables/            跨模块组合式函数（useAppBootstrap / usePanelResize / useSessionLifecycle / useQuickAction）
     ├── utils/                  无 Vue / 组件依赖的纯工具（ipcError / shortcut / localFileUrl）
-    ├── stores/*.ts             根 store（project/settings/workspace/mcp/skill/chatUi/layout/browserSession）
+    ├── stores/*.ts             根 store（project/settings/toolPanel/mcp/skill/chatUi/layout/browserSession）
     │   ├── stores/chat/        会话域拆分：index / stream / messageMapping / lastSession
-    │   └── stores/workspace/   工作区拆分：index / state / storage / panel / fileExplorer / terminalTabs
-    ├── modules/{chat,workspace,plugin,settings}/
+    │   └── stores/toolPanel/  工具面板拆分：index / state / storage / panel / fileExplorer / gitPanel / terminalTabs
+    ├── modules/{chat,toolPanel,plugin,settings}/
     ├── i18n/index.ts           装配 shared 文案 + t()
     ├── config/nav.ts           板块 ↔ 路由 ↔ 标题 ↔ 子菜单（唯一导航来源）
     ├── router/index.ts         Hash 路由（直接 import 模块 pages）
@@ -73,7 +73,7 @@ src/
 
 ```
 modules/chat/        pages/ · components/ · composables/ · utils/ · index.ts
-modules/workspace/   components/{hosts,git,browser,file,terminal}/ · composables/ · utils/ · index.ts
+modules/toolPanel/  components/{hosts,git,browser,file,terminal}/ · composables/ · utils/ · index.ts
 modules/plugin/      pages/ · components/ · utils/ · builtin/{pages,catalog.ts} · mcp/{pages,components}/ · skill/{pages,components}/
 modules/settings/    pages/ · components/ · index.ts
 ```
@@ -114,11 +114,11 @@ modules/settings/    pages/ · components/ · index.ts
 - **components 纯净**：`renderer/src/components` 只放跨模块展示组件，禁止依赖 `stores/*`、`api`、`modules/*`；统一目录 + `index.vue` + barrel。
 - **layout 受控依赖**：`layout` 可组合模块公共 `index.ts`，禁止引用模块内部文件。
 - **跨模块只走公共面**：模块 `index.ts`、store、全局 `components/composables/utils`；禁止 import 其它模块的 `pages/`、内部 `components/`、内部 `utils/`。唯一例外是路由挂载页面（无 `index.ts` 的 `plugin` 只由路由引用 `pages/`）。
-- **index.ts 只导出跨模块真正需要的**：不把内部 `components/composables` 全量透传（当前 `chat` / `workspace` 的 barrel 存在透传，新增导出按本规则）。
+- **index.ts 只导出跨模块真正需要的**：不把内部 `components/composables` 全量透传（当前 `chat` / `toolPanel` 的 barrel 存在透传，新增导出按本规则）。
 - **上移条件**：`components / composables / utils` 被 **2 个及以上模块**使用才上移到 `renderer/src` 对应目录。
 - **目录规模**：单个模块目录 ≤20 个文件；超限按子业务拆分（参考 `plugin/mcp`、`plugin/skill`）。
 - **禁止桶文件**：`utils.ts / common.ts / helpers.ts / manager.ts` 不得承载多领域逻辑，文件名必须表达领域语义。
-- **会话级 UI 状态**：跨面板/跨页面的会话态放 `stores/workspace/` 与 `createSessionScopedStorage`，不放组件局部或全局单例。
+- **会话级 UI 状态**：跨面板/跨页面的会话态放 `stores/toolPanel/` 与 `createSessionScopedStorage`，不放组件局部或全局单例。
 - **闭环检验**：改一个功能应只动「模块目录 + 其契约 + 调用方」；若要动 3 个以上模块，先重划边界。
 - **适配器扩展**：多实现场景用「接口 + 注册表」，新增实现只加文件、不改调用方。
 
@@ -210,7 +210,17 @@ modules/settings/    pages/ · components/ · index.ts
 - **工具面板宽度约定**：`0` 表示「自动按视口比例」，正数表示用户自定义像素；复位回到自动，不要写死旧默认值。
 - **约束只在 `config/layout.ts` 推导**：`sidebarWidthMax` / `toolPanelWidthMax` / `toolPanelMinWidth` 为纯函数；composable 只做 store 读写与响应式装配，组件内禁止重复硬编码 min/max。
 - **宽度约束双向成立**：面板上限要基于另一面板的实际宽度计算，不能只保证单侧。
-- **默认值调整优先字段级归一化**：`STORAGE_VERSION` 升级会清空全部会话工作区状态（宽度、展开态、选中文件），仅在结构不兼容时使用。
+- **默认值调整优先字段级归一化**：`STORAGE_VERSION` 升级会清空全部工具面板状态（宽度、展开态、选中文件），仅在结构不兼容时使用。
+
+### 2.7 命名、去重与清理 [硬]
+
+- **命名表达职责，拒绝泛化词**：模块、Store、类型、i18n 命名空间使用同一词根（如 `toolPanel` / `useToolPanelStore` / `ToolPanelTab` / `toolPanel.*`）；不用 `workspace`、`panel`、`manager` 等跨语义词承载单一职责。
+- **同一能力只保留一个主入口**：侧栏 / 子菜单已有的操作，顶栏、详情页等外壳不重复实现；确需快捷入口时复用同一 action，不复制重命名 / 删除等逻辑。
+- **不写不存在的兼容**：无真实存量数据或明确要求时，不做旧字段 / 旧前缀迁移；确需兼容时只在读取边界单点归一，并注明过期时间与移除条件。
+- **删除功能要闭环**：组件、composable、barrel 导出、i18n 键、样式、CSS 类名、注释、文档与 Skill 同步删除；禁止留下无引用“孤岛文件”。
+- **死代码只有两种处理**：接入使用，或删除。发现未被引用的组件时先确认是否为遗失功能，再决定接线还是移除。
+- **清理校验**：重命名后全仓搜索旧词（含路径、类型、i18n key、CSS class、文档）；用 `tsc --noUnusedLocals --noUnusedParameters` 清理未使用导入 / 变量 / 参数。
+- **描述精简**：Agent 工具描述只保留「做什么 + 默认行为 + 关键限制」，不堆叠实现细节与重复提示。
 
 ## 3. 开发流程
 
@@ -325,13 +335,13 @@ layout/index.vue（app-wrapper，纵向）
 
 - **术语边界**：`layout` 指应用外壳；`nav` 指导航；`sidebar` 指左侧整列；`rail` 指图标栏；`panel` 只指正文内可调整尺寸的面板（工具/终端/文件/浏览器）；`shell` 只用于操作系统 shell（`api.shell`、`desk:shell:*`）。
 - **导航单一来源**：板块 ↔ 入口路径 ↔ 顶栏标题 ↔ 子菜单项均在 `config/nav.ts`（`NAV_SECTIONS` / `SECTION_ENTRY` / `SECTION_ICON`）。新增板块需同步：`nav.ts`、`SidebarRail` 按钮、路由与正文页。
-- **顶栏**：左侧依次为首页入口（回到对话模块新建对话页）与软件名称（`appName` 优先、回落 `app.name`），其后为板块图标 + 标题/操作，标题随路由（首页=会话标题，插件=「插件」，设置=「系统设置」）；软件名称与标题间的细线仅在有标题时展示；交互控件 `no-drag`。
+- **顶栏**：左侧依次为首页入口（回到对话模块新建对话页）与软件名称（`appName` 优先、回落 `app.name`），其后为板块图标 + 标题/操作，标题随路由（首页=会话标题，插件=「插件」，设置=「系统设置」）；软件名称与标题间的细线仅在有标题时展示；交互控件 `no-drag`。顶栏标题只做展示，不重复会话重命名 / 删除等侧栏已有操作。
 - **子菜单**：标题 18px/600，条目 14px/400，选中项 600 + 浅底；不展示 Logo；点击当前板块按钮切换子菜单栏折叠/展开，图标栏常驻。
 - **布局不承载域逻辑**：域内逻辑下沉 `modules/{module}`；`SidebarContent` 是唯一装配侧栏域内容的位置。
 - **布局不承载启动逻辑**：`App.vue` 只组装外壳；全局快捷键、设置/项目/会话初始化、会话生命周期与更新检查在 `composables/useAppBootstrap.ts`。
 - **面板宽度约束**：左侧栏与右侧工具面板均按像素持久化，最小 40px，最大保证会话区不低于 300px；拖拽统一走 `usePanelResize`（rAF 合并）与 `PanelResizer`。
 - **工具面板统一入口**：文件 / Git / 浏览器 / 终端均为右侧工具面板的 Tab，顺序为文件、Git、终端、浏览器；不再保留底部独立终端面板。
-- **面板交互统一复用**：拖拽用 `composables/usePanelResize.ts` + `layout/components/PanelResizer/index.vue`；左侧栏宽度走 `stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `stores/workspace/`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
+- **面板交互统一复用**：拖拽用 `composables/usePanelResize.ts` + `layout/components/PanelResizer/index.vue`；左侧栏宽度走 `stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `stores/toolPanel/`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
 - **共享选中态归属域**：跨「子菜单 ↔ 页面」的选中态放所属域 store（如 `settings.activeTab`），不塞进 `layout`。
 - **配色分层**：`--desk-chrome-bg`（顶栏+图标栏）> `--desk-panel-bg`（子菜单栏）> `--desk-bg`（正文）；不加分隔线，仅「子菜单栏 ↔ 正文」保留 1px `--desk-border`。
 - **尺寸令牌**：`--desk-header-height`、`--desk-rail-width`、`--desk-sidebar-width`、`--desk-terminal-height`、`--desk-panel-header-height`；JS 侧尺寸统一取 `config/layout.ts#LAYOUT`；自绘 SVG 统一 `.desk-svg-icon`，尺寸由使用处覆盖。

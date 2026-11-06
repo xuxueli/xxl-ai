@@ -11,7 +11,6 @@ import { logIpcError } from './utils/logger'
 import type {
   AgentMemorySaveInput,
   AppSettings,
-  BrowserAction,
   BrowserActionResult,
   GitCommitInput,
   GitDiffInput,

@@ -5,7 +5,6 @@
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useMcpStore } from '@renderer/stores/mcp'
-import { ipcErrorMessage } from '@renderer/utils/ipcError'
 import { api } from '@renderer/api'
 import { t } from '@renderer/i18n'
 import McpDiscoverDetailDrawer from './McpDiscoverDetailDrawer.vue'

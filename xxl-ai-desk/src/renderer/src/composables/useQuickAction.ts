@@ -2,17 +2,17 @@
 
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@renderer/stores/chat'
-import { DRAFT_SESSION_KEY, useWorkspaceStore } from '@renderer/stores/workspace'
+import { DRAFT_SESSION_KEY, useToolPanelStore } from '@renderer/stores/toolPanel'
 import { SECTION_ENTRY } from '@renderer/config/nav'
 import type { QuickAction } from '@shared/ipc'
 
 export function useQuickAction(): (action: QuickAction) => void {
   const router = useRouter()
   const chat = useChatStore()
-  const workspace = useWorkspaceStore()
+  const toolPanel = useToolPanelStore()
 
-  /* 当前工作区 key：真实会话 id；新建对话草稿态使用固定 key */
-  function workspaceKey(): string {
+  /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
+  function sessionKey(): string {
     return chat.currentId || DRAFT_SESSION_KEY
   }
 
@@ -33,15 +33,15 @@ export function useQuickAction(): (action: QuickAction) => void {
     } else if (action === 'terminal') {
       /* 回到对话页并在工具面板中打开终端 */
       router.push('/')
-      workspace.openTerminal(workspaceKey())
+      toolPanel.openTerminal(sessionKey())
     } else if (action === 'files') {
       /* 回到对话页并展开当前会话的文件面板 */
       router.push('/')
-      workspace.openTool(workspaceKey(), 'files')
+      toolPanel.openTab(sessionKey(), 'files')
     } else if (action === 'browser') {
       /* 回到对话页并展开当前会话的浏览器面板 */
       router.push('/')
-      workspace.openTool(workspaceKey(), 'browser')
+      toolPanel.openTab(sessionKey(), 'browser')
     }
   }
 }

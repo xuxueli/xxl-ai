@@ -10,7 +10,7 @@ const DEFAULT_DELAY = 300
 
 /* 持久化配置 */
 export interface SessionScopedStorageOptions<T> {
-  /* 键前缀（如 desk:workspace:） */
+  /* 键前缀（如 desk:toolPanel:） */
   prefix: string
   /* 结构版本（不一致时视为无缓存） */
   version: number
