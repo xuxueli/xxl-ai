@@ -34,9 +34,9 @@ export type Appearance = (typeof APPEARANCES)[number]
 
 /* 主题配色预设（顺序即设置页展示顺序：中性 → 蓝 → 暖 → 青绿 → 紫，第一套为安装默认） */
 export const THEME_PRESETS = [
-  /* 中性 */
-  'classic',
+  /* 中性（极简灰为安装默认） */
   'github',
+  'classic',
   /* 蓝色系 */
   'onedark',
   'tokyo-night',

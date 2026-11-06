@@ -95,6 +95,7 @@ modules/settings/    pages/ · components/ · index.ts
 - `services` import `agent/worker` → 违规；`agent/*` 出现 `getDb()` / DDL → 违规。
 - renderer 里出现 `window.desk`（除 `api/index.ts`）、`fs`、`child_process` → 违规。
 - 跨模块引用只允许：模块 `index.ts` 导出、对应 store、全局 `components/composables/utils`。
+- 同一职责域在两个模块各有一份实现 → 违规；先确定唯一归属，再让调用方改走其公共入口。
 
 补充：
 - **唯一持久化出口**：`getDb()` 只在 `services/*`；`agent/*` 可经 service 读配置，不写业务表。
@@ -107,14 +108,21 @@ modules/settings/    pages/ · components/ · index.ts
   - `ipc.ts` 部分 handler 含会话运行时清理与 `resetAgents()`（目标改由 service 提供统一入口）。
   - `composables/useHighlight.ts` 同时服务 Markdown 与文件查看器；`useContentLink` 依赖 `api.shell`，两者暂留全局；Markdown 专属的 `useMarkdown` / `useCodeBlock` / `sanitize` 已收进 `components/MarkdownBlock/`。
 
-### 1.4 模块边界（硬约束）
+### 1.4 模块边界与职责收拢（硬约束）
 
 - **一个功能 = 一个模块**：service、契约、IPC、preload、store、页面/组件、文案、SQL、需求目录同属该模块。
+- **职责域单一归属（收拢）**：同一职责域的数据读写、校验、归一、默认值、派生、编排与运行时状态，只在该域模块内实现；其它模块只能经其公共入口调用，禁止复制或降级重写。例：会话删除级联与运行时清理只在会话 service，面板只调入口。
+- **跨进程归属**：同一域跨进程存在是允许的，但权威规则只在主进程 `services/*`；渲染层只保留展示态与交互态，禁止复制业务校验、默认值与状态机。
+- **最小暴露面**：模块 `index.ts` 只导出调用方真实使用的 DTO / 行为入口；内部行结构、常量、辅助函数、子组件、缓存实现一律不导出，没有调用方就不导出。
+- **不向调用方泄漏实现**：跨模块只传契约 DTO 与行为结果，不暴露表结构、SQL、内部协议、第三方 SDK 类型与缓存键。
+- **单向依赖**：调用方向只能是「使用方 → 被复用模块」，禁止双向 / 循环依赖；共享逻辑下沉到真正低层（`shared/` 或全局 `utils`），不靠模块互引打补丁。
 - **模块自包含**：页面放 `pages/`（页内弹窗内联）、模块内共享件放 `components/`、组合式函数放 `composables/`、纯函数放 `utils/`、跨模块出口放 `index.ts`。
 - **components 纯净**：`renderer/src/components` 只放跨模块展示组件，禁止依赖 `stores/*`、`api`、`modules/*`；统一目录 + `index.vue` + barrel。
 - **layout 受控依赖**：`layout` 可组合模块公共 `index.ts`，禁止引用模块内部文件。
+- **外壳不承载域逻辑**：`layout`、顶栏、路由与页面壳不实现域的默认值、校验、派生与状态流转，只装配模块公共入口。
 - **跨模块只走公共面**：模块 `index.ts`、store、全局 `components/composables/utils`；禁止 import 其它模块的 `pages/`、内部 `components/`、内部 `utils/`。唯一例外是路由挂载页面（无 `index.ts` 的 `plugin` 只由路由引用 `pages/`）。
-- **index.ts 只导出跨模块真正需要的**：不把内部 `components/composables` 全量透传（当前 `chat` / `toolPanel` 的 barrel 存在透传，新增导出按本规则）。
+- **重构以收拢为默认动作**：发现同职责散落时，先定唯一归属模块 → 实现迁入 → 调用方改走公共入口 → 删除副本；禁止「新写一份、旧的不动」。
+- **收拢不等于提前泛化**：归属唯一针对同一职责域；跨域相似但边界不同的实现可保留，抽象仍按 `AGENTS.md` 的「第三次」原则。
 - **上移条件**：`components / composables / utils` 被 **2 个及以上模块**使用才上移到 `renderer/src` 对应目录。
 - **目录规模**：单个模块目录 ≤20 个文件；超限按子业务拆分（参考 `plugin/mcp`、`plugin/skill`）。
 - **禁止桶文件**：`utils.ts / common.ts / helpers.ts / manager.ts` 不得承载多领域逻辑，文件名必须表达领域语义。
@@ -123,6 +131,8 @@ modules/settings/    pages/ · components/ · index.ts
 - **适配器扩展**：多实现场景用「接口 + 注册表」，新增实现只加文件、不改调用方。
 
 ### 1.5 落位速查
+
+落位前先判定职责域：一个需求涉及多个域时按域拆到各自模块，不新建「跨域公共模块」；域内实现只落在归属模块。
 
 | 新增内容 | 落位 |
 |---|---|
@@ -216,6 +226,8 @@ modules/settings/    pages/ · components/ · index.ts
 
 - **命名表达职责，拒绝泛化词**：模块、Store、类型、i18n 命名空间使用同一词根（如 `toolPanel` / `useToolPanelStore` / `ToolPanelTab` / `toolPanel.*`）；不用 `workspace`、`panel`、`manager` 等跨语义词承载单一职责。
 - **同一能力只保留一个主入口**：侧栏 / 子菜单已有的操作，顶栏、详情页等外壳不重复实现；确需快捷入口时复用同一 action，不复制重命名 / 删除等逻辑。
+- **同一职责不散落**：业务规则（校验、归一、默认值、状态流转、级联清理）全仓只有一处实现，其它位置调公共入口；发现第二份实现即按 §1.4 收拢，不追加「临时同步」注释。
+- **导出即契约**：barrel / `index.ts` 的每个导出都要有真实调用方；无调用方的导出删除，内部实现不进入公共面。
 - **不写不存在的兼容**：无真实存量数据或明确要求时，不做旧字段 / 旧前缀迁移；确需兼容时只在读取边界单点归一，并注明过期时间与移除条件。
 - **删除功能要闭环**：组件、composable、barrel 导出、i18n 键、样式、CSS 类名、注释、文档与 Skill 同步删除；禁止留下无引用“孤岛文件”。
 - **死代码只有两种处理**：接入使用，或删除。发现未被引用的组件时先确认是否为遗失功能，再决定接线还是移除。
@@ -397,6 +409,8 @@ layout/index.vue（app-wrapper，纵向）
 - [ ] 结构一致：`schema.ts` / `DDL`。
 - [ ] `services/*` 是唯一 `getDb()` 出口；`ipc.ts` 仅网关；契约 / IPC 常量 / `DeskApi` / preload 齐备。
 - [ ] 依赖方向符合 §1.3；配置与运行时未耦合；运行时使用官方方案。
+- [ ] 同一职责域只有一处实现，跨模块仅经公共入口；`index.ts` 无未使用导出、无循环 / 双向依赖。
+- [ ] 外壳、`ipc.ts`、调用方未承载域内校验 / 归一 / 默认值 / 级联清理。
 - [ ] 新增/变更依赖为精确版本（无 `^` / `~` / 区间）；lock 当前被 `.gitignore` 忽略，如放开需同步提交。
 - [ ] 通道 `desk:{module}:{action}`；时间 ISO；布尔归一。
 - [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。

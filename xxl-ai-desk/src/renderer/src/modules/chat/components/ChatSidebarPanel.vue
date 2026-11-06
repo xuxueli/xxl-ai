@@ -210,4 +210,9 @@ async function onSelect(id: string): Promise<void> {
   color: var(--desk-primary);
 }
 
+/* 空状态说明：对齐侧栏次要文案字号，避免 Element 默认 15px 盖过列表条目 */
+.sidebar-list :deep(.el-empty__description p) {
+  font-size: var(--desk-font-sm);
+}
+
 </style>

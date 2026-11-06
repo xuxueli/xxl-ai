@@ -79,6 +79,11 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
   display: none;
 }
 
+/* 取消内容区裁剪：主题卡片等元素的选中描边为外发光，默认 overflow:hidden 会裁掉左右 1px */
+.settings-tabs :deep(.el-tabs__content) {
+  overflow: visible;
+}
+
 .settings-inner {
   max-width: 940px;
   margin: 0 auto;

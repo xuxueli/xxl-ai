@@ -1,7 +1,7 @@
 /*
  * 主题预设（换肤配置单一来源）
  *
- * 展示顺序以 contracts/app.ts 的 THEME_PRESETS 为准，第一套为安装默认（经典灰）。
+ * 展示顺序以 contracts/app.ts 的 THEME_PRESETS 为准，第一套为安装默认（极简灰）。
  * 每套预设定义浅色 / 深色两组颜色种子；语义 token 由 tokens.scss 的 mixin 统一推导。
  * 表面层级（由亮到暗）：content > sidebar > panel > chrome；elevated 为悬浮层，浅色下比 content 略暗。
  * 新增主题：在此追加浅色 / 深色两组种子，并在 contracts/app.ts 的 THEME_PRESETS 登记。
@@ -10,34 +10,9 @@
  */
 
 /* ============================================================
- * 经典灰（默认，暖中性灰）
+ * 极简灰（GitHub Primer，冷中性灰；安装默认）
  * ============================================================ */
 :root,
-[data-palette='classic'] {
-  --theme-brand: #3f3f46;
-  --theme-brand-strong: #27272a;
-  --theme-brand-contrast: #ffffff;
-  --theme-chrome: #f2f2f4;
-  --theme-sidebar: #fafafa;
-  --theme-panel: #f7f7f9;
-  --theme-content: #ffffff;
-  --theme-elevated: #f4f4f6;
-  --theme-border: #e7e7ea;
-  --theme-text: #27272a;
-  --theme-text-secondary: #5e5e66;
-  --theme-text-tertiary: #8a8a92;
-  --theme-success: #1f7a4d;
-  --theme-warning: #8a6a16;
-  --theme-danger: #d93025;
-  --theme-info: #3f5f8a;
-  --theme-mix-base: #ffffff;
-  --theme-mix-strong: #000000;
-  --theme-shadow: #000000;
-}
-
-/* ============================================================
- * 极简灰（GitHub Primer，冷中性灰）
- * ============================================================ */
 [data-palette='github'] {
   --theme-brand: #57606a;
   --theme-brand-strong: #24292f;
@@ -58,6 +33,31 @@
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #1f2328;
   --theme-shadow: #1f2328;
+}
+
+/* ============================================================
+ * 经典灰（暖中性灰）
+ * ============================================================ */
+[data-palette='classic'] {
+  --theme-brand: #3f3f46;
+  --theme-brand-strong: #27272a;
+  --theme-brand-contrast: #ffffff;
+  --theme-chrome: #f2f2f4;
+  --theme-sidebar: #fafafa;
+  --theme-panel: #f7f7f9;
+  --theme-content: #ffffff;
+  --theme-elevated: #f4f4f6;
+  --theme-border: #e7e7ea;
+  --theme-text: #27272a;
+  --theme-text-secondary: #5e5e66;
+  --theme-text-tertiary: #8a8a92;
+  --theme-success: #1f7a4d;
+  --theme-warning: #8a6a16;
+  --theme-danger: #d93025;
+  --theme-info: #3f5f8a;
+  --theme-mix-base: #ffffff;
+  --theme-mix-strong: #000000;
+  --theme-shadow: #000000;
 }
 
 /* ============================================================
@@ -261,33 +261,11 @@
 }
 
 /* ============================================================
- * 深色外观：默认经典灰 + 各主题暗色种子
+ * 深色外观：默认极简灰 + 各主题暗色种子
  * 放在浅色主题之后，保证深色规则覆盖同名浅色种子。
  * 深色层级同样保持：content 最亮，chrome 最暗。
  * ============================================================ */
 :root.dark,
-.dark[data-palette='classic'] {
-  --theme-brand: #c4c4cc;
-  --theme-brand-strong: #dcdce2;
-  --theme-brand-contrast: #1c1c1f;
-  --theme-chrome: #111113;
-  --theme-sidebar: #19191c;
-  --theme-panel: #151518;
-  --theme-content: #1d1d20;
-  --theme-elevated: #252529;
-  --theme-border: #303035;
-  --theme-text: #e6e6ea;
-  --theme-text-secondary: #b0b0b8;
-  --theme-text-tertiary: #8a8a92;
-  --theme-success: #4cc38a;
-  --theme-warning: #e5a54a;
-  --theme-danger: #f2555a;
-  --theme-info: #6ea8ff;
-  --theme-mix-base: #000000;
-  --theme-mix-strong: #ffffff;
-  --theme-shadow: #000000;
-}
-
 .dark[data-palette='github'] {
   --theme-brand: #8b949e;
   --theme-brand-strong: #b1bac4;
@@ -305,6 +283,28 @@
   --theme-warning: #d29922;
   --theme-danger: #f85149;
   --theme-info: #8b949e;
+  --theme-mix-base: #000000;
+  --theme-mix-strong: #ffffff;
+  --theme-shadow: #000000;
+}
+
+.dark[data-palette='classic'] {
+  --theme-brand: #c4c4cc;
+  --theme-brand-strong: #dcdce2;
+  --theme-brand-contrast: #1c1c1f;
+  --theme-chrome: #111113;
+  --theme-sidebar: #19191c;
+  --theme-panel: #151518;
+  --theme-content: #1d1d20;
+  --theme-elevated: #252529;
+  --theme-border: #303035;
+  --theme-text: #e6e6ea;
+  --theme-text-secondary: #b0b0b8;
+  --theme-text-tertiary: #8a8a92;
+  --theme-success: #4cc38a;
+  --theme-warning: #e5a54a;
+  --theme-danger: #f2555a;
+  --theme-info: #6ea8ff;
   --theme-mix-base: #000000;
   --theme-mix-strong: #ffffff;
   --theme-shadow: #000000;
