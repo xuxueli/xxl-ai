@@ -162,6 +162,15 @@ body.resizing-vertical {
   background: var(--desk-text-tertiary);
 }
 
+/* --- 会话内搜索高亮（CSS Custom Highlight API） --- */
+::highlight(chat-search) {
+  background: color-mix(in srgb, var(--desk-warning) 28%, transparent);
+}
+
+::highlight(chat-search-active) {
+  background: color-mix(in srgb, var(--desk-warning) 68%, transparent);
+}
+
 /* --- Markdown 渲染 --- */
 .markdown-body {
   font-size: var(--desk-font-base);

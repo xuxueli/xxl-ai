@@ -122,6 +122,11 @@
     "railTurnOf": "Turn {0} of {1}",
     "railTurnRangeOf": "Turns {0}–{1} of {2}",
     "railQuestionFallback": "Question {0}",
+    "searchPlaceholder": "Search this conversation…",
+    "searchNoResult": "No results",
+    "searchPrev": "Previous match",
+    "searchNext": "Next match",
+    "searchClose": "Close search",
     "interaction": {
       "submit": "Submit",
       "cancel": "Cancel",

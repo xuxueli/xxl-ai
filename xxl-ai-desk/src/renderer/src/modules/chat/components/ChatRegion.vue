@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MessageItem from './MessageItem.vue'
 import ConversationRail from './ConversationRail.vue'
+import ChatSearchBox from './ChatSearchBox.vue'
 import ChatComposer from './ChatComposer.vue'
 import ChatEmptyExtras from './ChatEmptyExtras.vue'
 import EmptyState from './EmptyState.vue'
@@ -256,6 +257,9 @@ async function onRemoveMessage(message: { id: string }): Promise<void> {
 
     <!-- 空态：项目选择与示例入口 -->
     <ChatEmptyExtras v-if="!hasMessages" @example="onSend" />
+
+    <!-- 会话内搜索：⌘/Ctrl+F 唤起，右上角浮动 -->
+    <ChatSearchBox :messages="chat.messages" :container="scrollRef" />
   </div>
 </template>
 

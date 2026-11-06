@@ -122,6 +122,11 @@
     "railTurnOf": "第 {0} / {1} 轮",
     "railTurnRangeOf": "第 {0}–{1} / {2} 轮",
     "railQuestionFallback": "第 {0} 轮提问",
+    "searchPlaceholder": "搜索当前会话…",
+    "searchNoResult": "无结果",
+    "searchPrev": "上一处",
+    "searchNext": "下一处",
+    "searchClose": "关闭搜索",
     "interaction": {
       "submit": "提交",
       "cancel": "取消",
