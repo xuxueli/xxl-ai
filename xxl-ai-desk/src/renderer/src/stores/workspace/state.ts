@@ -55,6 +55,8 @@ export interface FileExplorerState {
   expanded: Record<string, boolean>
   /* 目录树宽度（px，展示时按 10% - 90% 动态约束） */
   treeWidth: number
+  /* 是否收起文件树区域（仅展示文件内容） */
+  treeCollapsed: boolean
 }
 
 /* 单个会话的工作区状态（仅存 UI 状态，不含 PTY / webview 运行时） */
@@ -88,7 +90,8 @@ export function createState(): WorkspaceState {
       preview: false,
       keyword: '',
       expanded: {},
-      treeWidth: defaultTreeWidth(LAYOUT.toolPanel.defaultWidth)
+      treeWidth: defaultTreeWidth(LAYOUT.toolPanel.defaultWidth),
+      treeCollapsed: false
     },
     gitSidebarWidth: LAYOUT.git.defaultSidebarWidth,
     updateTime: Date.now(),
@@ -169,7 +172,8 @@ export function normalizeState(raw: unknown): WorkspaceState {
       treeWidth: treeWidthOf(
         parsed.fileExplorer,
         Number(parsed.toolPanel?.width) || base.toolPanel.width
-      )
+      ),
+      treeCollapsed: boolOf(parsed.fileExplorer?.treeCollapsed, false)
     },
     gitSidebarWidth: Math.max(
       0,

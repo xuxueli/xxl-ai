@@ -158,6 +158,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
       runtimePath: input.runtimePath,
       mcpServers: input.mcpServers ?? [],
       skills: input.skills ?? [],
+      skillsDir: input.skillsDir,
       tools: input.tools,
       isAborted: () => isSessionAborted(input.sessionId)
     })

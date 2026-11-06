@@ -1234,12 +1234,11 @@ xxl-ai-desk/
 
 打包产物由 electron-builder 生成（mac：`dmg` + `zip`；win：`nsis`；linux：`AppImage` + `deb`），输出目录 `xxl-ai-desk/release/{version}/`。
 
-**macOS 提示「文件损坏」的临时处理**：当前 macOS 包未做代码签名与公证，在其他电脑安装时会被 Gatekeeper 打上隔离标记，提示「XXL-AI-Desk 已损坏，无法打开，你应该将它移到废纸篓」。但是，实际上文件并未损坏，去除隔离标记即可：
+**macOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 
 ```
-# 1、双击安装软件、把 App 拖入 /Applications（先不启动运行）；
-# 2、终端去除隔离标记（sudo 需输入密码），如下命令操作后，双击 App 启用运行使用；
-sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"
+# 将安装软件拖入 /Applications 后，终端执行如下命令即可
+sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 ```
 
 去除后正常打开；若首次仍被拦截，进入「系统设置 → 隐私与安全性 → 仍要打开」放行一次即可。
@@ -1644,8 +1643,8 @@ docker compose down
 - 15、【体验】外观主题：支持深色模式、浅色模式，以及自定义多主题设置，提升用户体验；
 - 16、【体验】会话区域体验优化：会话区域布局、交互调整，体验性升级； 
 
-> 补充说明：macOS 提示「文件损坏」并非实际损坏，而是因为 macOS Gatekeeper 对未签名的应用做了隔离标记，用户可以通过终端命令去除隔离标记来解决问题。
-> 操作处理：1、双击安装软件、把 App 拖入 /Applications（先不启动运行）；2、终端去除隔离标记（sudo 需输入密码）：`sudo xattr -rd com.apple.quarantine "/Applications/XXL-AI-Desk.app"`；3、双击 App 启用运行使用；
+> 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
+> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
 **【云版（Web 服务端）】**
 
@@ -1657,6 +1656,53 @@ docker compose down
 
 ### v1.4.1 Release Notes[ING]
 
+**【本地版（Desk 桌面端）】**
+
+- 1、【优化】沙箱文件权限优化：SKILL目录文件读取默认放行；
+- 2、【优化】文件工具面板优化：文件工具面板中文件树支持折叠，定位目录名左侧添加折叠/展开icon；
+- 
+- 查询安装目录文件，skill的子/孙子目录，频繁请求权限；
+
+> 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
+> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+
+
+2、左侧栏目，太窄不方面；
+3、限制最小宽度：左、中、右侧；默认右侧 50%；
+4、右侧，放大/缩小icon调整；
+5、长会话滚动，浮动快捷键；
+6、默认配色，淡蓝色；
+7、
+8、选中复制，文件名；
+9、操作浏览器，侧边栏不必固定；
+
+
+- 结构化重构：单模块内聚。
+  - 会话：项目/会话、对话区、工具面板
+    （项目：项目目录，Agent，记忆开关）
+    （框左下：+文件/强制使用，模式/不限制）
+    （输右下：模型，发送/队列）
+  - 自动化：任务列表，任务类会话icon。【新】
+    （输入：项目、时间 ）
+  - 扩展中心：
+    ——Agent：
+      默认（指令/工具配置）
+      编程：文件
+      办公：ppt、excel
+      知心朋友：
+      应用创造（创造工具）
+    ——MCP工具：
+    ——Skill技能：
+    ——内置工具：+长程任务插件
+  - 应用中心：安装卸载、自定义扩展。
+    —— 笔记：目录、导航、编辑、预览。
+     （搜/换，图，本地文件。启用/新菜单）
+    —— 应用市场：启用/卸载，入口。
+    —— 创造应用：注册入口，应用目录文件。
+  - 系统设置：
+    ——供应商模型：
+    ——运行时设置：
+    ——项目管理：记忆开关，Agent，会话管理
 
 ### TODO LIST
 - 1、AI 能力增强：

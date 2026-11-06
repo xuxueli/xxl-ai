@@ -146,6 +146,7 @@ function toggleFocus(): void {
         v-if="opened.files"
         v-show="activeTool === 'files'"
         :session-id="props.sessionId"
+        :project-id="props.projectId"
         :root="props.root"
         :project-name="props.projectName"
       />

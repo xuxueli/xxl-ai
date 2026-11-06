@@ -222,20 +222,20 @@ export interface DeskApi {
     /* 订阅终端输出 / 退出事件（返回取消订阅函数） */
     onEvent(cb: (event: TerminalEvent) => void): () => void
   }
-  /* 本地文件系统（右侧「工具 → 文件」面板使用，限定在项目目录内） */
+  /* 本地文件系统（右侧「工具 → 文件」面板使用，按项目主键限定项目目录内） */
   fs: {
     /* 列出目录项（子目录懒加载） */
-    list(root: string, dir: string): Promise<FsEntry[]>
+    list(projectId: string, dir: string): Promise<FsEntry[]>
     /* 读取文件内容（文本预览；图片附带预览数据 URL） */
-    read(root: string, path: string): Promise<FileContent>
+    read(projectId: string, path: string): Promise<FileContent>
     /* 写入文件内容 */
-    write(root: string, path: string, content: string): Promise<void>
+    write(projectId: string, path: string, content: string): Promise<void>
     /* 删除文件（移入系统废纸篓） */
-    trash(root: string, path: string): Promise<void>
+    trash(projectId: string, path: string): Promise<void>
     /* 监听目录变更（本地增删文件后自动刷新）；onChange 返回取消订阅函数 */
-    watch(dir: string): Promise<void>
+    watch(projectId: string, dir: string): Promise<void>
     /* 取消目录监听 */
-    unwatch(dir: string): Promise<void>
+    unwatch(projectId: string, dir: string): Promise<void>
     /* 订阅目录变更事件（返回取消订阅函数） */
     onChange(cb: (dir: string) => void): () => void
   }

@@ -13,13 +13,14 @@ import {
   BUILD_ONLY,
   MAX_OUTPUT,
   describe,
+  readAllowedRootsOf,
   text,
   toolError,
   tr,
   type ToolContext,
   type ToolEntry
 } from './shared'
-import { detectDangerousCommand, findOutsideTarget } from './shellPolicy'
+import { detectDangerousCommand, findOutsideTarget, isReadOnlyCommand } from './shellPolicy'
 import { guardPath } from '../sandbox'
 
 /* 运行时 PATH（主进程随每轮对话下发，供命令使用设置的 Node / Python 环境） */
@@ -34,6 +35,10 @@ export function setRuntimePath(value?: string): void {
 export async function createShellTools(context: ToolContext): Promise<ToolEntry[]> {
   const { Type } = await import('@earendil-works/pi-ai')
   const { rootDir } = context
+  /* 技能库只读放行根目录：与文件类工具共用同一套放行规则 */
+  const readAllowedRoots = readAllowedRootsOf(context)
+  /* 技能库为完全信任目录：命令访问技能库不触发越界审批 */
+  const trustedRoots = context.skillsDir ? [context.skillsDir] : []
 
   /* 执行命令：项目目录内执行 shell 并汇总 stdout/stderr，仅 Build 模式 */
   const runCommand: AgentTool = {
@@ -65,16 +70,18 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
           isError: true
         }
       }
-      /* 越界路径：与文件工具共用审批弹窗与会话级信任 */
+      /* 越界路径：与文件工具共用审批弹窗与会话级信任；纯读取命令按 read 动作走只读放行目录 */
       const outside = findOutsideTarget(command, rootDir)
       if (outside) {
         const outcome = await guardPath({
           sessionId: context.sessionId,
           rootDir,
           target: outside,
-          action: 'command',
+          action: isReadOnlyCommand(command) ? 'read' : 'command',
           tool: 'run_command',
-          language: context.language
+          language: context.language,
+          readAllowedRoots,
+          trustedRoots
         })
         if (!outcome.allowed) {
           return toolError(outcome.reason ?? tr(context, 'runtime.tool.commandBlocked', [outside]))

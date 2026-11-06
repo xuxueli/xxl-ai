@@ -72,7 +72,7 @@ import {
   resizeTerminal,
   writeTerminal
 } from './services/terminalService'
-import { listDir, readFile, trashFile, writeFile } from './services/fsService'
+import { assertProjectDir, listDir, readFile, trashFile, writeFile } from './services/fsService'
 import { initFsWatch, unwatchDir, watchDir } from './services/fsWatchService'
 import { listOpenWithApps, openWith } from './services/openWithService'
 import {
@@ -374,17 +374,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     getWindow()?.webContents.send(IPC.terminalEvent, event)
   })
 
-  /* --- 本地文件系统（右侧「文件」面板；限定项目目录内） --- */
-  handle(IPC.fsList, (_event, root: string, dir: string) => listDir(root, dir))
-  handle(IPC.fsRead, (_event, root: string, path: string) => readFile(root, path))
-  handle(IPC.fsWrite, (_event, root: string, path: string, content: string) =>
-    writeFile(root, path, content)
+  /* --- 本地文件系统（右侧「文件」面板；按项目主键限定，根目录由主进程解析） --- */
+  handle(IPC.fsList, (_event, projectId: string, dir: string) => listDir(projectId, dir))
+  handle(IPC.fsRead, (_event, projectId: string, path: string) => readFile(projectId, path))
+  handle(IPC.fsWrite, (_event, projectId: string, path: string, content: string) =>
+    writeFile(projectId, path, content)
   )
-  handle(IPC.fsTrash, (_event, root: string, path: string) => trashFile(root, path))
+  handle(IPC.fsTrash, (_event, projectId: string, path: string) => trashFile(projectId, path))
   /* 目录监听：本地增删文件后推送变更，渲染层刷新对应目录 */
   initFsWatch((dir) => getWindow()?.webContents.send(IPC.fsChange, dir))
-  handle(IPC.fsWatch, (_event, dir: string) => watchDir(dir))
-  handle(IPC.fsUnwatch, (_event, dir: string) => unwatchDir(dir))
+  handle(IPC.fsWatch, (_event, projectId: string, dir: string) =>
+    watchDir(assertProjectDir(projectId, dir))
+  )
+  handle(IPC.fsUnwatch, (_event, _projectId: string, dir: string) => unwatchDir(dir))
 
   /* --- 系统外壳能力 --- */
   handle(IPC.shellOpenExternal, (_event, url: string) => shell.openExternal(url))

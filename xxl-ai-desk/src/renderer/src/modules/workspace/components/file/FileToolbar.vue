@@ -13,6 +13,8 @@ defineProps<{
   editable: boolean
   dirty: boolean
   saving: boolean
+  /* 文件树是否收起 */
+  treeCollapsed: boolean
   /* 是否可预览、预览是否生效 */
   canPreview: boolean
   showPreview: boolean
@@ -26,6 +28,7 @@ defineProps<{
 const emit = defineEmits<{
   save: []
   'toggle-preview': []
+  'toggle-tree': []
   reveal: []
   'open-default': []
   'open-command': [command: string]
@@ -34,11 +37,21 @@ const emit = defineEmits<{
 
 <template>
   <div class="file-toolbar">
-    <div class="file-breadcrumb">
-      <template v-for="(seg, index) in breadcrumb" :key="index">
-        <span v-if="index > 0" class="crumb-sep">›</span>
-        <span class="crumb" :class="{ current: index === breadcrumb.length - 1 }">{{ seg }}</span>
-      </template>
+    <div class="file-leading">
+      <!-- 文件树折叠 / 展开：位于目录名左侧，控制整个文件树区域显隐 -->
+      <button
+        class="panel-btn tree-toggle"
+        :title="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')"
+        @click="emit('toggle-tree')"
+      >
+        <el-icon><Expand v-if="treeCollapsed" /><Fold v-else /></el-icon>
+      </button>
+      <div class="file-breadcrumb">
+        <template v-for="(seg, index) in breadcrumb" :key="index">
+          <span v-if="index > 0" class="crumb-sep">›</span>
+          <span class="crumb" :class="{ current: index === breadcrumb.length - 1 }">{{ seg }}</span>
+        </template>
+      </div>
     </div>
     <div class="file-actions">
       <button
@@ -133,9 +146,23 @@ const emit = defineEmits<{
   align-items: center;
   gap: 4px;
   min-width: 0;
+  flex: 1;
   overflow: hidden;
   font-size: var(--desk-font-sm);
   color: var(--desk-text-tertiary);
+}
+
+/* 左侧：文件树折叠按钮 + 面包屑 */
+.file-leading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-toggle {
+  flex-shrink: 0;
 }
 
 .crumb {

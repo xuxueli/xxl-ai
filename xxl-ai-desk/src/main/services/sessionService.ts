@@ -8,6 +8,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { getDb } from '../db'
 import { llmTraceTable, messageTable, sessionTable } from '../db/schema'
 import { disposeTerminalsBySession } from './terminalService'
+import { getProject } from './projectService'
 import { NEW_CHAT_TITLE } from '@shared/ipc'
 import type { SessionDTO, StoredMessage } from '@shared/ipc'
 
@@ -53,14 +54,23 @@ export function listSessions(): SessionDTO[] {
   return rows.map(toSessionDTO).sort((a, b) => b.updateTime.localeCompare(a.updateTime))
 }
 
+/* 校验会话归属项目：会话必须绑定有效项目，避免无项目会话把沙箱根退化为用户主目录 */
+function assertProject(projectId: string): void {
+  if (!projectId || !getProject(projectId)) {
+    throw new Error('会话必须归属有效项目，请先选择项目')
+  }
+}
+
 /* 创建会话 */
 export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
   const db = getDb()
+  const projectId = input.projectId || ''
+  assertProject(projectId)
   const now = new Date().toISOString()
   const record = {
     id: input.id || randomUUID(),
     title: input.title || NEW_CHAT_TITLE,
-    projectId: input.projectId || '',
+    projectId,
     providerId: input.providerId || '',
     modelId: input.modelId || '',
     mode: input.mode === 'plan' ? 'plan' : 'build',
@@ -77,6 +87,10 @@ export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDT
   const existing = db.select().from(sessionTable).where(eq(sessionTable.id, id)).get()
   if (!existing) {
     throw new Error('会话不存在')
+  }
+  /* 重新绑定项目时必须指向有效项目；缺省保持原项目不变 */
+  if (patch.projectId !== undefined) {
+    assertProject(patch.projectId)
   }
   const record = {
     ...existing,

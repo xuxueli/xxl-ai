@@ -10,8 +10,10 @@ import { normalizePath, parentDir } from '../utils/path'
 import type { FsEntry } from '@shared/ipc'
 
 export interface UseProjectFileTreeOptions {
-  /* 项目根目录（响应式取值） */
+  /* 项目根目录（响应式取值，用于路径展示与状态重置） */
   root: () => string | undefined
+  /* 项目主键（文件系统 IPC 的唯一边界依据） */
+  projectId: () => string | undefined
   /* 外部维护的过滤关键字（按会话隔离时传入；缺省使用组件内部状态） */
   keyword?: Ref<string>
   /* 外部维护的目录展开态（按会话隔离时传入；缺省使用组件内部状态） */
@@ -54,19 +56,20 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
 
   /* 注册目录监听（幂等） */
   function registerWatch(dir: string): void {
-    if (watchedDirs.has(dir)) {
+    const projectId = options.projectId()
+    if (!projectId || watchedDirs.has(dir)) {
       return
     }
     watchedDirs.add(dir)
-    void api.fs.watch(dir)
+    void api.fs.watch(projectId, dir)
   }
 
-  /* 取消目录监听 */
+  /* 取消目录监听（项目缺失时仍清理本地登记，主进程按目录关闭监听即可） */
   function unwatch(dir: string): void {
     if (!watchedDirs.delete(dir)) {
       return
     }
-    void api.fs.unwatch(dir)
+    void api.fs.unwatch(options.projectId() ?? '', dir)
   }
 
   /*
@@ -95,12 +98,13 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
   /* 加载目录子项（force=true 时强制重载）；成功后注册监听并清理消失的子目录 */
   async function loadDir(path: string, force = false): Promise<void> {
     const root = options.root()
-    if (!root || (!force && (childrenMap.value[path] || loadingMap.value[path]))) {
+    const projectId = options.projectId()
+    if (!root || !projectId || (!force && (childrenMap.value[path] || loadingMap.value[path]))) {
       return
     }
     loadingMap.value = { ...loadingMap.value, [path]: true }
     try {
-      const entries = await api.fs.list(root, path)
+      const entries = await api.fs.list(projectId, path)
       childrenMap.value = { ...childrenMap.value, [path]: entries }
       registerWatch(path)
       cleanupChildren(path, entries)
@@ -165,6 +169,10 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     }
     lastRoot = root
     if (root) {
+      /* 根节点默认展开，保证首次打开即可看到项目文件；用户手动收起后保留会话态 */
+      if (expandedMap.value[root] === undefined) {
+        expandedMap.value = { ...expandedMap.value, [root]: true }
+      }
       void loadDir(root)
       /* 恢复已展开目录的子项（会话切换后保持树展开状态） */
       for (const [dir, open] of Object.entries(expandedMap.value)) {

@@ -8,7 +8,7 @@
  */
 
 import { homedir } from 'os'
-import { isAbsolute, join, resolve } from 'path'
+import { basename, isAbsolute, join, resolve } from 'path'
 import { outsidePath } from '../sandbox'
 
 /* 危险命令规则：命中即拦截，返回可读原因 */
@@ -67,6 +67,57 @@ export function detectDangerousCommand(command: string): string | null {
     }
   }
   return null
+}
+
+/* 只读命令名单：访问只读放行目录（如技能库）时，仅这些命令按读取动作处理 */
+const READ_ONLY_COMMANDS = new Set([
+  'cat',
+  'head',
+  'tail',
+  'less',
+  'more',
+  'ls',
+  'll',
+  'find',
+  'grep',
+  'egrep',
+  'fgrep',
+  'rg',
+  'wc',
+  'stat',
+  'file',
+  'du',
+  'tree',
+  'diff',
+  'cmp',
+  'cut',
+  'sort',
+  'uniq',
+  'tr',
+  'basename',
+  'dirname',
+  'realpath',
+  'readlink',
+  'md5',
+  'shasum',
+  'md5sum',
+  'sha1sum',
+  'sha256sum'
+])
+
+/* 写操作特征：出现即不视为纯读取 */
+const WRITE_PATTERN =
+  />>?|\btee\b|\b(rm|mv|cp|chmod|chown|touch|mkdir|rmdir|truncate|ln|dd|install|patch|tar|zip|unzip)\b|\bsed\b[^\n]*\s-i|\b(find|fd|grep|rg)\b[^\n]*-(delete|exec|exec-batch|remove)\b|\|\s*(sudo\s+)?(ba|z|k)?sh\b/i
+
+/* 命令是否纯读取：首命令在只读名单内且不含写操作特征 */
+export function isReadOnlyCommand(command: string): boolean {
+  const value = command.trim()
+  if (!value || WRITE_PATTERN.test(value)) {
+    return false
+  }
+  const tokens = tokenize(value)
+  const first = tokens.find((token) => !token.includes('='))
+  return Boolean(first && READ_ONLY_COMMANDS.has(basename(first)))
 }
 
 /* 简易分词：按空白切分并保留引号内容，同时把 ; | & 作为分隔符 */

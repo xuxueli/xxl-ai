@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /*
- * 项目文件树：目录过滤、懒加载展开与文件选中。
+ * 项目文件树：根节点一键折叠、目录过滤、懒加载展开与文件选中。
  * @author xuxueli 2026-10-25
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useProjectFileTree } from '../../composables/useProjectFileTree'
+import { baseName } from '../../utils/path'
 import { useWorkspaceStore } from '@renderer/stores/workspace'
 import { LAYOUT } from '@renderer/config/layout'
 import PanelResizer from '@renderer/layout/components/PanelResizer/index.vue'
@@ -12,7 +13,12 @@ import FileTreeNode from './FileTreeNode.vue'
 import { t } from '@renderer/i18n'
 import type { FsEntry } from '@shared/ipc'
 
-const props = defineProps<{ sessionId: string; root?: string; selectedPath: string }>()
+const props = defineProps<{
+  sessionId: string
+  projectId?: string
+  root?: string
+  selectedPath: string
+}>()
 const emit = defineEmits<{
   select: [entry: FsEntry]
   /* 右键文件：位置交由文件面板定位菜单 */
@@ -94,8 +100,21 @@ const treeWidth = computed({
   set: (value: number) => workspace.setTreeWidth(props.sessionId, clampTreeWidth(value))
 })
 
-const { childrenMap, expandedMap, loadingMap, rootChildren, visibleRoot, toggle } =
-  useProjectFileTree({ root: () => props.root, keyword, expanded })
+const { childrenMap, expandedMap, loadingMap, visibleRoot, toggle } = useProjectFileTree({
+  root: () => props.root,
+  projectId: () => props.projectId,
+  keyword,
+  expanded
+})
+
+/* 根节点：以项目目录名为标题，点击箭头可一键折叠 / 展开整棵文件树 */
+const rootEntry = computed<FsEntry | null>(() => {
+  const root = props.root
+  if (!root) {
+    return null
+  }
+  return { name: baseName(root) || root, path: root, isDir: true }
+})
 
 /* 右键事件上抛给文件面板（统一处理选中与菜单动作） */
 function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void {
@@ -119,11 +138,11 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
     </div>
     <div class="tree-body">
       <div v-if="!root" class="tree-empty">{{ t('panel.needProject') }}</div>
-      <template v-else>
+      <template v-else-if="rootEntry">
+        <!-- 根节点：项目目录名，点击左侧箭头一键折叠 / 展开整棵文件树 -->
         <FileTreeNode
-          v-for="entry in visibleRoot"
-          :key="entry.path"
-          :entry="entry"
+          class="tree-root"
+          :entry="rootEntry"
           :depth="0"
           :children-map="childrenMap"
           :expanded-map="expandedMap"
@@ -134,10 +153,7 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
           @toggle="toggle"
           @context-menu="onContextMenu"
         />
-        <div v-if="childrenMap[root] && rootChildren.length === 0" class="tree-empty">
-          {{ t('panel.emptyTree') }}
-        </div>
-        <div v-else-if="childrenMap[root] && visibleRoot.length === 0" class="tree-empty">
+        <div v-if="childrenMap[root] && visibleRoot.length === 0" class="tree-empty">
           {{ t('panel.emptyTree') }}
         </div>
       </template>
@@ -170,6 +186,12 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
   min-height: 0;
   overflow: auto;
   padding: 6px 6px 12px;
+}
+
+/* 根节点：项目目录名略作强调，与内部子目录区分 */
+.tree-root :deep(.tree-row) {
+  color: var(--desk-text);
+  font-weight: 600;
 }
 
 .tree-empty {

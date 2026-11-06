@@ -209,23 +209,25 @@ const api: DeskApi = {
       return () => ipcRenderer.removeListener(IPC.terminalEvent, listener)
     }
   },
-  /* 本地文件系统（右侧「工具 → 文件」面板，限定项目目录内） */
+  /* 本地文件系统（右侧「工具 → 文件」面板，按项目主键限定项目目录内） */
   fs: {
     /* 列出目录项 */
-    list: (root: string, dir: string): Promise<FsEntry[]> =>
-      ipcRenderer.invoke(IPC.fsList, root, dir),
+    list: (projectId: string, dir: string): Promise<FsEntry[]> =>
+      ipcRenderer.invoke(IPC.fsList, projectId, dir),
     /* 读取文件内容 */
-    read: (root: string, path: string): Promise<FileContent> =>
-      ipcRenderer.invoke(IPC.fsRead, root, path),
+    read: (projectId: string, path: string): Promise<FileContent> =>
+      ipcRenderer.invoke(IPC.fsRead, projectId, path),
     /* 写入文件内容 */
-    write: (root: string, path: string, content: string) =>
-      ipcRenderer.invoke(IPC.fsWrite, root, path, content),
+    write: (projectId: string, path: string, content: string) =>
+      ipcRenderer.invoke(IPC.fsWrite, projectId, path, content),
     /* 删除文件（移入系统废纸篓） */
-    trash: (root: string, path: string) => ipcRenderer.invoke(IPC.fsTrash, root, path),
+    trash: (projectId: string, path: string) =>
+      ipcRenderer.invoke(IPC.fsTrash, projectId, path),
     /* 监听目录变更 */
-    watch: (dir: string) => ipcRenderer.invoke(IPC.fsWatch, dir),
+    watch: (projectId: string, dir: string) => ipcRenderer.invoke(IPC.fsWatch, projectId, dir),
     /* 取消目录监听 */
-    unwatch: (dir: string) => ipcRenderer.invoke(IPC.fsUnwatch, dir),
+    unwatch: (projectId: string, dir: string) =>
+      ipcRenderer.invoke(IPC.fsUnwatch, projectId, dir),
     /* 订阅目录变更事件（返回取消订阅函数） */
     onChange: (callback: (dir: string) => void) => {
       const listener = (_event: unknown, dir: string): void => callback(dir)

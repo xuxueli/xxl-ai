@@ -38,12 +38,19 @@ export function createFileExplorerActions(stateOf: StateOf) {
     state.fileExplorer.treeWidth = defaultTreeWidth(state.toolPanel.width)
   }
 
+  /* 切换文件树区域收起 / 展开 */
+  function toggleTreeCollapsed(key: string): void {
+    const state = stateOf(key)
+    state.fileExplorer.treeCollapsed = !state.fileExplorer.treeCollapsed
+  }
+
   return {
     setSelectedPath,
     setPreview,
     setKeyword,
     setExpanded,
     setTreeWidth,
-    resetTreeWidth
+    resetTreeWidth,
+    toggleTreeCollapsed
   }
 }

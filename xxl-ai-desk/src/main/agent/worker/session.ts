@@ -39,6 +39,8 @@ export interface AgentRuntimeOptions {
   mcpServers: McpRuntimeConfig[]
   /* 已启用的技能索引 */
   skills: SkillRuntimeConfig[]
+  /* 技能根目录（文件沙箱的技能库只读放行边界） */
+  skillsDir: string
   /* 内置工具分类开关 */
   tools: BuiltinToolSwitches
   /* 会话是否已被终止（Agent 创建阶段用于提前跳出） */
@@ -170,6 +172,7 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
     sessionId: options.sessionId,
     language: options.language,
     skills: options.skills,
+    skillsDir: options.skillsDir,
     tools: options.tools
   })
   const tools = entries.map((entry) => entry.tool)

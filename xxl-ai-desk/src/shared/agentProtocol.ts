@@ -78,6 +78,8 @@ export interface RunAgentInput {
   mcpServers: McpRuntimeConfig[]
   /* 已启用的技能清单（只下发索引，正文由 read_skill 按需读取） */
   skills: SkillRuntimeConfig[]
+  /* 技能根目录（技能库只读放行的边界，含未启用技能与目录列举） */
+  skillsDir: string
   /* 内置工具分类开关（关闭的分类不装配） */
   tools: BuiltinToolSwitches
   /* 本轮用户输入 */

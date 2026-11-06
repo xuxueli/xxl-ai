@@ -5,7 +5,6 @@
  *   - ipc.ts 仅负责通道注册与事件转发，保持薄网关。
  */
 
-import { app } from 'electron'
 import log from 'electron-log/main'
 import { trimHistory } from '@shared/ipc'
 import { translate } from '@shared/i18n'
@@ -30,6 +29,7 @@ import { appendMessages, getSession, listMessages, updateSession } from './sessi
 import { getProject } from './projectService'
 import { getAgentMemory, maybeGenerateAgentMemory } from './agentMemoryService'
 import { buildRuntimePath } from './envService'
+import { getSkillsDir } from '../config/paths'
 import { abortAgent, evictAgent, isAgentRunning, runAgent } from '../agent/host/runtimeHost'
 import { resolveInteraction, cancelInteractionsOf } from '../agent/host/interaction'
 
@@ -272,10 +272,14 @@ export async function sendChat(
     modelId = model
     contextReady = true
 
-    /* 对话模式与文件沙箱边界：默认 Build；根目录取会话所属项目目录（缺失时回退用户主目录） */
+    /* 对话模式与文件沙箱边界：默认 Build；会话必须绑定有效项目，禁止回退主目录造成沙箱扩大 */
     const mode = session.mode === 'plan' ? 'plan' : 'build'
     const project = session.projectId ? getProject(session.projectId) : null
-    const rootDir = project?.path || app.getPath('home')
+    if (!project) {
+      fail(translate(language, 'runtime.projectMissing'))
+      return
+    }
+    const rootDir = project.path
 
     /* 技能清单：全局启用，摘要随系统提示下发，正文由 read_skill 按需读取 */
     const skills = listEnabledSkillsForRuntime()
@@ -321,6 +325,8 @@ export async function sendChat(
       mcpServers: listEnabledMcpServers(),
       /* SKILL：已启用技能索引，运行时进程据此装配 read_skill */
       skills,
+      /* SKILL：技能根目录，文件工具读取技能库不触发越界审批 */
+      skillsDir: getSkillsDir(),
       /* 内置工具：按分类开关决定下发的工具域 */
       tools: {
         fs: settings.builtinToolFsEnabled,

@@ -20,11 +20,23 @@ import FileTreePanel from './FileTreePanel.vue'
 import FileContextMenu from './FileContextMenu.vue'
 import type { FileContent, FsEntry, OpenWithApp } from '@shared/ipc'
 
-const props = defineProps<{ sessionId: string; root?: string; projectName?: string }>()
+const props = defineProps<{
+  sessionId: string
+  projectId?: string
+  root?: string
+  projectName?: string
+}>()
 
 /* 会话工作区 store：选中文件与预览态按会话隔离 */
 const workspace = useWorkspaceStore()
 const fileState = computed(() => workspace.sliceOf(props.sessionId).fileExplorer)
+/* 文件树是否收起（收起时仅展示文件内容） */
+const treeCollapsed = computed(() => fileState.value.treeCollapsed)
+
+/* 折叠 / 展开文件树区域 */
+function toggleTree(): void {
+  workspace.toggleTreeCollapsed(props.sessionId)
+}
 
 /* 当前选中节点、文件内容与加载/错误态、是否预览 */
 const selected = ref<FsEntry | null>(null)
@@ -47,7 +59,15 @@ const saving = ref(false)
 const openApps = ref<OpenWithApp[]>([])
 
 /* 右键菜单：可见态、鼠标位置与目标文件（菜单动作只针对该文件） */
-const contextMenu = ref({ visible: false, x: 0, y: 0, path: '', name: '', isDir: false })
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  path: '',
+  name: '',
+  isDir: false,
+  isRoot: false
+})
 
 /* 文件变更监听解绑函数 */
 let offFsChange: (() => void) | null = null
@@ -117,13 +137,13 @@ function clearSelection(): void {
 
 /* 选中的文件在磁盘上变化（或被删除）时回读；编辑中（dirty）不覆盖 */
 async function refreshSelected(): Promise<void> {
-  const root = props.root
+  const projectId = props.projectId
   const entry = selected.value
-  if (!root || !entry || dirty.value) {
+  if (!projectId || !entry || dirty.value) {
     return
   }
   try {
-    const loaded = await api.fs.read(root, entry.path)
+    const loaded = await api.fs.read(projectId, entry.path)
     file.value = loaded
     original.value = loaded.content
     draft.value = loaded.content
@@ -135,8 +155,8 @@ async function refreshSelected(): Promise<void> {
 
 /* 选中文件并加载内容（有未保存修改时先确认）；返回是否完成选中 */
 async function select(entry: FsEntry): Promise<boolean> {
-  const root = props.root
-  if (!root) {
+  const projectId = props.projectId
+  if (!projectId) {
     return false
   }
   /* 重复选中当前文件：保留编辑内容，不再触发未保存确认 */
@@ -163,7 +183,7 @@ async function select(entry: FsEntry): Promise<boolean> {
   original.value = ''
   draft.value = ''
   try {
-    const loaded = await api.fs.read(root, entry.path)
+    const loaded = await api.fs.read(projectId, entry.path)
     file.value = loaded
     original.value = loaded.content
     draft.value = loaded.content
@@ -180,13 +200,13 @@ async function select(entry: FsEntry): Promise<boolean> {
 
 /* 保存编辑内容到磁盘 */
 async function save(): Promise<void> {
-  const root = props.root
-  if (!root || !file.value || !editable.value || saving.value || !dirty.value) {
+  const projectId = props.projectId
+  if (!projectId || !file.value || !editable.value || saving.value || !dirty.value) {
     return
   }
   saving.value = true
   try {
-    await api.fs.write(root, file.value.path, draft.value)
+    await api.fs.write(projectId, file.value.path, draft.value)
     file.value = {
       ...file.value,
       content: draft.value,
@@ -294,7 +314,8 @@ async function openContextMenu(
     y: position.y,
     path: entry.path,
     name: entry.name,
-    isDir: entry.isDir
+    isDir: entry.isDir,
+    isRoot: normalizePath(entry.path) === normalizePath(props.root ?? '')
   }
 }
 
@@ -315,11 +336,15 @@ async function menuCopyPath(): Promise<void> {
 
 /* 右键菜单：删除文件（移入系统废纸篓，操作前二次确认） */
 async function menuRemove(): Promise<void> {
-  const root = props.root
-  if (!root) {
+  const projectId = props.projectId
+  if (!projectId) {
     return
   }
   const { path, name } = contextMenu.value
+  /* 根目录不可删除，避免误操作移除整个项目目录 */
+  if (normalizePath(path) === normalizePath(props.root ?? '')) {
+    return
+  }
   try {
     await ElMessageBox.confirm(t('panel.deleteConfirm', [name]), t('panel.deleteTitle'), {
       type: 'warning',
@@ -330,7 +355,7 @@ async function menuRemove(): Promise<void> {
     return
   }
   try {
-    await api.fs.trash(root, path)
+    await api.fs.trash(projectId, path)
     ElMessage.success(t('common.deleted'))
     /* 删除的是当前文件或当前文件所在目录：清空查看器，避免残留已删除内容 */
     const selectedPath = selected.value?.path ?? ''
@@ -358,18 +383,22 @@ async function menuRemove(): Promise<void> {
       :show-preview="showPreview"
       :has-file="Boolean(file)"
       :has-root="Boolean(root)"
+      :tree-collapsed="treeCollapsed"
       :open-apps="openApps"
       @save="save"
       @toggle-preview="preview = !preview"
+      @toggle-tree="toggleTree"
       @reveal="revealFolder"
       @open-default="openDefault"
       @open-command="onOpenCommand"
     />
 
     <div class="file-main">
-      <!-- 左：项目目录树 -->
+      <!-- 左：项目目录树（可折叠隐藏） -->
       <FileTreePanel
+        v-show="!treeCollapsed"
         :session-id="props.sessionId"
+        :project-id="props.projectId"
         :root="root"
         :selected-path="selected?.path ?? ''"
         @select="select"
@@ -400,6 +429,7 @@ async function menuRemove(): Promise<void> {
       :x="contextMenu.x"
       :y="contextMenu.y"
       :is-dir="contextMenu.isDir"
+      :is-root="contextMenu.isRoot"
       @open="menuOpenDefault"
       @reveal="menuReveal"
       @copy="menuCopyPath"

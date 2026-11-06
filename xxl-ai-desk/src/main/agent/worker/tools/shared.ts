@@ -23,6 +23,8 @@ export interface ToolContext {
   language: AppLanguage
   /* 已启用的技能索引（正文由 read_skill 按需读取） */
   skills?: SkillRuntimeConfig[]
+  /* 技能根目录（技能库只读放行边界：覆盖全部已安装技能与目录列举） */
+  skillsDir?: string
   /* 内置工具分类开关（由注册表统一过滤，工具工厂不再各自判断） */
   tools: BuiltinToolSwitches
 }
@@ -107,13 +109,26 @@ export function clipToolResult<T>(
 }
 
 /*
+ * 技能只读放行根目录：技能库整库可读（含未启用技能与目录列举），**永不弹审批**。
+ * 这是「文件读取权限」；「是否启用」只决定 Agent 能否通过 read_skill 主动使用技能，
+ * 两者是不同维度，不要用启用状态去限制文件读取。
+ * 文件类工具与终端只读命令共用，保证技能库读取在各工具间一致。
+ */
+export function readAllowedRootsOf(context: ToolContext): string[] {
+  return [
+    ...new Set([context.skillsDir, ...(context.skills ?? []).map((skill) => skill.dir)])
+  ].filter((dir): dir is string => Boolean(dir))
+}
+
+/*
  * 统一路径闸门：目录内直接放行，越界转主进程审批；拒绝则返回可直接回填模型的错误。
  * 具体工具只需声明动作类型（read / write）与工具名。
- * SKILL 内容（已启用技能目录）读取时放行，不打断会话。
+ * 技能库（技能根目录）读取时放行，且作为完全信任目录，写入不弹审批。
  */
 export function createGuard(context: ToolContext) {
-  /* 技能目录只读放行：随 Agent 装配的技能清单保持一致，无需额外全局状态 */
-  const readRoots = (context.skills ?? []).map((skill) => skill.dir)
+  const readAllowedRoots = readAllowedRootsOf(context)
+  /* 技能库为完全信任目录：Agent 可读写技能内容，不触发越界审批 */
+  const trustedRoots = context.skillsDir ? [context.skillsDir] : []
   return async function guard(
     target: string | undefined,
     action: PathAction,
@@ -128,7 +143,8 @@ export function createGuard(context: ToolContext) {
       action,
       tool,
       language: context.language,
-      readRoots
+      readAllowedRoots,
+      trustedRoots
     })
     if (!outcome.allowed) {
       return {

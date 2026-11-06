@@ -14,3 +14,10 @@ export function parentDir(file: string): string {
   const index = normalized.lastIndexOf('/')
   return index < 0 ? '' : normalized.slice(0, index)
 }
+
+/* 取路径末级名称（兼容末尾分隔符） */
+export function baseName(path: string): string {
+  const normalized = normalizePath(path).replace(/\/+$/, '')
+  const index = normalized.lastIndexOf('/')
+  return index < 0 ? normalized : normalized.slice(index + 1)
+}

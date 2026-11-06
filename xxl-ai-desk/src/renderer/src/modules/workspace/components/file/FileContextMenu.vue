@@ -14,6 +14,8 @@ const props = defineProps<{
   y: number
   /* 右键目标是否为目录 */
   isDir: boolean
+  /* 右键目标是否为项目根目录（根目录不可删除） */
+  isRoot?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -131,11 +133,13 @@ function choose(action: 'open' | 'reveal' | 'copy' | 'remove'): void {
         <el-icon><CopyDocument /></el-icon>
         <span>{{ t('panel.copyPath') }}</span>
       </button>
-      <div class="file-menu-sep"></div>
-      <button class="file-menu-item danger" @click="choose('remove')">
-        <el-icon><Delete /></el-icon>
-        <span>{{ t('common.delete') }}</span>
-      </button>
+      <template v-if="!isRoot">
+        <div class="file-menu-sep"></div>
+        <button class="file-menu-item danger" @click="choose('remove')">
+          <el-icon><Delete /></el-icon>
+          <span>{{ t('common.delete') }}</span>
+        </button>
+      </template>
     </div>
   </Teleport>
 </template>
