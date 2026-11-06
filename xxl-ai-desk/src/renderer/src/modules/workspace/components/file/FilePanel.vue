@@ -270,6 +270,32 @@ async function copyPath(): Promise<void> {
   await copyToClipboard(file.value.path)
 }
 
+/* 目标是否为可编辑控件（输入框 / 文本域 / 可编辑区域） */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+  return (
+    target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+  )
+}
+
+/* 文件面板快捷键：选中文件后 ⌘/Ctrl+C 默认复制文件路径；不干扰输入与文本选择 */
+function onPanelKeydown(event: KeyboardEvent): void {
+  if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'c') {
+    return
+  }
+  if (!selected.value || isEditableTarget(event.target)) {
+    return
+  }
+  /* 已有文本选区时保持系统复制行为 */
+  if (window.getSelection()?.toString()) {
+    return
+  }
+  event.preventDefault()
+  void copyToClipboard(selected.value.path)
+}
+
 /* 直接以系统默认应用打开当前文件（「打开」按钮左半区） */
 function openDefault(): void {
   if (!file.value) {
@@ -373,7 +399,7 @@ async function menuRemove(): Promise<void> {
 </script>
 
 <template>
-  <div class="file-panel">
+  <div class="file-panel" @keydown="onPanelKeydown">
     <FileToolbar
       :breadcrumb="breadcrumb"
       :editable="editable"

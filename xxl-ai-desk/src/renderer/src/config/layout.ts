@@ -5,10 +5,10 @@
 
 /* 布局尺寸常量：与 styles/tokens.scss 中的同名 token 保持一致 */
 export const LAYOUT = {
-  /* 左侧常驻图标栏宽度 */
-  railWidth: 38,
+  /* 左侧常驻图标栏宽度（独立于顶栏高度） */
+  railWidth: 44,
   /* 左侧子菜单栏宽度 */
-  sidebar: { default: 240, min: 40 },
+  sidebar: { default: 240, min: 100 },
   /* 右侧工具面板宽度 / 正文最小可用宽度 */
   toolPanel: { defaultWidth: 520, minWidth: 40, minChatWidth: 300 },
   /* Git 工具：左侧变更树默认宽度 */

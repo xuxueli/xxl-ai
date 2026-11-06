@@ -149,7 +149,8 @@
 
   /* 尺寸与字体 */
   --desk-header-height: 38px;
-  --desk-rail-width: var(--desk-header-height);
+  /* 左侧图标栏：独立尺寸，不与顶栏高度绑定 */
+  --desk-rail-width: 44px;
   --desk-sidebar-width: 240px;
   --desk-panel-header-height: 40px;
   --desk-scrollbar-size: 8px;

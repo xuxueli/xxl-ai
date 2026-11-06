@@ -141,7 +141,6 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
       <template v-else-if="rootEntry">
         <!-- 根节点：项目目录名，点击左侧箭头一键折叠 / 展开整棵文件树 -->
         <FileTreeNode
-          class="tree-root"
           :entry="rootEntry"
           :depth="0"
           :children-map="childrenMap"
@@ -186,12 +185,6 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
   min-height: 0;
   overflow: auto;
   padding: 6px 6px 12px;
-}
-
-/* 根节点：项目目录名略作强调，与内部子目录区分 */
-.tree-root :deep(.tree-row) {
-  color: var(--desk-text);
-  font-weight: 600;
 }
 
 .tree-empty {

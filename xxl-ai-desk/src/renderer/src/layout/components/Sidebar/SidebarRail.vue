@@ -87,16 +87,16 @@ function go(key: SectionKey): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* 图标按钮：宽度收紧至图标栏内留出等距外边距 */
+/* 图标按钮：44px 栏内留 4px 边距，色块饱满且不贴边 */
 .rail-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--desk-text-secondary);
   font-size: var(--desk-icon-lg);
