@@ -1,0 +1,35 @@
+{
+  "git": {
+    "tab": "Git",
+    "noProject": "请先在对话中选择一个项目",
+    "notRepo": "当前项目不是 Git 仓库",
+    "detached": "游离 HEAD",
+    "refresh": "刷新",
+    "loading": "正在读取 Git 状态…",
+    "staged": "已暂存",
+    "changes": "未暂存",
+    "noChanges": "工作区干净",
+    "stage": "暂存",
+    "unstage": "取消暂存",
+    "commitPlaceholder": "提交信息",
+    "commit": "提交",
+    "commitEmpty": "请输入提交信息",
+    "committed": "提交成功：{0}",
+    "binary": "二进制文件，无法展示文本差异",
+    "noDiff": "暂无差异",
+    "status": {
+      "modified": "已修改",
+      "added": "新增",
+      "deleted": "删除",
+      "renamed": "重命名",
+      "copied": "复制",
+      "typechange": "类型变更",
+      "untracked": "未跟踪",
+      "conflicted": "冲突"
+    },
+    "selectFile": "选择左侧变更文件查看差异",
+    "diffLoading": "正在读取差异…",
+    "expandAll": "展开全部目录",
+    "collapseAll": "折叠全部目录"
+  }
+}

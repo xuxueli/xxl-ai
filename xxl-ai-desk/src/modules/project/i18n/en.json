@@ -1,0 +1,27 @@
+{
+  "project": {
+    "label": "Projects",
+    "new": "New project",
+    "selectProject": "Select project",
+    "searchPlaceholder": "Search projects or quick actions",
+    "quickActions": "Quick actions",
+    "sortBy": "Sort by",
+    "sortName": "Name",
+    "sortTime": "Updated",
+    "selectDirTitle": "Select project folder",
+    "empty": "No projects yet. Click + to create one.",
+    "noSession": "No chats",
+    "rename": "Rename project",
+    "renamePrompt": "Enter a new project name",
+    "delete": "Delete project",
+    "deleteConfirm": "Delete project \"{0}\" and all of its chats and messages? This cannot be undone.",
+    "reveal": "Show in file manager",
+    "revealMac": "Reveal in Finder",
+    "revealWin": "Show in File Explorer",
+    "revealLinux": "Show in File Manager",
+    "renamed": "Project renamed",
+    "deleted": "Project deleted",
+    "needProject": "Please select a project first",
+    "duplicate": "A project already exists for this folder"
+  }
+}

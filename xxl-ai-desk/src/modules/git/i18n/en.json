@@ -1,0 +1,35 @@
+{
+  "git": {
+    "tab": "Git",
+    "noProject": "Select a project in the chat first",
+    "notRepo": "The current project is not a Git repository",
+    "detached": "Detached HEAD",
+    "refresh": "Refresh",
+    "loading": "Reading Git status…",
+    "staged": "Staged",
+    "changes": "Unstaged",
+    "noChanges": "Working tree clean",
+    "stage": "Stage",
+    "unstage": "Unstage",
+    "commitPlaceholder": "Commit message",
+    "commit": "Commit",
+    "commitEmpty": "Enter a commit message",
+    "committed": "Committed: {0}",
+    "binary": "Binary file; text diff is unavailable",
+    "noDiff": "No diff",
+    "status": {
+      "modified": "Modified",
+      "added": "Added",
+      "deleted": "Deleted",
+      "renamed": "Renamed",
+      "copied": "Copied",
+      "typechange": "Type changed",
+      "untracked": "Untracked",
+      "conflicted": "Conflicted"
+    },
+    "selectFile": "Select a changed file to view its diff",
+    "diffLoading": "Loading diff…",
+    "expandAll": "Expand all folders",
+    "collapseAll": "Collapse all folders"
+  }
+}

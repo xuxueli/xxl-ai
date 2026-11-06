@@ -1,6 +1,6 @@
 ---
 name: xxl-ai-desk
-description: 在 XXL-AI 本地版（Desk 桌面客户端，xxl-ai-desk，Electron + Vue3 + Pi + SQLite/Drizzle 三进程架构）下新增或改造业务模块。当任务涉及修改 xxl-ai-desk/src/main（services/db/agent/ipc）、xxl-ai-desk/src/shared、xxl-ai-desk/src/preload 或 xxl-ai-desk/src/renderer/src（stores/modules/components/i18n）时加载本技能。
+description: 在 XXL-AI 本地版（Desk 桌面客户端，xxl-ai-desk，Electron + Vue3 + Pi + SQLite/Drizzle 三进程架构）下新增或改造业务模块。当任务涉及修改 xxl-ai-desk/src/modules（shared/main/preload/renderer/worker/i18n）、xxl-ai-desk/src/common、xxl-ai-desk/src/main、xxl-ai-desk/src/preload 或 xxl-ai-desk/src/renderer/src/shell 时加载本技能。
 ---
 
 # XXL-AI-Desk · 本地版开发 Skill
@@ -15,9 +15,9 @@ Desk 是 **Electron + Vue3 + Pi + SQLite/Drizzle** 的三进程桌面应用；�
 
 | 进程 | 入口 | 职责 | 边界 |
 |---|---|---|---|
-| Renderer | `src/renderer/src` | 界面、Pinia 状态、模块业务 | 只经 `@renderer/api` 访问能力，无 Node / FS / DB |
-| Main | `src/main/index.ts` | 窗口、IPC 网关、`services/*` 业务、host 运行时托管、`desk-file` 协议 | 唯一 `getDb()` 出口；不直接执行 Agent 会话 |
-| Worker | `src/main/agent/worker/worker.ts`（utilityProcess） | Agent 会话、工具、MCP、技能沙箱 | 不访问 DB 与主进程内部，只经 `shared/agentProtocol.ts` |
+| Renderer | `src/renderer/src` | 界面、Pinia 状态、模块业务 | 只经 `@common/renderer/api` 访问能力，无 Node / FS / DB |
+| Main | `src/main/index.ts` | 窗口、IPC / DB / i18n 装配、`desk-file` 协议 | 业务在 `modules/*/main`；唯一 `getDb()` 出口在 `common/main/db`；不直接执行 Agent 会话 |
+| Worker | `src/modules/agent/worker/worker.ts`（utilityProcess） | Agent 会话、工具、MCP、技能沙箱 | 不访问 DB 与主进程内部，只经 `modules/agent/shared/agentProtocol.ts` |
 
 ```
 Renderer ──preload 白名单（DeskApi）──▶ Main ──utilityProcess + parentPort──▶ Worker
@@ -27,106 +27,143 @@ Renderer ──preload 白名单（DeskApi）──▶ Main ──utilityProcess
 
 ```
 src/
-├── main/
-│   ├── index.ts                入口：DB 初始化 → 种子 → 协议 → IPC → 建窗
-│   ├── ipc.ts                  IPC 注册总入口（薄网关）
-│   ├── config/paths.ts         数据目录 / DB 路径
-│   ├── db/{schema,index}.ts    Drizzle 表结构 / DDL + 种子（仅全新安装）
-│   ├── utils/                  pathGuard · http · ttlCache
-│   ├── services/*.ts           业务 CRUD 与编排（唯一 getDb 出口）
-│   └── agent/
-│       ├── host/               runtimeHost · approval · browserBridge · community/{mcpSo,skillsSh}Adapter · skills/githubInstaller
-│       └── worker/             worker · session · sandbox · models · mcp/{client,naming,tools} · tools/{fs,shell,browser,general,skill,shared,index}
-├── preload/index.ts            contextBridge 白名单（DeskApi）
-├── shared/
-│   ├── ipc.ts                  契约聚合 + IPC 常量 + DeskApi
-│   ├── contracts/*.ts          按域 DTO（app/provider/project/session/chat/terminal/fs/shell/mcp/browser/skill）
-│   ├── agentProtocol.ts        Main ⇄ Worker 协议
-│   ├── i18n/{index.ts,locales/{zh,en}.json}   文案（渲染层 / 主进程 / worker 共用）
-│   └── fileTypes.ts · defaults.ts · history.ts · providerUrl.ts · browserUrl.ts · appInfo.ts
+├── common/                         # 一级公共：跨域、无业务规则
+│   ├── shared/                     # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、providerUrl、runtimeLog、appInfo、i18n
+│   ├── main/                       # 主进程基础设施：db(getDb) / config/paths / utils(http·logger·pathGuard·ttlCache) / ipc
+│   └── renderer/                   # 渲染公共：api(window.desk) / components / composables / config / styles / types / utils
+├── modules/                        # 单领域模块：一个域一个目录
+│   ├── app/                        # shared · main · preload · i18n
+│   ├── settings/                   # shared · main · preload · renderer · i18n
+│   ├── provider/                   # shared · main · preload · renderer
+│   ├── project/                    # shared · main · preload · renderer · i18n
+│   ├── chat/                       # shared · main · preload · renderer · i18n
+│   ├── agent/                      # shared · main · preload · worker · renderer · i18n
+│   ├── mcp/                        # shared · main · preload · worker · renderer
+│   ├── skill/                      # shared · main · preload · worker · renderer
+│   ├── file/                       # shared · main · preload · worker · renderer · i18n
+│   ├── git/                        # shared · main · preload · renderer · i18n
+│   ├── terminal/                   # shared · main · preload · renderer
+│   ├── browser/                    # shared · main · preload · worker · renderer
+│   ├── diagnostics/                # shared · main · preload · renderer
+│   ├── toolPanel/                  # renderer（仅壳：Tab / 宽度 / 宿主） · i18n
+│   └── plugin/                     # renderer（仅壳：插件中心 / builtin） · i18n
+├── main/                           # 主进程入口壳：index.ts · ipc.ts(聚合) · db.ts(聚合) · i18n.ts(聚合)
+├── preload/                        # 预加载入口壳：index.ts(聚合) · deskApi.ts(类型聚合) · index.d.ts
 └── renderer/src/
-    ├── api/index.ts            唯一能力入口：export const api = window.desk
-    ├── components/             跨模块通用件（MarkdownBlock / icons，纯展示、无业务依赖）
-    ├── layout/                 布局域：index.vue + components/ + utils/
-    │   ├── components/         统一经 components/index.ts 导出
-    │   │   ├── Navbar/         顶部导航栏
-    │   │   ├── Sidebar/        左侧栏：index / SidebarRail / SidebarContent / SidebarMenu / SidebarHeader / SidebarRow
-    │   │   ├── AppMain/        主内容区：RouterView
-    │   │   └── PanelResizer/   面板尺寸拖拽原语
-    │   └── utils/              布局域单消费者工具（persistedWidth）
-    ├── composables/            跨模块组合式函数（useAppBootstrap / usePanelResize / useSessionLifecycle / useQuickAction）
-    ├── utils/                  无 Vue / 组件依赖的纯工具（ipcError / shortcut / localFileUrl）
-    ├── stores/*.ts             根 store（project/settings/toolPanel/mcp/skill/chatUi/layout/browserSession）
-    │   ├── stores/chat/        会话域拆分：index / stream / messageMapping / lastSession
-    │   └── stores/toolPanel/  工具面板拆分：index / state / storage / panel / fileExplorer / gitPanel / terminalTabs
-    ├── modules/{chat,toolPanel,plugin,settings}/
-    ├── i18n/index.ts           装配 shared 文案 + t()
-    ├── config/nav.ts           板块 ↔ 路由 ↔ 标题 ↔ 子菜单（唯一导航来源）
-    ├── router/index.ts         Hash 路由（直接 import 模块 pages）
-    ├── styles/{tokens,index}.scss   设计令牌 / 全局样式
-    └── types/index.ts          全局基础类型
+    ├── main.ts · App.vue · env.d.ts
+    └── shell/                      # 应用外壳
+        ├── layout/                 # Navbar / Sidebar / AppMain / PanelResizer
+        ├── router/index.ts         # 路由组合根：直接装配各模块 pages
+        ├── config/nav.ts
+        ├── composables/            # useAppBootstrap / useSessionLifecycle / useQuickAction
+        ├── stores/layout.ts
+        └── i18n/index.ts           # 渲染层词条组合根
 ```
 
 项目根 `resources/` 存放应用级静态资源（`icon.png` 同时用于 electron-builder 安装包图标与 `extraResources` 注入）；渲染层经 `@resources/*` 引用，不放在 `renderer/src` 内。
 
-模块目录构成（按实际）：
+模块内部构成（统一模板）：
 
 ```
-modules/chat/        pages/ · components/ · composables/ · utils/ · index.ts
-modules/toolPanel/  components/{hosts,git,browser,file,terminal}/ · composables/ · utils/ · index.ts
-modules/plugin/      pages/ · components/ · utils/ · builtin/{pages,catalog.ts} · mcp/{pages,components}/ · skill/{pages,components}/
-modules/settings/    pages/ · components/ · index.ts
+modules/{domain}/
+├── shared/     contracts.ts · ipc.ts · api.ts · index.ts
+├── main/       service.ts|{domain}Service.ts · runtime.ts · discover.ts · schema.ts · ddl.ts · seed.ts · ipc.ts · index.ts（按域取用）
+├── preload/    index.ts
+├── worker/     tools.ts · client.ts · index.ts（仅 Agent 相关域）
+├── i18n/       zh.json · en.json（仅需要领域词条的模块）
+└── renderer/   pages/ · components/ · composables/ · utils/ · store.ts|store/ · index.ts
 ```
+
+### 1.2.1 `common` 与 `modules` 的定义（硬约束）
+
+顶层目录固定为 `src/common`（跨域公共）和 `src/modules`（领域模块）；不新增其它顶层分层，也不在 `modules` 下再嵌套框架层或业务层。
+
+| 层 | 定义 | 判断标准 |
+|---|---|---|
+| `common` | 跨域公共层：被 **2 个及以上领域** 复用、且 **不含任何单一领域业务规则** 的代码 | 只被依赖，不依赖业务；只有 1 个域使用就不进 `common` |
+| `modules` | 领域模块层：一个业务域 / 职责域的**完整纵向切片**，拥有该域的权威实现、数据与公共接口 | 一个模块 = 一个变更理由；同一职责域只能有一个归属模块 |
+
+`common` 收录范围：
+
+- 跨进程契约原语：`contracts/pagination` / `contracts/quickAction`；
+- 跨域纯函数 / 常量：`appInfo` / `fileTypes` / `providerUrl` / `runtimeLog`；
+- 主进程基础设施：`db(getDb)` / `config/paths` / `utils` / `ipc`；
+- 渲染公共能力：`api(window.desk)` / 公共组件 / 公共 composables / 布局常量 / 设计令牌 / 公共 i18n。
+
+`common` 禁止收录：
+
+- 领域 DTO、领域 service、领域 store、领域页面、领域表结构、领域默认值 / 校验 / 状态机；
+- 只被 1 个模块使用的工具或组件；
+- 以「跨进程共用」为理由把领域契约放进 `common`（跨进程 ≠ 公共）。
+
+`modules` 内部构成：
+
+- `shared/`：本域 DTO、IPC 通道、Api 类型；
+- `main/`：本域权威实现（service / runtime / schema / ddl / seed / ipc）；
+- `preload/`：本域 DeskApi 片段；
+- `renderer/`：本域页面、组件、store、composables、utils；
+- `worker/`：可选，本域 Worker 工具 / 客户端；
+- `i18n/`：可选，本域 zh/en 词条。
+
+判定顺序：
+
+1. 只有 1 个领域使用 → 放该 `modules/{domain}`。
+2. 被 ≥2 个领域使用，且无业务规则 → 放 `common`。
+3. 跨进程使用但属于单一领域 → 放 `modules/{domain}/shared`。
+4. 同一逻辑出现第二份实现 → 先定唯一归属，再让调用方走公共入口。
+5. 不确定时先按领域归属，禁止默认丢进 `common`。
+
+命名要求：`common` 内不出现领域名（`mcp` / `skill` / `chat` / `file` 等）；`modules` 目录名使用领域或壳名词，禁止 `utils` / `shared` / `common` / `manager` 等泛化名。
 
 ### 1.3 分层与依赖（硬约束）
 
 | 层 | 允许依赖 | 禁止 |
 |---|---|---|
-| `services/*` | `db` · `config` · `main/utils` · `shared/*` · `agent/host` 门面 · 其它 service（编排） | import `agent/worker/*`；自写协议 / SDK；在 `ipc.ts` 写业务 |
-| `agent/host/*` | electron · `services/*`（读配置 / 导入）· `shared/*` | 定义 `ipcMain` handler；直接写业务表 |
-| `agent/worker/*` | `shared/*`（含 `agentProtocol`）· Pi 官方 SDK · `electron-log` | 访问 DB、`services/*`、主进程内部模块；做业务校验 |
-| `ipc.ts` | `services/*` · `agent/host` 门面 | 业务编排、状态清理、连接管理、SQL |
-| `preload` | `shared/ipc`（DeskApi 契约） | 业务逻辑；暴露任意 Node 能力 |
-| `renderer/layout` | `@renderer/{components,composables,utils,stores,config}` · 模块公共 `index.ts` | 模块内部文件；直接 `window.desk`、`node:` |
-| `renderer/components` | `@shared/*` · `@renderer/{composables,utils,i18n}` | `stores/*`、`api`、`modules/*` |
-| `renderer/modules` | `@renderer/api` · 本模块内部 · `@shared/*` · `@renderer/{components,composables,utils,stores}` · 其它模块公共 `index.ts` | 其它模块内部文件；直接 `window.desk`、`node:` |
+| `common/shared` | 无（纯 TS / 常量 / 契约原语） | Node / Electron / Vue / DOM / `@modules/*` |
+| `common/main` | `common/shared` · Node / Electron 基础设施 | `common/renderer` · `@modules/*` |
+| `common/renderer` | `common/shared` · Vue / DOM | `common/main` · `@modules/*` |
+| `modules/*/shared` | `common/shared` | 进程实现、Vue、Node、其它模块内部文件 |
+| `modules/*/main` | `common/{shared,main}` · 本模块 `shared/main` · 其它模块 `shared/main` 公共面 | `renderer` · `common/renderer` · 其它模块内部文件 |
+| `modules/*/preload` | `common/shared` · 本模块 `shared` | 业务逻辑；暴露任意 Node 能力 |
+| `modules/*/worker` | `common/shared` · 本模块 `shared/worker` · 其它模块 `shared/worker` 公共面 · Pi SDK | DB、`main`、`renderer`、主进程内部模块 |
+| `modules/*/renderer` | `common/{shared,renderer}` · 本模块 `shared/renderer` · 其它模块 `shared/renderer` 公共面 | `main` · `worker` · `common/main` · 其它模块内部文件 |
+| `src/main|preload|renderer` 入口壳 | 各模块公共面（仅装配） | 承载领域规则、SQL、状态机 |
 
-判定：
-- `services` import `agent/worker` → 违规；`agent/*` 出现 `getDb()` / DDL → 违规。
-- renderer 里出现 `window.desk`（除 `api/index.ts`）、`fs`、`child_process` → 违规。
-- 跨模块引用只允许：模块 `index.ts` 导出、对应 store、全局 `components/composables/utils`。
+判定（按本节约束人工评审）：
+- `common/*` import `@modules/*` → 违规；`renderer` 出现 `@main` / `@preload` / `@common/main` / `@common/worker` → 违规；`worker` import `@main` → 违规。
+- 跨模块引用只允许 `@modules/{domain}/{shared,main,preload,renderer,worker,i18n}` 公共入口；禁止内部文件（`i18n` 语言包与组合根装配除外）。
+- 渲染层出现 `window.desk`（除 `common/renderer/api/index.ts`）、`fs`、`child_process` → 违规。
 - 同一职责域在两个模块各有一份实现 → 违规；先确定唯一归属，再让调用方改走其公共入口。
+- 组合根（`src/main/index.ts`、`src/main/ipc.ts`、`src/main/db.ts`、`src/main/i18n.ts`、`src/preload/index.ts`、`src/preload/deskApi.ts`、`src/renderer/src/main.ts`、`shell/router`、`shell/i18n`）是唯一允许同时装配多个模块的位置。
 
 补充：
-- **唯一持久化出口**：`getDb()` 只在 `services/*`；`agent/*` 可经 service 读配置，不写业务表。
-- **运行时门面**：需要运行时能力时，`services/*RuntimeService.ts` 编排 → `agent/host` 门面 → worker。
-- **基础设施独立**：路径解析在 `config/paths.ts`；`db` 不反向依赖 `services`。
-- **本地文件访问**：渲染层一律经 `utils/localFileUrl.ts#toLocalFileUrl()` 转 `desk-file://`，禁止 `file://`；新增文件类型需同步 `shared/fileTypes.ts` 与 `index.html` 的 CSP（`img-src` / `media-src`）。
-- **存量偏差**（新增代码按上表执行，改到旧文件时顺手收敛）：
-  - `agent/host/skills/githubInstaller.ts` 直接 import `services/skillImportService`、`skillLimits`（方向反了，目标下沉 `shared/`）。
-  - `agent/worker/sandbox.ts` 直接 import `main/utils/pathGuard`（目标下沉 `shared/`）。
-  - `ipc.ts` 部分 handler 含会话运行时清理与 `resetAgents()`（目标改由 service 提供统一入口）。
-  - `composables/useHighlight.ts` 同时服务 Markdown 与文件查看器；`useContentLink` 依赖 `api.shell`，两者暂留全局；Markdown 专属的 `useMarkdown` / `useCodeBlock` / `sanitize` 已收进 `components/MarkdownBlock/`。
+- **唯一持久化出口**：`getDb()` 只在 `common/main/db`；各域 `main/schema.ts` 定义表，`main/ddl.ts` 提供建表片段，`src/main/db.ts` 聚合。
+- **运行时门面**：需要运行时能力时，`modules/{domain}/main/*` 编排 → agent 运行时 → worker；`modules/agent/worker` 提供沙箱与工具注册助手。
+- **基础设施独立**：路径解析在 `common/main/config/paths.ts`；`db` 不反向依赖任何领域模块。
+- **本地文件访问**：渲染层一律经 `common/renderer/utils/localFileUrl.ts#toLocalFileUrl()` 转 `desk-file://`，禁止 `file://`；新增文件类型需同步 `common/shared/fileTypes.ts` 与 `index.html` 的 CSP（`img-src` / `media-src`）。
+- **IPC 三段式**：`modules/{domain}/shared/ipc.ts` 通道 → `main/ipc.ts` 注册 → `preload/index.ts` 暴露；`src/main/ipc.ts`、`src/preload/index.ts` 只聚合。
+- **i18n**：公共词条在 `common/shared/i18n/locales`，领域词条在 `modules/{domain}/i18n/{zh,en}.json`；主进程由 `src/main/i18n.ts`、Worker 由 `modules/agent/worker/i18n.ts`、渲染层由 `shell/i18n/index.ts` 合并后注册。
+- **跨域数据**：禁止跨模块读取 `main/schema`；跨域统计 / 级联改为调用所属域 `main/index.ts` 导出的 service 函数。
 
 ### 1.4 模块边界与职责收拢（硬约束）
 
 - **一个功能 = 一个模块**：service、契约、IPC、preload、store、页面/组件、文案、SQL、需求目录同属该模块。
 - **职责域单一归属（收拢）**：同一职责域的数据读写、校验、归一、默认值、派生、编排与运行时状态，只在该域模块内实现；其它模块只能经其公共入口调用，禁止复制或降级重写。例：会话删除级联与运行时清理只在会话 service，面板只调入口。
-- **跨进程归属**：同一域跨进程存在是允许的，但权威规则只在主进程 `services/*`；渲染层只保留展示态与交互态，禁止复制业务校验、默认值与状态机。
+- **跨进程归属**：同一域跨进程存在是允许的，但权威规则只在主进程 `modules/{domain}/main/*`；渲染层只保留展示态与交互态，禁止复制业务校验、默认值与状态机。
 - **最小暴露面**：模块 `index.ts` 只导出调用方真实使用的 DTO / 行为入口；内部行结构、常量、辅助函数、子组件、缓存实现一律不导出，没有调用方就不导出。
 - **不向调用方泄漏实现**：跨模块只传契约 DTO 与行为结果，不暴露表结构、SQL、内部协议、第三方 SDK 类型与缓存键。
-- **单向依赖**：调用方向只能是「使用方 → 被复用模块」，禁止双向 / 循环依赖；共享逻辑下沉到真正低层（`shared/` 或全局 `utils`），不靠模块互引打补丁。
+- **单向依赖**：调用方向只能是「使用方 → 被复用模块」，禁止双向 / 循环依赖；共享逻辑下沉到真正低层（`common/shared` 或 `common/renderer`），不靠模块互引打补丁。
 - **模块自包含**：页面放 `pages/`（页内弹窗内联）、模块内共享件放 `components/`、组合式函数放 `composables/`、纯函数放 `utils/`、跨模块出口放 `index.ts`。
-- **components 纯净**：`renderer/src/components` 只放跨模块展示组件，禁止依赖 `stores/*`、`api`、`modules/*`；统一目录 + `index.vue` + barrel。
-- **layout 受控依赖**：`layout` 可组合模块公共 `index.ts`，禁止引用模块内部文件。
-- **外壳不承载域逻辑**：`layout`、顶栏、路由与页面壳不实现域的默认值、校验、派生与状态流转，只装配模块公共入口。
-- **跨模块只走公共面**：模块 `index.ts`、store、全局 `components/composables/utils`；禁止 import 其它模块的 `pages/`、内部 `components/`、内部 `utils/`。唯一例外是路由挂载页面（无 `index.ts` 的 `plugin` 只由路由引用 `pages/`）。
+- **components 纯净**：`common/renderer/components` 只放跨模块展示组件，禁止依赖 store、api、`@modules/*`；统一目录 + `index.vue` + barrel。
+- **shell 受控依赖**：`renderer/src/shell` 可组合模块公共入口，禁止引用模块内部文件；shell 不承载领域规则。
+- **外壳不承载域逻辑**：`shell/layout`、顶栏、路由与页面壳不实现域的默认值、校验、派生与状态流转，只装配模块公共入口。
+- **跨模块只走公共面**：模块 `shared/main/preload/renderer/worker` 的 `index.ts`；禁止 import 其它模块内部文件；`i18n` 仅由组合根读取。路由挂载页面是组合根行为，可引用模块 `pages/`。
 - **重构以收拢为默认动作**：发现同职责散落时，先定唯一归属模块 → 实现迁入 → 调用方改走公共入口 → 删除副本；禁止「新写一份、旧的不动」。
 - **收拢不等于提前泛化**：归属唯一针对同一职责域；跨域相似但边界不同的实现可保留，抽象仍按 `AGENTS.md` 的「第三次」原则。
-- **上移条件**：`components / composables / utils` 被 **2 个及以上模块**使用才上移到 `renderer/src` 对应目录。
-- **目录规模**：单个模块目录 ≤20 个文件；超限按子业务拆分（参考 `plugin/mcp`、`plugin/skill`）。
+- **上移条件**：`components / composables / utils` 被 **2 个及以上模块**使用才上移到 `common/renderer` 对应目录。
+- **目录规模**：模块单个进程子目录 ≤20 个文件；超限按子业务拆分（参考 `mcp/worker`、`skill/main/github`）。
 - **禁止桶文件**：`utils.ts / common.ts / helpers.ts / manager.ts` 不得承载多领域逻辑，文件名必须表达领域语义。
-- **会话级 UI 状态**：跨面板/跨页面的会话态放 `stores/toolPanel/` 与 `createSessionScopedStorage`，不放组件局部或全局单例。
+- **会话级 UI 状态**：跨面板/跨页面的会话态放 `modules/toolPanel/renderer/store`（以及 file/git/terminal 子域 store）与 `createSessionScopedStorage`，不放组件局部或全局单例。
 - **闭环检验**：改一个功能应只动「模块目录 + 其契约 + 调用方」；若要动 3 个以上模块，先重划边界。
 - **适配器扩展**：多实现场景用「接口 + 注册表」，新增实现只加文件、不改调用方。
 
@@ -136,22 +173,25 @@ modules/settings/    pages/ · components/ · index.ts
 
 | 新增内容 | 落位 |
 |---|---|
-| 跨进程 DTO / IPC 常量 / DeskApi | `shared/contracts/*.ts` + `shared/ipc.ts` |
-| 跨进程纯函数 / 常量（如文件类型、URL 归一） | `shared/*.ts` |
-| 跨进程布局常量（窗口最小宽度、顶栏高度） | `shared/*.ts`，主进程与渲染层共用 |
-| 主进程业务与编排 | `main/services/{module}Service.ts` |
-| 主进程运行时门面 / 审批 / 社区抓取 | `main/agent/host/*` |
-| Agent 工具 / 会话 / MCP | `main/agent/worker/*` |
-| IPC 注册 | `main/ipc.ts`（只转发） |
-| 渲染能力入口 | `renderer/src/api/index.ts` |
-| 跨模块组件 | `renderer/src/components/{Name}/index.vue`，统一从 `components/index.ts` 导出 |
-| 布局骨架 / 区域组件 | `renderer/src/layout/{,components/}` |
-| 跨模块组合式函数 / 纯工具 | `renderer/src/{composables,utils}` |
-| 模块页面 / 模块内组件 | `renderer/src/modules/{module}/{pages,components}` |
-| 模块壳级宿主（跨路由常驻） | `renderer/src/modules/{module}/components/hosts/` |
-| 模块状态 | `renderer/src/stores/{module}.ts`（复杂域用 `stores/{module}/`） |
-| 文案 | `shared/i18n/locales/{zh,en}.json` |
-| 颜色 / 尺寸令牌 | `renderer/src/styles/tokens.scss` |
+| 领域 DTO / 通道 / Api 类型 | `modules/{domain}/shared/{contracts,ipc,api}.ts` |
+| 跨域纯函数 / 常量（分页、快捷动作、文件类型、URL 归一） | `common/shared/*.ts` |
+| 跨进程布局常量（窗口最小宽度、顶栏高度） | `common/shared/*.ts`，主进程与渲染层共用 |
+| 主进程业务与编排 | `modules/{domain}/main/*.ts` |
+| 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
+| Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
+| IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
+| preload 能力片段 | `modules/{domain}/preload/index.ts`，由 `src/preload/index.ts` 聚合 |
+| DeskApi 类型聚合 | `src/preload/deskApi.ts` |
+| 渲染能力入口 | `common/renderer/api/index.ts` |
+| 跨模块组件 | `common/renderer/components/{Name}/index.vue` |
+| 布局骨架 / 区域组件 | `renderer/src/shell/layout/{,components/}` |
+| 跨模块组合式函数 / 纯工具 | `common/renderer/{composables,utils}` |
+| 模块页面 / 模块内组件 | `modules/{domain}/renderer/{pages,components}` |
+| 模块壳级宿主（跨路由常驻） | `modules/{domain}/renderer/components/hosts/` |
+| 模块状态 | `modules/{domain}/renderer/store.ts`（复杂域用 `store/`） |
+| 公共文案 | `common/shared/i18n/locales/{zh,en}.json` |
+| 领域文案 | `modules/{domain}/i18n/{zh,en}.json` |
+| 颜色 / 尺寸令牌 | `common/renderer/styles/tokens.scss` |
 
 ## 2. 代码约束
 
@@ -160,15 +200,15 @@ modules/settings/    pages/ · components/ · index.ts
 
 ### 2.1 契约与数据 [硬]
 
-- 跨进程只传 `shared/contracts/{domain}.ts` 的 DTO；禁止 `any` / 匿名对象穿透 IPC。
-- 通道命名 `desk:{module}:{action}`；时间统一 ISO；DTO 布尔由 INTEGER 归一。
+- 跨进程只传 `modules/{domain}/shared/contracts.ts` 的 DTO；禁止 `any` / 匿名对象穿透 IPC。
+- 通道命名 `desk:{module}:{action}`，定义在 `modules/{domain}/shared/ipc.ts`；时间统一 ISO；DTO 布尔由 INTEGER 归一。
 - 只传可结构化克隆的纯数据：不传 Error、类实例、Vue 响应式代理；必要时深拷贝。
 - **单一数据源**：同一配置只有一处权威存储；派生字段保存时统一重生，不允许两处并存。
 - **写库结构必须合法**：写入前保证下游可消费；历史脏数据在读取边界归一化。
-- 结构变更两处同步：`db/schema.ts` 与 `db/index.ts` 的 `DDL`（仅面向全新安装，不做旧库迁移）。
+- 结构变更两处同步：`modules/{domain}/main/schema.ts` 与 `modules/{domain}/main/ddl.ts`（仅面向全新安装，不做旧库迁移）。
 - 敏感值不落明文、不进日志；列表脱敏，编辑态才解密。
-- **SQLite 无外键级联**：删除父记录（项目 / 会话 / 消息 / 终端）必须由 service 手动级联并清理运行时，禁止依赖数据库约束。
-- **跨进程文案**：主进程 / worker 的用户可见错误用 `shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
+- **SQLite 无外键级联**：删除父记录（项目 / 会话 / 消息 / 终端）必须由所属 service 手动级联并清理运行时，禁止依赖数据库约束。
+- **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
 
@@ -208,8 +248,8 @@ modules/settings/    pages/ · components/ · index.ts
 
 ### 2.6 布局与尺寸 [硬]
 
-- **单一数据源**：JS 侧尺寸只取 `renderer/src/config/layout.ts#LAYOUT`，CSS 侧取 `styles/tokens.scss`；同一尺寸在两处出现时，改动必须同步，并在注释标注权威方。
-- **跨进程共享尺寸**（窗口最小宽度、顶栏高度等）下沉 `shared/`，主进程直接引用常量计算，禁止写魔法数（如窗口 `minWidth`）。
+- **单一数据源**：JS 侧尺寸只取 `common/renderer/config/layout.ts#LAYOUT`，CSS 侧取 `common/renderer/styles/tokens.scss`；同一尺寸在两处出现时，改动必须同步，并在注释标注权威方。
+- **跨进程共享尺寸**（窗口最小宽度、顶栏高度等）下沉 `common/shared/`，主进程直接引用常量计算，禁止写魔法数（如窗口 `minWidth`）。
 - **布局不变量**（2026-11 基线）：
   - 图标栏 44px；按需独立于顶栏高度，不共用同一 token；
   - 子菜单：默认 240px、最小 150px、最大由会话区约束；
@@ -218,7 +258,7 @@ modules/settings/    pages/ · components/ · index.ts
   - 文件树：默认 240px、最小 150px；文件正文：最小 150px；
   - 窗口最小宽度需满足上述最小值之和（当前 44 + 150 + 300 + 400 = 894，取 900）。
 - **工具面板宽度约定**：`0` 表示「自动按视口比例」，正数表示用户自定义像素；复位回到自动，不要写死旧默认值。
-- **约束只在 `config/layout.ts` 推导**：`sidebarWidthMax` / `toolPanelWidthMax` / `toolPanelMinWidth` 为纯函数；composable 只做 store 读写与响应式装配，组件内禁止重复硬编码 min/max。
+- **约束只在 `common/renderer/config/layout.ts` 推导**：`sidebarWidthMax` / `toolPanelWidthMax` / `toolPanelMinWidth` 为纯函数；composable 只做 store 读写与响应式装配，组件内禁止重复硬编码 min/max。
 - **宽度约束双向成立**：面板上限要基于另一面板的实际宽度计算，不能只保证单侧。
 - **默认值调整优先字段级归一化**：`STORAGE_VERSION` 升级会清空全部工具面板状态（宽度、展开态、选中文件），仅在结构不兼容时使用。
 
@@ -239,50 +279,70 @@ modules/settings/    pages/ · components/ · index.ts
 1. **需求确认（必须）**：模块命名、字段与校验、系统能力（对话框/shell/终端/文件）、页面形态、改动范围、验证范围；确认后写入需求目录的 `方案.md`。
 2. **需求落盘**：`xxl-ai-spec/{yyyyMMdd}-{module}/` 建 `方案.md` 与建表 SQL（SQLite DDL）。
 3. **数据结构**：按 §2.1 同步 `db/schema.ts` 与 `db/index.ts` 的 `DDL`。
-4. **主进程落位**：`services/{module}Service.ts` + 契约 + IPC + preload；需要运行时再加 `{module}RuntimeService.ts` 与 `agent/*` 实现。
-5. **渲染进程落位**：store + 页面/组件 + 路由 + 文案。
+4. **主进程落位**：`modules/{domain}/main/*.ts` + `shared/contracts|ipc|api` + `preload/index.ts`；需要运行时再加 `main/runtime.ts` 与 `worker/*` 实现。
+5. **渲染进程落位**：`modules/{domain}/renderer` 的 store + 页面/组件 + routes + 文案。
 6. **验证**：按 §7 执行（`type-check` → `build` → 端到端）；完成后清理测试数据并恢复用户状态。
 
 `方案.md` 最小结构：需求结论 / 数据库设计 / 后端改动 / 前端改动 / 验证结果。
 
 ## 4. 落位清单
 
-### 4.1 主进程 6 件套（业务 `Widget` → `widget`）
+### 4.1 领域模块 6 件套（业务 `Widget` → `widget`）
 
-| 文件 | 位置 | 说明 |
-|---|---|---|
-| `schema.ts` | `src/main/db/schema.ts` | `sqliteTable('desk_widget', {...})` |
-| `index.ts` | `src/main/db/index.ts` | DDL 建表 + 内置种子（全新安装生效，不做旧库迁移） |
-| `widgetService.ts` | `src/main/services/widgetService.ts` | CRUD/编排；唯一 `getDb()` 出口 |
-| handler | `src/main/ipc.ts` | `ipcMain.handle(IPC.widget*, ...)`，薄网关 |
-| 契约 | `src/shared/contracts/widget.ts` + `src/shared/ipc.ts` | DTO + `IPC.widget*` + `DeskApi.widget` |
-| 暴露 | `src/preload/index.ts` | `widget: { list, save, remove }` |
-
-```ts
-/* schema.ts */
-export const widgetTable = sqliteTable('desk_widget', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull().default(''),
-  enabled: integer('enabled').notNull().default(1),
-  addTime: text('add_time').notNull().default(''),
-  updateTime: text('update_time').notNull().default('')
-})
+```
+modules/widget/
+├── shared/
+│   ├── contracts.ts          WidgetDTO 等跨进程契约
+│   ├── ipc.ts                WIDGET_IPC 通道常量
+│   ├── api.ts                WidgetApi 类型
+│   └── index.ts              本域公共契约出口
+├── main/
+│   ├── schema.ts             Drizzle 表结构
+│   ├── ddl.ts                建表片段
+│   ├── widgetService.ts      CRUD / 编排；经 common/main/db#getDb()
+│   ├── ipc.ts                registerWidgetIpc(ipc)
+│   └── index.ts              主进程公共出口
+├── preload/index.ts          widgetApi 片段
+└── renderer/
+    ├── pages/index.vue
+    ├── components/
+    ├── store.ts              （复杂域用 store/）
+    └── index.ts              渲染层公共出口
 ```
 
 ```ts
-/* widgetService.ts：行 → DTO、list/save/delete；save 以 onConflictDoUpdate 幂等写入 */
-function toDTO(row: WidgetRow): WidgetDTO {
-  return { id: row.id, name: row.name, enabled: row.enabled === 1,
-    addTime: row.addTime, updateTime: row.updateTime }
+/* shared/ipc.ts */
+export const WIDGET_IPC = {
+  list: 'desk:widget:list',
+  save: 'desk:widget:save',
+  remove: 'desk:widget:remove'
+} as const
+
+/* shared/api.ts */
+export interface WidgetApi {
+  list(): Promise<WidgetDTO[]>
+  save(dto: Partial<WidgetDTO>): Promise<WidgetDTO>
+  remove(id: string): Promise<void>
 }
+```
+
+```ts
+/* main/widgetService.ts：行 → DTO、list/save/delete；save 以 onConflictDoUpdate 幂等写入 */
+import { getDb } from '@common/main/db'
+import { widgetTable } from './schema'
+
 export function saveWidget(input: Partial<WidgetDTO>): WidgetDTO {
   const db = getDb()
   const now = new Date().toISOString()
   const id = input.id || randomUUID()
   const existing = db.select().from(widgetTable).where(eq(widgetTable.id, id)).get()
-  const record = { id, name: input.name ?? existing?.name ?? '',
+  const record = {
+    id,
+    name: input.name ?? existing?.name ?? '',
     enabled: (input.enabled ?? (existing ? existing.enabled === 1 : true)) ? 1 : 0,
-    addTime: existing?.addTime ?? now, updateTime: now }
+    addTime: existing?.addTime ?? now,
+    updateTime: now
+  }
   db.insert(widgetTable).values(record)
     .onConflictDoUpdate({ target: widgetTable.id, set: record }).run()
   return toDTO(record)
@@ -290,26 +350,33 @@ export function saveWidget(input: Partial<WidgetDTO>): WidgetDTO {
 ```
 
 ```ts
-/* ipc.ts：只注册与转发；运行时失效/清理在 service 内完成 */
-ipcMain.handle(IPC.widgetList, () => listWidgets())
-ipcMain.handle(IPC.widgetSave, (_e, dto: Partial<WidgetDTO>) => saveWidget(dto))
-ipcMain.handle(IPC.widgetRemove, (_e, id: string) => deleteWidget(id))
+/* main/ipc.ts：只注册与转发；运行时失效/清理在 service 内完成 */
+export function registerWidgetIpc(ipc: IpcContext): void {
+  ipc.handle(WIDGET_IPC.list, () => listWidgets())
+  ipc.handle(WIDGET_IPC.save, (_e, dto: Partial<WidgetDTO>) => saveWidget(dto))
+  ipc.handle(WIDGET_IPC.remove, (_e, id: string) => deleteWidget(id))
+}
 ```
 
 ```ts
-/* shared/contracts/widget.ts + IPC/DeskApi 片段 */
-export interface WidgetDTO { id: string; name: string; enabled: boolean; addTime: string; updateTime: string }
-// IPC: widgetList: 'desk:widget:list' ...
+/* preload/index.ts */
+export const widgetApi: WidgetApi = {
+  list: () => ipcRenderer.invoke(WIDGET_IPC.list),
+  save: (dto) => ipcRenderer.invoke(WIDGET_IPC.save, dto),
+  remove: (id: string) => ipcRenderer.invoke(WIDGET_IPC.remove, id)
+}
 ```
 
-### 4.2 渲染进程 4 件套
+组合根：`src/main/ipc.ts` 调 `registerWidgetIpc(ipc)`；`src/main/db.ts` 聚合 `WIDGET_DDL`；`src/preload/index.ts` 把 `widgetApi` 挂到 `DeskApi.widget`；`src/preload/deskApi.ts` 增加 `widget: WidgetApi`。
+
+### 4.2 渲染层 4 件套
 
 | 文件 | 位置 | 说明 |
 |---|---|---|
-| store | `src/renderer/src/stores/{module}.ts` | Pinia；只经 `api.{module}` 访问能力 |
-| 页面/组件 | `src/renderer/src/modules/{domain}/{module}/{pages,components}` | 模块自包含 |
-| 路由 | `src/renderer/src/router/index.ts` | 新页面登记（Hash） |
-| 文案 | `src/shared/i18n/locales/{zh,en}.json` | 成对新增 |
+| store | `modules/{domain}/renderer/store.ts`（复杂域用 `store/`） | Pinia；只经 `api.{module}` 访问能力 |
+| 页面/组件 | `modules/{domain}/renderer/{pages,components}` | 模块自包含 |
+| 路由 | `renderer/src/shell/router/index.ts` | 组合根直接装配模块 `pages/`；子菜单路由按 `shell/config/nav.ts` 生成 |
+| 文案 | `modules/{domain}/i18n/{zh,en}.json` | 公共词条走 `common.*`；领域词条放本域，zh/en 成对 |
 
 ```ts
 export const useWidgetStore = defineStore('widget', () => {
@@ -329,15 +396,16 @@ export const useWidgetStore = defineStore('widget', () => {
 
 要点：
 
-- 能力访问统一 `import { api } from '@renderer/api'`；禁止直接 `window.desk`。
-- 引用优先别名：`@renderer/*`、`@shared/*`；禁止 3 层以上 `../`。
+- 能力访问统一 `import { api } from '@common/renderer/api'`；禁止直接 `window.desk`。
+- 引用优先别名：`@common/*`、`@modules/*`、`@renderer/*`；禁止 3 层以上 `../`。
+- 模块对外只经 `shared/main/preload/renderer/worker` 的 `index.ts` 暴露；跨模块禁止内部文件。
 - 组件 PascalCase；文案规范（`t()`、zh/en 成对、`common.*` 复用、插值）以 `AGENTS.md`「国际化」为准。
 - 落位、模块边界与目录语义见 §1.2–§1.5，此处不重复。
 
 ## 5. 界面外壳
 
 ```
-layout/index.vue（app-wrapper，纵向）
+shell/layout/index.vue（app-wrapper，纵向）
 ├─ Navbar        全局顶栏（固定最顶部，整体 -webkit-app-region: drag）
 └─ app-body（横向）
    ├─ Sidebar     SidebarRail（常驻图标栏）+ SidebarContent（可折叠/可拖拽内容区）
@@ -346,39 +414,39 @@ layout/index.vue（app-wrapper，纵向）
 ```
 
 - **术语边界**：`layout` 指应用外壳；`nav` 指导航；`sidebar` 指左侧整列；`rail` 指图标栏；`panel` 只指正文内可调整尺寸的面板（工具/终端/文件/浏览器）；`shell` 只用于操作系统 shell（`api.shell`、`desk:shell:*`）。
-- **导航单一来源**：板块 ↔ 入口路径 ↔ 顶栏标题 ↔ 子菜单项均在 `config/nav.ts`（`NAV_SECTIONS` / `SECTION_ENTRY` / `SECTION_ICON`）。新增板块需同步：`nav.ts`、`SidebarRail` 按钮、路由与正文页。
+- **导航单一来源**：板块 ↔ 入口路径 ↔ 顶栏标题 ↔ 子菜单项均在 `renderer/src/shell/config/nav.ts`（`NAV_SECTIONS` / `SECTION_ENTRY` / `SECTION_ICON`）。新增板块需同步：`nav.ts`、`SidebarRail` 按钮、路由与正文页。
 - **顶栏**：左侧依次为首页入口（回到对话模块新建对话页）与软件名称（`appName` 优先、回落 `app.name`），其后为板块图标 + 标题/操作，标题随路由（首页=会话标题，插件=「插件」，设置=「系统设置」）；软件名称与标题间的细线仅在有标题时展示；交互控件 `no-drag`。顶栏标题只做展示，不重复会话重命名 / 删除等侧栏已有操作。
 - **子菜单**：标题 18px/600，条目 14px/400，选中项 600 + 浅底；不展示 Logo；点击当前板块按钮切换子菜单栏折叠/展开，图标栏常驻。
-- **布局不承载域逻辑**：域内逻辑下沉 `modules/{module}`；`SidebarContent` 是唯一装配侧栏域内容的位置。
-- **布局不承载启动逻辑**：`App.vue` 只组装外壳；全局快捷键、设置/项目/会话初始化、会话生命周期与更新检查在 `composables/useAppBootstrap.ts`。
-- **面板宽度约束**：左侧栏与右侧工具面板均按像素持久化，最小 40px，最大保证会话区不低于 300px；拖拽统一走 `usePanelResize`（rAF 合并）与 `PanelResizer`。
-- **工具面板统一入口**：文件 / Git / 浏览器 / 终端均为右侧工具面板的 Tab，顺序为文件、Git、终端、浏览器；不再保留底部独立终端面板。
-- **面板交互统一复用**：拖拽用 `composables/usePanelResize.ts` + `layout/components/PanelResizer/index.vue`；左侧栏宽度走 `stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `stores/toolPanel/`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
-- **共享选中态归属域**：跨「子菜单 ↔ 页面」的选中态放所属域 store（如 `settings.activeTab`），不塞进 `layout`。
+- **布局不承载域逻辑**：域内逻辑下沉 `modules/{domain}/renderer`；`SidebarContent` 是唯一装配侧栏域内容的位置。
+- **布局不承载启动逻辑**：`App.vue` 只组装外壳；全局快捷键、设置/项目/会话初始化、会话生命周期与更新检查在 `shell/composables/useAppBootstrap.ts`。
+- **面板宽度约束**：左侧子菜单栏与右侧工具面板均按像素持久化；子菜单栏最小 150px，工具面板最小 150px（文件工具展开目录树时 300px），二者上限都要为会话区保留 400px。
+- **工具面板统一入口**：文件 / Git / 终端 / 浏览器均为右侧工具面板的 Tab，顺序为文件、Git、终端、浏览器；开发者模式追加「诊断」Tab，关闭后回退文件面板。
+- **面板交互统一复用**：拖拽用 `common/renderer/composables/usePanelResize.ts` + `shell/layout/components/PanelResizer/index.vue`；左侧栏宽度走 `shell/stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `modules/toolPanel/renderer/store`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
+- **共享选中态归属域**：跨「子菜单 ↔ 页面」的选中态放所属域 store（如 `modules/settings/renderer/store` 的 `activeTab`），不塞进 `layout`。
 - **配色分层**：`--desk-chrome-bg`（顶栏+图标栏）> `--desk-panel-bg`（子菜单栏）> `--desk-bg`（正文）；不加分隔线，仅「子菜单栏 ↔ 正文」保留 1px `--desk-border`。
-- **尺寸令牌**：`--desk-header-height`、`--desk-rail-width`、`--desk-sidebar-width`、`--desk-terminal-height`、`--desk-panel-header-height`；JS 侧尺寸统一取 `config/layout.ts#LAYOUT`；自绘 SVG 统一 `.desk-svg-icon`，尺寸由使用处覆盖。
+- **尺寸令牌**：`--desk-header-height`、`--desk-rail-width`、`--desk-sidebar-width`、`--desk-terminal-height`、`--desk-panel-header-height`；JS 侧尺寸统一取 `common/renderer/config/layout.ts#LAYOUT`；自绘 SVG 统一 `.desk-svg-icon`，尺寸由使用处覆盖。
 - **字体层级**：文字统一使用 `--desk-font-{xs,sm,base,md,lg,xl}`，图标字号使用 `--desk-icon-md`；禁止在组件内新增绝对 px 字号。
 
 ## 6. Agent 运行时
 
-新增 Agent 能力落 `src/main/agent/`，按进程归属落位；工具/会话扩展不需要新 IPC，只有新增跨进程能力才动 `shared/agentProtocol.ts` 与 `ipc.ts` / `preload`。
+新增 Agent 能力落 `src/modules/agent/`，按进程归属落位；工具/会话扩展不需要新 IPC，只有新增跨进程能力才动 `modules/agent/shared/agentProtocol.ts` 与各模块 `main/ipc.ts` / `preload/index.ts`。
 
 | 需求 | 落位 | 要点 |
 |---|---|---|
-| 内置工具 | `agent/worker/tools/{fs,shell,browser,general,skill}.ts` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写/命令类仅 build；是否进入「内置工具」页见 §6.1 |
-| 文件类工具 | `agent/worker/tools/fs.ts` + `agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool })`，越界返回拦截错误 |
-| 越界审批 | `sandbox.ts` + `host/runtimeHost.ts` + `host/approval.ts` | worker 经 `parentPort` 发 `approval-request`，主进程弹窗回传 `once/session/deny` |
-| MCP | `agent/worker/mcp/{client,tools}.ts` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal` |
-| 会话装配 | `agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并 |
-| 工具注册表 | `agent/worker/tools/shared.ts` | `ALL_MODES` / `BUILD_ONLY` / `describe` / `toolError` / `createGuard`；新增工具复用，不重复实现 |
-| 协议 | `shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
-| 模型 | `agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
+| 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写/命令类仅 build；是否进入「内置工具」页见 §6.1 |
+| 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, readAllowedRoots, trustedRoots })`，越界返回拦截错误 |
+| 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层弹窗，回传 `allow`（可 `remember`）/ `deny` |
+| MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal` |
+| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并 |
+| 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按模式 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_MODES` / `BUILD_ONLY` / `describe` / `toolError` / `createGuard` |
+| 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
+| 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
 
 工具结果 `content` 为文本块数组；失败用 `isError: true`。新增工具必须自测越界拦截与 Plan 模式不可见。
 
 ### 6.1 内置工具目录的产品边界（硬约束）
 
-「插件 → 内置工具」是**产品能力目录**，不是 `agent/worker/tools` 注册表的镜像。收录项须同时满足：
+「插件 → 内置工具」是**产品能力目录**，不是 `modules/agent/worker/tools` 注册表的镜像。收录项须同时满足：
 
 1. 由客户端自身提供，不是外部 MCP / 插件动态接入；
 2. 是独立能力，不是其它功能的内部实现（如 `read_skill` 仅服务 SKILL）；
@@ -387,7 +455,7 @@ layout/index.vue（app-wrapper，纵向）
 
 判定顺序：**先问用户是否应在此页看到并管理，再看代码里有没有。**
 
-- 展示：`fs` / `shell` / `browser` / `general` 等客户端核心能力；
+- 展示：`fs` / `shell` / `browser` / `general` / `interaction` 等客户端核心能力；
 - 不展示：MCP 工具、`read_skill` 等插件内部工具、仅服务单一业务模块的辅助 Tool；
 - 分类与工具清单按产品白名单维护，不按工具工厂输出自动展开。
 
@@ -406,17 +474,20 @@ layout/index.vue（app-wrapper，纵向）
 ## 7. 校验清单
 
 - [ ] 需求目录 `xxl-ai-spec/{yyyyMMdd}-{module}/` 存在，`方案.md` 与 SQL 同步。
-- [ ] 结构一致：`schema.ts` / `DDL`。
-- [ ] `services/*` 是唯一 `getDb()` 出口；`ipc.ts` 仅网关；契约 / IPC 常量 / `DeskApi` / preload 齐备。
+- [ ] 结构一致：`modules/{domain}/main/schema.ts` / `ddl.ts`，并由 `src/main/db.ts` 聚合。
+- [ ] `common/main/db#getDb()` 是唯一持久化出口；`src/main/ipc.ts` / `src/main/db.ts` / `src/main/i18n.ts` / `src/preload/index.ts` / `shell/router` / `shell/i18n` 仅聚合；契约 / IPC 常量 / Api / preload 齐备。
 - [ ] 依赖方向符合 §1.3；配置与运行时未耦合；运行时使用官方方案。
+- [ ] 顶层目录保持 `src/common` + `src/modules`，未新增其它顶层分层或 `modules` 下的框架 / 业务嵌套层。
+- [ ] 新增 `common` 内容满足「≥2 个领域使用且无业务规则」；`common` 内无领域名，单域逻辑未外溢。
+- [ ] 领域文案在 `modules/{domain}/i18n`，公共词条在 `common/shared/i18n`，zh/en 成对。
 - [ ] 同一职责域只有一处实现，跨模块仅经公共入口；`index.ts` 无未使用导出、无循环 / 双向依赖。
-- [ ] 外壳、`ipc.ts`、调用方未承载域内校验 / 归一 / 默认值 / 级联清理。
+- [ ] 外壳、`src/main/ipc.ts`、调用方未承载域内校验 / 归一 / 默认值 / 级联清理。
 - [ ] 新增/变更依赖为精确版本（无 `^` / `~` / 区间）；lock 当前被 `.gitignore` 忽略，如放开需同步提交。
 - [ ] 通道 `desk:{module}:{action}`；时间 ISO；布尔归一。
 - [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
 - [ ] UI 复用 tokens/外壳/列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
-- [ ] 布局尺寸变更已同步 `config/layout.ts` 与 `tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
+- [ ] 布局尺寸变更已同步 `common/renderer/config/layout.ts` 与 `common/renderer/styles/tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
 - [ ] 技能库读写不触发审批；`read_skill` 仍只认已启用技能；未新增脆弱的 shell 只读命令白名单。
 - [ ] 资源生命周期闭环；超时/取消/失败隔离/进程无残留。
 - [ ] `npm run type-check`、`npm run build` 通过；涉及 IPC/运行时完成端到端验证。
@@ -424,7 +495,7 @@ layout/index.vue（app-wrapper，纵向）
 
 ## 8. 参考实现
 
-- 主进程：`services/chatService.ts`（编排）、`services/sessionService.ts`（CRUD + 级联）、`agent/host/runtimeHost.ts`
-- 渲染：`modules/plugin/mcp/{pages,components}`（管理 + 发现）、`stores/chat/{index,stream}.ts`
-- 运行时：`agent/worker/session.ts`、`agent/worker/tools/shared.ts`
+- 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/host/runtimeHost.ts`
+- 渲染：`modules/mcp/renderer/{pages,components}`（管理 + 发现）、`modules/chat/renderer/store/{index,stream}.ts`
+- 运行时：`modules/agent/worker/session.ts`、`modules/agent/worker/tools/index.ts`、`modules/agent/worker/toolkit.ts`
 - 构建：`package.json`（`type-check` / `build` / `dev`）、`electron.vite.config.ts`

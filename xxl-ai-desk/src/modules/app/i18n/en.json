@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "XXL-AI-Desk",
+    "tagline": "AI Agent desktop client"
+  },
+  "update": {
+    "title": "Update available",
+    "version": "New version: v{0}",
+    "current": "Current version: v{0}",
+    "download": "Download",
+    "later": "Later",
+    "latest": "You're on the latest version",
+    "failed": "Update check failed: {0}"
+  }
+}

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /* 应用根组件：布局框架 + 全局宿主（浏览器/人机交互/更新提示），启动逻辑见 useAppBootstrap */
-import { ChatInteractionDialog } from '@renderer/modules/chat'
-import { BrowserHost } from '@renderer/modules/toolPanel'
-import { UpdateDialog } from '@renderer/modules/settings'
-import Layout from '@renderer/layout/index.vue'
-import { useAppBootstrap } from '@renderer/composables/useAppBootstrap'
+import { ChatInteractionDialog } from '@modules/chat/renderer'
+import { BrowserHost } from '@modules/toolPanel/renderer'
+import { UpdateDialog } from '@modules/settings/renderer'
+import Layout from '@renderer/shell/layout/index.vue'
+import { useAppBootstrap } from '@renderer/shell/composables/useAppBootstrap'
 
 useAppBootstrap()
 </script>

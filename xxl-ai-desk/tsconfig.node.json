@@ -14,14 +14,21 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@main/*": ["./src/main/*"],         /* 主进程路径别名，与 electron.vite.config.ts 一致 */
-      "@shared/*": ["./src/shared/*"]      /* 跨进程共享契约别名 */
+      "@main/*": ["./src/main/*"],         /* 主进程入口壳 */
+      "@preload/*": ["./src/preload/*"],   /* 预加载入口壳 */
+      "@common/*": ["./src/common/*"],     /* 跨域公共 */
+      "@modules/*": ["./src/modules/*"]    /* 领域模块 */
     }
   },
   "include": [
-    "src/main/**/*",                       /* 主进程与 Agent 运行时 */
-    "src/preload/**/*",                    /* 预加载脚本 */
-    "src/shared/**/*",                     /* 主/预加载/渲染共享契约 */
+    "src/main/**/*",                       /* 主进程入口壳 */
+    "src/preload/**/*",                    /* 预加载入口壳 */
+    "src/common/shared/**/*",              /* 跨进程公共 */
+    "src/common/main/**/*",                /* 主进程公共基础设施 */
+    "src/modules/*/shared/**/*",           /* 领域契约 */
+    "src/modules/*/main/**/*",             /* 领域主进程实现 */
+    "src/modules/*/preload/**/*",          /* 领域预加载片段 */
+    "src/modules/*/worker/**/*",           /* 领域 Worker 实现 */
     "electron.vite.config.ts"              /* 构建配置本身也纳入检查 */
   ]
 }

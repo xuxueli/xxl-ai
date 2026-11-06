@@ -1,0 +1,10 @@
+/*
+ * Agent 域 IPC 通道。
+ * @author xuxueli 2026-11-07
+ */
+
+export const AGENT_IPC = {
+  memoryList: 'desk:agent-memory:list',
+  memorySave: 'desk:agent-memory:save',
+  memoryRemove: 'desk:agent-memory:remove'
+} as const

@@ -15,16 +15,21 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@renderer/*": ["./src/renderer/src/*"], /* 渲染进程路径别名，与 electron.vite.config.ts 一致 */
-      "@shared/*": ["./src/shared/*"],         /* 跨进程共享契约别名 */
+      "@renderer/*": ["./src/renderer/src/*"], /* 渲染进程入口壳 */
+      "@common/*": ["./src/common/*"],         /* 跨域公共 */
+      "@modules/*": ["./src/modules/*"],       /* 领域模块 */
       "@resources/*": ["./resources/*"],       /* 项目级静态资源（图标等） */
       "@/*": ["./src/renderer/src/*"]
     }
   },
   "include": [
-    "src/renderer/src/**/*",               /* 渲染进程源码 */
+    "src/renderer/src/**/*",               /* 渲染进程外壳 */
     "src/renderer/src/**/*.vue",           /* Vue 单文件组件 */
     "src/preload/*.d.ts",                  /* window.desk 类型声明 */
-    "src/shared/**/*"                      /* 主/预加载/渲染共享契约 */
+    "src/preload/deskApi.ts",              /* DeskApi 聚合类型 */
+    "src/common/shared/**/*",              /* 跨进程公共 */
+    "src/common/renderer/**/*",            /* 渲染进程公共 */
+    "src/modules/*/shared/**/*",           /* 领域契约 */
+    "src/modules/*/renderer/**/*"          /* 领域渲染实现 */
   ]
 }

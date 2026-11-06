@@ -1,0 +1,27 @@
+{
+  "project": {
+    "label": "项目",
+    "new": "新建项目",
+    "selectProject": "选择项目",
+    "searchPlaceholder": "搜索项目或快捷操作",
+    "quickActions": "快捷操作",
+    "sortBy": "排序方式",
+    "sortName": "名称排序",
+    "sortTime": "更新时间",
+    "selectDirTitle": "选择项目目录",
+    "empty": "暂无项目，点击 + 新建",
+    "noSession": "暂无会话",
+    "rename": "重命名项目",
+    "renamePrompt": "请输入新的项目名称",
+    "delete": "删除项目",
+    "deleteConfirm": "确定删除项目「{0}」及其下的全部会话与消息？该操作不可恢复。",
+    "reveal": "在文件管理器中显示",
+    "revealMac": "在 Finder 中显示",
+    "revealWin": "在资源管理器中显示",
+    "revealLinux": "在文件管理器中显示",
+    "renamed": "项目已重命名",
+    "deleted": "项目已删除",
+    "needProject": "请先选择项目",
+    "duplicate": "该目录已创建项目"
+  }
+}

@@ -1,0 +1,67 @@
+/*
+* 桌面端路由：hash 模式，含对话页、设置页与兜底重定向
+*/
+import { createRouter, createWebHashHistory } from 'vue-router'
+import type { Component } from 'vue'
+import { NAV_SECTIONS } from '@renderer/shell/config/nav'
+
+/* 插件子页组件映射：路由项由导航配置统一生成，新增插件页只改 nav + 此映射 */
+const PLUGIN_PAGES: Record<string, () => Promise<{ default: Component }>> = {
+  mcp: () => import('@modules/mcp/renderer/pages/index.vue'),
+  skill: () => import('@modules/skill/renderer/pages/index.vue'),
+  builtin: () => import('@modules/plugin/renderer/builtin/pages/index.vue')
+}
+
+/* Agent 子页组件映射 */
+const AGENT_PAGES: Record<string, () => Promise<{ default: Component }>> = {
+  instructions: () => import('@modules/agent/renderer/instructions/pages/index.vue'),
+  memory: () => import('@modules/agent/renderer/memory/pages/index.vue')
+}
+
+/* 桌面端使用 hash 路由，兼容 file:// 加载 */
+const router = createRouter({
+  history: createWebHashHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'chat',
+      component: () => import('@modules/chat/renderer/pages/index.vue')
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@modules/settings/renderer/pages/index.vue')
+    },
+    {
+      path: '/agent',
+      component: () => import('@modules/agent/renderer/pages/index.vue'),
+      redirect: NAV_SECTIONS.agent.entryPath,
+      children: NAV_SECTIONS.agent.items
+        .filter((item) => item.path && AGENT_PAGES[item.key])
+        .map((item) => ({
+          path: item.key,
+          name: `agent-${item.key}`,
+          component: AGENT_PAGES[item.key]
+        }))
+    },
+    {
+      path: '/plugin',
+      component: () => import('@modules/plugin/renderer/pages/index.vue'),
+      redirect: NAV_SECTIONS.plugin.entryPath,
+      children: NAV_SECTIONS.plugin.items
+        .filter((item) => item.path && PLUGIN_PAGES[item.key])
+        .map((item) => ({
+          path: item.key,
+          name: `plugin-${item.key}`,
+          component: PLUGIN_PAGES[item.key]
+        }))
+    },
+    {
+      /* 未匹配路由兜底到对话首页 */
+      path: '/:pathMatch(.*)*',
+      redirect: '/'
+    }
+  ]
+})
+
+export default router

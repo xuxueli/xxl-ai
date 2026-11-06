@@ -60,11 +60,11 @@ import {
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import 'katex/dist/katex.min.css'
-import App from './App.vue'
-import router from './router'
-import { api } from './api'
-import { i18n } from './i18n'
-import './styles/index.scss'
+import App from '@renderer/App.vue'
+import router from '@renderer/shell/router'
+import { api } from '@common/renderer/api'
+import { i18n } from '@renderer/shell/i18n'
+import '@common/renderer/styles/index.scss'
 
 /* 渲染进程入口 */
 const app = createApp(App)

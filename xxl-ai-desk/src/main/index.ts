@@ -3,20 +3,21 @@
 import { app, BrowserWindow, nativeImage, shell } from 'electron'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { IPC } from '@shared/ipc'
-import { APP_NAME } from '@shared/appInfo'
-import { initDatabase } from './db'
-import { purgeExpiredTraces } from './services/diagnosticsService'
-import { registerIpc } from './ipc'
-import { cleanupGithubArchiveTemps } from './agent/host/skills/githubArchive'
-import { ensureSeedProviders } from './services/providerService'
-import { registerLocalFileProtocol } from './services/localFileProtocolService'
-import { disposeAllTerminals } from './services/terminalService'
-import { disposeAllFsWatch } from './services/fsWatchService'
-import { disposeAllGitWatch } from './services/gitService'
-import { disposeAgentRuntime } from './agent/host/runtimeHost'
-import { disposeBrowserActions } from './agent/host/browserBridge'
-import { initLogger } from './utils/logger'
+import './i18n'
+import { BROWSER_IPC } from '@modules/browser/shared'
+import { APP_NAME } from '@common/shared/appInfo'
+import { initDatabaseFromModules } from '@main/db'
+import { purgeExpiredTraces } from '@modules/diagnostics/main'
+import { registerIpc } from '@main/ipc'
+import { cleanupGithubArchiveTemps } from '@modules/skill/main'
+import { ensureSeedProviders } from '@modules/provider/main'
+import { registerLocalFileProtocol } from '@modules/app/main'
+import { disposeAllTerminals } from '@modules/terminal/main'
+import { disposeAllFsWatch } from '@modules/file/main'
+import { disposeAllGitWatch } from '@modules/git/main'
+import { disposeAgentRuntime } from '@modules/agent/main'
+import { disposeBrowserActions } from '@modules/browser/main'
+import { initLogger } from '@common/main/utils/logger'
 
 /* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null
@@ -129,7 +130,7 @@ if (!gotLock) {
   /* 应用就绪：初始化数据库、播种供应商、注册 IPC、建立窗口 */
   app.whenReady().then(() => {
     initLogger()
-    initDatabase()
+    initDatabaseFromModules()
     /* 清理过期模型通讯记录（开发者模式） */
     purgeExpiredTraces()
     cleanupGithubArchiveTemps()
@@ -145,7 +146,7 @@ if (!gotLock) {
       if (contents.getType() === 'webview') {
         contents.setWindowOpenHandler(({ url }) => {
           /* 页面内新窗口请求：始终新建标签页；sessionId 留空由渲染层按当前会话兜底 */
-          mainWindow?.webContents.send(IPC.browserOpenTab, {
+          mainWindow?.webContents.send(BROWSER_IPC.openTab, {
             sessionId: '',
             url,
             newTab: true

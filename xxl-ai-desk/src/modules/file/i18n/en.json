@@ -1,0 +1,24 @@
+{
+  "editor": {
+    "find": "Find",
+    "replace": "Replace",
+    "next": "next",
+    "previous": "previous",
+    "replaceOne": "replace",
+    "replaceAll": "replace all",
+    "close": "close",
+    "goToLine": "Go to line",
+    "go": "go"
+  },
+  "editorTheme": {
+    "auto": "Follow appearance",
+    "githubLight": "GitHub Light",
+    "oneLight": "One Light",
+    "solarizedLight": "Solarized Light",
+    "githubDarkDimmed": "GitHub Dark Dimmed",
+    "oneDark": "One Dark",
+    "solarizedDark": "Solarized Dark",
+    "nord": "Nord",
+    "dracula": "Dracula"
+  }
+}

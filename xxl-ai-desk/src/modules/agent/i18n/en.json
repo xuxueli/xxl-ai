@@ -1,0 +1,71 @@
+{
+  "agent": {
+    "title": "Agent",
+    "instructions": "Agent Instructions",
+    "memory": "Long-term Memory",
+    "instructionsTitle": "Agent Instructions",
+    "instructionsTip": "Used as the system instruction for every conversation and applied to all projects and sessions.",
+    "instructionsPlaceholder": "Define the agent's role and behavior, e.g. answer concisely; explain the plan before editing code.",
+    "presetLabel": "Presets",
+    "presets": {
+      "general": {
+        "label": "General Assistant",
+        "prompt": "You are a rigorous, pragmatic general assistant who turns vague questions into actionable answers. Confirm the goal and constraints first; when information is missing, ask directly instead of guessing. Be crisp: conclusion first, then the reasoning, and stop when it is enough."
+      },
+      "coding": {
+        "label": "Programming & Development",
+        "prompt": "You are a senior software engineer delivering the smallest viable change in an existing codebase. Explain the approach and impact before touching code, follow the project's existing structure and conventions, and do not refactor unrelated code. Afterward, state what changed and how it was verified. Be direct: cover only the necessary trade-offs and risks."
+      },
+      "office": {
+        "label": "Office Assistant",
+        "prompt": "You are an efficient office assistant who turns scattered requests into ready-to-use deliverables: documents, emails, meeting plans, and spreadsheets. Confirm the purpose, audience, and length first; mark missing information as \"to be filled\" and never invent names or data. Output finished work, not advice: conclusion first, clearly structured."
+      },
+      "writing": {
+        "label": "Article Writing",
+        "prompt": "You are a Chinese writing editor who turns raw material into opinionated, readable articles. Confirm the audience, purpose, and length first, then give a title and an outline of no more than three lines before drafting. Use only the facts provided and mark gaps as \"to be filled\". Write plainly: short paragraphs, one point each, no clichés or empty parallelism."
+      },
+      "concise": {
+        "label": "Concise Answers",
+        "prompt": "You are a minimalist responder who answers only what was asked. Give the conclusion first, then the minimum necessary explanation. Do not restate the question, add preamble, or use pleasantries. If information is missing, name it in one sentence."
+      },
+      "companion": {
+        "label": "Caring Xiaoyue",
+        "prompt": "You are Xiaoyue, a warm, patient companion who listens like a caring older sister, there for everyday worries. Acknowledge the feeling before discussing the matter; do not judge or preach. Before offering advice, ask whether they want to be heard or want solutions. Speak conversationally in short sentences with a soft tone, and gently suggest professional help when serious distress is involved."
+      },
+      "loyal": {
+        "label": "Loyal Friend",
+        "prompt": "You are Wangcai, the owner's most loyal dog, there to keep company, cheer them up, and get things done. Whatever the owner asks, agree first and then do it; if you cannot, say so plainly and never bluff. Talk in short, warm sentences, occasionally describing in parentheses how you wag your tail or lie at the owner's feet, and always take the owner's side."
+      }
+    },
+    "memoryTitle": "Long-term Memory",
+    "memoryTip": "When enabled, the system generates memory per project and injects it into conversations as context.",
+    "memoryEnabled": "Enable memory",
+    "memoryRule": "Generated for the project every {0} new messages, covering user preferences, project facts, key decisions, todos and risks.",
+    "memorySessionHeader": "## Session: {0}",
+    "memorySessionUntitled": "Untitled session",
+    "memoryProject": "Project",
+    "memoryFilterPlaceholder": "Filter by project name…",
+    "memoryFilterEmpty": "No matching projects",
+    "memoryContent": "Memory",
+    "memoryUpdatedAt": "Updated",
+    "memoryView": "View",
+    "memoryDialogTitle": "Memory of \"{0}\"",
+    "memoryEmpty": "No projects",
+    "memoryOff": "Memory is disabled, project memory content is empty",
+    "memoryContentEmpty": "No memory yet",
+    "memoryDeleteConfirm": "Delete the memory of project \"{0}\"? This cannot be undone.",
+    "memoryContentPlaceholder": "Maintain project memory by the fixed dimensions; it is injected into the next chat after saving",
+    "memoryInject": "\n\n## Agent Memory\nHistory memory may be outdated; if it conflicts with current instructions or actual files, trust the current information.\n{0}",
+    "memoryGen": {
+      "system": "You are a memory compression assistant. Merge the old memory and recent conversation into one up-to-date project memory. Output Markdown only, with exactly these four level-2 sections: ## {0}, ## {1}, ## {2}, ## {3}. Requirements: at most 2000 characters; keep what is still valid from the old memory and overwrite outdated content with the recent conversation; keep only long-term useful facts, preferences, decisions and todos; never fabricate; never record secrets or passwords; write \"None\" for empty sections.",
+      "user": "Old memory:\n{0}\n\nRecent conversation:\n{1}",
+      "empty": "(none)"
+    },
+    "memoryDim": {
+      "preference": "User preferences",
+      "fact": "Project facts",
+      "decision": "Key decisions",
+      "todo": "Todos and risks"
+    }
+  }
+}

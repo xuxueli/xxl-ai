@@ -1,0 +1,185 @@
+<script setup lang="ts">
+/* 文件树节点：目录懒加载可展开，文件点击选中；支持按名称关键字过滤当前已加载节点 */
+import { computed } from 'vue'
+import type { FsEntry } from '@modules/file/shared'
+
+const props = defineProps<{
+  entry: FsEntry
+  depth: number
+  childrenMap: Record<string, FsEntry[]>
+  expandedMap: Record<string, boolean>
+  loadingMap: Record<string, boolean>
+  selectedPath: string
+  keyword: string
+}>()
+const emit = defineEmits<{
+  select: [entry: FsEntry]
+  toggle: [entry: FsEntry]
+  /* 右键文件：携带鼠标视口坐标，由上层定位菜单 */
+  'context-menu': [entry: FsEntry, position: { x: number; y: number }]
+}>()
+
+/* 过滤生效（非空关键字）时：自动展开已加载目录，仅展示命中项及其祖先 */
+const filtering = computed(() => props.keyword.trim().length > 0)
+
+/* 是否展开：手工展开态或过滤态 */
+const expanded = computed(() => Boolean(props.expandedMap[props.entry.path]) || filtering.value)
+
+/* 已加载子项 */
+const children = computed(() => props.childrenMap[props.entry.path] ?? [])
+
+/* 关键字命中：自身命中，或任一已加载子项命中 */
+function matches(item: FsEntry): boolean {
+  const keyword = props.keyword.trim().toLowerCase()
+  if (!keyword) {
+    return true
+  }
+  if (item.name.toLowerCase().includes(keyword)) {
+    return true
+  }
+  const kids = props.childrenMap[item.path]
+  return Boolean(kids && kids.some((child) => matches(child)))
+}
+
+/* 过滤后的可见子项 */
+const visibleChildren = computed(() => children.value.filter((child) => matches(child)))
+
+/* 点击行：目录切换展开/收起，文件触发选中 */
+function onClick(): void {
+  if (props.entry.isDir) {
+    emit('toggle', props.entry)
+  } else {
+    emit('select', props.entry)
+  }
+}
+
+/* 右键文件 / 目录：阻止系统菜单，交给上层按鼠标位置展示操作菜单 */
+function onContextMenu(event: MouseEvent): void {
+  emit('context-menu', props.entry, { x: event.clientX, y: event.clientY })
+}
+
+/* 子节点右键事件上抛 */
+function forwardContextMenu(entry: FsEntry, position: { x: number; y: number }): void {
+  emit('context-menu', entry, position)
+}
+</script>
+
+<template>
+  <div class="tree-node">
+    <!-- 节点行：目录切换展开/收起，文件触发选中 -->
+    <button
+      class="tree-row"
+      :class="{ selected: entry.path === selectedPath }"
+      :style="{ paddingLeft: `${8 + depth * 13}px` }"
+      :title="entry.name"
+      @click="onClick"
+      @contextmenu.prevent.stop="onContextMenu"
+    >
+      <el-icon v-if="entry.isDir" class="tree-caret" :class="{ open: expanded }">
+        <CaretRight />
+      </el-icon>
+      <span v-else class="tree-caret is-placeholder"></span>
+      <el-icon class="tree-icon">
+        <FolderOpened v-if="entry.isDir && expanded" />
+        <Folder v-else-if="entry.isDir" />
+        <Document v-else />
+      </el-icon>
+      <span class="tree-name">{{ entry.name }}</span>
+      <el-icon v-if="loadingMap[entry.path]" class="tree-loading spin"><Loading /></el-icon>
+    </button>
+
+    <!-- 子节点：递归渲染（过滤态仅展示命中项及其祖先） -->
+    <div v-if="entry.isDir && expanded && visibleChildren.length" class="tree-children">
+      <FileTreeNode
+        v-for="child in visibleChildren"
+        :key="child.path"
+        :entry="child"
+        :depth="depth + 1"
+        :children-map="childrenMap"
+        :expanded-map="expandedMap"
+        :loading-map="loadingMap"
+        :selected-path="selectedPath"
+        :keyword="keyword"
+        @select="emit('select', $event)"
+        @toggle="emit('toggle', $event)"
+        @context-menu="forwardContextMenu"
+      />
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 4px 8px 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--desk-text-secondary);
+  font-size: var(--desk-font-sm);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.tree-row:hover {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+}
+
+.tree-row.selected {
+  background: var(--desk-segment-bg);
+  color: var(--desk-text);
+}
+
+.tree-caret {
+  flex-shrink: 0;
+  width: 12px;
+  font-size: var(--desk-icon-xs);
+  color: var(--desk-text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.tree-caret.open {
+  transform: rotate(90deg);
+}
+
+.tree-caret.is-placeholder {
+  display: inline-block;
+}
+
+.tree-icon {
+  flex-shrink: 0;
+  font-size: var(--desk-icon-sm);
+  color: var(--desk-text-tertiary);
+}
+
+.tree-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-loading {
+  flex-shrink: 0;
+  font-size: var(--desk-font-xs);
+  color: var(--desk-text-tertiary);
+}
+
+.spin {
+  animation: tree-spin 1s linear infinite;
+}
+
+@keyframes tree-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
