@@ -21,6 +21,19 @@ const settings = useSettingsStore()
 const memoryVisible = ref(false)
 const memoryProject = ref<ProjectDTO | null>(null)
 
+/* 项目筛选：按项目名或目录模糊匹配 */
+const keyword = ref('')
+const filteredProjects = computed(() => {
+  const query = keyword.value.trim().toLowerCase()
+  if (!query) {
+    return project.projects
+  }
+  return project.projects.filter(
+    (item) =>
+      item.name.toLowerCase().includes(query) || item.path.toLowerCase().includes(query)
+  )
+})
+
 /* 「在文件管理器中显示」文案按运行平台区分 */
 const revealLabel = computed(() => {
   if (settings.platform === 'darwin') {
@@ -150,14 +163,27 @@ function onAction(row: ProjectDTO, command: string): void {
 
 <template>
   <div class="project-settings">
+    <div class="settings-block-title">{{ t('project.listTitle') }}</div>
     <div class="panel-toolbar">
-      <div class="panel-tip">{{ t('project.settingsTip') }}</div>
-      <el-button type="primary" @click="onCreate">
-        <el-icon><Plus /></el-icon>{{ t('project.new') }}
-      </el-button>
+      <div class="settings-block-tip">{{ t('project.settingsTip') }}</div>
+      <div class="panel-actions">
+        <el-input
+          v-model="keyword"
+          class="project-search"
+          :placeholder="t('project.filterPlaceholder')"
+          clearable
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" @click="onCreate">
+          <el-icon><Plus /></el-icon>{{ t('project.new') }}
+        </el-button>
+      </div>
     </div>
 
-    <el-table :data="project.projects" class="project-table" style="width: 100%" row-key="id">
+    <el-table :data="filteredProjects" class="project-table" style="width: 100%" row-key="id">
       <!-- 列宽用 min-width 比例分配：项目名 30、目录 30、长期记忆 15、生成时间 20、操作 15 -->
       <el-table-column
         :label="t('project.name')"
@@ -217,7 +243,10 @@ function onAction(row: ProjectDTO, command: string): void {
         </template>
       </el-table-column>
       <template #empty>
-        <el-empty :description="t('project.empty')" :image-size="80" />
+        <el-empty
+          :description="keyword ? t('project.filterEmpty') : t('project.empty')"
+          :image-size="80"
+        />
       </template>
     </el-table>
 
@@ -232,6 +261,8 @@ function onAction(row: ProjectDTO, command: string): void {
 </template>
 
 <style scoped lang="scss">
+@use '../../../../common/renderer/styles/settingsBlock.scss';
+
 .project-settings {
   font-size: var(--desk-font-base);
   --el-font-size-base: 14px;
@@ -243,12 +274,18 @@ function onAction(row: ProjectDTO, command: string): void {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.panel-tip {
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
-  line-height: 1.6;
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.project-search {
+  width: 280px;
 }
 
 /* 项目名：主信息稍加权重 */

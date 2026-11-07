@@ -25,6 +25,9 @@
     "duplicate": "A project already exists for this folder",
     "settingsTip": "A project binds a local folder and owns its sessions; long-term memory is controlled per project.",
     "name": "Name",
-    "path": "Folder"
+    "path": "Folder",
+    "listTitle": "Project list",
+    "filterPlaceholder": "Search by project name or folder",
+    "filterEmpty": "No matching projects"
   }
 }

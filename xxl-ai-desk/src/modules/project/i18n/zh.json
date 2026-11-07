@@ -25,6 +25,9 @@
     "duplicate": "该目录已创建项目",
     "settingsTip": "项目用于绑定本地目录并承载会话；长期记忆按项目独立控制。",
     "name": "项目名",
-    "path": "目录"
+    "path": "目录",
+    "listTitle": "项目列表",
+    "filterPlaceholder": "按项目名称或目录搜索",
+    "filterEmpty": "没有匹配的项目"
   }
 }

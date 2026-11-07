@@ -49,14 +49,30 @@ async function onSave(): Promise<void> {
   }
 }
 
-/* 打开时重新加载记忆列表并同步内容，确保展示最新生成结果 */
-watch(visible, async (opened) => {
-  if (!opened) {
-    return
-  }
-  await agent.loadMemories()
-  syncContent()
-})
+/* 打开或切换项目时重新加载记忆并同步内容，确保展示最新生成结果 */
+let loadToken = 0
+watch(
+  [visible, () => props.projectId],
+  async ([opened]) => {
+    if (!opened) {
+      return
+    }
+    /* 快速切换项目时只允许最后一次请求回写编辑区，避免旧响应覆盖新内容 */
+    const token = ++loadToken
+    try {
+      await agent.loadMemories()
+      if (token === loadToken) {
+        syncContent()
+      }
+    } catch (error) {
+      if (token === loadToken) {
+        content.value = ''
+        ElMessage.error(ipcErrorMessage(error))
+      }
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
