@@ -6,12 +6,13 @@
 import { randomUUID } from 'crypto'
 import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { messageTable, sessionTable } from '@modules/chat/main/schema'
 import { disposeTerminalsBySession } from '@modules/terminal/main'
 import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
-import type { SessionDTO, StoredMessage } from '@modules/chat/shared'
+import type { ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
 
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
@@ -59,18 +60,18 @@ export function listSessions(): SessionDTO[] {
 /* 校验会话归属项目：会话必须绑定有效项目，避免无项目会话把沙箱根退化为用户主目录 */
 function assertProject(projectId: string): void {
   if (!projectId || !getProject(projectId)) {
-    throw new Error('会话必须归属有效项目，请先选择项目')
+    throw new Error(t('runtime.error.sessionProjectRequired'))
   }
 }
 
 /* 校验 Agent：新建会话必须显式绑定一个已存在的 Agent */
 function assertAgent(agentId: string): string {
   if (!agentId) {
-    throw new Error('请选择 Agent 后再创建会话')
+    throw new Error(t('runtime.error.sessionAgentRequired'))
   }
   const agent = getAgentById(agentId)
   if (!agent) {
-    throw new Error('Agent 不存在，请重新选择')
+    throw new Error(t('runtime.error.agentMissing'))
   }
   return agent.id
 }
@@ -102,7 +103,7 @@ export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDT
   const db = getDb()
   const existing = db.select().from(sessionTable).where(eq(sessionTable.id, id)).get()
   if (!existing) {
-    throw new Error('会话不存在')
+    throw new Error(t('runtime.error.sessionMissing'))
   }
   const record = {
     ...existing,
@@ -159,30 +160,17 @@ export function listSessionIdsByAgent(agentId: string): string[] {
     .map((row) => row.id)
 }
 
-/* Agent 绑定会话数 */
-export function countSessionsByAgent(agentId: string): number {
-  if (!agentId) {
-    return 0
-  }
-  return getDb()
-    .select({ value: count() })
+/* 各 Agent 绑定会话数：一次分组统计，供列表批量回填 */
+export function countSessionsByAgents(): Record<string, number> {
+  const rows = getDb()
+    .select({ agentId: sessionTable.agentId, value: count() })
     .from(sessionTable)
-    .where(eq(sessionTable.agentId, agentId))
-    .get()?.value ?? 0
+    .groupBy(sessionTable.agentId)
+    .all()
+  return Object.fromEntries(rows.map((row) => [row.agentId, row.value]))
 }
 
 /* 项目内晚于游标的消息：按会话分组，供 Agent 记忆生成 */
-export interface ProjectMessageGroup {
-  title: string
-  messages: StoredMessage[]
-}
-
-export interface ProjectMessages {
-  sessions: ProjectMessageGroup[]
-  total: number
-  lastMessageTime: string
-}
-
 export function listNewProjectMessages(
   projectId: string,
   lastMessageTime: string

@@ -11,6 +11,7 @@ import type { WriteStream } from 'fs'
 import type { Readable } from 'stream'
 import { net } from 'electron'
 import { join } from 'path'
+import { t } from '@common/main/i18n'
 import { x as extractTar } from 'tar'
 import {
   GITHUB_ARCHIVE_MAX_BYTES,
@@ -47,18 +48,18 @@ function headerNumber(value: string | string[] | undefined): number {
 
 /* 附加请求地址：让错误既可直接展示，也能在日志中定位仓库 / 分支 */
 function withUrl(message: string, url: string): string {
-  return `${message}：${url}`
+  return `${message} (${url})`
 }
 
 /* HTTP 状态码 → 可读错误 */
 function statusError(status: number, url: string): Error {
   if (status === 404) {
-    return new Error(withUrl('仓库、分支或标签不存在，或为私有仓库（GitHub 404）', url))
+    return new Error(withUrl(t('runtime.error.skillGithubRepoNotFound'), url))
   }
   if (status === 403 || status === 429) {
-    return new Error(withUrl(`GitHub 拒绝下载请求（HTTP ${status}）`, url))
+    return new Error(withUrl(t('runtime.error.skillGithubDownloadRejected', [status]), url))
   }
-  return new Error(withUrl(`GitHub 归档下载失败（HTTP ${status}）`, url))
+  return new Error(withUrl(t('runtime.error.skillGithubDownloadHttpFailed', [status]), url))
 }
 
 /* 下载归档到指定文件，支持取消 */
@@ -74,7 +75,7 @@ function downloadArchive(url: string, dest: string, signal?: AbortSignal): Promi
     let total = 0
 
     const timer = setTimeout(() => {
-      fail(new Error(withUrl('GitHub 归档下载超时，请检查网络后重试', url)))
+      fail(new Error(withUrl(t('runtime.error.skillGithubDownloadTimeout'), url)))
     }, DOWNLOAD_TIMEOUT)
 
     function cleanup(): void {
@@ -104,7 +105,7 @@ function downloadArchive(url: string, dest: string, signal?: AbortSignal): Promi
     }
 
     function onAbort(): void {
-      fail(new Error('已取消 GitHub 归档下载'))
+      fail(new Error(t('runtime.error.skillGithubArchiveCancelled')))
     }
 
     if (signal?.aborted) {
@@ -122,18 +123,20 @@ function downloadArchive(url: string, dest: string, signal?: AbortSignal): Promi
       }
       const length = headerNumber(response.headers['content-length'])
       if (length > GITHUB_ARCHIVE_MAX_BYTES) {
-        fail(new Error('仓库归档过大，暂不支持在线安装'))
+        fail(new Error(t('runtime.error.skillGithubArchiveTooLarge')))
         return
       }
 
       stream = createWriteStream(dest)
-      stream.on('error', (error) => fail(new Error(`GitHub 归档写入失败：${error.message}`)))
+      stream.on('error', (error) =>
+        fail(new Error(t('runtime.error.skillGithubArchiveWriteFailed', [error.message])))
+      )
       /* Electron 的 IncomingMessage 运行时具备流控方法，类型声明未暴露 */
       const readable = response as unknown as Readable
       response.on('data', (chunk: Buffer) => {
         total += chunk.length
         if (total > GITHUB_ARCHIVE_MAX_BYTES) {
-          fail(new Error('仓库归档过大，暂不支持在线安装'))
+          fail(new Error(t('runtime.error.skillGithubArchiveTooLarge')))
           return
         }
         /* 磁盘写入慢时暂停网络流，避免归档全部堆在内存 */
@@ -146,12 +149,16 @@ function downloadArchive(url: string, dest: string, signal?: AbortSignal): Promi
         stream?.end(() => finish())
       })
       response.on('error', (error) => {
-        fail(new Error(withUrl(`GitHub 归档读取失败：${error.message}`, url)))
+        fail(
+          new Error(withUrl(t('runtime.error.skillGithubArchiveReadFailed', [error.message]), url))
+        )
       })
     })
 
     request.on('error', (error) => {
-      fail(new Error(withUrl(`GitHub 归档请求失败：${error.message}`, url)))
+      fail(
+        new Error(withUrl(t('runtime.error.skillGithubArchiveRequestFailed', [error.message]), url))
+      )
     })
     request.end()
   })
@@ -161,14 +168,14 @@ function downloadArchive(url: string, dest: string, signal?: AbortSignal): Promi
 function safeArchivePath(path: string): string {
   const normalized = path.replace(/\\/g, '/').replace(/^\.\/+/, '')
   if (!normalized || normalized.includes('\0')) {
-    throw new Error('GitHub 归档包含非法空路径')
+    throw new Error(t('runtime.error.skillArchiveEmptyPath'))
   }
   if (normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) {
-    throw new Error(`GitHub 归档包含绝对路径：${path}`)
+    throw new Error(t('runtime.error.skillArchiveAbsolutePath', [path]))
   }
   const parts = normalized.split('/')
   if (parts.some((part) => part === '..')) {
-    throw new Error(`GitHub 归档包含越界路径：${path}`)
+    throw new Error(t('runtime.error.skillArchiveEscapePath', [path]))
   }
   return normalized
 }
@@ -205,17 +212,17 @@ async function extractArchive(archiveFile: string, dest: string): Promise<void> 
         if (type === 'File' || type === 'OldFile' || type === 'ContiguousFile') {
           const size = Number((entry as { size?: number }).size ?? 0)
           if (size > SKILL_MAX_FILE_BYTES) {
-            fatal = new Error(`技能文件过大：${safe}`)
+            fatal = new Error(t('runtime.error.skillFileTooLarge', [safe]))
             return false
           }
           total += size
           files += 1
           if (total > GITHUB_EXTRACT_MAX_BYTES) {
-            fatal = new Error('仓库解压后体积过大，暂不支持在线安装')
+            fatal = new Error(t('runtime.error.skillGithubExtractTooLarge'))
             return false
           }
           if (files > GITHUB_EXTRACT_MAX_FILES) {
-            fatal = new Error('仓库文件数量过多，暂不支持在线安装')
+            fatal = new Error(t('runtime.error.skillGithubExtractTooManyFiles'))
             return false
           }
         }
@@ -249,7 +256,7 @@ export async function downloadGithubArchive(
     await downloadArchive(url, archiveFile, signal)
     await extractArchive(archiveFile, rootDir)
     if (!existsSync(rootDir) || readdirSync(rootDir).length === 0) {
-      throw new Error('GitHub 归档为空')
+      throw new Error(t('runtime.error.skillArchiveEmpty'))
     }
   } finally {
     /* 解压完成后压缩包不再需要，避免临时目录占用翻倍 */

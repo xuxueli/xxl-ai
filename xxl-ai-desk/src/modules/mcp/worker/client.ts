@@ -10,6 +10,8 @@ import { delimiter } from 'path'
 import log from 'electron-log/main'
 import type { CallToolResult, McpClient, McpTransport, Tool } from '@earendil-works/pi-mcp'
 import { APP_VERSION } from '@common/shared/appInfo'
+import { translate } from '@common/shared/i18n'
+import type { AppLanguage } from '@common/shared/i18n'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 
 /* pi-mcp 为 ESM 包：运行时进程按需动态加载 */
@@ -71,9 +73,17 @@ const inflight = new Map<string, Promise<{ client: McpClient; tools: Tool[] }>>(
 /* 运行时 PATH（含设置的 Node / Python 环境，供 stdio 解析 npx / uvx） */
 let runtimePath = ''
 
+/* 错误文案语言（随每轮对话 / MCP 请求由主进程传入） */
+let language: AppLanguage = 'zh'
+
 /* 设置运行时 PATH（每轮对话开始时由运行时进程调用） */
 export function setMcpRuntimePath(value?: string): void {
   runtimePath = value?.trim() || ''
+}
+
+/* 设置错误文案语言 */
+export function setMcpLanguage(value: AppLanguage): void {
+  language = value
 }
 
 /* 配置指纹：配置变化即重建连接 */
@@ -109,7 +119,7 @@ async function createTransport(server: McpRuntimeConfig): Promise<McpTransport> 
   if (server.transport === 'stdio') {
     const command = (server.command ?? '').trim()
     if (!command) {
-      throw new Error('本地 MCP 缺少启动命令')
+      throw new Error(translate(language, 'runtime.error.mcpLocalCommandMissing'))
     }
     const stderrKey = server.id || fingerprintOf(server)
     return new StdioTransport({
@@ -127,7 +137,7 @@ async function createTransport(server: McpRuntimeConfig): Promise<McpTransport> 
     })
   }
   if (!server.url) {
-    throw new Error('远程 MCP 缺少服务地址')
+    throw new Error(translate(language, 'runtime.error.mcpRemoteUrlMissing'))
   }
   return new StreamableHttpTransport({
     url: new URL(server.url),
@@ -140,13 +150,13 @@ const stderrCapture = new Map<string, string>()
 
 /* 连接失败文案：优先给出定位提示，并附带服务 stderr 尾部输出 */
 function describeConnectError(error: Error, stderr: string, server: McpRuntimeConfig): string {
-  const base = error.message || '连接失败'
+  const base = error.message || translate(language, 'runtime.error.mcpConnectFailed')
   const parts: string[] = []
   if (/closed|transport/i.test(base) && !stderr) {
     parts.push(
       server.transport === 'stdio'
-        ? `MCP 服务进程启动后立即退出（命令：${server.command ?? ''}），请检查命令参数是否完整、目录是否存在`
-        : `MCP 服务连接被关闭（地址：${server.url ?? ''}）`
+        ? translate(language, 'runtime.error.mcpStdioExited', [server.command ?? ''])
+        : translate(language, 'runtime.error.mcpConnectionClosed', [server.url ?? ''])
     )
   } else {
     parts.push(base)
@@ -154,9 +164,9 @@ function describeConnectError(error: Error, stderr: string, server: McpRuntimeCo
   if (stderr) {
     /* 首次安装依赖的提示：避免用户把正常下载误判为服务故障 */
     if (/Downloading|Installing|Resolving|Building/i.test(stderr)) {
-      parts.push('该 MCP 依赖首次安装耗时较长，请等待安装完成后重试')
+      parts.push(translate(language, 'runtime.error.mcpFirstInstall'))
     }
-    parts.push(`服务输出：${stderr}`)
+    parts.push(translate(language, 'runtime.error.mcpStderr', [stderr]))
   }
   return parts.join('；')
 }
@@ -246,7 +256,7 @@ export async function getMcpConnection(
   if (failure && failure.fingerprint === fingerprint) {
     if (failure.until > Date.now()) {
       const remain = Math.ceil((failure.until - Date.now()) / 1000)
-      throw new Error(`${failure.message}（${remain} 秒后重试）`)
+      throw new Error(translate(language, 'runtime.error.mcpCooldown', [failure.message, remain]))
     }
     failures.delete(server.id)
   }

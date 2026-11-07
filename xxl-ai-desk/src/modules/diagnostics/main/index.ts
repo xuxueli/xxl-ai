@@ -4,4 +4,3 @@
  */
 
 export { clearTraces, purgeExpiredTraces, recordTrace } from './diagnosticsService'
-export { registerDiagnosticsIpc } from './ipc'

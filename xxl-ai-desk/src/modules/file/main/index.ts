@@ -4,4 +4,3 @@
  */
 
 export { disposeAllFsWatch } from './fsWatchService'
-export { registerFileIpc } from './ipc'

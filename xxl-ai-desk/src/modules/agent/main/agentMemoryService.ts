@@ -8,20 +8,29 @@ import { randomUUID } from 'crypto'
 import log from 'electron-log/main'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { agentMemoryTable } from '@modules/agent/main/schema'
 import { AGENT_MEMORY_MAX_CHARS, AGENT_MEMORY_MESSAGE_LIMIT } from '@modules/agent/shared'
 import type { AgentMemoryDTO, AgentMemorySaveInput } from '@modules/agent/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
-import type { SessionDTO } from '@modules/chat/shared'
+import type { ProjectMessageGroup, ProjectMessages, SessionDTO } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
 import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { getProject, listProjects } from '@modules/project/main'
-import { getSession, listNewProjectMessages, listSessionIdsByProject } from '@modules/chat/main'
-import type { ProjectMessageGroup } from '@modules/chat/main'
-import { evictAgent, generateMemory } from '@modules/agent/main'
+import { generateMemory } from './host/runtimeHost'
 import type { ProviderModelConfig } from '@modules/agent/shared/agentProtocol'
+
+/* 记忆生成上下文：会话数据由调用方（chat）提供，避免 agent → chat 反向依赖 */
+export interface AgentMemoryGenerationContext {
+  /* 触发本轮记忆检查的会话 */
+  session: SessionDTO
+  /* 读取项目内晚于游标的消息 */
+  loadPendingMessages: (since: string) => ProjectMessages
+  /* 记忆变更后清理项目下会话运行时，使新记忆下一轮生效 */
+  evictProjectSessions: () => void
+}
 
 /* 生成中的项目：同一项目同时只跑一个记忆任务，避免多会话并发覆盖 */
 const generatingProjects = new Set<string>()
@@ -109,26 +118,23 @@ function upsertMemory(
 export function saveAgentMemory(input: AgentMemorySaveInput): AgentMemoryDTO {
   const project = getProject(input.projectId)
   if (!project) {
-    throw new Error('项目不存在')
+    throw new Error(t('runtime.error.projectMissing'))
   }
   const existing = getDb()
     .select()
     .from(agentMemoryTable)
     .where(eq(agentMemoryTable.projectId, project.id))
     .get()
-  const saved = upsertMemory(
+  return upsertMemory(
     project.id,
     (input.content ?? '').slice(0, AGENT_MEMORY_MAX_CHARS),
     existing?.lastMessageTime ?? ''
   )
-  evictProjectAgents(project.id)
-  return saved
 }
 
-/* 删除项目记忆（保留项目本身） */
+/* 删除项目记忆（保留项目本身；运行时清理由调用方编排） */
 export function removeAgentMemory(projectId: string): void {
   getDb().delete(agentMemoryTable).where(eq(agentMemoryTable.projectId, projectId)).run()
-  evictProjectAgents(projectId)
 }
 
 /* 会话运行时目标：优先会话绑定，缺失时回退设置默认，再回退供应商首个模型 */
@@ -212,21 +218,18 @@ function buildTranscript(sessions: ProjectMessageGroup[], language: string): str
     : transcript
 }
 
-/* 清理项目下会话运行时：系统提示词在创建 Agent 时固化，记忆变更后需重建才能注入最新内容 */
-function evictProjectAgents(projectId: string): void {
-  listSessionIdsByProject(projectId).forEach((id) => evictAgent(id))
-}
-
 /*
  * 一轮对话结束后调用：开启记忆且距上次生成达到阈值消息数时异步生成。
- *   - 计数与转录均按项目内全部会话，lastMessageTime 之前的消息不再重复纳入；
+ *   - 会话与增量消息由调用方提供，计数与转录按项目内全部会话；
  *   - 生成成功覆盖项目记忆并清理项目下会话运行时，使新记忆下一轮生效。
  */
-export async function maybeGenerateAgentMemory(sessionId: string): Promise<void> {
+export async function maybeGenerateAgentMemory(
+  context: AgentMemoryGenerationContext
+): Promise<void> {
   const settings = getSettings()
-  const session = getSession(sessionId)
+  const { session } = context
   /* 记忆归属项目：未归属项目的会话不生成 */
-  if (!session || !session.projectId) {
+  if (!session.projectId) {
     return
   }
   const project = getProject(session.projectId)
@@ -239,13 +242,13 @@ export async function maybeGenerateAgentMemory(sessionId: string): Promise<void>
     .from(agentMemoryTable)
     .where(eq(agentMemoryTable.projectId, project.id))
     .get()
-  const pending = listNewProjectMessages(project.id, memory?.lastMessageTime ?? '')
+  const pending = context.loadPendingMessages(memory?.lastMessageTime ?? '')
   if (pending.total < AGENT_MEMORY_MESSAGE_LIMIT) {
     return
   }
   const target = resolveTarget(session, settings)
   if (!target) {
-    log.warn(`[agent-memory] 跳过生成：会话 ${sessionId} 未找到可用模型`)
+    log.warn(`[agent-memory] 跳过生成：会话 ${session.id} 未找到可用模型`)
     return
   }
   const transcript = buildTranscript(pending.sessions, settings.language)
@@ -261,12 +264,12 @@ export async function maybeGenerateAgentMemory(sessionId: string): Promise<void>
       language: settings.language,
       oldMemory: memory?.content ?? '',
       transcript,
-      sessionId,
+      sessionId: session.id,
       traceEnabled: settings.developerMode
     })
     const saved = content.trim().slice(0, AGENT_MEMORY_MAX_CHARS)
     if (!saved) {
-      throw new Error('模型未返回记忆内容')
+      throw new Error(t('runtime.error.memoryEmpty'))
     }
     /* 生成期间项目可能已被删除：不再写入，避免孤儿记忆 */
     if (!getProject(project.id)) {
@@ -274,7 +277,7 @@ export async function maybeGenerateAgentMemory(sessionId: string): Promise<void>
     }
     upsertMemory(project.id, saved, lastMessageTime)
     /* 系统提示词在创建 Agent 时固化：新记忆需清理项目下会话运行时，下一轮重新装配 */
-    evictProjectAgents(project.id)
+    context.evictProjectSessions()
     log.info(`[agent-memory] 项目 ${project.id} 记忆已更新（${pending.total} 条消息）`)
   } catch (error) {
     /* 失败隔离：保留旧记忆，下一轮达到阈值时重试 */

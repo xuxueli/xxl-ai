@@ -6,6 +6,8 @@
  * @author xuxueli 2026-10-31
  */
 
+import { t } from '@common/main/i18n'
+
 /* GitHub 仓库定位结果 */
 export interface GithubRepoRef {
   /* 仓库所有者 */
@@ -28,14 +30,14 @@ function decodeSegment(value: string): string {
   try {
     return decodeURIComponent(value)
   } catch {
-    throw new Error('GitHub 地址包含非法字符')
+    throw new Error(t('runtime.error.skillGithubInvalidChars'))
   }
 }
 
 /* 校验 owner / repo */
 function assertRepoSegment(value: string, label: string): string {
   if (!value || value === '.' || value === '..' || !SEGMENT.test(value)) {
-    throw new Error(`GitHub 地址中的${label}不合法`)
+    throw new Error(t('runtime.error.skillGithubInvalidSegment', [label]))
   }
   return value
 }
@@ -47,11 +49,11 @@ function assertRef(value: string): string {
     return 'HEAD'
   }
   if (/[\0\r\n]/.test(ref)) {
-    throw new Error('GitHub 分支或标签不合法')
+    throw new Error(t('runtime.error.skillGithubInvalidRef'))
   }
   const parts = ref.split('/')
   if (parts.some((part) => !part || part === '.' || part === '..')) {
-    throw new Error('GitHub 分支或标签不合法')
+    throw new Error(t('runtime.error.skillGithubInvalidRef'))
   }
   return ref
 }
@@ -63,11 +65,11 @@ function normalizeRepoPath(raw: string, dropFileName: boolean): string {
     return ''
   }
   if (normalized.startsWith('/') || /^[A-Za-z]:\//.test(normalized)) {
-    throw new Error('GitHub 技能路径不合法')
+    throw new Error(t('runtime.error.skillGithubInvalidPath'))
   }
   const parts = normalized.split('/').filter(Boolean)
   if (parts.some((part) => part === '.' || part === '..')) {
-    throw new Error('GitHub 技能路径不合法')
+    throw new Error(t('runtime.error.skillGithubInvalidPath'))
   }
   if (dropFileName && parts.length > 0) {
     parts.pop()
@@ -98,7 +100,7 @@ function parseBare(input: string): { owner: string; repo: string } | null {
 export function parseGithubUrl(input: string, explicitRef = ''): GithubRepoRef {
   const value = input.trim()
   if (!value) {
-    throw new Error('请输入 GitHub 地址')
+    throw new Error(t('runtime.error.skillGithubUrlRequired'))
   }
 
   /* SSH 地址 */
@@ -135,15 +137,15 @@ export function parseGithubUrl(input: string, explicitRef = ''): GithubRepoRef {
   try {
     url = new URL(value)
   } catch {
-    throw new Error('GitHub 地址格式不正确')
+    throw new Error(t('runtime.error.skillGithubUrlFormat'))
   }
   if (!['github.com', 'www.github.com'].includes(url.hostname.toLowerCase())) {
-    throw new Error('仅支持 github.com 地址')
+    throw new Error(t('runtime.error.skillGithubOnly'))
   }
 
   const segments = url.pathname.split('/').filter(Boolean).map(decodeSegment)
   if (segments.length < 2) {
-    throw new Error('GitHub 地址缺少仓库信息')
+    throw new Error(t('runtime.error.skillGithubMissingRepo'))
   }
   const owner = assertRepoSegment(segments[0], '仓库所有者')
   const repo = assertRepoSegment(segments[1].replace(/\.git$/i, ''), '仓库名')
@@ -153,10 +155,10 @@ export function parseGithubUrl(input: string, explicitRef = ''): GithubRepoRef {
   if (segments.length > 2) {
     const mode = segments[2].toLowerCase()
     if (mode !== 'tree' && mode !== 'blob') {
-      throw new Error('请输入 GitHub 仓库地址或技能地址')
+      throw new Error(t('runtime.error.skillGithubRepoRequired'))
     }
     if (!segments[3]) {
-      throw new Error('GitHub 地址缺少分支或标签')
+      throw new Error(t('runtime.error.skillGithubMissingRef'))
     }
     ref = segments[3]
     path = normalizeRepoPath(segments.slice(4).join('/'), mode === 'blob')

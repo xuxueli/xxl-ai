@@ -6,6 +6,7 @@
  * @author xuxueli 2026-10-31
  */
 
+import { t } from '@common/main/i18n'
 import {
   existsSync,
   readFileSync,
@@ -16,7 +17,7 @@ import {
 } from 'fs'
 import { join } from 'path'
 import { ensureTempDir, getTempDir } from '@common/main/config/paths'
-import { downloadGithubArchive } from '@modules/skill/main'
+import { downloadGithubArchive } from './githubDownload'
 
 /* 归档缓存有效期（毫秒）：同仓库重复下载复用 30 分钟 */
 const CACHE_TTL = 30 * 60 * 1000
@@ -218,7 +219,7 @@ export async function acquireGithubArchive(
     .then((archive) => {
       if (controller.signal.aborted) {
         rmSync(archive.tempDir, { recursive: true, force: true })
-        throw new Error('已取消 GitHub 归档下载')
+        throw new Error(t('runtime.error.skillGithubArchiveCancelled'))
       }
       return archive
     })

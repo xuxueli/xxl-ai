@@ -4,5 +4,4 @@
  */
 
 export { browseCategoryMcpSo, browseMcpSo, detailMcpSo, listMcpSoCategories, searchMcpSo } from './community/mcpSoAdapter'
-export { registerMcpIpc } from './ipc'
 export { buildRuntimeConfig, getMcp, listMcpRuntimeConfigs, saveMcpHealth } from './service'

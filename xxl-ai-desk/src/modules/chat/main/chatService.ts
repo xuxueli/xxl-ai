@@ -17,7 +17,7 @@ import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendMessages, getSession, listMessages, updateSession } from '@modules/chat/main'
+import { appendMessages, getSession, listMessages, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, getDefaultAgent, maybeGenerateAgentMemory } from '@modules/agent/main'
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
@@ -364,8 +364,13 @@ export async function sendChat(
       }))
     appendMessages(sessionId, serialized)
     committed = true
-    /* 记忆生成异步执行：不阻塞本轮结束，失败只记日志（保留旧记忆） */
-    void maybeGenerateAgentMemory(sessionId).catch((error) => {
+    /* 记忆生成异步执行：会话数据由本域提供，避免 agent 反向依赖 chat；失败只记日志（保留旧记忆） */
+    void maybeGenerateAgentMemory({
+      session,
+      loadPendingMessages: (since) => listNewProjectMessages(session.projectId, since),
+      evictProjectSessions: () =>
+        listSessionIdsByProject(session.projectId).forEach((id) => evictAgent(id))
+    }).catch((error) => {
       log.warn(`[chat] 记忆生成异常 session=${sessionId}`, error)
     })
   } catch (error) {

@@ -14,7 +14,6 @@ import { TRACE_ERROR_MAX_CHARS, TRACE_REQUEST_MAX_CHARS, TRACE_RESPONSE_MAX_CHAR
 import type { DiagnosticsQuery, LlmTraceDTO, LlmTraceInput, ToolCallTraceDTO } from '@modules/diagnostics/shared'
 import type { PageResult } from '@common/shared'
 import type { StoredMessage } from '@modules/chat/shared'
-import { listSessionMessagePage } from '@modules/chat/main'
 import { getSettings } from '@modules/settings/main'
 
 /* 保留天数与单会话条数上限：开发者模式长期开启时控制体积 */
@@ -52,10 +51,19 @@ function normalizePhase(phase: string): LlmTraceDTO['phase'] {
   return phase === 'memory' ? 'memory' : 'chat'
 }
 
-/* 会话消息分页：复用对话域的消息读取能力，诊断只做分页编排 */
-export function listMessagePage(query: DiagnosticsQuery): PageResult<StoredMessage> {
+/* 会话消息分页：消息读取能力由组合根注入，诊断只做分页编排 */
+export type MessagePageLoader = (
+  sessionId: string,
+  limit: number,
+  offset: number
+) => { items: StoredMessage[]; total: number }
+
+export function listMessagePage(
+  query: DiagnosticsQuery,
+  loadMessages: MessagePageLoader
+): PageResult<StoredMessage> {
   const { page, pageSize, offset } = normalizePage(query)
-  const { items, total } = listSessionMessagePage(query.sessionId, pageSize, offset)
+  const { items, total } = loadMessages(query.sessionId, pageSize, offset)
   return { items, total, page, pageSize }
 }
 

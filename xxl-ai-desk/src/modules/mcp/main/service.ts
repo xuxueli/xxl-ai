@@ -7,6 +7,7 @@
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { mcpTable } from '@modules/mcp/main/schema'
 import { decryptSecret, encryptSecret } from '@modules/provider/main'
 import type { McpDTO, McpHealth, McpRuntimeConfig, McpTransport, McpType } from '@modules/mcp/shared'
@@ -138,10 +139,10 @@ export function getMcp(id: string): McpDTO | null {
 function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<McpRow, 'addTime' | 'updateTime'> {
   const name = (input.name ?? existing?.name ?? '').trim()
   if (!name) {
-    throw new Error('请填写 MCP 名称')
+    throw new Error(t('runtime.error.mcpNameRequired'))
   }
   if (name.length > 64) {
-    throw new Error('MCP 名称过长（最多 64 个字符）')
+    throw new Error(t('runtime.error.mcpNameTooLong', [64]))
   }
 
   const type: McpType = (input.type ?? existing?.type ?? 'remote') === 'local' ? 'local' : 'remote'
@@ -155,13 +156,13 @@ function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<M
 
   if (type === 'remote') {
     if (!url) {
-      throw new Error('请填写 MCP 服务地址')
+      throw new Error(t('runtime.error.mcpUrlRequired'))
     }
     if (!/^https?:\/\/\S+$/i.test(url)) {
-      throw new Error('MCP 服务地址需以 http:// 或 https:// 开头')
+      throw new Error(t('runtime.error.mcpUrlScheme'))
     }
   } else if (!command) {
-    throw new Error('请填写本地 MCP 启动命令')
+    throw new Error(t('runtime.error.mcpCommandRequired'))
   }
 
   const argsList = args.map((item) => String(item ?? '').trim()).filter((item) => item !== '')
@@ -216,7 +217,7 @@ export function saveMcp(input: Partial<McpDTO>): McpDTO {
     .all()
     .find((row) => row.name === record.name && row.id !== record.id)
   if (duplicated) {
-    throw new Error(`MCP 名称「${record.name}」已存在，请更换名称`)
+    throw new Error(t('runtime.error.mcpNameDuplicate', [record.name]))
   }
 
   const now = new Date().toISOString()
@@ -313,13 +314,13 @@ export function buildRuntimeConfig(input: Partial<McpDTO>): McpRuntimeConfig {
   } as McpDTO
 
   if (!draft.name.trim()) {
-    throw new Error('请填写 MCP 名称')
+    throw new Error(t('runtime.error.mcpNameRequired'))
   }
   if (draft.type === 'remote' && !draft.url.trim()) {
-    throw new Error('请填写 MCP 服务地址')
+    throw new Error(t('runtime.error.mcpUrlRequired'))
   }
   if (draft.type === 'local' && !draft.command.trim()) {
-    throw new Error('请填写本地 MCP 启动命令')
+    throw new Error(t('runtime.error.mcpCommandRequired'))
   }
   return toRuntimeConfig(draft)
 }

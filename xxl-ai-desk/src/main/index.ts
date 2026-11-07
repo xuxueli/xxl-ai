@@ -7,6 +7,8 @@ import './i18n'
 import { BROWSER_IPC } from '@modules/browser/shared'
 import { APP_NAME } from '@common/shared/appInfo'
 import { initDatabaseFromModules } from '@main/db'
+import { setMainLanguage } from '@common/main/i18n'
+import { getSettings } from '@modules/settings/main'
 import { purgeExpiredTraces } from '@modules/diagnostics/main'
 import { registerIpc } from '@main/ipc'
 import { cleanupGithubArchiveTemps } from '@modules/skill/main'
@@ -131,6 +133,8 @@ if (!gotLock) {
   app.whenReady().then(() => {
     initLogger()
     initDatabaseFromModules()
+    /* 主进程错误文案语言：语言由配置决定且不支持运行时切换，启动时初始化一次 */
+    setMainLanguage(getSettings().language)
     /* 清理过期模型通讯记录（开发者模式） */
     purgeExpiredTraces()
     cleanupGithubArchiveTemps()

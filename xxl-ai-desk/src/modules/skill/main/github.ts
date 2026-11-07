@@ -6,12 +6,9 @@
  * @author xuxueli 2026-10-31
  */
 
-import { parseGithubUrl } from '@modules/skill/main'
-import {
-  installFromGithub,
-  inspectGithubRepo,
-  cancelGithubRepo
-} from '@modules/skill/main'
+import { t } from '@common/main/i18n'
+import { parseGithubUrl } from './github/githubUrl'
+import { installFromGithub, inspectGithubRepo, cancelGithubRepo } from './install'
 import type { GithubSkillCandidate, GithubSkillInspectResult, GithubSkillInstallInput, GithubSkillQuery, SkillDTO } from '@modules/skill/shared'
 
 /* 扫描 GitHub 仓库中的技能 */
@@ -25,7 +22,7 @@ export async function inspectGithubSkills(
     path: repoRef.path || undefined
   })
   if (candidates.length === 0) {
-    throw new Error('仓库中未找到可安装的技能（缺少 SKILL.md）')
+    throw new Error(t('runtime.error.skillNoInstallable'))
   }
   return {
     repo: repoRef.repoPath,

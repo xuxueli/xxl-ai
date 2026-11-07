@@ -4,4 +4,3 @@
  */
 
 export { disposeAllGitWatch } from './gitService'
-export { registerGitIpc } from './ipc'

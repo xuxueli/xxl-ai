@@ -7,6 +7,7 @@ import { basename } from 'path'
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { projectTable } from '@modules/project/main/schema'
 import type { ProjectCreateInput, ProjectDTO } from '@modules/project/shared'
 
@@ -40,12 +41,12 @@ export function getProject(id: string): ProjectDTO | null {
 export function createProject(input: ProjectCreateInput): ProjectDTO {
   const path = (input.path ?? '').trim()
   if (!path) {
-    throw new Error('未选择项目目录')
+    throw new Error(t('runtime.error.projectFolderRequired'))
   }
   /* 1:1 强绑定：同一目录不允许重复建项目 */
   const duplicated = getDb().select().from(projectTable).where(eq(projectTable.path, path)).get()
   if (duplicated) {
-    throw new Error('该目录已创建项目')
+    throw new Error(t('runtime.error.projectDuplicate'))
   }
   const now = new Date().toISOString()
   const record = {
@@ -65,11 +66,11 @@ export function renameProject(id: string, name: string): ProjectDTO {
   const db = getDb()
   const existing = db.select().from(projectTable).where(eq(projectTable.id, id)).get()
   if (!existing) {
-    throw new Error('项目不存在')
+    throw new Error(t('runtime.error.projectMissing'))
   }
   const value = name.trim()
   if (!value) {
-    throw new Error('项目名称不能为空')
+    throw new Error(t('runtime.error.projectNameRequired'))
   }
   const record = { ...existing, name: value, updateTime: new Date().toISOString() }
   db.update(projectTable).set(record).where(eq(projectTable.id, id)).run()
@@ -86,7 +87,7 @@ export function setProjectMemoryEnabled(id: string, enabled: boolean): ProjectDT
   const db = getDb()
   const existing = db.select().from(projectTable).where(eq(projectTable.id, id)).get()
   if (!existing) {
-    throw new Error('项目不存在')
+    throw new Error(t('runtime.error.projectMissing'))
   }
   const record = {
     ...existing,

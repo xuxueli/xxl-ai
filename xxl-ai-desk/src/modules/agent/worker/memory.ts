@@ -61,7 +61,9 @@ export async function generateMemoryContent(input: MemoryGenerateInput): Promise
   const models = await buildModels([{ ...input.provider, sessionId: input.sessionId }])
   const model = models.getModel(input.provider.id, input.modelId)
   if (!model) {
-    throw new Error(`模型未找到：${input.provider.id}/${input.modelId}`)
+    throw new Error(
+      translate(input.language, 'runtime.error.modelNotFound', [input.provider.id, input.modelId])
+    )
   }
   const tracing = input.traceEnabled && Boolean(input.sessionId)
   const traceTarget = tracing ? createTraceTarget(input.sessionId, 'memory') : null

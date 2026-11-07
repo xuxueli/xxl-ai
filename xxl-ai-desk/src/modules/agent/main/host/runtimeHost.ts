@@ -9,8 +9,10 @@ import { execFileSync, spawn } from 'child_process'
 import { utilityProcess, type UtilityProcess } from 'electron'
 import log from 'electron-log/main'
 import { getTempDir } from '@common/main/config/paths'
+import { t } from '@common/main/i18n'
+import { getSettings } from '@modules/settings/main'
 import { recordTrace } from '@modules/diagnostics/main'
-import { openInteraction, cancelInteraction, clearInteractions } from '@modules/agent/main'
+import { openInteraction, cancelInteraction, clearInteractions } from './interaction'
 import { requestBrowserAction } from '@modules/browser/main'
 import type { HostEvent, MemoryGenerateInput, RunAgentInput, WorkerMessage, WorkerRequest } from '@modules/agent/shared/agentProtocol'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
@@ -71,7 +73,7 @@ function ensureWorker(): Promise<UtilityProcess> {
   workerReady = new Promise<UtilityProcess>((resolve, reject) => {
     proc.once('spawn', () => resolve(proc))
     /* 启动失败（未 spawn 即退出）：拒绝就绪 Promise，由 runAgent 转成失败结果 */
-    proc.once('exit', () => reject(new Error('Agent 运行时进程启动失败')))
+    proc.once('exit', () => reject(new Error(t('runtime.error.runtimeProcessStartFailed'))))
   })
   proc.on('message', (message) => {
     void handleMessage(message as WorkerMessage)
@@ -92,13 +94,13 @@ function ensureWorker(): Promise<UtilityProcess> {
     /* 未结算的 MCP 请求同样统一失败 */
     for (const [requestId, pending] of pendingMcp) {
       clearTimeout(pending.timer)
-      pending.reject(new Error('Agent 运行时进程异常退出，请重试'))
+      pending.reject(new Error(t('runtime.error.runtimeProcessExited')))
       pendingMcp.delete(requestId)
     }
     /* 未结算的记忆生成同样统一失败 */
     for (const [requestId, pending] of pendingMemory) {
       clearTimeout(pending.timer)
-      pending.reject(new Error('Agent 运行时进程异常退出，请重试'))
+      pending.reject(new Error(t('runtime.error.runtimeProcessExited')))
       pendingMemory.delete(requestId)
     }
   })
@@ -176,7 +178,7 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
         if (message.ok) {
           pending.resolve(message.content ?? '')
         } else {
-          pending.reject(new Error(message.message ?? '记忆生成失败'))
+          pending.reject(new Error(message.message ?? t('runtime.error.memoryGenerateFailed')))
         }
       }
       break
@@ -253,7 +255,7 @@ async function requestMcp<T>(build: (requestId: string) => WorkerRequest): Promi
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       pendingMcp.delete(requestId)
-      reject(new Error('MCP 请求超时，请检查服务是否可用'))
+      reject(new Error(t('runtime.error.mcpRequestTimeout')))
     }, MCP_REQUEST_TIMEOUT)
     pendingMcp.set(requestId, {
       resolve: (value) => resolve(value as T),
@@ -270,7 +272,8 @@ export function testMcpByRuntime(server: McpRuntimeConfig, runtimePath: string):
     type: 'mcp-test',
     requestId,
     server,
-    runtimePath
+    runtimePath,
+    language: getSettings().language
   }))
 }
 
@@ -283,7 +286,8 @@ export function listMcpToolsByRuntime(
     type: 'mcp-tools',
     requestId,
     server,
-    runtimePath
+    runtimePath,
+    language: getSettings().language
   }))
 }
 
@@ -301,7 +305,7 @@ export async function generateMemory(
   return new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => {
       pendingMemory.delete(requestId)
-      reject(new Error('记忆生成超时'))
+      reject(new Error(t('runtime.error.memoryGenerateTimeout')))
     }, MEMORY_REQUEST_TIMEOUT)
     pendingMemory.set(requestId, { resolve, reject, timer })
     proc.postMessage({

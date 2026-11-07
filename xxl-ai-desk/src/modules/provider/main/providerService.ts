@@ -7,8 +7,9 @@
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { providerTable } from '@modules/provider/main/schema'
-import { decryptSecret, encryptSecret } from '@modules/provider/main'
+import { decryptSecret, encryptSecret } from './securityService'
 import { normalizeBaseUrl, USER_AGENT } from '@common/shared/providerUrl'
 import { isTimeoutError, requestWithTimeout } from '@common/main/utils/http'
 import { getSettings, saveSettings } from '@modules/settings/main'
@@ -124,7 +125,7 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
   }
 
   if (!baseUrl) {
-    throw new Error('请先填写接口地址')
+    throw new Error(t('runtime.error.providerBaseUrlRequired'))
   }
 
   /* 统一携带 User-Agent，标识 Desk 客户端（压过自定义同名头） */
@@ -155,7 +156,7 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
     return Array.from(new Set(ids.filter((id): id is string => Boolean(id))))
   } catch (error) {
     if (isTimeoutError(error)) {
-      throw new Error('请求供应商模型列表超时，请检查网络或接口地址')
+      throw new Error(t('runtime.error.providerModelsTimeout'))
     }
     throw error as Error
   }

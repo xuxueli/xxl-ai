@@ -9,7 +9,7 @@ import {
   detailMcpSo,
   listMcpSoCategories,
   searchMcpSo
-} from '@modules/mcp/main'
+} from './community/mcpSoAdapter'
 import { createTtlCache } from '@common/main/utils/ttlCache'
 import type { McpCategory, McpDiscoverDetail, McpDiscoverPage, McpDiscoverQuery, McpDiscoverSort } from '@modules/mcp/shared'
 

@@ -7,6 +7,7 @@
  */
 
 import AdmZip from 'adm-zip'
+import { t } from '@common/main/i18n'
 import {
   closeSync,
   existsSync,
@@ -104,7 +105,7 @@ function firstParagraph(body: string): string {
 export function parseSkillMeta(dir: string, fallbackName: string): ParsedSkillMeta {
   const file = join(dir, 'SKILL.md')
   if (!existsSync(file)) {
-    throw new Error('未找到 SKILL.md')
+    throw new Error(t('runtime.error.skillManifestNotFound'))
   }
   const raw = readFileSync(file, 'utf-8').replace(/\r\n/g, '\n')
   let body = raw
@@ -112,7 +113,7 @@ export function parseSkillMeta(dir: string, fallbackName: string): ParsedSkillMe
   if (raw.startsWith('---')) {
     const end = raw.indexOf('\n---', 3)
     if (end < 0) {
-      throw new Error('SKILL.md frontmatter 未闭合')
+      throw new Error(t('runtime.error.skillFrontmatterUnclosed'))
     }
     const header = raw.slice(3, end).trim()
     body = raw.slice(end + 4).replace(/^\n+/, '')
@@ -123,7 +124,7 @@ export function parseSkillMeta(dir: string, fallbackName: string): ParsedSkillMe
           data = parsed as Record<string, unknown>
         }
       } catch {
-        throw new Error('SKILL.md frontmatter 不是合法 YAML')
+        throw new Error(t('runtime.error.skillFrontmatterInvalid'))
       }
     }
   }
@@ -262,14 +263,14 @@ export async function importSkillDirectory(sourceDir: string): Promise<SkillImpo
 function assertZipEntrySafe(entryName: string): string {
   const normalized = entryName.replace(/\\/g, '/').replace(/^\/+/, '')
   if (!normalized || normalized.includes('\0')) {
-    throw new Error('Zip 包含非法空路径')
+    throw new Error(t('runtime.error.zipEmptyPath'))
   }
   if (/^[a-zA-Z]:\//.test(normalized) || isAbsolute(entryName)) {
-    throw new Error(`Zip 包含绝对路径：${entryName}`)
+    throw new Error(t('runtime.error.zipAbsolutePath', [entryName]))
   }
   const parts = normalized.split('/')
   if (parts.some((part) => part === '..')) {
-    throw new Error(`Zip 包含越界路径：${entryName}`)
+    throw new Error(t('runtime.error.zipEscapePath', [entryName]))
   }
   if (parts.some((part) => SKIP_DIRS.has(part))) {
     return ''
@@ -292,11 +293,11 @@ function extractZip(zipFile: string, dest: string): void {
       continue
     }
     if (isSymlinkEntry(entry)) {
-      throw new Error(`Zip 包含符号链接：${entry.entryName}`)
+      throw new Error(t('runtime.error.zipSymlink', [entry.entryName]))
     }
     const target = resolve(dest, safe)
     if (!isInside(dest, target)) {
-      throw new Error(`Zip 包含越界路径：${entry.entryName}`)
+      throw new Error(t('runtime.error.zipEscapePath', [entry.entryName]))
     }
     if (entry.isDirectory) {
       mkdirSync(target, { recursive: true })

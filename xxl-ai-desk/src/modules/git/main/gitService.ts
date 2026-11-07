@@ -11,6 +11,7 @@ import { promisify } from 'util'
 import { readFile, stat } from 'fs/promises'
 import { join, resolve } from 'path'
 import { assertInside } from '@common/main/utils/pathGuard'
+import { t } from '@common/main/i18n'
 import { buildRuntimePath } from '@modules/app/main'
 import { getProject } from '@modules/project/main'
 import type { GitChange, GitChangeStatus, GitCommitInput, GitCommitResult, GitDiffInput, GitDiffResult, GitOperationResult, GitStatus } from '@modules/git/shared'
@@ -41,10 +42,10 @@ async function runGit(
   } catch (error) {
     const failure = error as NodeJS.ErrnoException & { stderr?: string; stdout?: string }
     if (failure.code === 'ENOENT') {
-      throw new Error('未检测到 Git，请先安装并配置 Git')
+      throw new Error(t('runtime.error.gitNotInstalled'))
     }
     const message = (failure.stderr || failure.stdout || failure.message || '').trim()
-    throw new Error(message || 'Git 命令执行失败')
+    throw new Error(message || t('runtime.error.gitCommandFailed'))
   }
 }
 
@@ -52,7 +53,7 @@ async function runGit(
 function projectPath(projectId: string): string {
   const project = getProject(projectId)
   if (!project) {
-    throw new Error('项目不存在')
+    throw new Error(t('runtime.error.projectMissing'))
   }
   return project.path
 }
@@ -75,7 +76,7 @@ async function repoRootOf(projectId: string): Promise<string> {
 async function requireRepo(projectId: string): Promise<string> {
   const root = await repoRootOf(projectId)
   if (!root) {
-    throw new Error('当前项目不是 Git 仓库')
+    throw new Error(t('runtime.error.gitNotRepo'))
   }
   return root
 }
@@ -410,7 +411,7 @@ export async function unstageGit(
 export async function commitGit(input: GitCommitInput): Promise<GitCommitResult> {
   const message = input.message.trim()
   if (!message) {
-    throw new Error('请输入提交说明')
+    throw new Error(t('runtime.error.gitCommitMessageRequired'))
   }
   const root = await requireRepo(input.projectId)
   const { stdout, stderr } = await runGit(root, ['commit', '-m', message])

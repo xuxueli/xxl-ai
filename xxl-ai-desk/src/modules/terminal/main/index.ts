@@ -3,5 +3,4 @@
  * @author xuxueli 2026-11-07
  */
 
-export { registerTerminalIpc } from './ipc'
 export { disposeAllTerminals, disposeTerminalsBySession } from './terminalService'

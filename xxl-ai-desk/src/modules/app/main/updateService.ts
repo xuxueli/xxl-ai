@@ -6,6 +6,7 @@
  */
 
 import { app, net, shell } from 'electron'
+import { t } from '@common/main/i18n'
 import type { UpdateInfo } from '@modules/app/shared'
 
 /* 发布仓库与 Releases 接口（公开仓库匿名访问；失败由调用方兜底） */
@@ -47,7 +48,7 @@ function getJson(url: string): Promise<unknown> {
         try {
           resolve(JSON.parse(body))
         } catch {
-          reject(new Error('响应解析失败'))
+          reject(new Error(t('runtime.error.responseParseFailed')))
         }
       })
     })

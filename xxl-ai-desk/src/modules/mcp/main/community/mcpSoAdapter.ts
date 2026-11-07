@@ -5,6 +5,7 @@
  */
 
 import { load } from 'cheerio'
+import { t } from '@common/main/i18n'
 import { isTimeoutError, requestWithTimeout } from '@common/main/utils/http'
 import type { McpCategory, McpDiscoverDetail, McpDiscoverItem, McpDiscoverPage, McpDiscoverSort } from '@modules/mcp/shared'
 
@@ -41,7 +42,7 @@ async function fetchHtml(url: string): Promise<string> {
         timeout: FETCH_TIMEOUT
       })
       if (!response.ok) {
-        throw new Error(`社区访问失败（HTTP ${response.status}）`)
+        throw new Error(t('runtime.error.mcpCommunityHttpFailed', [response.status]))
       }
       return await response.text()
     } catch (error) {
@@ -54,7 +55,7 @@ async function fetchHtml(url: string): Promise<string> {
     }
   }
   if (isTimeoutError(lastError)) {
-    throw new Error('社区访问超时，请稍后重试')
+    throw new Error(t('runtime.error.mcpCommunityTimeout'))
   }
   throw lastError as Error
 }
@@ -182,7 +183,7 @@ export async function browseCategoryMcpSo(
   sort: McpDiscoverSort
 ): Promise<McpDiscoverPage> {
   if (!/^[a-zA-Z0-9-]+$/.test(slug)) {
-    throw new Error('非法的分类标识')
+    throw new Error(t('runtime.error.mcpCategoryInvalid'))
   }
   const query = new URLSearchParams({ category: slug, sort, page: String(page) })
   const url = `${BASE_URL}/zh/servers?${query.toString()}`
@@ -218,7 +219,7 @@ export async function listMcpSoCategories(): Promise<McpCategory[]> {
 /* 详情：简介 + 可导入配置片段 */
 export async function detailMcpSo(slug: string): Promise<McpDiscoverDetail> {
   if (!/^[a-zA-Z0-9._-]+$/.test(slug)) {
-    throw new Error('非法的 MCP 标识')
+    throw new Error(t('runtime.error.mcpIdInvalid'))
   }
   const url = `${BASE_URL}/zh/servers/${slug}`
   const html = await fetchHtml(url)

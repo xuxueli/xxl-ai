@@ -164,7 +164,12 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   const models = await buildModels([{ ...options.provider, sessionId: options.sessionId }])
   const model = models.getModel(options.provider.id, options.modelId)
   if (!model) {
-    throw new Error(`模型未找到：${options.provider.id}/${options.modelId}`)
+    throw new Error(
+      translate(options.language, 'runtime.error.modelNotFound', [
+        options.provider.id,
+        options.modelId
+      ])
+    )
   }
   const entries = await createBuiltinToolEntries({
     mode: options.mode,

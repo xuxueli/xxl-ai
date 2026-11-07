@@ -3,6 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export { registerProviderIpc } from './ipc'
 export { ensureSeedProviders, getProvider } from './providerService'
 export { decryptSecret, encryptSecret } from './securityService'

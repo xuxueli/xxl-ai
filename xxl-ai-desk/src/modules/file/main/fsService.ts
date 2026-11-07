@@ -9,6 +9,7 @@ import { resolve } from 'path'
 import { imageMimeOf } from '@common/shared/fileTypes'
 import { shell } from 'electron'
 import { assertInside } from '@common/main/utils/pathGuard'
+import { t } from '@common/main/i18n'
 import { getProject } from '@modules/project/main'
 import type { FileContent, FsEntry } from '@modules/file/shared'
 
@@ -21,7 +22,7 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 function rootOf(projectId: string): string {
   const project = getProject(projectId)
   if (!project) {
-    throw new Error('项目不存在')
+    throw new Error(t('runtime.error.projectMissing'))
   }
   return project.path
 }
@@ -83,7 +84,7 @@ export async function writeFile(projectId: string, file: string, content: string
   assertInside(root, file)
   const info = await stat(file)
   if (info.isDirectory()) {
-    throw new Error('目标是目录，无法写入')
+    throw new Error(t('runtime.error.fileTargetIsDirWrite'))
   }
   await writeFileFs(file, content, 'utf8')
 }
@@ -94,7 +95,7 @@ export async function trashFile(projectId: string, file: string): Promise<void> 
   assertInside(root, file)
   const target = resolve(file)
   if (target === resolve(root)) {
-    throw new Error('不允许删除项目根目录')
+    throw new Error(t('runtime.tool.deleteRoot'))
   }
   await shell.trashItem(target)
 }
@@ -105,7 +106,7 @@ export async function readFile(projectId: string, file: string): Promise<FileCon
   assertInside(root, file)
   const info = await stat(file)
   if (info.isDirectory()) {
-    throw new Error('目标是目录，无法预览')
+    throw new Error(t('runtime.error.fileTargetIsDirPreview'))
   }
   const size = info.size
   /* 图片优先按二进制处理并生成内联预览 */

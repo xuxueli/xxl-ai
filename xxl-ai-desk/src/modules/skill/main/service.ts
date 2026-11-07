@@ -8,6 +8,7 @@ import { existsSync, readdirSync, rmSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { skillTable } from '@modules/skill/main/schema'
 import { ensureSkillsDir, getSkillsDir } from '@common/main/config/paths'
 import {
@@ -17,8 +18,7 @@ import {
   parseSkillMeta,
   readSkillContentChunk,
   type ImportedSkill
-} from '@modules/skill/main'
-import { resetAgents } from '@modules/agent/main'
+} from './import'
 import type { SkillContentChunk, SkillDTO, SkillDetail, SkillImportResult, SkillRuntimeConfig, SkillSource } from '@modules/skill/shared'
 
 type SkillRow = typeof skillTable.$inferSelect
@@ -50,12 +50,12 @@ export function getSkillDir(id: string): string {
   const root = getSkillsDir()
   /* 目录名只允许单层名称，拒绝空值、. / .. 与路径分隔符 */
   if (!id || id === '.' || id === '..' || id.includes('/') || id.includes('\\')) {
-    throw new Error('技能标识非法')
+    throw new Error(t('runtime.error.skillIdInvalid'))
   }
   const target = resolve(root, id)
   const rel = relative(root, target)
   if (!rel || rel.startsWith('..') || isAbsolute(rel)) {
-    throw new Error('技能标识非法')
+    throw new Error(t('runtime.error.skillIdInvalid'))
   }
   return target
 }
@@ -182,7 +182,6 @@ export function deleteSkill(id: string): void {
     rmSync(dir, { recursive: true, force: true })
   }
   getDb().delete(skillTable).where(eq(skillTable.id, id)).run()
-  resetAgents()
 }
 
 /* 技能详情：元信息 + SKILL.md 正文首屏 + 附属文件清单 */
@@ -190,7 +189,7 @@ export function getSkillDetail(id: string): SkillDetail {
   const list = listSkills()
   const dto = list.find((item) => item.id === id)
   if (!dto) {
-    throw new Error('技能不存在，请刷新列表')
+    throw new Error(t('runtime.error.skillNotFound'))
   }
   const dir = getSkillDir(id)
   return {
@@ -233,20 +232,15 @@ export function listInstalledSourceIds(): Set<string> {
   return new Set(rows.map((row) => row.sourceId).filter((value) => value !== ''))
 }
 
-/* 重新扫描技能目录：用户手动放入/删除技能后刷新，并清空运行时缓存 */
+/* 重新扫描技能目录：用户手动放入/删除技能后刷新（运行时清理由 IPC 编排） */
 export function refreshSkills(): SkillDTO[] {
-  const list = listSkills()
-  resetAgents()
-  return list
+  return listSkills()
 }
 
 /* 本地目录导入：落位后逐个登记，返回成功与失败汇总 */
 export async function importSkillsFromDirectory(sourceDir: string): Promise<SkillImportResult> {
   const outcome = await importSkillDirectory(sourceDir)
   const imported = outcome.imported.map((item) => registerSkill(item, 'local'))
-  if (imported.length > 0) {
-    resetAgents()
-  }
   return { imported, failed: outcome.failed }
 }
 
@@ -254,9 +248,6 @@ export async function importSkillsFromDirectory(sourceDir: string): Promise<Skil
 export async function importSkillsFromZip(zipFile: string): Promise<SkillImportResult> {
   const outcome = await importSkillZip(zipFile)
   const imported = outcome.imported.map((item) => registerSkill(item, 'local'))
-  if (imported.length > 0) {
-    resetAgents()
-  }
   return { imported, failed: outcome.failed }
 }
 

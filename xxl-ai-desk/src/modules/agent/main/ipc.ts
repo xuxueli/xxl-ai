@@ -1,31 +1,44 @@
 /*
  * Agent 域 IPC 注册：Agent 配置 CRUD 与项目记忆。
  *   - 保存后清理关联会话运行时，使新配置下一轮立即生效；
- *   - 删除前校验默认 Agent 与会话占用。
+ *   - 删除前校验默认 Agent 与会话占用；
+ *   - 会话能力由组合根注入，避免 agent → chat 的模块反向依赖。
  * @author xuxueli 2026-11-07
  */
 
 import type { IpcContext } from '@common/main/ipc'
+import { t } from '@common/main/i18n'
 import { AGENT_IPC } from '../shared/ipc'
 import { listAgentMemories, removeAgentMemory, saveAgentMemory } from './agentMemoryService'
 import { deleteAgent, getAgentById, listAgents, saveAgent } from './agentService'
 import { evictAgent } from './host/runtimeHost'
-import { countSessionsByAgent, listSessionIdsByAgent } from '@modules/chat/main'
 
-/* 列表补全会话占用数（跨域统计在 IPC 层编排） */
-function withSessionCount<T extends { id: string }>(agent: T): T & { sessionCount: number } {
-  return { ...agent, sessionCount: countSessionsByAgent(agent.id) }
+/* 会话域注入能力 */
+interface AgentSessionDeps {
+  /* 各 Agent 绑定会话数（一次分组统计） */
+  countSessionsByAgents(): Record<string, number>
+  /* Agent 绑定会话 ID 列表 */
+  listSessionIdsByAgent(agentId: string): string[]
+  /* 项目下会话 ID 列表 */
+  listSessionIdsByProject(projectId: string): string[]
 }
 
-export function registerAgentIpc(ipc: IpcContext): void {
-  ipc.handle(AGENT_IPC.list, () => listAgents().map(withSessionCount))
+/* 清理指定会话运行时：配置或记忆变更后下一轮重新装配 */
+function evictSessions(sessionIds: string[]): void {
+  sessionIds.forEach((sessionId) => evictAgent(sessionId))
+}
+
+export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): void {
+  ipc.handle(AGENT_IPC.list, () => {
+    const counts = sessions.countSessionsByAgents()
+    return listAgents().map((agent) => ({ ...agent, sessionCount: counts[agent.id] ?? 0 }))
+  })
   ipc.handle(AGENT_IPC.save, (_event, input) => {
     const saved = saveAgent(input)
     /* 配置变更：仅清理绑定该 Agent 的会话运行时 */
-    for (const sessionId of listSessionIdsByAgent(saved.id)) {
-      evictAgent(sessionId)
-    }
-    return withSessionCount(saved)
+    evictSessions(sessions.listSessionIdsByAgent(saved.id))
+    const sessionCount = sessions.countSessionsByAgents()[saved.id] ?? 0
+    return { ...saved, sessionCount }
   })
   ipc.handle(AGENT_IPC.remove, (_event, id: string) => {
     const existing = getAgentById(id)
@@ -33,16 +46,24 @@ export function registerAgentIpc(ipc: IpcContext): void {
       return
     }
     if (existing.builtin) {
-      throw new Error('默认 Agent 不允许删除')
+      throw new Error(t('runtime.error.agentBuiltinUndeletable'))
     }
-    const sessionCount = countSessionsByAgent(id)
+    const sessionCount = sessions.countSessionsByAgents()[id] ?? 0
     if (sessionCount > 0) {
-      throw new Error(`该 Agent 已被 ${sessionCount} 个会话使用，无法删除`)
+      throw new Error(t('runtime.error.agentInUse', [sessionCount]))
     }
     deleteAgent(id)
   })
 
   ipc.handle(AGENT_IPC.memoryList, () => listAgentMemories())
-  ipc.handle(AGENT_IPC.memorySave, (_event, input) => saveAgentMemory(input))
-  ipc.handle(AGENT_IPC.memoryRemove, (_event, projectId: string) => removeAgentMemory(projectId))
+  ipc.handle(AGENT_IPC.memorySave, (_event, input) => {
+    const saved = saveAgentMemory(input)
+    /* 记忆变更：清理项目下会话运行时，下一轮注入最新内容 */
+    evictSessions(sessions.listSessionIdsByProject(saved.projectId))
+    return saved
+  })
+  ipc.handle(AGENT_IPC.memoryRemove, (_event, projectId: string) => {
+    removeAgentMemory(projectId)
+    evictSessions(sessions.listSessionIdsByProject(projectId))
+  })
 }

@@ -10,6 +10,7 @@ import { execFile, execFileSync } from 'child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 import { delimiter, dirname, isAbsolute, join } from 'path'
 import { getDataDir } from '@common/main/config/paths'
+import { t } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
 import type { RuntimeDetectResult, RuntimeExecInput } from '@modules/app/shared'
 
@@ -216,7 +217,7 @@ function execVersion(command: string, args: string[]): Promise<string> {
           resolve(output)
           return
         }
-        reject(error ?? new Error('未获取到版本信息'))
+        reject(error ?? new Error(t('runtime.error.versionInfoMissing')))
       }
     )
   })

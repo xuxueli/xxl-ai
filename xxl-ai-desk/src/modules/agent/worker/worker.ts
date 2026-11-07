@@ -29,6 +29,7 @@ import { setBrowserOpener, setBrowserActionInvoker, setRuntimePath } from '@modu
 import {
   closeAllMcpClients,
   listServerTools,
+  setMcpLanguage,
   setMcpRuntimePath,
   testMcpServer
 } from '@modules/mcp/worker'
@@ -144,6 +145,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
     setRuntimePath(input.runtimePath)
     /* MCP stdio 使用独立 PATH：优先系统 Node，避免产生额外 Dock 图标 */
     setMcpRuntimePath(input.mcpRuntimePath)
+    setMcpLanguage(input.language)
     const agent = await getAgent({
       sessionId: input.sessionId,
       provider: input.provider,
@@ -238,9 +240,11 @@ async function handleMemoryGenerate(input: Parameters<typeof generateMemoryConte
 async function handleMcpTest(
   requestId: string,
   server: McpRuntimeConfig,
-  path: string
+  path: string,
+  language: 'zh' | 'en'
 ): Promise<void> {
   try {
+    setMcpLanguage(language)
     const result = await testMcpServer(server, path)
     post({ type: 'mcp-test-result', requestId, result })
   } catch (error) {
@@ -252,9 +256,11 @@ async function handleMcpTest(
 async function handleMcpTools(
   requestId: string,
   server: McpRuntimeConfig,
-  path: string
+  path: string,
+  language: 'zh' | 'en'
 ): Promise<void> {
   try {
+    setMcpLanguage(language)
     setMcpRuntimePath(path)
     const tools = await listServerTools(server)
     post({ type: 'mcp-tools-result', requestId, tools })
@@ -270,10 +276,10 @@ function handleRequest(message: WorkerRequest): void {
       void handleRun(message.input)
       break
     case 'mcp-test':
-      void handleMcpTest(message.requestId, message.server, message.runtimePath)
+      void handleMcpTest(message.requestId, message.server, message.runtimePath, message.language)
       break
     case 'mcp-tools':
-      void handleMcpTools(message.requestId, message.server, message.runtimePath)
+      void handleMcpTools(message.requestId, message.server, message.runtimePath, message.language)
       break
     case 'memory-generate':
       void handleMemoryGenerate(message.input)

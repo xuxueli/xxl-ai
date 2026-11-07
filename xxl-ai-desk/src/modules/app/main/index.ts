@@ -4,5 +4,4 @@
  */
 
 export { buildMcpRuntimePath, buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
-export { registerAppIpc } from './ipc'
 export { registerLocalFileProtocol } from './localFileProtocol'

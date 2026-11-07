@@ -9,20 +9,20 @@
 import { existsSync, lstatSync, readdirSync } from 'fs'
 import type { Dirent, Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'path'
+import { t } from '@common/main/i18n'
 import {
   acquireGithubArchive,
   cancelGithubArchive,
   disposeGithubArchive,
   type GithubArchive
-} from '@modules/skill/main'
-import { resetAgents } from '@modules/agent/main'
+} from './github/githubArchive'
 import {
   commitSkillRoot,
   listSkillRoots,
   parseSkillMeta,
   type ParsedSkillMeta
-} from '@modules/skill/main'
-import { findSkillBySourceId, registerSkill } from '@modules/skill/main'
+} from './import'
+import { findSkillBySourceId, registerSkill } from './service'
 import {
   SKILL_MAX_BYTES,
   SKILL_MAX_FILES,
@@ -84,7 +84,7 @@ function canonicalSkillSourceId(repo: string, name: string): string {
 /* 校验技能目录：路径、体积、文件数与符号链接 */
 function assertSkillDir(dir: string): void {
   if (!existsSync(join(dir, 'SKILL.md'))) {
-    throw new Error('技能目录缺少 SKILL.md')
+    throw new Error(t('runtime.error.skillDirMissingManifest'))
   }
   let total = 0
   let files = 0
@@ -95,7 +95,7 @@ function assertSkillDir(dir: string): void {
     try {
       entries = readdirSync(current, { withFileTypes: true })
     } catch {
-      throw new Error('技能目录读取失败')
+      throw new Error(t('runtime.error.skillDirReadFailed'))
     }
     for (const entry of entries) {
       if (entry.name === '.git' || entry.name === 'node_modules') {
@@ -106,10 +106,10 @@ function assertSkillDir(dir: string): void {
       try {
         info = lstatSync(full)
       } catch {
-        throw new Error('技能目录读取失败')
+        throw new Error(t('runtime.error.skillDirReadFailed'))
       }
       if (info.isSymbolicLink()) {
-        throw new Error(`技能包含符号链接：${relative(dir, full)}`)
+        throw new Error(t('runtime.error.skillSymlinkNotAllowed', [relative(dir, full)]))
       }
       if (info.isDirectory()) {
         stack.push(full)
@@ -121,13 +121,13 @@ function assertSkillDir(dir: string): void {
       files += 1
       total += info.size
       if (info.size > SKILL_MAX_FILE_BYTES) {
-        throw new Error(`技能文件过大：${relative(dir, full)}`)
+        throw new Error(t('runtime.error.skillFileTooLarge', [relative(dir, full)]))
       }
       if (total > SKILL_MAX_BYTES) {
-        throw new Error('技能体积超过安装上限')
+        throw new Error(t('runtime.error.skillTooLarge'))
       }
       if (files > SKILL_MAX_FILES) {
-        throw new Error('技能文件数量超过安装上限')
+        throw new Error(t('runtime.error.skillTooManyFiles'))
       }
     }
   }
@@ -166,24 +166,24 @@ function locateSkillDir(archive: GithubArchive, input: InstallFromGithubInput): 
   if (input.path !== undefined && input.path !== '') {
     const target = resolve(archive.rootDir, input.path)
     if (!isInside(archive.rootDir, target)) {
-      throw new Error('技能路径非法')
+      throw new Error(t('runtime.error.skillPathInvalid'))
     }
     const dir = basename(target).toLowerCase() === 'skill.md' ? dirname(target) : target
     if (existsSync(join(dir, 'SKILL.md'))) {
       return dir
     }
-    throw new Error(`仓库中未找到技能目录「${input.path}」`)
+    throw new Error(t('runtime.error.skillRepoDirNotFound', [input.path]))
   }
 
   const roots = matchSkillRoots(archive, input)
   if (roots.length === 0) {
-    throw new Error('仓库中未找到对应技能，可能已更新')
+    throw new Error(t('runtime.error.skillRepoNotFound'))
   }
   if (roots.length === 1) {
     return roots[0]
   }
   if (!input.skillId && !input.skillName) {
-    throw new Error('仓库包含多个技能，请先扫描并选择要安装的技能')
+    throw new Error(t('runtime.error.skillRepoMultiple'))
   }
 
   /* 多个匹配：优先标准 skills/{skillId}，其次层级最浅、路径最短 */
@@ -228,7 +228,7 @@ export async function installFromGithub(input: InstallFromGithubInput): Promise<
   const repo = input.repo.trim().replace(/\/+$/, '')
   const ref = (input.ref ?? 'HEAD').trim() || 'HEAD'
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
-    throw new Error('GitHub 仓库标识非法')
+    throw new Error(t('runtime.error.skillRepoIdInvalid'))
   }
 
   if (input.sourceId) {
@@ -250,10 +250,8 @@ export async function installFromGithub(input: InstallFromGithubInput): Promise<
 
   /* copy=true：保留缓存中的完整仓库，30 分钟内重新扫描仍能看到全部技能 */
   const item = await commitSkillRoot(skillDir, true)
-  const saved = registerSkill(item, input.origin, sourceId)
-  /* 新技能写库后清空运行时缓存；需在 Agent 中勾选后参与对话 */
-  resetAgents()
-  return saved
+  /* 新技能写库后由 IPC 统一清空运行时缓存；需在 Agent 中勾选后参与对话 */
+  return registerSkill(item, input.origin, sourceId)
 }
 
 /*
@@ -275,7 +273,7 @@ export async function inspectGithubRepo(input: {
     if (input.path) {
       const target = resolve(archive.rootDir, input.path)
       if (!isInside(archive.rootDir, target)) {
-        throw new Error('技能路径非法')
+        throw new Error(t('runtime.error.skillPathInvalid'))
       }
       roots = roots.filter((dir) => isInside(target, dir))
     }

@@ -4,4 +4,3 @@
  */
 
 export { disposeBrowserActions, requestBrowserAction } from './browserBridge'
-export { registerBrowserIpc } from './ipc'

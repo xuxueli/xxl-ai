@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, statSync, writeFileSync } from 'fs'
 import { basename, join } from 'path'
 import * as pty from 'node-pty'
 import type { IPty } from 'node-pty'
+import { t } from '@common/main/i18n'
 import type { TerminalAttachResult, TerminalChunk, TerminalCreateInput, TerminalDTO, TerminalEvent } from '@modules/terminal/shared'
 import {
   buildRuntimePath,
@@ -203,14 +204,14 @@ const MAX_TERMINALS_TOTAL = 16
 export function createTerminal(input: TerminalCreateInput): TerminalDTO {
   const sessionId = input.sessionId?.trim()
   if (!sessionId) {
-    throw new Error('创建终端失败：缺少会话标识')
+    throw new Error(t('runtime.error.terminalSessionRequired'))
   }
   /* 资源上限：避免长期运行持续累积 PTY 进程 */
   if (sessions.size >= MAX_TERMINALS_TOTAL) {
-    throw new Error(`终端数量已达上限（最多 ${MAX_TERMINALS_TOTAL} 个）`)
+    throw new Error(t('runtime.error.terminalLimit', [MAX_TERMINALS_TOTAL]))
   }
   if ((sessionIndex.get(sessionId)?.size ?? 0) >= MAX_TERMINALS_PER_SESSION) {
-    throw new Error(`当前会话终端数量已达上限（最多 ${MAX_TERMINALS_PER_SESSION} 个）`)
+    throw new Error(t('runtime.error.terminalSessionLimit', [MAX_TERMINALS_PER_SESSION]))
   }
   const id = randomUUID()
   const cwd = resolveCwd(input.cwd)
@@ -235,7 +236,7 @@ export function createTerminal(input: TerminalCreateInput): TerminalDTO {
   } catch (error) {
     /* posix_spawnp failed 多由 spawn-helper 缺少可执行权限或 Shell 路径失效导致 */
     const detail = (error as Error).message || '未知错误'
-    throw new Error(`终端启动失败（${shell}）：${detail}`)
+    throw new Error(t('runtime.error.terminalStartFailed', [shell, detail]))
   }
 
   const session: TerminalSession = {

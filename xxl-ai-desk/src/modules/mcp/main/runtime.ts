@@ -4,8 +4,9 @@
  *   - 连接、协议、工具列举由 runtimeHost → 运行时进程（pi-mcp）完成。
  */
 
+import { t } from '@common/main/i18n'
 import { buildMcpRuntimePath } from '@modules/app/main'
-import { buildRuntimeConfig, getMcp, saveMcpHealth } from '@modules/mcp/main'
+import { buildRuntimeConfig, getMcp, saveMcpHealth } from './service'
 import { listMcpToolsByRuntime, testMcpByRuntime } from '@modules/agent/main'
 import type { McpDTO, McpHealth, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 
@@ -32,7 +33,7 @@ export async function testMcp(input: Partial<McpDTO>): Promise<McpTestResult> {
 export async function listMcpTools(id: string): Promise<McpToolMeta[]> {
   const dto = getMcp(id)
   if (!dto) {
-    throw new Error('MCP 服务不存在')
+    throw new Error(t('runtime.error.mcpNotFound'))
   }
   return listMcpToolsByRuntime(buildRuntimeConfig(dto), buildMcpRuntimePath())
 }

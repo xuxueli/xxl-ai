@@ -6,6 +6,7 @@
  */
 
 import { load } from 'cheerio'
+import { t } from '@common/main/i18n'
 import { isTimeoutError, requestWithTimeout } from '@common/main/utils/http'
 
 /* 站点根地址 */
@@ -59,17 +60,19 @@ async function fetchText(url: string): Promise<string> {
         /* 非 JSON 错误体忽略 */
       }
       if (response.status === 429) {
-        throw new Error('skills.sh 请求过于频繁，请稍后重试')
+        throw new Error(t('runtime.error.skillCommunityRateLimited'))
       }
       if (response.status === 400) {
-        throw new Error(detail || 'skills.sh 检索参数不合法（请尝试更具体的关键字）')
+        throw new Error(detail || t('runtime.error.skillCommunityInvalidQuery'))
       }
-      throw new Error(`skills.sh 访问失败（HTTP ${response.status}）${detail ? `：${detail}` : ''}`)
+      throw new Error(
+        t('runtime.error.skillCommunityHttpFailed', [response.status, detail ? `：${detail}` : ''])
+      )
     }
     return await response.text()
   } catch (error) {
     if (isTimeoutError(error)) {
-      throw new Error('skills.sh 访问超时，请检查网络后重试')
+      throw new Error(t('runtime.error.skillCommunityTimeout'))
     }
     throw error as Error
   }
@@ -134,7 +137,7 @@ function parseSkills(payload: unknown): RemoteSkillItem[] {
 /* 详情描述：读取技能详情页的 meta description（站点按需返回，缓存由业务层负责） */
 export async function detailSkillSh(id: string): Promise<string> {
   if (!/^[\w.-]+(\/[\w.-]+){1,2}$/.test(id)) {
-    throw new Error('非法的技能标识')
+    throw new Error(t('runtime.error.skillIdInvalid'))
   }
   const html = await fetchText(`${BASE_URL}/${id}`)
   const $ = load(html)
@@ -153,7 +156,7 @@ export async function searchSkillsSh(keyword: string, limit: number): Promise<Re
   try {
     payload = JSON.parse(text)
   } catch {
-    throw new Error('skills.sh 返回数据格式异常')
+    throw new Error(t('runtime.error.skillCommunityInvalidData'))
   }
   const items = parseSkills(payload).slice(0, limit)
   return { items, total: items.length, hasMore: false }
@@ -173,7 +176,7 @@ export async function listLeaderboardSkillsSh(
   try {
     payload = JSON.parse(text)
   } catch {
-    throw new Error('skills.sh 返回数据格式异常')
+    throw new Error(t('runtime.error.skillCommunityInvalidData'))
   }
   const items = parseSkills(payload)
   const total = toInstalls((payload as { total?: unknown }).total)

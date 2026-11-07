@@ -11,9 +11,10 @@ import {
   searchSkillsSh,
   type RemoteSkillItem,
   type RemoteSkillPage
-} from '@modules/skill/main'
-import { findSkillBySourceId, listInstalledSourceIds, listSkills } from '@modules/skill/main'
-import { installFromGithub } from '@modules/skill/main'
+} from './community/skillsShAdapter'
+import { findSkillBySourceId, listInstalledSourceIds, listSkills } from './service'
+import { installFromGithub } from './install'
+import { t } from '@common/main/i18n'
 import { createTtlCache } from '@common/main/utils/ttlCache'
 import type { SkillDiscoverDetail, SkillDiscoverItem, SkillDiscoverPage, SkillDiscoverQuery, SkillDTO, SkillLeaderboard } from '@modules/skill/shared'
 
@@ -99,7 +100,7 @@ export async function discoverSkillDetail(id: string): Promise<SkillDiscoverDeta
 function parseSourceId(id: string): { source: string; skillId: string } {
   const parts = id.trim().split('/')
   if (parts.length !== 3 || parts.some((part) => !/^[\w.-]+$/.test(part))) {
-    throw new Error('该技能来源暂不支持安装（仅支持 GitHub 仓库）')
+    throw new Error(t('runtime.error.skillSourceUnsupported'))
   }
   return { source: `${parts[0]}/${parts[1]}`, skillId: parts[2] }
 }

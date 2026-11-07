@@ -6,6 +6,7 @@
 import { app, dialog, ipcMain, shell } from 'electron'
 import log from 'electron-log/main'
 import type { IpcContext } from '@common/main/ipc'
+import { t } from '@common/main/i18n'
 import type { RuntimeInfo } from '../shared/contracts'
 import { APP_IPC, SHELL_IPC, UPDATE_IPC } from '../shared/ipc'
 import { getDataDir, getDbFile, getDefaultDataDir, setDataDir } from '@common/main/config/paths'
@@ -29,7 +30,7 @@ export function registerAppIpc(ipc: IpcContext): void {
   ipc.handle(APP_IPC.setDataDir, (_event, dir: string) => setDataDir(dir))
   ipc.handle(APP_IPC.selectDataDir, async () => {
     const result = await dialog.showOpenDialog({
-      title: '选择数据目录',
+      title: t('runtime.dialog.selectDataDir'),
       defaultPath: getDataDir(),
       properties: ['openDirectory', 'createDirectory']
     })

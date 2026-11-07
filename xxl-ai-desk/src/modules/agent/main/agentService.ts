@@ -7,6 +7,7 @@
 import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { t } from '@common/main/i18n'
 import { agentTable } from '@modules/agent/main/schema'
 import { resolveAgentAvatar } from '@modules/agent/shared/agentPresets'
 import {
@@ -110,10 +111,10 @@ export function saveAgent(input: AgentSaveInput): AgentDTO {
 
   const name = (input.name ?? existing?.name ?? '').trim()
   if (!name) {
-    throw new Error('请填写 Agent 名称')
+    throw new Error(t('runtime.error.agentNameRequired'))
   }
   if (name.length > AGENT_NAME_MAX_CHARS) {
-    throw new Error(`Agent 名称过长（最多 ${AGENT_NAME_MAX_CHARS} 个字符）`)
+    throw new Error(t('runtime.error.agentNameTooLong', [AGENT_NAME_MAX_CHARS]))
   }
 
   /* 名称唯一：工具名前缀与会话识别均依赖名称 */
@@ -123,7 +124,7 @@ export function saveAgent(input: AgentSaveInput): AgentDTO {
     .all()
     .find((row) => row.name === name && row.id !== existing?.id)
   if (duplicated) {
-    throw new Error(`Agent 名称「${name}」已存在，请更换名称`)
+    throw new Error(t('runtime.error.agentNameDuplicate', [name]))
   }
 
   const id = input.id || randomUUID()
@@ -160,7 +161,7 @@ export function deleteAgent(id: string): void {
     return
   }
   if (existing.builtin === 1) {
-    throw new Error('默认 Agent 不允许删除')
+    throw new Error(t('runtime.error.agentBuiltinUndeletable'))
   }
   getDb().delete(agentTable).where(eq(agentTable.id, id)).run()
 }

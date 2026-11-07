@@ -7,4 +7,3 @@ export { getAgentById, getDefaultAgent, listAgents, saveAgent } from './agentSer
 export { getAgentMemory, maybeGenerateAgentMemory, removeAgentMemory } from './agentMemoryService'
 export { cancelInteraction, cancelInteractionsOf, clearInteractions, openInteraction, resolveInteraction } from './host/interaction'
 export { abortAgent, clearSessionPermissions, disposeAgentRuntime, evictAgent, generateMemory, isAgentRunning, listMcpToolsByRuntime, resetAgents, runAgent, setBrowserOpener, testMcpByRuntime } from './host/runtimeHost'
-export { registerAgentIpc } from './ipc'

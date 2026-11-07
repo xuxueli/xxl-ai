@@ -111,8 +111,8 @@ export type WorkerRequest =
   | { type: 'reset' } /* 重置全部运行时状态 */
   | { type: 'shutdown' } /* 退出前优雅关闭：释放 MCP 子进程后自行退出 */
   | { type: 'interaction-response'; requestId: string; result: InteractionResult } /* 回传用户交互结果 */
-  | { type: 'mcp-test'; requestId: string; server: McpRuntimeConfig; runtimePath: string } /* 连通测试（临时连接） */
-  | { type: 'mcp-tools'; requestId: string; server: McpRuntimeConfig; runtimePath: string } /* 列举工具（复用连接缓存） */
+  | { type: 'mcp-test'; requestId: string; server: McpRuntimeConfig; runtimePath: string; language: 'zh' | 'en' } /* 连通测试（临时连接） */
+  | { type: 'mcp-tools'; requestId: string; server: McpRuntimeConfig; runtimePath: string; language: 'zh' | 'en' } /* 列举工具（复用连接缓存） */
   | { type: 'memory-generate'; input: MemoryGenerateInput } /* 生成 Agent 记忆 */
   | { type: 'browser-action-result'; requestId: string; result: BrowserActionResult } /* 页面动作结果回传 */
 

@@ -2,14 +2,14 @@
  * Agent 内置种子：首次初始化写入 3 个预设 Agent（默认 Agent 不允许删除）。
  *   - 通用助手（默认）/ 编程助手 / 陪伴交流；
  *   - MCP / SKILL 默认不选择；
- *   - 内置工具按预设组合写入（通用助手为默认组合）。
+ *   - 内置工具统一使用默认组合：文件 / 终端 / 浏览器开启，其余关闭。
  * @author xuxueli 2026-11-07
  */
 
 import type Database from 'better-sqlite3'
 import { translate } from '@common/shared/i18n'
-import { AGENT_AVATAR_PRESETS, resolvePresetTools } from '@modules/agent/shared/agentPresets'
-import { DEFAULT_AGENT_ID } from '@modules/agent/shared/contracts'
+import { AGENT_AVATAR_PRESETS } from '@modules/agent/shared/agentPresets'
+import { DEFAULT_AGENT_ID, DEFAULT_AGENT_TOOLS } from '@modules/agent/shared/contracts'
 
 /* 内置 Agent 初始化标记：写入成功后不再重置，避免用户删除后被重新写回 */
 const AGENT_SEED_KEY = 'seed.agent'
@@ -64,7 +64,7 @@ export function seedDefaultAgent(db: Database.Database): void {
       const name = translate(language, preset.labelKey)
       const description = translate(language, preset.preset.descriptionKey)
       const systemPrompt = translate(language, preset.preset.promptKey)
-      const tools = resolvePresetTools(preset.preset)
+      const tools = DEFAULT_AGENT_TOOLS
       const toolValues = [
         tools.fs ? 1 : 0,
         tools.shell ? 1 : 0,

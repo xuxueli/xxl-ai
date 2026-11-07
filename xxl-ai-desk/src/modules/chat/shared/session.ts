@@ -44,3 +44,21 @@ export interface StoredMessage {
   /* 创建时间（ISO） */
   addTime: string
 }
+
+/* 项目内按会话分组的增量消息（供 Agent 记忆生成） */
+export interface ProjectMessageGroup {
+  /* 会话标题 */
+  title: string
+  /* 晚于游标的消息 */
+  messages: StoredMessage[]
+}
+
+/* 项目增量消息集合 */
+export interface ProjectMessages {
+  /* 按会话分组 */
+  sessions: ProjectMessageGroup[]
+  /* 总消息数 */
+  total: number
+  /* 本次读取到的最新消息时间（下次生成游标） */
+  lastMessageTime: string
+}

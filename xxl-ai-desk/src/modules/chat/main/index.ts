@@ -4,6 +4,4 @@
  */
 
 export { abortChat, discardSessionRuns } from './chatService'
-export { registerChatIpc } from './ipc'
-export { appendMessages, countSessionsByAgent, deleteSession, getSession, listMessages, listNewProjectMessages, listSessionIdsByAgent, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'
-export type { ProjectMessageGroup } from './sessionService'
+export { appendMessages, countSessionsByAgents, deleteSession, getSession, listMessages, listNewProjectMessages, listSessionIdsByAgent, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'

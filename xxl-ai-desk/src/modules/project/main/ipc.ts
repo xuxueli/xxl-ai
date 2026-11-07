@@ -5,6 +5,7 @@
 
 import { dialog, shell } from 'electron'
 import type { IpcContext } from '@common/main/ipc'
+import { t } from '@common/main/i18n'
 import { PROJECT_IPC } from '../shared/ipc'
 import { createProject, deleteProject, getProject, listProjects, renameProject, setProjectMemoryEnabled } from './projectService'
 import { abortChat, deleteSession, discardSessionRuns, listSessionIdsByProject } from '@modules/chat/main'
@@ -17,7 +18,7 @@ export function registerProjectIpc(ipc: IpcContext): void {
     let path = input?.path?.trim() ?? ''
     if (!path) {
       const result = await dialog.showOpenDialog({
-        title: input?.dialogTitle || '选择项目目录',
+        title: input?.dialogTitle || t('runtime.dialog.selectFolderTitle'),
         properties: ['openDirectory', 'createDirectory']
       })
       if (result.canceled || result.filePaths.length === 0) {
