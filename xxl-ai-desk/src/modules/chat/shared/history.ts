@@ -8,6 +8,8 @@
  */
 
 import { translate } from '@common/shared/i18n'
+import { isRuntimeSource } from './messageSource'
+import type { MessageSource } from './messageSource'
 import { messageStatusOf } from './messageStatus'
 
 /* 历史窗口：最多保留的最近消息条数 */
@@ -16,10 +18,10 @@ export const HISTORY_MAX_MESSAGES = 50
 /* 历史窗口：总字符上限（超过后从最旧轮次继续丢弃） */
 export const HISTORY_MAX_CHARS = 120_000
 
-/* 历史条目：消息本体 + 运行时注入标记（注入消息不算真实用户轮次） */
+/* 历史条目：消息本体 + 运行时注入来源（注入消息不算真实用户轮次） */
 export interface HistoryEntry {
   message: HistoryMessage | null
-  injected: boolean
+  source: MessageSource | null
 }
 
 /* 运行期消息最小结构 */
@@ -37,7 +39,7 @@ export function contentBlocks(message: { content?: unknown }): unknown[] {
 
 /* 是否为真实用户轮次（注入消息不算新一轮） */
 function isTurnStart(entry: HistoryEntry): boolean {
-  return entry.message?.role === 'user' && !entry.injected
+  return entry.message?.role === 'user' && !isRuntimeSource(entry.source)
 }
 
 /*
@@ -78,7 +80,7 @@ export function trimHistory(input: HistoryEntry[], language = 'zh'): unknown[] {
   const cleaned = input
     .map((entry) => ({
       message: stripThinking(entry.message as HistoryMessage, language),
-      injected: entry.injected
+      source: entry.source
     }))
     .filter((entry): entry is HistoryEntry & { message: HistoryMessage } => entry.message !== null)
 

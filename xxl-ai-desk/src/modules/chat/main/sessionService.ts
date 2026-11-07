@@ -12,7 +12,7 @@ import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import { messageStatusOf, normalizeMessageStatus } from '@modules/chat/shared'
-import type { MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
+import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
 
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
@@ -39,7 +39,7 @@ export function toMessageDTO(row: MessageRow): StoredMessage {
     sessionId: row.sessionId,
     turnId: row.turnId,
     role: row.role,
-    injected: row.injected,
+    source: row.source,
     status: normalizeMessageStatus(row.status),
     content: row.content,
     data: row.data,
@@ -270,14 +270,14 @@ export function listSessionMessagePage(
   return { items, total }
 }
 
-/* 追加消息输入：turnStart 标记本轮真实用户提问，injected 标记运行时注入提示 */
+/* 追加消息输入：turnStart 标记本轮真实用户提问，source 标记运行时注入来源 */
 interface AppendMessageInput {
   role: string
   content: string
   data: string
   timestamp?: number
   turnStart?: boolean
-  injected?: boolean
+  source?: MessageSource | null
 }
 
 /* 从原始消息 JSON 归一状态：写入时统一重生派生字段，避免调用方各写一份 */
@@ -321,7 +321,7 @@ export function appendMessages(sessionId: number, messages: AppendMessageInput[]
           sessionId,
           turnId: message.turnStart ? 0 : turnId,
           role: message.role,
-          injected: message.injected ?? false,
+          source: message.source ?? null,
           status: statusOfData(message.role, message.data),
           content: message.content,
           data: message.data,

@@ -2,6 +2,7 @@
  * 会话域跨进程契约：对话模式、会话与已持久化消息。
  */
 
+import type { MessageSource } from './messageSource'
 import type { MessageStatus } from './messageStatus'
 
 /* 对话模式：plan 只读只规划；build 全量读写（默认） */
@@ -39,8 +40,8 @@ export interface StoredMessage {
   turnId: number
   /* 角色（user / assistant 等） */
   role: string
-  /* 运行时注入消息（非用户输入）：不展示、不构成新一轮 */
-  injected: boolean
+  /* 运行时注入来源；常规消息为 null */
+  source: MessageSource | null
   /* 消息状态（非助手为空串） */
   status: MessageStatus | ''
   /* 文本内容（列表预览用） */

@@ -1460,7 +1460,7 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 
 - 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制项目长期记忆；
 - 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / mode`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
-- 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`injected` 标记运行时注入消息；落库增量 + 单事务，生成中切换会话不丢内容；
+- 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；落库增量 + 单事务，生成中切换会话不丢内容；
 - 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 项目记忆 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、上下文占用率、Markdown 实时渲染与代码高亮。
 
 **生命周期**：任何改变 Agent 能力或模型的操作触发会话运行时清理（`evictAgent` / `resetAgents`），下一轮重新装配；应用退出时回收运行时与终端进程，避免残留。
@@ -1564,7 +1564,7 @@ desk_llm_trace
 | `desk_project` | 本地项目（`id / name / path / memory_enabled / add_time / update_time`，路径 1:1 唯一） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
 | `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / mode / add_time / update_time`） |
-| `desk_message` | 消息（`id / session_id / turn_id / role / injected / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态） |
+| `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
 | `desk_skill` | 技能状态（`id` 目录名 / `name / description / version / source / source_id / enabled`，目录内容为权威） |
@@ -1723,13 +1723,13 @@ docker compose down
   - 会话压缩：针对历史会话提炼背景/目标/进展等提炼，压缩为 max 定长（2000）摘要信息。会话上下文传递短期记忆时：需传递摘要信息与上次摘要后全部增量对话信息。每轮会话后都会触发异步压缩摘要，如果上下文使用率超过80% 或 对话轮次超过20次 或 压缩摘要不存在，需要主动压缩一次；
   - 长期记忆：项目维度跨会话的画像/偏好/事实/目标/进展等长期记忆沉淀。会话完成时异步触发记忆生成/保鲜，检测记忆为空 或 距离上次记忆生成超5min，需要主动生成一次记忆；项目设置里，支持手动查看管理记忆；
   （项目 列表，启用记忆 列名改为 长期记忆；新增 记忆生成时间 列；）
-- 16、【ING】权限管控：
-  - 针对「越界访问确认」，除了 允许本地、本会话全部允许、拒绝本次；新增 本会话全部拒绝；权限
-  - Build/Plan；权限审核，审核通过/不通过，单次/全部；
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 > 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
+- 16、【ING】权限管控：
+  - 针对「越界访问确认」，除了 允许本地、本会话全部允许、拒绝本次；新增 本会话全部拒绝；权限
+  - Build/Plan；权限审核，审核通过/不通过，单次/全部；
 - 17、【ING】应用中心：包含多个 菜单功能：
     - 应用市场：顶部两个TAB，分别为「已安装应用」和「应用市场」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
     （左侧导航栏应用类入口，与顶部固定入口时间通过横线隔开；没有应用入口时横线不展示；）

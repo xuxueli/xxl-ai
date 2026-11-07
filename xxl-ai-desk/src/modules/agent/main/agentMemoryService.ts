@@ -13,7 +13,7 @@ import { AGENT_MEMORY_MAX_CHARS, AGENT_MEMORY_MESSAGE_LIMIT } from '@modules/age
 import type { AgentMemoryDTO, AgentMemorySaveInput } from '@modules/agent/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
-import type { ProjectMessageGroup, ProjectMessages, SessionDTO } from '@modules/chat/shared'
+import { isRuntimeSource, type ProjectMessageGroup, type ProjectMessages, type SessionDTO } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
 import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
@@ -212,7 +212,11 @@ function buildTranscript(
   let count = 0
   const blocks = sessions.map((session) => {
     const rows = session.messages
-      .filter((row) => (row.role === 'user' || row.role === 'assistant') && !row.injected)
+      .filter(
+        (row) =>
+          (row.role === 'user' || row.role === 'assistant') &&
+          !isRuntimeSource(row.source)
+      )
       .map((row) => ({ role: row.role, text: extractMessageText(row) }))
       .filter((row) => row.text)
     count += rows.length

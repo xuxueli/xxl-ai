@@ -7,7 +7,7 @@ import type { Agent } from '@earendil-works/pi-agent-core'
 import { buildModels, type ProviderModelConfig } from '@modules/agent/worker/models'
 import { buildToolGuide, createBuiltinToolEntries } from '@modules/agent/worker/tools'
 import { createMcpTools } from '@modules/mcp/worker'
-import type { ChatMode } from '@modules/chat/shared'
+import type { ChatMode, MessageSource } from '@modules/chat/shared'
 import type { HostEvent } from '@modules/agent/shared/agentProtocol'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { contentBlocks } from '@modules/chat/shared'
@@ -100,7 +100,7 @@ interface RuntimeMessage {
   stopReason?: string
   errorMessage?: string
   timestamp?: number
-  injected?: boolean
+  source?: MessageSource
 }
 
 /* 助手消息的上下文用量：非助手消息返回 0 */
@@ -122,11 +122,11 @@ function hasUserText(agent: Agent, text: string): boolean {
 }
 
 /* 标记本轮新增的运行时注入提示：按新增位置定位，避免依赖提示文本匹配 */
-function markInjectedPrompt(agent: Agent, fromIndex: number): void {
+function markRuntimePrompt(agent: Agent, fromIndex: number, source: MessageSource): void {
   const messages = agent.state.messages as RuntimeMessage[]
   for (let index = fromIndex; index < messages.length; index += 1) {
     if (messages[index].role === 'user') {
-      messages[index].injected = true
+      messages[index].source = source
       return
     }
   }
@@ -426,7 +426,7 @@ export async function runPrompt(
       } finally {
         /* 续写提示由运行时注入：标记后落库时不进入界面、不切分轮次 */
         if (continuePrompt) {
-          markInjectedPrompt(agent, beforeCount)
+          markRuntimePrompt(agent, beforeCount, 'runtime:continue')
         }
       }
 

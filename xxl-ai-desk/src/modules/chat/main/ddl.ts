@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS desk_message (
   session_id INTEGER NOT NULL,
   turn_id    INTEGER NOT NULL DEFAULT 0,
   role       TEXT NOT NULL DEFAULT '',
-  injected   INTEGER NOT NULL DEFAULT 0,
+  source     TEXT,
   status     TEXT NOT NULL DEFAULT '',
   content    TEXT NOT NULL DEFAULT '',
   data       TEXT NOT NULL DEFAULT '',

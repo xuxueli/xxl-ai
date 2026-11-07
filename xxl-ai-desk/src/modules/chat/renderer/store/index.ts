@@ -4,6 +4,8 @@
 
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { t } from '@renderer/shell/i18n'
 import { api } from '@common/renderer/api'
 import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
@@ -12,7 +14,7 @@ import { useProviderStore } from '@modules/provider/renderer'
 import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
-import { mapStoredMessages, nextLocalMessageId } from '@modules/chat/renderer/store/messageMapping'
+import { mapStoredMessages, nextLocalMessageId, appendPart, refreshContent } from '@modules/chat/renderer/store/messageMapping'
 import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import type { ChatMode, SessionDTO } from '@modules/chat/shared'
@@ -133,6 +135,10 @@ export const useChatStore = defineStore('chat', () => {
         stream.setLiveMessages(id, list)
       }
       messages.value = list
+    } catch (error) {
+      /* 加载失败要显式提示，避免界面只停在空态且无任何反馈 */
+      messages.value = []
+      ElMessage.error(t('chat.loadMessagesFailed', [(error as Error).message]))
     } finally {
       loading.value = false
     }
@@ -244,6 +250,30 @@ export const useChatStore = defineStore('chat', () => {
     unbind = api.chat.onEvent(stream.handleEvent)
   }
 
+  /* 发送失败：提示并在当前流式助手气泡内追加可读错误 */
+  function reportSendError(sessionId: number, assistantId: number, error: string): void {
+    const tip = t('chat.sendFailed', [error])
+    ElMessage.error(tip)
+    const assistant = stream.assistantOf(sessionId)
+    if (assistant && stream.targetIdOf(sessionId) === assistantId && currentId.value === sessionId) {
+      appendPart(assistant, { type: 'text', text: tip, error: true })
+      refreshContent(assistant)
+      assistant.error = true
+    }
+  }
+
+  /* 回读持久化消息：失败时保留内存内容并提示，避免界面被清空 */
+  async function reloadStoredMessages(sessionId: number, assistantId: number): Promise<void> {
+    try {
+      const stored = await api.session.messages(sessionId)
+      if (currentId.value === sessionId && stream.targetIdOf(sessionId) === assistantId) {
+        messages.value = mapStoredMessages(stored)
+      }
+    } catch (error) {
+      ElMessage.error(t('chat.loadMessagesFailed', [(error as Error).message]))
+    }
+  }
+
   /* 发送消息（新建会话时按传入模式创建，默认 Build） */
   async function send(text: string, mode: ChatMode = 'build'): Promise<void> {
     const content = text.trim()
@@ -287,27 +317,34 @@ export const useChatStore = defineStore('chat', () => {
     /* 开始本轮：登记流式目标并缓存消息数组（切走后仍持续累积） */
     stream.beginRound(sessionId, assistantMessage.id)
 
+    let sendError = ''
     try {
       await api.chat.send({ sessionId, text: content })
+    } catch (error) {
+      sendError = (error as Error).message
     } finally {
       stream.flush(sessionId)
       delete streamingIds.value[sessionId]
       /* 本轮是否仍为该会话的当前流（避免被同一会话的新一轮取代） */
       const active = stream.targetIdOf(sessionId) === assistantMessage.id
-      if (active && currentId.value === sessionId) {
-        /* 仅当该会话仍在展示时回读替换，避免覆盖其它会话；否则待下次进入时按库回读 */
-        const assistant = stream.assistantOf(sessionId)
-        if (assistant) {
-          assistant.pending = false
-        }
-        const stored = await api.session.messages(sessionId)
-        if (currentId.value === sessionId && stream.targetIdOf(sessionId) === assistantMessage.id) {
-          messages.value = mapStoredMessages(stored)
-        }
+      const assistant = stream.assistantOf(sessionId)
+      if (assistant) {
+        assistant.pending = false
+      }
+      if (sendError) {
+        reportSendError(sessionId, assistantMessage.id, sendError)
+      }
+      /* 失败轮次未落库，回读会覆盖错误气泡；仅成功时刷新持久化结果 */
+      if (active && currentId.value === sessionId && !sendError) {
+        await reloadStoredMessages(sessionId, assistantMessage.id)
       }
       /* 本轮结束：内存缓存让位于持久化结果，后续切换按库回读 */
       stream.completeRound(sessionId, assistantMessage.id)
-      await loadSessions()
+      try {
+        await loadSessions()
+      } catch {
+        /* 会话列表刷新失败不覆盖当前对话界面 */
+      }
     }
   }
 

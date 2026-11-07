@@ -9,7 +9,7 @@ import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/render
 import { t } from '@renderer/shell/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
-import { hasVisiblePart } from '@modules/chat/shared'
+import { hasVisiblePart, isRuntimeSource } from '@modules/chat/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 
 /* 持久化的 Pi 原始消息结构（仅取渲染所需字段） */
@@ -135,8 +135,8 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
   for (const record of stored) {
     const raw = parseData(record.data)
     if (record.role === 'user') {
-      /* 自动续写提示仅驱动模型，不进入界面 */
-      if (record.injected) {
+      /* 运行时注入提示仅驱动模型，不进入界面 */
+      if (isRuntimeSource(record.source)) {
         continue
       }
       currentTurnId = record.turnId

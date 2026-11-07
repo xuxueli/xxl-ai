@@ -125,6 +125,8 @@
       }
     },
     "requestFailed": "请求失败",
+    "sendFailed": "发送失败：{0}",
+    "loadMessagesFailed": "加载会话消息失败：{0}",
     "toolFields": "{0} 个字段",
     "browser": {
       "noPage": "右侧浏览器尚未打开页面，请先使用 open_browser 打开页面",

@@ -8,7 +8,7 @@
 import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
-import type { ChatMode, HistoryEntry, InteractionResult, SessionDTO } from '@modules/chat/shared'
+import type { ChatMode, HistoryEntry, InteractionResult, MessageSource, SessionDTO } from '@modules/chat/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -375,7 +375,7 @@ export async function sendChat(
               return null
             }
           })(),
-          injected: message.injected
+          source: message.source
         }))
         .filter((item) => item.message !== null),
       settings.language
@@ -440,30 +440,26 @@ export async function sendChat(
       return
     }
     /* 落库：只追加本轮新增消息，完整历史始终由数据库持有 */
-    /* 首条真实用户提问标记为轮次头，其自增 id 由落库层回填为 turnId */
-    let turnStarted = false
+    /* 真实用户消息（含运行中追加）均为轮次头，其自增 id 由落库层回填为 turnId */
     const serialized = result.messages
       .filter((message) => (message as { role?: string }).role !== 'system')
       .map((message) => {
         const role = (message as { role?: string }).role ?? ''
         const content = contentToText(message)
-        /* 注入标记只做持久化字段，不写回 Agent 原始消息 JSON */
-        const { injected: injectedFlag, ...raw } = message as {
+        /* 来源只做持久化字段，不写回 Agent 原始消息 JSON */
+        const { source: sourceFlag, ...raw } = message as {
           role?: string
-          injected?: boolean
+          source?: MessageSource
         } & Record<string, unknown>
-        const injected = role === 'user' && injectedFlag === true
-        const turnStart = role === 'user' && !injected && !turnStarted
-        if (turnStart) {
-          turnStarted = true
-        }
+        const source = sourceFlag ?? null
+        const turnStart = role === 'user' && source === null
         return {
           role,
           content,
           data: JSON.stringify(raw),
           timestamp: messageDisplayTime(raw),
           turnStart,
-          injected
+          source
         }
       })
     appendMessages(sessionId, serialized)

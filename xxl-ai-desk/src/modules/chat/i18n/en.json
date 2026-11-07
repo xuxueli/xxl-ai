@@ -125,6 +125,8 @@
       }
     },
     "requestFailed": "Request failed",
+    "sendFailed": "Failed to send: {0}",
+    "loadMessagesFailed": "Failed to load session messages: {0}",
     "toolFields": "{0} fields",
     "browser": {
       "noPage": "The browser has no page open. Use open_browser first.",
