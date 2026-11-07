@@ -30,6 +30,8 @@ export const useChatStore = defineStore('chat', () => {
   const messages = ref<UiMessage[]>([])
   /* 当前会话消息加载中标记（启动时先视为加载中，避免闪出新建对话空态） */
   const loading = ref(true)
+  /* 应用启动引导中：恢复最后会话完成前保持加载态 */
+  const bootstrapping = ref(true)
   /* 对话事件监听解绑函数（避免重复绑定） */
   let unbind: (() => void) | null = null
 
@@ -72,11 +74,10 @@ export const useChatStore = defineStore('chat', () => {
     sessions.value = await api.session.list()
   }
 
-  /*
-   * 启动定位会话：优先恢复最近打开的会话（记录丢失时回落最近更新的会话）；
-   * 无任何历史会话则进入新建对话页面。
-   */
+  /* 启动定位会话：优先恢复最近打开的会话（记录丢失时回落最近更新的会话）；
+   * 无任何历史会话则进入新建对话页面。 */
   async function restoreLastSession(): Promise<void> {
+    loading.value = true
     const lastId = readLastSessionId()
     const target = sessions.value.find((item) => item.id === lastId) || sessions.value[0]
     if (target) {
@@ -84,6 +85,12 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
     startNewChat()
+  }
+
+  /* 启动引导结束：退出全局加载态（异常中断时也保证界面可用） */
+  function finishBootstrap(): void {
+    bootstrapping.value = false
+    loading.value = false
   }
 
   /* 记住当前会话：选中/新建会话后写入本地，供下次启动默认定位（草稿态不写入） */
@@ -377,11 +384,13 @@ export const useChatStore = defineStore('chat', () => {
     streaming,
     isStreaming,
     loading,
+    bootstrapping,
     currentSession,
     contextUsage,
     loadSessions,
     reloadSessions,
     restoreLastSession,
+    finishBootstrap,
     selectSession,
     createSession,
     startNewChat,

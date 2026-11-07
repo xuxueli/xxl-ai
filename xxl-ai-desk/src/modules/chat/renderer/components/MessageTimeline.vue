@@ -72,12 +72,24 @@ const processVisible = computed(
   () => props.message.pending || !hasProcess.value || processOpen.value
 )
 
-/* 轮次完成摘要：有耗时展示「已完成，用时 X」，历史消息无耗时仅展示「已完成」 */
+/* 轮次完成摘要：按落库状态区分已完成 / 已中断 / 已失败 / 已截断，并带本轮耗时 */
 const turnSummary = computed(() => {
-  if (!turnDuration.value) {
-    return t('chat.turnDoneNoTime')
+  const duration = turnDuration.value
+  const status = props.message.status
+  if (status === 'aborted') {
+    return duration ? t('chat.turnAborted', [duration]) : t('chat.turnAbortedNoTime')
   }
-  return t('chat.turnDone', [turnDuration.value])
+  if (status === 'error') {
+    return duration ? t('chat.turnFailed', [duration]) : t('chat.turnFailedNoTime')
+  }
+  if (status === 'truncated') {
+    return duration ? t('chat.turnTruncated', [duration]) : t('chat.turnTruncatedNoTime')
+  }
+  /* 流式失败尚未回读落库状态时，按 error 标记先展示失败，避免短暂显示「已完成」 */
+  if (!status && props.message.error) {
+    return duration ? t('chat.turnFailed', [duration]) : t('chat.turnFailedNoTime')
+  }
+  return duration ? t('chat.turnDone', [duration]) : t('chat.turnDoneNoTime')
 })
 
 /* 切换过程明细的展开/收起 */

@@ -185,7 +185,8 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
         parts: [],
         addTime: record.addTime,
         startedAt,
-        endedAt
+        endedAt,
+        status
       }
       result.push(last)
     } else {
@@ -193,6 +194,7 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
       last.addTime = record.addTime
       last.startedAt = startedAt
       last.endedAt = endedAt
+      last.status = status
     }
     currentTurnId = turnId
 

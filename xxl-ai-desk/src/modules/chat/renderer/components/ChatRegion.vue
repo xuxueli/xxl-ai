@@ -38,8 +38,10 @@ const composerRef = ref()
 /* 是否有消息、是否具备对话条件（存在启用的供应商） */
 const hasMessages = computed(() => chat.messages.length > 0)
 const canChat = computed(() => provider.enabledProviders.length > 0)
-/* 会话载入中：避免消息尚未返回时闪出「新建对话」空态 */
-const loadingMessages = computed(() => chat.loading && !hasMessages)
+/* 会话载入中：启动恢复或消息加载期间保持加载态，避免闪出「新建对话」空态 */
+const loadingMessages = computed(
+  () => (chat.bootstrapping || chat.loading) && !hasMessages
+)
 
 let scrollFrame = 0
 /* 是否贴近底部：用户上翻阅读时不再强制吸底（避免打断查看思考内容/回翻） */

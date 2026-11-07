@@ -1,5 +1,7 @@
 /* 渲染进程 UI 类型 */
 
+import type { MessageStatus } from '@modules/chat/shared'
+
 /* 工具调用状态（含入参、结果与耗时，供执行过程时间线渲染） */
 export interface ToolCallState {
   /* 模型给出的工具调用 id（与 toolResult 关联） */
@@ -45,6 +47,8 @@ export interface UiMessage {
   pending?: boolean
   /* 助手消息本轮是否以错误结束（标记失败样式） */
   error?: boolean
+  /* 落库后的轮次状态（成功 / 中止 / 失败 / 截断），流式消息为空 */
+  status?: MessageStatus | ''
   /* 助手消息本轮开始时间戳（展示总耗时） */
   startedAt?: number
   /* 助手消息本轮结束时间戳 */

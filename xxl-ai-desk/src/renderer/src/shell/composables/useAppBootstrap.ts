@@ -50,20 +50,25 @@ export function useAppBootstrap(): void {
   onMounted(async () => {
     window.addEventListener('keydown', onGlobalKeydown)
     chat.bind()
-    await settings.load()
-    await provider.load()
-    await project.loadProjects()
-    await agent.loadAgents()
-    await chat.loadSessions()
-    /* 校准并开始监听会话生命周期：清理已删除会话遗留的工具面板 / 浏览器 / 对话 UI 持久化 */
-    sessionLifecycle.start(chat.sessions.map((session) => session.id))
-    /* 默认定位会话：有历史会话则打开最后打开的会话，否则进入新建对话页面 */
-    await chat.restoreLastSession()
-    /* 启动后延迟静默检查更新（仅发现新版本时弹提示，失败静默） */
-    if (settings.settings.updateAutoCheck) {
-      updateTimer = setTimeout(() => {
-        void settings.checkUpdate(false)
-      }, UPDATE_CHECK_DELAY)
+    try {
+      await settings.load()
+      await provider.load()
+      await project.loadProjects()
+      await agent.loadAgents()
+      await chat.loadSessions()
+      /* 校准并开始监听会话生命周期：清理已删除会话遗留的工具面板 / 浏览器 / 对话 UI 持久化 */
+      sessionLifecycle.start(chat.sessions.map((session) => session.id))
+      /* 默认定位会话：有历史会话则打开最后打开的会话，否则进入新建对话页面 */
+      await chat.restoreLastSession()
+      /* 启动后延迟静默检查更新（仅发现新版本时弹提示，失败静默） */
+      if (settings.settings.updateAutoCheck) {
+        updateTimer = setTimeout(() => {
+          void settings.checkUpdate(false)
+        }, UPDATE_CHECK_DELAY)
+      }
+    } finally {
+      /* 启动引导结束：无论成功或失败都退出全局加载态 */
+      chat.finishBootstrap()
     }
   })
 
