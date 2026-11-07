@@ -109,13 +109,21 @@ function resolveRuntimeTarget(
   return { provider, model: fallback }
 }
 
-/* 失败轮次落库：追加「用户提问 + 错误提示助手消息」，完整历史不重写 */
-function persistFailureRound(sessionId: string, text: string, tip: string): void {
+/*
+ * 失败轮次落库：追加「用户提问 + 错误提示助手消息」，完整历史不重写。
+ * 用户提问取本轮发送时刻，错误提示取失败时刻：长轮次失败时两者不应显示为同一时间。
+ */
+function persistFailureRound(
+  sessionId: string,
+  text: string,
+  tip: string,
+  startedAt: number
+): void {
   /* 会话已删除或结果已丢弃：不再写入 */
   if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
     return
   }
-  const now = Date.now()
+  const failedAt = Date.now()
   appendMessages(sessionId, [
     {
       role: 'user',
@@ -124,9 +132,9 @@ function persistFailureRound(sessionId: string, text: string, tip: string): void
       data: JSON.stringify({
         role: 'user',
         content: [{ type: 'text', text }],
-        timestamp: now
+        timestamp: startedAt
       }),
-      timestamp: now
+      timestamp: startedAt
     },
     {
       role: 'assistant',
@@ -136,9 +144,9 @@ function persistFailureRound(sessionId: string, text: string, tip: string): void
         content: [{ type: 'text', text: tip }],
         stopReason: 'error',
         errorMessage: tip,
-        timestamp: now
+        timestamp: failedAt
       }),
-      timestamp: now
+      timestamp: failedAt
     }
   ])
 }
@@ -224,6 +232,8 @@ export async function sendChat(
   emit: (payload: ChatEventPayload) => void
 ): Promise<void> {
   const { sessionId, text } = input
+  /* 本轮发送时刻：失败轮次回写时用户提问仍取此刻，避免与错误提示显示为同一时间 */
+  const startedAt = Date.now()
   /* 同一会话已有运行中的一轮：直接下发提示，不落库错误轮次 */
   if (isAgentRunning(sessionId)) {
     emit({ sessionId, type: 'error', message: '当前会话正在生成，请等待本轮结束或先停止生成' })
@@ -256,7 +266,7 @@ export async function sendChat(
   const fail = (raw: string): void => {
     const tip = contextReady ? describeError(raw, providerName, modelId, language) : raw
     if (!committed) {
-      persistFailureRound(sessionId, text, tip)
+      persistFailureRound(sessionId, text, tip, startedAt)
     }
     emitEvent({ type: 'error', message: tip })
   }

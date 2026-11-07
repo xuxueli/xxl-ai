@@ -34,10 +34,26 @@ const toolOpen = ref<Record<string, boolean>>({})
 /* 最后一个片段下标（用于判断是否处于流式跟随的尾段） */
 const lastIndex = computed(() => props.message.parts.length - 1)
 
-/* 生成中文案：尚无输出为「工作中」，已有输出则为「正在生成」（尾部常驻活动指示） */
-const pendingLabel = computed(() =>
-  props.message.parts.length === 0 ? t('chat.preparing') : t('chat.generating')
-)
+/* 轮次耗时：按「毫秒 / 秒 / 分秒」展示，与折叠摘要文案保持一致 */
+function formatTurnDuration(ms: number): string {
+  if (ms < 1000) {
+    return t('chat.turnDurationMs', [Math.max(0, Math.round(ms))])
+  }
+  const totalSeconds = Math.round(ms / 1000)
+  if (totalSeconds < 60) {
+    return t('chat.turnDurationSec', [totalSeconds])
+  }
+  return t('chat.turnDurationMinSec', [Math.floor(totalSeconds / 60), totalSeconds % 60])
+}
+
+/* 运行中文案：实时展示本轮已用耗时（尾部带跳动省略号） */
+const pendingLabel = computed(() => {
+  const { startedAt } = props.message
+  if (!startedAt) {
+    return t('chat.turnRunningNoTime')
+  }
+  return t('chat.turnRunning', [formatTurnDuration(now.value - startedAt)])
+})
 
 /* 本轮总耗时（仅流式轮次有时间戳，重载后不展示） */
 const turnDuration = computed(() => {
@@ -45,8 +61,32 @@ const turnDuration = computed(() => {
   if (!startedAt || !endedAt) {
     return ''
   }
-  return formatDuration(endedAt - startedAt)
+  return formatTurnDuration(endedAt - startedAt)
 })
+
+/* 是否存在执行过程片段（思考/工具）；仅正文的轮次无需折叠 */
+const hasProcess = computed(() => props.message.parts.some((part) => part.type !== 'text'))
+
+/* 完成后过程明细是否展开（默认折叠，仅保留最终答复） */
+const processOpen = ref(false)
+
+/* 过程明细可见性：生成中始终平铺，完成后按展开态决定 */
+const processVisible = computed(
+  () => props.message.pending || !hasProcess.value || processOpen.value
+)
+
+/* 轮次完成摘要：有耗时展示「已完成，用时 X」，历史消息无耗时仅展示「已完成」 */
+const turnSummary = computed(() => {
+  if (!turnDuration.value) {
+    return t('chat.turnDoneNoTime')
+  }
+  return t('chat.turnDone', [turnDuration.value])
+})
+
+/* 切换过程明细的展开/收起 */
+function toggleProcess(): void {
+  processOpen.value = !processOpen.value
+}
 
 /* 是否最后一段（用于流式尾段的错误态标记） */
 function isLastPart(index: number): boolean {
@@ -147,10 +187,20 @@ function toolDetailsText(tool: ToolCallState): string {
 
 <template>
   <div class="timeline">
+    <!-- 轮次完成：过程明细折叠为摘要行，点击展开查看思考与工具调用 -->
+    <div v-if="!message.pending && hasProcess" class="turn-summary-row">
+      <button class="turn-summary" @click="toggleProcess">
+        <span class="turn-summary-label">{{ turnSummary }}</span>
+        <el-icon class="step-chevron" :class="{ open: processOpen }">
+          <ArrowDown />
+        </el-icon>
+      </button>
+    </div>
+
     <template v-for="(part, index) in message.parts" :key="index">
       <!-- 思考片段 -->
       <div
-        v-if="part.type === 'thinking'"
+        v-if="part.type === 'thinking' && processVisible"
         class="step step-thinking"
         :class="{ active: message.pending && isLastPart(index) }"
       >
@@ -175,7 +225,11 @@ function toolDetailsText(tool: ToolCallState): string {
       </div>
 
       <!-- 工具调用片段 -->
-      <div v-else-if="part.type === 'tool'" class="step step-tool" :class="part.tool.status">
+      <div
+        v-else-if="part.type === 'tool' && processVisible"
+        class="step step-tool"
+        :class="part.tool.status"
+      >
         <button class="step-head" @click="toggleTool(part.tool)">
           <el-icon class="step-icon"><component :is="toolView(part.tool).icon" /></el-icon>
           <span class="step-label">{{ toolView(part.tool).title }}</span>
@@ -224,8 +278,8 @@ function toolDetailsText(tool: ToolCallState): string {
       <span class="generating-dots"><span></span><span></span><span></span></span>
     </div>
 
-    <!-- 本轮耗时（仅流式轮次可见） -->
-    <div v-if="turnDuration && !message.pending" class="turn-meta">
+    <!-- 本轮耗时（无过程明细时单独展示，避免与摘要行重复） -->
+    <div v-if="turnDuration && !message.pending && !hasProcess" class="turn-meta">
       {{ t('chat.turnElapsed', [turnDuration]) }}
     </div>
   </div>
@@ -241,6 +295,33 @@ function toolDetailsText(tool: ToolCallState): string {
 
 .step {
   position: relative;
+}
+
+/* 轮次摘要行：过程明细折叠后的单行入口，底部细线区分答复正文 */
+.turn-summary-row {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--desk-border);
+}
+
+.turn-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--desk-text-tertiary);
+  font-size: var(--desk-font-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.turn-summary:hover {
+  color: var(--desk-text-secondary);
+}
+
+.turn-summary-label {
+  font-weight: 500;
 }
 
 /* 过程节点（思考/工具）：左侧竖线 + 可点击标题行 */
