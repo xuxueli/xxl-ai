@@ -121,19 +121,12 @@ function hasUserText(agent: Agent, text: string): boolean {
   )
 }
 
-/* 标记本轮新增的运行时注入提示：落库时据此不展示、不切分轮次 */
-function markInjectedPrompt(agent: Agent, start: number, promptText: string): void {
-  const messages = (agent.state.messages as RuntimeMessage[]).slice(start)
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if (
-      message.role === 'user' &&
-      contentBlocks(message).some(
-        (block) => (block as { type?: string; text?: string }).type === 'text' &&
-          (block as { text?: string }).text === promptText
-      )
-    ) {
-      message.injected = true
+/* 标记本轮新增的运行时注入提示：按新增位置定位，避免依赖提示文本匹配 */
+function markInjectedPrompt(agent: Agent, fromIndex: number): void {
+  const messages = agent.state.messages as RuntimeMessage[]
+  for (let index = fromIndex; index < messages.length; index += 1) {
+    if (messages[index].role === 'user') {
+      messages[index].injected = true
       return
     }
   }
@@ -144,7 +137,7 @@ function appendAbortNote(agent: Agent, start: number, note: string): void {
   const hasNewAssistant = (agent.state.messages as RuntimeMessage[])
     .slice(start)
     .some((message) => message.role === 'assistant')
-  appendAssistantNote(agent, note, hasNewAssistant)
+  appendAssistantNote(agent, note, hasNewAssistant, 'aborted')
 }
 
 /* 最后一轮助手消息 */
@@ -159,19 +152,28 @@ function lastAssistant(agent: Agent): RuntimeMessage | undefined {
 }
 
 /* 在正文追加一条系统备注；appendToLast=true 时并入最后一条助手消息 */
-function appendAssistantNote(agent: Agent, note: string, appendToLast: boolean): void {
+function appendAssistantNote(
+  agent: Agent,
+  note: string,
+  appendToLast: boolean,
+  stopReason: 'stop' | 'aborted' | 'error' = 'stop'
+): void {
   const messages = agent.state.messages as RuntimeMessage[]
   if (appendToLast) {
     const last = lastAssistant(agent)
     if (last && Array.isArray(last.content)) {
       last.content.push({ type: 'text', text: note, error: true })
+      /* 备注即本轮终态：同步 stopReason，保证落库状态与界面一致 */
+      if (stopReason !== 'stop') {
+        last.stopReason = stopReason
+      }
       return
     }
   }
   messages.push({
     role: 'assistant',
     content: [{ type: 'text', text: note, error: true }],
-    stopReason: 'stop',
+    stopReason,
     timestamp: Date.now()
   })
 }
@@ -415,6 +417,7 @@ export async function runPrompt(
       let thrown: unknown = null
       const continuePrompt = !first
       const promptText = first ? text : tr('runtime.continuePrompt')
+      const beforeCount = (agent.state.messages as RuntimeMessage[]).length
       first = false
       try {
         await agent.prompt(promptText)
@@ -423,7 +426,7 @@ export async function runPrompt(
       } finally {
         /* 续写提示由运行时注入：标记后落库时不进入界面、不切分轮次 */
         if (continuePrompt) {
-          markInjectedPrompt(agent, start, promptText)
+          markInjectedPrompt(agent, beforeCount)
         }
       }
 
@@ -470,7 +473,7 @@ export async function runPrompt(
       /* 不可重试错误（401/402/403/404）：直接结束 */
       if (!thrown && isNonRetryable(detail)) {
         const note = `\n\n${tr('runtime.nonRetryable', [detail])}`
-        appendAssistantNote(agent, note, !thrown)
+        appendAssistantNote(agent, note, !thrown, 'error')
         sink({ type: 'error', message: note })
         return takeNew()
       }
@@ -481,7 +484,7 @@ export async function runPrompt(
       const note = final
         ? `\n\n${tr('runtime.final', [MAX_REQUEST_RETRIES + 1, detail])}`
         : `\n\n${tr('runtime.retry', [failures, detail])}`
-      appendAssistantNote(agent, note, appendToLast)
+      appendAssistantNote(agent, note, appendToLast, 'error')
 
       if (final) {
         sink({ type: 'error', message: note })

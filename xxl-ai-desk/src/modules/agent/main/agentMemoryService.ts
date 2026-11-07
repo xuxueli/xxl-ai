@@ -201,15 +201,22 @@ function extractMessageText(row: { content: string; data: string }): string {
   }
 }
 
-/* 分会话拼接转录：仅用户 / 助手正文，超长从最旧截断 */
-function buildTranscript(sessions: ProjectMessageGroup[], language: string): string {
+/*
+ * 分会话拼接转录：仅真实用户 / 助手正文，注入消息与工具结果不参与；
+ * 同时返回有效消息数，供记忆阈值与转录保持同一口径。
+ */
+function buildTranscript(
+  sessions: ProjectMessageGroup[],
+  language: string
+): { text: string; count: number } {
+  let count = 0
   const blocks = sessions.map((session) => {
-    const body = session.messages
+    const rows = session.messages
       .filter((row) => (row.role === 'user' || row.role === 'assistant') && !row.injected)
       .map((row) => ({ role: row.role, text: extractMessageText(row) }))
       .filter((row) => row.text)
-      .map((row) => `${row.role}: ${row.text}`)
-      .join('\n\n')
+    count += rows.length
+    const body = rows.map((row) => `${row.role}: ${row.text}`).join('\n\n')
     if (!body) {
       return ''
     }
@@ -217,9 +224,13 @@ function buildTranscript(sessions: ProjectMessageGroup[], language: string): str
     return `${translate(language, 'agent.memorySessionHeader', [title])}\n\n${body}`
   })
   const transcript = blocks.filter(Boolean).join('\n\n')
-  return transcript.length > TRANSCRIPT_MAX_CHARS
-    ? transcript.slice(-TRANSCRIPT_MAX_CHARS)
-    : transcript
+  return {
+    text:
+      transcript.length > TRANSCRIPT_MAX_CHARS
+        ? transcript.slice(-TRANSCRIPT_MAX_CHARS)
+        : transcript,
+    count
+  }
 }
 
 /*
@@ -247,16 +258,17 @@ export async function maybeGenerateAgentMemory(
     .where(eq(agentMemoryTable.projectId, project.id))
     .get()
   const pending = context.loadPendingMessages(memory?.lastMessageTime ?? '')
+  /* 先按原始总数快速短路，再按有效正文数校验阈值 */
   if (pending.total < AGENT_MEMORY_MESSAGE_LIMIT) {
+    return
+  }
+  const transcript = buildTranscript(pending.sessions, settings.language)
+  if (transcript.count < AGENT_MEMORY_MESSAGE_LIMIT || !transcript.text) {
     return
   }
   const target = resolveTarget(session, settings)
   if (!target) {
     log.warn(`[agent-memory] 跳过生成：会话 ${session.id} 未找到可用模型`)
-    return
-  }
-  const transcript = buildTranscript(pending.sessions, settings.language)
-  if (!transcript) {
     return
   }
   const lastMessageTime = pending.lastMessageTime
@@ -267,7 +279,7 @@ export async function maybeGenerateAgentMemory(
       modelId: target.modelId,
       language: settings.language,
       oldMemory: memory?.content ?? '',
-      transcript,
+      transcript: transcript.text,
       sessionId: session.id,
       traceEnabled: settings.developerMode
     })
@@ -283,7 +295,7 @@ export async function maybeGenerateAgentMemory(
     upsertMemory(project.id, saved, lastMessageTime)
     /* 系统提示词在创建 Agent 时固化：新记忆需清理项目下会话运行时，下一轮重新装配 */
     context.evictProjectSessions()
-    log.info(`[agent-memory] 项目 ${project.id} 记忆已更新（${pending.total} 条消息）`)
+    log.info(`[agent-memory] 项目 ${project.id} 记忆已更新（${transcript.count} 条消息）`)
   } catch (error) {
     /* 失败隔离：保留旧记忆，下一轮达到阈值时重试 */
     log.warn(`[agent-memory] 生成失败 project=${project.id}`, error)

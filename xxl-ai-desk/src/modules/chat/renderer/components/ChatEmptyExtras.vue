@@ -52,8 +52,7 @@ function onAgentChange(value: string): void {
 const examples = [
   { title: 'chat.example1Title', prompt: 'chat.example1Prompt' },
   { title: 'chat.example2Title', prompt: 'chat.example2Prompt' },
-  { title: 'chat.example3Title', prompt: 'chat.example3Prompt' },
-  { title: 'chat.example4Title', prompt: 'chat.example4Prompt' }
+  { title: 'chat.example3Title', prompt: 'chat.example3Prompt' }
 ]
 </script>
 

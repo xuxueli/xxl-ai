@@ -8,6 +8,7 @@
  */
 
 import { translate } from '@common/shared/i18n'
+import { messageStatusOf } from './messageStatus'
 
 /* 历史窗口：最多保留的最近消息条数 */
 export const HISTORY_MAX_MESSAGES = 50
@@ -55,7 +56,7 @@ function stripThinking(message: HistoryMessage, language: string): HistoryMessag
   const kept = blocks.filter((block) => (block as { type?: string })?.type !== 'thinking')
   if (kept.length === 0) {
     /* 用户主动终止：写入终止备注，继续进入模型上下文 */
-    if (message.stopReason === 'aborted') {
+    if (messageStatusOf(message) === 'aborted') {
       return {
         ...message,
         errorMessage: translate(language, 'runtime.abortNote'),

@@ -6,6 +6,7 @@
  * @author xuxueli 2026-11-01
  */
 
+import { messageStatusOf } from '@modules/chat/shared'
 import { TRACE_REQUEST_MAX_CHARS, TRACE_RESPONSE_MAX_CHARS, TRACE_TOOL_RESULT_MAX_CHARS } from '@modules/diagnostics/shared'
 import type { LlmTraceInput, ToolCallTraceDTO } from '@modules/diagnostics/shared'
 
@@ -236,13 +237,10 @@ export function handleTraceMessageEnd(target: TraceTarget, message: unknown): vo
   current.inputTokens = Number(item.usage?.input) || 0
   current.outputTokens = Number(item.usage?.output) || 0
   current.reasoningTokens = Number(item.usage?.reasoning) || 0
-  /* 状态以 stopReason 为准，避免响应体被截断后无法判断 */
+  /* 状态与消息落库共用同一套归一规则，避免响应体截断后无法判断 */
+  const status = messageStatusOf(item)
   current.status =
-    item.stopReason === 'aborted'
-      ? 'aborted'
-      : item.stopReason === 'error'
-        ? 'error'
-        : 'success'
+    status === 'aborted' ? 'aborted' : status === 'error' || status === 'truncated' ? 'error' : 'success'
   current.error = item.errorMessage ?? ''
 }
 

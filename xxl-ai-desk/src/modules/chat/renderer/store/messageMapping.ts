@@ -9,6 +9,7 @@ import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/render
 import { t } from '@renderer/shell/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
+import { hasVisiblePart, messageStatusOf } from '@modules/chat/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 
 /* 持久化的 Pi 原始消息结构（仅取渲染所需字段） */
@@ -163,12 +164,11 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     if (record.role !== 'assistant') continue
 
     const parts = Array.isArray(raw?.content) ? raw.content : []
-    const hasVisiblePart = parts.some((part) => part.type === 'text' || part.type === 'toolCall')
-    const aborted = raw?.stopReason === 'aborted'
+    /* 状态优先取落库列；旧库 status 为空时现场归一，待本地库统一重建后移除 */
+    const status = record.status || messageStatusOf(raw ?? {})
+    const aborted = status === 'aborted'
     /* 用户主动终止不是异常；失败、截断、只有 thinking / 空内容才标记 error */
-    const failed =
-      !aborted &&
-      (raw?.stopReason === 'error' || raw?.stopReason === 'length' || !hasVisiblePart)
+    const failed = !aborted && (status === 'error' || status === 'truncated')
 
     /* 本轮起止时间：开始取用户提问时间，结束取本轮最后一次助手落库时间 */
     const startedAt = turnStarts.get(record.turnId)
@@ -241,7 +241,7 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     /* 失败/截断消息：至少给出一段可读的异常说明 */
     if (failed) {
       markFailedPart(last, partStart)
-    } else if (aborted && !hasVisiblePart) {
+    } else if (aborted && !hasVisiblePart(raw?.content)) {
       /* 用户主动终止：保留思考并写入终止备注，不标记为异常 */
       appendPart(last, { type: 'text', text: t('runtime.abortNote'), error: true })
     }

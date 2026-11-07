@@ -1564,7 +1564,7 @@ desk_llm_trace
 | `desk_project` | 本地项目（`id / name / path / memory_enabled / add_time / update_time`，路径 1:1 唯一） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
 | `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / mode / add_time / update_time`） |
-| `desk_message` | 消息（`id / session_id / turn_id / role / injected / content / data / add_time`，`data` 为 Agent 原始消息 JSON） |
+| `desk_message` | 消息（`id / session_id / turn_id / role / injected / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
 | `desk_skill` | 技能状态（`id` 目录名 / `name / description / version / source / source_id / enabled`，目录内容为权威） |

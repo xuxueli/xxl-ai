@@ -45,6 +45,7 @@
       "memoryEmpty": "模型未返回记忆内容",
       "sessionProjectRequired": "会话必须归属有效项目，请先选择项目",
       "sessionAgentRequired": "请选择 Agent 后再创建会话",
+      "messageTurnMissing": "消息缺少轮次头，无法落库",
       "projectFolderRequired": "未选择项目目录",
       "projectDuplicate": "该目录已创建项目",
       "projectNameRequired": "项目名称不能为空",

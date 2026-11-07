@@ -25,6 +25,7 @@ export const messageTable = sqliteTable('desk_message', {
   turnId: integer('turn_id').notNull().default(0), /* 所属轮次：等于该轮真实用户提问消息 id */
   role: text('role').notNull().default(''),
   injected: integer('injected', { mode: 'boolean' }).notNull().default(false), /* 运行时注入消息（非用户输入）：不展示、不构成新一轮 */
+  status: text('status').notNull().default(''), /* 消息状态（success/aborted/error/truncated，非助手为空） */
   content: text('content').notNull().default(''), /* 归一化纯文本（列表预览） */
   data: text('data').notNull().default(''), /* Agent 原始消息 JSON */
   addTime: text('add_time').notNull().default('')

@@ -45,6 +45,7 @@
       "memoryEmpty": "The model returned no memory content",
       "sessionProjectRequired": "A session must belong to a valid project; select a project first",
       "sessionAgentRequired": "Please select an Agent before creating a session",
+      "messageTurnMissing": "The message has no turn head and cannot be saved",
       "projectFolderRequired": "No project folder selected",
       "projectDuplicate": "A project already exists for this folder",
       "projectNameRequired": "Project name cannot be empty",

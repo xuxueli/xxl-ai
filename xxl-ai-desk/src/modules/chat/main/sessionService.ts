@@ -11,7 +11,8 @@ import { disposeTerminalsBySession } from '@modules/terminal/main'
 import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
-import type { ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
+import { messageStatusOf, normalizeMessageStatus } from '@modules/chat/shared'
+import type { MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
 
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
@@ -39,6 +40,7 @@ export function toMessageDTO(row: MessageRow): StoredMessage {
     turnId: row.turnId,
     role: row.role,
     injected: row.injected,
+    status: normalizeMessageStatus(row.status),
     content: row.content,
     data: row.data,
     addTime: row.addTime
@@ -278,6 +280,19 @@ interface AppendMessageInput {
   injected?: boolean
 }
 
+/* 从原始消息 JSON 归一状态：写入时统一重生派生字段，避免调用方各写一份 */
+function statusOfData(role: string, data: string): MessageStatus | '' {
+  if (role !== 'assistant') {
+    return ''
+  }
+  try {
+    const raw = JSON.parse(data) as MessageStatusSource
+    return messageStatusOf({ ...raw, role })
+  } catch {
+    return ''
+  }
+}
+
 /*
  * 追加本轮新增消息（完整历史由数据库持有；消息自带时间戳时按各自时间落库）。
  * 真实用户提问插入后取其自增 id 作为本轮 turnId，后续消息统一挂到该轮次。
@@ -296,6 +311,10 @@ export function appendMessages(sessionId: number, messages: AppendMessageInput[]
   db.transaction((tx) => {
     let turnId = 0
     for (const message of messages) {
+      /* 非轮次头消息必须已归属某一轮：避免静默写入 turn_id = 0 的孤儿消息 */
+      if (!message.turnStart && turnId === 0) {
+        throw new Error(t('runtime.error.messageTurnMissing'))
+      }
       const inserted = tx
         .insert(messageTable)
         .values({
@@ -303,6 +322,7 @@ export function appendMessages(sessionId: number, messages: AppendMessageInput[]
           turnId: message.turnStart ? 0 : turnId,
           role: message.role,
           injected: message.injected ?? false,
+          status: statusOfData(message.role, message.data),
           content: message.content,
           data: message.data,
           addTime: addTimeOf(message.timestamp)
