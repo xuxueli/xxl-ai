@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /*
- * 系统设置 - 项目：项目列表维护（新增 / 重命名 / 定位 / 删除）与项目记忆开关、查看。
+ * 系统设置 - 项目：项目列表维护（新增 / 重命名 / 定位 / 删除）与长期记忆开关、查看、生成时间。
  * @author xuxueli 2026-11-07
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '@modules/project/renderer/store'
 import { useChatStore } from '@modules/chat/renderer'
@@ -35,6 +35,22 @@ const revealLabel = computed(() => {
 onMounted(() => {
   void project.loadProjects()
 })
+
+/* 记忆弹窗关闭后回读项目列表：手工保存记忆会更新生成时间 */
+watch(memoryVisible, (opened) => {
+  if (!opened) {
+    void project.loadProjects()
+  }
+})
+
+/* 记忆生成时间：空值表示尚未生成 */
+function formatMemoryTime(iso: string): string {
+  if (!iso) {
+    return '-'
+  }
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString()
+}
 
 /* 新建项目：系统目录选择后自动落库 */
 async function onCreate(): Promise<void> {
@@ -142,7 +158,7 @@ function onAction(row: ProjectDTO, command: string): void {
     </div>
 
     <el-table :data="project.projects" class="project-table" style="width: 100%" row-key="id">
-      <!-- 列宽用 min-width 比例分配：项目名 30%、目录 30%、启用记忆 20%、操作 20% -->
+      <!-- 列宽用 min-width 比例分配：项目名 30、目录 30、长期记忆 15、生成时间 20、操作 15 -->
       <el-table-column
         :label="t('project.name')"
         min-width="30"
@@ -157,7 +173,7 @@ function onAction(row: ProjectDTO, command: string): void {
         class-name="project-path-cell"
         :show-overflow-tooltip="{ popperClass: 'project-path-tooltip' }"
       />
-      <el-table-column :label="t('agent.memoryEnabled')" min-width="20" align="center">
+      <el-table-column :label="t('agent.memoryEnabled')" min-width="15" align="center">
         <template #default="{ row }">
           <el-switch
             :model-value="row.memoryEnabled"
@@ -165,7 +181,12 @@ function onAction(row: ProjectDTO, command: string): void {
           />
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.actions')" min-width="20" align="center">
+      <el-table-column :label="t('agent.memoryGenerateTime')" min-width="20" align="center">
+        <template #default="{ row }">
+          {{ formatMemoryTime(row.memoryUpdateTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column :label="t('common.actions')" min-width="15" align="center">
         <template #default="{ row }">
           <el-dropdown
             trigger="click"

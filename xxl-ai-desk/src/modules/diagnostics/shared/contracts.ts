@@ -55,8 +55,8 @@ export interface LlmTraceInput {
   providerId: number
   /* 模型 ID */
   modelId: string
-  /* 来源：对话 / 记忆生成 */
-  phase: 'chat' | 'memory'
+  /* 来源：对话 / 记忆生成 / 会话摘要 */
+  phase: 'chat' | 'memory' | 'summary'
   /* 结果状态 */
   status: 'success' | 'error' | 'aborted'
   /* HTTP 状态码（未知为 0） */

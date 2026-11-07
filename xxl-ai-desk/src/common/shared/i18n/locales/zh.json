@@ -128,6 +128,8 @@
       "runtimeProcessExited": "Agent 运行时进程异常退出，请重试",
       "memoryGenerateFailed": "记忆生成失败",
       "memoryGenerateTimeout": "记忆生成超时",
+      "summaryGenerateFailed": "会话摘要生成失败",
+      "summaryGenerateTimeout": "会话摘要生成超时",
       "versionInfoMissing": "未获取到版本信息",
       "responseParseFailed": "响应解析失败",
       "gitCommandFailed": "Git 命令执行失败",

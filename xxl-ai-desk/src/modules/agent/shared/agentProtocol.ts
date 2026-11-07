@@ -104,6 +104,26 @@ export interface MemoryGenerateInput {
   transcript: string
 }
 
+/* 会话摘要生成入参（主进程组装提示词，运行时进程只调用模型） */
+export interface SessionSummaryGenerateInput {
+  /* 请求标识（结果回传关联） */
+  requestId: string
+  /* 归属会话（trace 记录用） */
+  sessionId: number
+  /* 开发者模式：开启后采集本次模型调用 trace */
+  traceEnabled: boolean
+  /* 供应商运行时配置 */
+  provider: ProviderModelConfig
+  /* 模型 ID */
+  modelId: string
+  /* 应用语言：提示词与输出语言 */
+  language: 'zh' | 'en'
+  /* 旧摘要（为空表示首次压缩） */
+  oldSummary: string
+  /* 上次摘要后的增量对话转录文本 */
+  transcript: string
+}
+
 /* 主进程 → 运行时进程 */
 export type WorkerRequest =
   | { type: 'run'; input: RunAgentInput } /* 启动一轮对话 */
@@ -116,6 +136,7 @@ export type WorkerRequest =
   | { type: 'mcp-test'; requestId: string; server: McpRuntimeConfig; runtimePath: string; language: 'zh' | 'en' } /* 连通测试（临时连接） */
   | { type: 'mcp-tools'; requestId: string; server: McpRuntimeConfig; runtimePath: string; language: 'zh' | 'en' } /* 列举工具（复用连接缓存） */
   | { type: 'memory-generate'; input: MemoryGenerateInput } /* 生成 Agent 记忆 */
+  | { type: 'summary-generate'; input: SessionSummaryGenerateInput } /* 生成会话压缩摘要 */
   | { type: 'browser-action-result'; requestId: string; result: BrowserActionResult } /* 页面动作结果回传 */
 
 /* 运行时进程 → 主进程 */
@@ -130,5 +151,6 @@ export type WorkerMessage =
   | { type: 'mcp-test-result'; requestId: string; result: McpTestResult } /* 连通测试结果 */
   | { type: 'mcp-tools-result'; requestId: string; tools: McpToolMeta[] } /* 工具列表结果 */
   | { type: 'memory-result'; requestId: string; ok: boolean; content?: string; message?: string } /* 记忆生成结果 */
+  | { type: 'summary-result'; requestId: string; ok: boolean; content?: string; message?: string } /* 会话摘要生成结果 */
   | { type: 'mcp-result-error'; requestId: string; message: string } /* MCP 操作失败 */
   | { type: 'llm-trace'; sessionId: number; trace: LlmTraceInput } /* 模型通讯 trace（开发者模式） */

@@ -117,9 +117,14 @@ export function traceStatusText(status: LlmTraceDTO['status']): string {
   return status === 'aborted' ? t('toolPanel.diagnostics.statusAborted') : t('toolPanel.diagnostics.statusSuccess')
 }
 
-/* 通讯来源文案：对话 / 记忆生成 */
+/* 通讯来源文案：对话 / 记忆生成 / 会话摘要 */
 export function tracePhaseText(phase: LlmTraceDTO['phase']): string {
-  return phase === 'memory' ? t('toolPanel.diagnostics.phaseMemory') : t('toolPanel.diagnostics.phaseChat')
+  if (phase === 'memory') {
+    return t('toolPanel.diagnostics.phaseMemory')
+  }
+  return phase === 'summary'
+    ? t('toolPanel.diagnostics.phaseSummary')
+    : t('toolPanel.diagnostics.phaseChat')
 }
 
 /* 日期与时间（详情用），非法值原样返回 */

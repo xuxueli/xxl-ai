@@ -177,7 +177,7 @@ modules/{domain}/
 | 跨域纯函数 / 常量（分页、快捷动作、文件类型、URL 归一） | `common/shared/*.ts` |
 | 跨进程布局常量（窗口最小宽度、顶栏高度） | `common/shared/*.ts`，主进程与渲染层共用 |
 | 主进程业务与编排 | `modules/{domain}/main/*.ts` |
-| Agent 配置 / 项目记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent` / `desk_agent_memory`） |
+| Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
 | IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
@@ -211,7 +211,7 @@ modules/{domain}/
 - **SQLite 无外键级联**：删除父记录（项目 / 会话 / 消息 / 终端）必须由所属 service 手动级联并清理运行时，禁止依赖数据库约束。
 - **会话双绑定**：`desk_session.project_id / agent_id` 均为数字且创建后不可修改；新建会话必须同时选择项目与 Agent，运行时按会话 `agent_id` 读取系统指令、SKILL、MCP 与内置工具开关，禁止把能力配置再冗余存进会话。
 - **Agent 是能力编排实体**：`desk_agent` 保存指令、`skill_ids / mcp_ids` 与工具分类开关；会话装配只能取 Agent 已选资源，Agent 保存后由 `agent/main/ipc.ts` 清理绑定会话运行时，下一轮重新装配。
-- **项目记忆按项目维度**：`desk_project.memory_enabled` 控制注入，`desk_agent_memory` 一项目一条；记忆内容变更后清理项目下会话运行时，禁止在会话表另存一份记忆。
+- **项目记忆按项目维度**：`desk_project.memory_enabled` 控制注入，记忆正文与游标随 `desk_project` 行保存；记忆内容变更后清理项目下会话运行时，禁止在会话表另存一份记忆。
 - **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
@@ -438,12 +438,13 @@ shell/layout/index.vue（app-wrapper，纵向）
 | 需求 | 落位 | 要点 |
 |---|---|---|
 | Agent 配置 | `modules/agent/main/{agentService,seed}.ts` | `desk_agent` 保存名称 / 指令 / SKILL / MCP / 工具分类；默认内置 Agent 禁删，被会话占用禁删 |
-| 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/agent/worker/memory.ts` | 一项目一条（`desk_agent_memory`），按项目 `memory_enabled` 注入；生成与消费解耦 |
+| 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/agent/worker/memory.ts` | 记忆随 `desk_project` 行保存，按 `memory_enabled` 注入；生成与消费解耦 |
+| 会话压缩 | `modules/chat/main/sessionSummaryService.ts` + `modules/agent/worker/summary.ts` | 摘要存 `desk_session.summary*`；无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 时异步压缩 |
 | 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写/命令类仅 build；是否进入「内置工具」页见 §6.1 |
 | 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, readAllowedRoots, trustedRoots })`，越界返回拦截错误 |
 | 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层弹窗，回传 `allow`（可 `remember`）/ `deny` |
 | MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
-| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 项目记忆 + SKILL 索引 + 模式/工具约束 |
+| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式/工具约束 |
 | 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按模式 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_MODES` / `BUILD_ONLY` / `describe` / `toolError` / `createGuard` |
 | 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
 | 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
@@ -482,9 +483,9 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **Agent 是能力编排实体**：`desk_agent` 持有 `system_prompt`、`skill_ids`、`mcp_ids` 与五类内置工具开关；MCP / SKILL / 内置工具本身仍是独立域，Agent 只保存引用与开关。
 - **会话创建即绑定**：新建会话必须选择项目与 Agent；`desk_session.agent_id` 创建后不可修改，运行时的指令、SKILL、MCP、内置工具全部按该 Agent 读取。
 - **权限来源唯一**：`chat/main/chatService.ts` 只从会话绑定的 Agent 取能力，禁止再读全局工具开关或把配置复制到会话；Agent 缺失直接报 `runtime.agentMissing`。
-- **实时生效**：Agent 保存后清理绑定会话的运行时缓存（`evictAgent`），项目记忆 / 记忆开关变更清理项目下会话运行时；下一轮重新装配，已发生消息不受影响。
+- **实时生效**：Agent 保存后清理绑定会话的运行时缓存（`evictAgent`），长期记忆 / 记忆开关变更清理项目下会话运行时；摘要生成后清理当前会话运行时；下一轮重新装配，已发生消息不受影响。
 - **删除约束**：默认内置 Agent（`builtin=1`）禁删；仍被会话引用的 Agent 禁删，并提示关联会话数。
-- **项目记忆归属**：记忆按项目维度（`desk_agent_memory` 一项目一条），由 `desk_project.memory_enabled` 控制是否注入；手动管理入口在「系统设置 → 项目」，不在 Agent 页另建一份。
+- **项目记忆归属**：记忆随项目行保存（`desk_project.memory*`），由 `desk_project.memory_enabled` 控制是否注入；手动管理入口在「系统设置 → 项目」，不在 Agent 页另建一份。
 - **新增 Agent 能力时**：契约加在 `modules/agent/shared/contracts.ts`，持久化加在 `agent/main/{schema,ddl,agentService}.ts`，装配只在 `chatService` / `worker/session` 消费，禁止在渲染层拼装系统提示。
 
 ## 7. 校验清单

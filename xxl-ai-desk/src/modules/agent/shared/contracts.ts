@@ -1,12 +1,13 @@
 /*
- * Agent 域跨进程契约：Agent 配置、预设标识与项目记忆（按项目维度保存，一个项目一条）。
+ * Agent 域跨进程契约：Agent 配置、预设标识与项目长期记忆（随项目行保存）。
  * @author xuxueli 2026-11-07
  */
 
-import { HISTORY_MAX_MESSAGES } from '@modules/chat/shared'
-
 /* 记忆固定长度上限（字符） */
 export const AGENT_MEMORY_MAX_CHARS = 2000
+
+/* 长期记忆保鲜间隔：距上次生成超过该时长且有新消息时重新生成 */
+export const AGENT_MEMORY_REFRESH_MS = 5 * 60 * 1000
 
 /* Agent 指令长度上限（字符） */
 export const AGENT_INSTRUCTION_MAX_CHARS = 2000
@@ -26,12 +27,6 @@ export const DEFAULT_AGENT_TOOLS: AgentToolSwitches = {
   general: false,
   interaction: false
 }
-
-/*
- * 记忆生成触发阈值：项目内自上次生成后积压的消息数达到该值即压缩。
- * 与上下文历史窗口保持一致：积压超过窗口，意味着最早的内容即将被挤出上下文。
- */
-export const AGENT_MEMORY_MESSAGE_LIMIT = HISTORY_MAX_MESSAGES
 
 /* Agent 内置工具分类开关 */
 export interface AgentToolSwitches {
@@ -95,7 +90,7 @@ export interface AgentSaveInput {
   tools?: Partial<AgentToolSwitches>
 }
 
-/* 项目记忆：无记忆时 content / lastMessageTime / updateTime 为空串 */
+/* 项目长期记忆：随项目行保存，无记忆时 content / lastMessageTime / updateTime 为空串 */
 export interface AgentMemoryDTO {
   /* 项目主键（记忆唯一键） */
   projectId: number
@@ -105,7 +100,7 @@ export interface AgentMemoryDTO {
   content: string
   /* 上次生成纳入的最后一条消息时间（项目级游标，ISO） */
   lastMessageTime: string
-  /* 更新时间（ISO），未生成过为空串 */
+  /* 记忆生成时间（ISO），未生成过为空串 */
   updateTime: string
 }
 

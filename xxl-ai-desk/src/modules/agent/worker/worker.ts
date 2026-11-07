@@ -35,6 +35,7 @@ import {
 } from '@modules/mcp/worker'
 import { clearSessionPermissions } from '@modules/agent/worker/sandbox'
 import { generateMemoryContent } from '@modules/agent/worker/memory'
+import { generateSessionSummaryContent } from '@modules/agent/worker/summary'
 import {
   cancelAllInteractions,
   cancelSessionInteractions,
@@ -236,6 +237,23 @@ async function handleMemoryGenerate(input: Parameters<typeof generateMemoryConte
   }
 }
 
+/* 会话摘要生成：调用一次模型压缩，结果回传主进程（失败只回错误，不影响对话） */
+async function handleSummaryGenerate(
+  input: Parameters<typeof generateSessionSummaryContent>[0]
+): Promise<void> {
+  try {
+    const content = await generateSessionSummaryContent(input)
+    post({ type: 'summary-result', requestId: input.requestId, ok: true, content })
+  } catch (error) {
+    post({
+      type: 'summary-result',
+      requestId: input.requestId,
+      ok: false,
+      message: (error as Error).message
+    })
+  }
+}
+
 /* 连通测试：临时连接 MCP 服务，返回服务信息与工具明细 */
 async function handleMcpTest(
   requestId: string,
@@ -283,6 +301,9 @@ function handleRequest(message: WorkerRequest): void {
       break
     case 'memory-generate':
       void handleMemoryGenerate(message.input)
+      break
+    case 'summary-generate':
+      void handleSummaryGenerate(message.input)
       break
     case 'browser-action-result': {
       const resolve = pendingBrowserActions.get(message.requestId)

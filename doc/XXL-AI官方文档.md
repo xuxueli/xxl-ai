@@ -1335,9 +1335,9 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
 | 层 | 文件 |
 |---|---|
-| 主进程业务 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`、`modules/mcp/main/{service,runtime,discover}.ts`、`modules/skill/main/{service,import,discover,github,install}.ts`、`modules/provider/main/providerService.ts` |
+| 主进程业务 | `modules/agent/main/{agentService,agentMemoryService,runtimeTarget,seed}.ts`、`modules/chat/main/sessionSummaryService.ts`、`modules/mcp/main/{service,runtime,discover}.ts`、`modules/skill/main/{service,import,discover,github,install}.ts`、`modules/provider/main/providerService.ts` |
 | 主进程 harness | `modules/agent/main/host/runtimeHost.ts`（托管 / 通信）、`modules/agent/main/host/interaction.ts`（人机交互桥）、`modules/mcp/main/community/mcpSoAdapter.ts`、`modules/skill/main/community/skillsShAdapter.ts`、`modules/skill/main/github/*` |
-| 运行时进程 | `modules/{file,agent,browser,skill}/worker/*`（内置工具）、`modules/agent/worker/{sandbox,hitl,trace}.ts`、`modules/agent/worker/memory.ts`、`modules/mcp/worker/*`（MCP 客户端与装配） |
+| 运行时进程 | `modules/{file,agent,browser,skill}/worker/*`（内置工具）、`modules/agent/worker/{sandbox,hitl,trace}.ts`、`modules/agent/worker/{memory,summary}.ts`、`modules/mcp/worker/*`（MCP 客户端与装配） |
 | 契约 | `modules/agent/shared/{contracts,agentProtocol}.ts`、`modules/mcp/shared/contracts.ts`、`modules/skill/shared/contracts.ts`、`modules/provider/shared/contracts.ts` |
 | 渲染层 | `modules/plugin/renderer/{pages,components,builtin}`、`modules/agent/renderer/{pages,components}`、`modules/{mcp,skill}/renderer`、`modules/toolPanel/renderer` |
 
@@ -1458,10 +1458,10 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 
 **项目与会话**：
 
-- 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制项目长期记忆；
-- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / mode`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
+- 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制长期记忆，记忆正文与游标随项目行保存；
+- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
 - 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；落库增量 + 单事务，生成中切换会话不丢内容；
-- 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 项目记忆 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、上下文占用率、Markdown 实时渲染与代码高亮。
+- 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、上下文占用率、Markdown 实时渲染与代码高亮。
 
 **生命周期**：任何改变 Agent 能力或模型的操作触发会话运行时清理（`evictAgent` / `resetAgents`），下一轮重新装配；应用退出时回收运行时与终端进程，避免残留。
 
@@ -1473,14 +1473,26 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 - **主动询问（`ask_user`）**：`modules/agent/worker/tools/interaction.ts` 提供 `ask_user` 工具，面向「多个候选方案请用户拍板」：提供 2~20 个选项，支持单选 / 多选，默认允许用户填写「其他」；确认操作或补充自由文本直接在回复里提问，不调用该工具。调用后**本轮挂起**等待用户在应用内弹窗应答，再按结果回填模型继续执行；权限校验类交互不开放给该工具，只能由系统沙箱发起；
 - **标准化组件**：渲染层提供权限确认、多选项选择、用户输入三类标准人机交互组件，Agent 集成后自动启用；应答结果（确认 / 选择值 / 输入文本 / 拒绝 / 取消）经协议回传并转为模型可读文本。
 
-#### 6.4.7、长期记忆
+#### 6.4.7、会话压缩与长期记忆
 
-本地版记忆以**项目**为唯一维度（一个项目一条，`desk_agent_memory`，项目 1:1），跨会话沉淀。与云版「Agent × 访客」的实体模型同构，只是维度换成「项目」——项目绑定本地目录，偏好与事实天然以项目为单位积累。设计沿用同一条铁律：**生成与消费解耦**，对话只「读」记忆，压缩在后台异步完成，绝不阻塞生成。
+本地版把上下文管理拆成**会话压缩**与**长期记忆**两层：会话压缩解决单会话上下文变长，长期记忆解决跨会话的项目级沉淀。两者都遵循同一条铁律：**生成与消费解耦**，对话只读取已有结果，压缩 / 生成在后台异步完成，绝不阻塞本轮回复。
+
+**会话压缩（会话内摘要）**：
+
+- 存储在 `desk_session` 的 `summary / summary_last_message_id / summary_update_time`，摘要定长 2000 字符，游标为摘要覆盖到的最后一条消息 ID；
+- 每轮对话结束调用 `modules/chat/main/sessionSummaryService.ts#maybeCompressSession`，满足任一条件才真正压缩：**无摘要**、**上下文使用率 ≥ 80%**、**距上次摘要后真实用户轮次 ≥ 20**；没有新消息或未命中条件直接返回；
+- 上下文装配时传递“摘要 + 上次摘要后的全部增量消息”：系统指令追加摘要，历史消息从 `summary_last_message_id` 之后读取；无摘要时仍按最近 50 条 / 12 万字符兜底；
+- 压缩输入为旧摘要 + 增量转录（只取用户 / 助手正文，排除 thinking 与工具结果，上限 60k 字符），输出固定「背景 / 目标 / 进展」三个二级标题并截断到 2000 字符；
+- 生成成功后推进游标并清理该会话运行时，使新摘要下一轮生效；失败保留旧摘要与游标，下一轮继续尝试。删除消息触及摘要覆盖区时摘要自动清空，避免摘要与历史不一致。
+
+**长期记忆（项目级）**：
+
+本地版记忆以**项目**为唯一维度，直接随 `desk_project` 行保存（`memory / memory_last_time / memory_update_time`），不单独建表。项目绑定本地目录，偏好与事实天然以项目为单位积累。
 
 **触发与游标**（`modules/agent/main/agentMemoryService.ts`）：
 
-- 每轮对话结束调用 `maybeGenerateAgentMemory({ session, loadPendingMessages, ... })`，统计项目内自上次生成后新增的消息数，达到 `AGENT_MEMORY_MESSAGE_LIMIT`（50，与上下文历史窗口一致）即触发压缩；未达阈值直接返回；
-- 游标为项目级 `last_time`（ISO 时间）：消息自增 `id` 是会话内序号，无法跨会话累计，按时间游标才能覆盖项目内全部会话；
+- 每轮对话结束调用 `maybeGenerateAgentMemory`：记忆为空，或距上次生成超过 5 分钟，且游标后存在新消息时异步生成；否则直接返回；
+- 游标为项目级 `memory_last_time`（ISO 时间）：消息自增 `id` 是会话内序号，无法跨会话累计，按时间游标才能覆盖项目内全部会话；
 - 加载时按项目下**每个会话独立查询** `add_time > 游标` 的消息，再按各会话首条新增消息时间排序；转录按「## 会话：标题」分节，多会话交替时顺序接近真实发生顺序；
 - 同一项目用 `generatingProjects` 去重，生成期间不重复触发；项目或记忆被删除时直接跳过。
 
@@ -1489,16 +1501,16 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 - 主进程组装提示词（旧记忆 + 最近对话转录），转录只取用户 / 助手正文，排除 thinking 与工具结果，上限 60k 字符，超长从最旧截断；
 - 生成运行在运行时进程：低温度（0.2）、`max_tokens` 3000、超时 120s 调用一次模型；输出固定四个二级标题「用户偏好 / 项目事实 / 关键决策 / 待办与风险」，总长截断到 2000 字符；
 - 提示词显式要求「保留仍然有效的信息、覆盖已过期内容、不得编造、不得记录密钥口令」，无内容章节写「暂无」；
-- **失败隔离**：生成失败只记日志并保留旧记忆，游标不推进，下一轮达到阈值自动重试；密钥、口令等敏感内容由提示词约束，不额外做内容过滤；
+- **失败隔离**：生成失败只记日志并保留旧记忆，游标不推进，下一轮自动重试；密钥、口令等敏感内容由提示词约束，不额外做内容过滤；
 - 记忆生成同样沿用当前会话 ID 构建模型，保证 `{session}` 占位请求头（如 `x-opencode-session`）被正确填充，避免网关因缺会话头直接 400。
 
 **注入与生效**（`modules/chat/main/chatService.ts`）：
 
 - 记忆开启且会话归属项目时，项目记忆追加到系统指令，并明确「可能过时的历史事实，与当前指令冲突时以当前指令为准」；
 - 系统指令在会话 Agent 创建时固化，因此生成成功后清理项目下会话运行时（`evictProjectSessions`），下一轮重新装配，新记忆立即生效；
-- 手动保存记忆、切换项目记忆开关同样清理运行时，避免继续使用旧提示词。
+- 手动保存记忆、切换项目长期记忆开关同样清理运行时，避免继续使用旧提示词。
 
-**手动管理**（系统设置 → 项目）：按项目维护「长期记忆」开关，通过「查看记忆」弹窗查看 / 编辑记忆正文并保存；关闭开关后不再注入或生成。删除项目时级联清空该项目记忆，不单独提供「清空记忆」入口。
+**手动管理**（系统设置 → 项目）：项目列表展示「长期记忆」开关与「记忆生成时间」，通过「查看长期记忆」弹窗查看 / 编辑正文并保存；关闭开关后不再注入或生成。删除项目时记忆随项目行一并删除，不单独提供「清空记忆」入口。
 
 #### 6.4.8、Agent可观测
 
@@ -1540,7 +1552,7 @@ worker（唯一能看到 provider payload 的进程）
 desk_llm_trace
 ```
 
-- 采集状态按「会话 + 来源（chat / memory）」隔离，记忆生成与对话并发时互不覆盖；
+- 采集状态按「会话 + 来源（chat / memory / summary）」隔离，对话、记忆生成与会话摘要并发时互不覆盖；
 - `onPayload` 收尾上一条并开启新一条——此时上一轮工具已执行完，工具结果可安全归属；
 - 工具结果按 `toolCallId` 挂到当前记录，`tool_execution_end` 回填结果、耗时与失败标记；
 - run 正常结束、异常、用户中止分别以 `success / error / aborted` 收尾；未拿到响应的一律按 `error` 落库，避免出现「空成功」；
@@ -1561,18 +1573,17 @@ desk_llm_trace
 
 | 表 | 说明 |
 |---|---|
-| `desk_project` | 本地项目（`id / name / path / memory_enabled / add_time / update_time`，路径 1:1 唯一） |
+| `desk_project` | 本地项目（`id / name / path / memory_enabled / memory / memory_last_time / memory_update_time / add_time / update_time`，路径 1:1 唯一；长期记忆随项目行保存） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
-| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / mode / add_time / update_time`） |
+| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / mode / summary / summary_last_message_id / summary_update_time / add_time / update_time`） |
 | `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
 | `desk_skill` | 技能状态（`id` 目录名 / `name / description / version / source / source_id / enabled`，目录内容为权威） |
 | `desk_mcp` | MCP 服务（`name / type / transport / url / headers / command / args / env / cwd / config / remark / enabled / health`） |
-| `desk_agent_memory` | 项目长期记忆（`project_id / content / last_time / add_time / update_time`，项目 1:1） |
 | `desk_llm_trace` | 模型通讯 trace（`session_id / run_id / step / phase / status / http_status / duration_ms / tokens / request / response / tool_calls / error / add_time`，仅开发者模式写入） |
 
-- **系统配置项**：应用名称 / Slogan、主题（浅色 / 深色 / 跟随系统 + 多主题配色）、语言（中 / 英）、Node / Python 运行环境 PATH、开发者模式等，统一存 `desk_setting`；Agent 指令与能力开关存 `desk_agent`，项目记忆开关存 `desk_project`；
+- **系统配置项**：应用名称 / Slogan、主题（浅色 / 深色 / 跟随系统 + 多主题配色）、语言（中 / 英）、Node / Python 运行环境 PATH、开发者模式等，统一存 `desk_setting`；Agent 指令与能力开关存 `desk_agent`，长期记忆开关与内容存 `desk_project`，会话摘要存 `desk_session`；
 - **数据目录**：默认 `app.getPath('userData')/xxl-ai-desk.sqlite`，可自定义（`userData/desk-config.json`），修改后重启生效。
 
 ## 七、版本更新日志
@@ -1714,22 +1725,21 @@ docker compose down
 - 13、【重构】产品功能设计重构：
   - 扩展中心：插件中心更名扩展中心，现有MCP、SKILL和内置工具之外，新增 “Agent”功能；支持创建管理多Agent，Agent支持设置 指令、SKILL、MCP和内置工具等；
   - 会话新建：新建会话时，当前会话框底部限制必选 项目；新增必选 Agent，Agent下拉框中限制Agent列表与新建Agent入口，参考项目选项交互；
-  - 系统设置：新增 项目 设置，支持管理维护 项目列表；支持新增项目、重命名、在Finder中显示、删除等；支持项目记忆开关、项目记忆查看；
+  - 系统设置：新增 项目 设置，支持管理维护 项目列表；支持新增项目、重命名、在Finder中显示、删除等；支持长期记忆开关、长期记忆查看；
   - 会话与Agent绑定，会话时使用的 系统指令、SKILL、MCP、内置工具等，从对应Agent上获取，Agent修改后需要实时感知最新的；
 - 14、【优化】新增会话示例任务调整，辅助用户快速上手；
 - 15、【新增】会话压缩与记忆：
   - 会话上下文结构化：system（系统指令 + 长期记忆 + skill技能 + 会话摘要）+ messages（短期记忆/会话）+ tools（内置工具 + MCP工具）
   - 会话上下文使用率：计算公式 = 上下文token消耗 / 模型ContextWindow；
-  - 会话压缩：针对历史会话提炼背景/目标/进展等提炼，压缩为 max 定长（2000）摘要信息。会话上下文传递短期记忆时：需传递摘要信息与上次摘要后全部增量对话信息。每轮会话后都会触发异步压缩摘要，如果上下文使用率超过80% 或 对话轮次超过20次 或 压缩摘要不存在，需要主动压缩一次；
-  - 长期记忆：项目维度跨会话的画像/偏好/事实/目标/进展等长期记忆沉淀。会话完成时异步触发记忆生成/保鲜，检测记忆为空 或 距离上次记忆生成超5min，需要主动生成一次记忆；项目设置里，支持手动查看管理记忆；
+  - 会话压缩：针对历史会话提炼背景/目标/进展等提炼，压缩为 max 定长（2000）摘要信息。会话上下文传递短期记忆时：需传递摘要信息与上次摘要后全部增量对话信息。每轮会话后都会触发异步压缩摘要，如果「上下文使用率超过80% 或 对话轮次超过20次 或 压缩摘要不存在」，需要主动压缩一次；
+  - 长期记忆：项目维度跨会话的画像/偏好/事实/目标/进展等长期记忆沉淀。会话完成时异步触发记忆生成/保鲜，「检测记忆为空 或 距离上次记忆生成超5min」，需要主动生成一次记忆；项目设置里，支持手动查看管理记忆；
   （项目 列表，启用记忆 列名改为 长期记忆；新增 记忆生成时间 列；）
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 > 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
-- 16、【ING】权限管控：
-  - 针对「越界访问确认」，除了 允许本地、本会话全部允许、拒绝本次；新增 本会话全部拒绝；权限
-  - Build/Plan；权限审核，审核通过/不通过，单次/全部；
+- 16、【ING】权限管控：升级三档权限模式「仅可查看（全局读）、工作区内修改（全局读 + 项目&系统临时目录写）、完全权限（全局读写）」；同时，兜底保留统一的敏感操作拦截机制；
+  （read-only、workspace-write、full-access）
 - 17、【ING】应用中心：包含多个 菜单功能：
     - 应用市场：顶部两个TAB，分别为「已安装应用」和「应用市场」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
     （左侧导航栏应用类入口，与顶部固定入口时间通过横线隔开；没有应用入口时横线不展示；）

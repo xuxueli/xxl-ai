@@ -36,6 +36,7 @@
       "toolResult": "Result",
       "phaseChat": "Chat",
       "phaseMemory": "Memory",
+      "phaseSummary": "Summary",
       "statusSuccess": "Success",
       "statusError": "Failed",
       "statusAborted": "Aborted"

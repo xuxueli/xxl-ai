@@ -18,10 +18,8 @@ export const useAgentStore = defineStore('agent', () => {
   /* Agent 列表是否已加载 */
   const loaded = ref(false)
 
-  /* 项目记忆列表（无记忆的项目 content 为空） */
+  /* 项目长期记忆列表（无记忆的项目 content 为空） */
   const memories = ref<AgentMemoryDTO[]>([])
-  /* 记忆是否已加载 */
-  const memoriesLoaded = ref(false)
 
   /* 当前 Agent 对象（未选中为 null） */
   const currentAgent = computed(
@@ -72,10 +70,9 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
-  /* 加载全部项目记忆 */
+  /* 加载全部项目长期记忆 */
   async function loadMemories(): Promise<void> {
     memories.value = await api.agent.memoryList()
-    memoriesLoaded.value = true
   }
 
   /* 保存项目记忆并就地更新列表 */
@@ -94,7 +91,6 @@ export const useAgentStore = defineStore('agent', () => {
     currentId,
     loaded,
     memories,
-    memoriesLoaded,
     currentAgent,
     defaultAgent,
     loadAgents,

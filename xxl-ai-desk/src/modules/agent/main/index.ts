@@ -4,6 +4,7 @@
  */
 
 export { countAgentsByMcpId, countAgentsBySkillId, getAgentById, listAgents, saveAgent } from './agentService'
-export { getAgentMemory, maybeGenerateAgentMemory, removeAgentMemory } from './agentMemoryService'
+export { getAgentMemory, maybeGenerateAgentMemory } from './agentMemoryService'
 export { cancelInteraction, cancelInteractionsOf, clearInteractions, openInteraction, resolveInteraction } from './host/interaction'
-export { abortAgent, clearSessionPermissions, disposeAgentRuntime, evictAgent, generateMemory, isAgentRunning, listMcpToolsByRuntime, prepareAgentRuntime, resetAgents, runAgent, setBrowserOpener, setSessionActiveResolver, testMcpByRuntime } from './host/runtimeHost'
+export { abortAgent, clearSessionPermissions, disposeAgentRuntime, evictAgent, generateMemory, generateSessionSummary, isAgentRunning, listMcpToolsByRuntime, prepareAgentRuntime, resetAgents, runAgent, setBrowserOpener, setSessionActiveResolver, testMcpByRuntime } from './host/runtimeHost'
+export { resolveAgentTarget, toRuntimeConfig } from './runtimeTarget'

@@ -3,4 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export { getProject, listProjects } from './projectService'
+export { getProject, getProjectMemory, listProjectMemories, listProjects, saveProjectMemory } from './projectService'
+export type { ProjectMemoryEntry, ProjectMemoryState } from './projectService'

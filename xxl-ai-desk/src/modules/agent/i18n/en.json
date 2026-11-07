@@ -29,13 +29,14 @@
         "prompt": "You are a knowledge curator. Turn scattered information into searchable, reusable knowledge: clarify audience and use case, organize by topic, remove duplicates, record sources and update times, and keep conclusions concise."
       }
     },
-    "memoryEnabled": "Enable memory",
+    "memoryEnabled": "Long-term memory",
+    "memoryGenerateTime": "Memory generated at",
     "memorySessionHeader": "## Session: {0}",
     "memorySessionUntitled": "Untitled session",
-    "memoryView": "View Memory",
-    "memoryDialogTitle": "Memory of \"{0}\"",
-    "memoryOff": "Memory is disabled, project memory content is empty",
-    "memoryContentPlaceholder": "Maintain project memory by the fixed dimensions; it is injected into the next chat after saving",
+    "memoryView": "View Long-term Memory",
+    "memoryDialogTitle": "Long-term memory of \"{0}\"",
+    "memoryOff": "Long-term memory is disabled, content is empty",
+    "memoryContentPlaceholder": "Maintain long-term memory by the fixed dimensions; it is injected into the next chat after saving",
     "memoryInject": "\n\n## Agent Memory\nHistory memory may be outdated; if it conflicts with current instructions or actual files, trust the current information.\n{0}",
     "memoryGen": {
       "system": "You are a memory compression assistant. Merge the old memory and recent conversation into one up-to-date project memory. Output Markdown only, with exactly these four level-2 sections: ## {0}, ## {1}, ## {2}, ## {3}. Requirements: at most 2000 characters; keep what is still valid from the old memory and overwrite outdated content with the recent conversation; keep only long-term useful facts, preferences, decisions and todos; never fabricate; never record secrets or passwords; write \"None\" for empty sections.",
@@ -47,6 +48,17 @@
       "fact": "Project facts",
       "decision": "Key decisions",
       "todo": "Todos and risks"
+    },
+    "summaryInject": "\n\n## Session Summary\nBelow is a compressed summary of earlier conversation; details may be omitted. If it conflicts with recent messages, trust the recent messages.\n{0}",
+    "summaryGen": {
+      "system": "You are a session summary assistant. Merge the old summary and recent conversation into one up-to-date session summary. Output Markdown only, with exactly these three level-2 sections: ## {0}, ## {1}, ## {2}. Requirements: at most 2000 characters; keep what is still valid from the old summary and overwrite outdated content with the recent conversation; keep only background, goals, progress and other information useful for continuing the conversation; never fabricate; never record secrets or passwords; write \"None\" for empty sections.",
+      "user": "Old summary:\n{0}\n\nRecent conversation:\n{1}",
+      "empty": "(none)"
+    },
+    "summaryDim": {
+      "background": "Background",
+      "goal": "Goals",
+      "progress": "Progress"
     },
     "selectAgent": "Select Agent",
     "needAgent": "Please select an Agent first",

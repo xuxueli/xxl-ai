@@ -49,14 +49,12 @@ async function onSave(): Promise<void> {
   }
 }
 
-/* 打开时确保记忆列表已加载并同步内容 */
+/* 打开时重新加载记忆列表并同步内容，确保展示最新生成结果 */
 watch(visible, async (opened) => {
   if (!opened) {
     return
   }
-  if (!agent.memoriesLoaded) {
-    await agent.loadMemories()
-  }
+  await agent.loadMemories()
   syncContent()
 })
 </script>

@@ -14,7 +14,7 @@ import { getSettings } from '@modules/settings/main'
 import { recordTrace } from '@modules/diagnostics/main'
 import { openInteraction, cancelInteraction, clearInteractions } from './interaction'
 import { requestBrowserAction } from '@modules/browser/main'
-import type { HostEvent, MemoryGenerateInput, RunAgentInput, WorkerMessage, WorkerRequest } from '@modules/agent/shared/agentProtocol'
+import type { HostEvent, MemoryGenerateInput, RunAgentInput, SessionSummaryGenerateInput, WorkerMessage, WorkerRequest } from '@modules/agent/shared/agentProtocol'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 
 /* 一次运行的回调与结算：以会话为代表，同一会话同时只允许一轮运行 */
@@ -48,6 +48,12 @@ const MEMORY_REQUEST_TIMEOUT = 180000
 
 /* 进行中的记忆生成：requestId → 结算 */
 const pendingMemory = new Map<
+  string,
+  { resolve: (content: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
+>()
+
+/* 进行中的会话摘要生成：requestId → 结算 */
+const pendingSummary = new Map<
   string,
   { resolve: (content: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
 >()
@@ -123,6 +129,12 @@ function ensureWorker(): Promise<UtilityProcess> {
       clearTimeout(pending.timer)
       pending.reject(new Error(t('runtime.error.runtimeProcessExited')))
       pendingMemory.delete(requestId)
+    }
+    /* 未结算的会话摘要生成同样统一失败 */
+    for (const [requestId, pending] of pendingSummary) {
+      clearTimeout(pending.timer)
+      pending.reject(new Error(t('runtime.error.runtimeProcessExited')))
+      pendingSummary.delete(requestId)
     }
   })
   return workerReady
@@ -216,6 +228,19 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
           pending.resolve(message.content ?? '')
         } else {
           pending.reject(new Error(message.message ?? t('runtime.error.memoryGenerateFailed')))
+        }
+      }
+      break
+    }
+    case 'summary-result': {
+      const pending = pendingSummary.get(message.requestId)
+      if (pending) {
+        clearTimeout(pending.timer)
+        pendingSummary.delete(message.requestId)
+        if (message.ok) {
+          pending.resolve(message.content ?? '')
+        } else {
+          pending.reject(new Error(message.message ?? t('runtime.error.summaryGenerateFailed')))
         }
       }
       break
@@ -359,6 +384,30 @@ export async function generateMemory(
     pendingMemory.set(requestId, { resolve, reject, timer })
     proc.postMessage({
       type: 'memory-generate',
+      input: { ...input, requestId }
+    } satisfies WorkerRequest)
+  })
+}
+
+/* 生成一次会话摘要并等待结果（超时/进程退出统一转为异常） */
+export async function generateSessionSummary(
+  input: Omit<SessionSummaryGenerateInput, 'requestId'>
+): Promise<string> {
+  let proc: UtilityProcess
+  try {
+    proc = await ensureWorker()
+  } catch (error) {
+    throw new Error((error as Error).message)
+  }
+  const requestId = `sum_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`
+  return new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pendingSummary.delete(requestId)
+      reject(new Error(t('runtime.error.summaryGenerateTimeout')))
+    }, MEMORY_REQUEST_TIMEOUT)
+    pendingSummary.set(requestId, { resolve, reject, timer })
+    proc.postMessage({
+      type: 'summary-generate',
       input: { ...input, requestId }
     } satisfies WorkerRequest)
   })

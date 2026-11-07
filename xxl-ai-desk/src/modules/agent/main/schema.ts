@@ -1,5 +1,5 @@
 /*
- * Agent 表结构：Agent 配置（图标标识 / 指令 / 技能 / MCP / 内置工具）与项目记忆。
+ * Agent 表结构：Agent 配置（图标标识 / 指令 / 技能 / MCP / 内置工具）。
  * @author xuxueli 2026-11-07
  */
 
@@ -20,16 +20,6 @@ export const agentTable = sqliteTable('desk_agent', {
   toolGeneral: integer('tool_general').notNull().default(0), /* 通用工具开关 */
   toolInteraction: integer('tool_interaction').notNull().default(0), /* 人机交互工具开关 */
   builtin: integer('builtin').notNull().default(0), /* 1=默认内置 Agent（禁止删除） */
-  addTime: text('add_time').notNull().default(''),
-  updateTime: text('update_time').notNull().default('')
-})
-
-/* Agent 记忆：按项目维度保存，一个项目一条 */
-export const agentMemoryTable = sqliteTable('desk_agent_memory', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  projectId: integer('project_id').notNull().default(0), /* 归属项目 ID（唯一） */
-  content: text('content').notNull().default(''), /* 记忆正文（Markdown，固定四段，≤2000 字） */
-  lastMessageTime: text('last_time').notNull().default(''), /* 上次生成纳入的最后一条消息时间（项目级游标） */
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')
 })

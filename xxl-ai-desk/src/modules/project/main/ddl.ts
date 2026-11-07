@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS desk_project (
   name        TEXT NOT NULL DEFAULT '',
   path        TEXT NOT NULL DEFAULT '',
   memory_enabled INTEGER NOT NULL DEFAULT 0,
+  memory      TEXT NOT NULL DEFAULT '',
+  memory_last_time   TEXT NOT NULL DEFAULT '',
+  memory_update_time TEXT NOT NULL DEFAULT '',
   add_time    TEXT NOT NULL DEFAULT '',
   update_time TEXT NOT NULL DEFAULT ''
 );

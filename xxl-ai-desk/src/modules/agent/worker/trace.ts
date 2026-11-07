@@ -17,8 +17,8 @@ export type TraceSink = (sessionId: number, trace: LlmTraceInput) => void
 export interface TraceTarget {
   /* 归属会话 */
   sessionId: number
-  /* 对话 / 记忆生成 */
-  phase: 'chat' | 'memory'
+  /* 对话 / 记忆生成 / 会话摘要 */
+  phase: 'chat' | 'memory' | 'summary'
 }
 
 /* 运行时消息最小结构（只取 trace 需要的字段） */
@@ -58,7 +58,7 @@ interface PendingTrace {
 /* 单轮对话的采集状态 */
 interface TraceRun {
   runId: string
-  phase: 'chat' | 'memory'
+  phase: 'chat' | 'memory' | 'summary'
   step: number
   current: PendingTrace | null
 }
@@ -75,7 +75,7 @@ function runKey(target: TraceTarget): string {
 /* 创建采集目标（phase 默认对话） */
 export function createTraceTarget(
   sessionId: number,
-  phase: 'chat' | 'memory' = 'chat'
+  phase: 'chat' | 'memory' | 'summary' = 'chat'
 ): TraceTarget {
   return { sessionId, phase }
 }
@@ -309,4 +309,5 @@ export function clearTraceRuns(sessionId?: number): void {
   }
   runs.delete(runKey(createTraceTarget(sessionId, 'chat')))
   runs.delete(runKey(createTraceTarget(sessionId, 'memory')))
+  runs.delete(runKey(createTraceTarget(sessionId, 'summary')))
 }

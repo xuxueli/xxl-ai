@@ -36,6 +36,7 @@
       "toolResult": "结果",
       "phaseChat": "对话",
       "phaseMemory": "记忆生成",
+      "phaseSummary": "会话摘要",
       "statusSuccess": "成功",
       "statusError": "失败",
       "statusAborted": "已中止"

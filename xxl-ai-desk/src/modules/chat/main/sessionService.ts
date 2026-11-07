@@ -3,7 +3,7 @@
  *   - 消息按轮次追加落库，历史完整保存在数据库。
  */
 
-import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNull } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
 import { messageTable, sessionTable } from '@modules/chat/main/schema'
@@ -95,6 +95,9 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     providerId: input.providerId ?? 0,
     modelId: input.modelId || '',
     mode: input.mode === 'plan' ? 'plan' : 'build',
+    summary: '',
+    summaryLastMessageId: 0,
+    summaryUpdateTime: '',
     addTime: now,
     updateTime: now
   }
@@ -165,6 +168,90 @@ export function listMessages(sessionId: number): StoredMessage[] {
     .orderBy(asc(messageTable.id))
     .all()
   return rows.map(toMessageDTO)
+}
+
+/* 会话在指定消息 ID 之后的消息（摘要 + 增量装配用） */
+export function listMessagesAfter(sessionId: number, afterId: number): StoredMessage[] {
+  if (!sessionId) {
+    return []
+  }
+  return getDb()
+    .select()
+    .from(messageTable)
+    .where(and(eq(messageTable.sessionId, sessionId), gt(messageTable.id, afterId)))
+    .orderBy(asc(messageTable.id))
+    .all()
+    .map(toMessageDTO)
+}
+
+/* 会话摘要状态（未生成时为空） */
+export interface SessionSummaryState {
+  /* 摘要正文 */
+  summary: string
+  /* 摘要覆盖到的最后一条消息 ID */
+  lastMessageId: number
+  /* 摘要生成时间（ISO） */
+  updateTime: string
+}
+
+/* 读取会话摘要 */
+export function getSessionSummary(sessionId: number): SessionSummaryState {
+  if (!sessionId) {
+    return { summary: '', lastMessageId: 0, updateTime: '' }
+  }
+  const row = getDb().select().from(sessionTable).where(eq(sessionTable.id, sessionId)).get()
+  return {
+    summary: row?.summary ?? '',
+    lastMessageId: row?.summaryLastMessageId ?? 0,
+    updateTime: row?.summaryUpdateTime ?? ''
+  }
+}
+
+/* 写入会话摘要：游标推进到本次覆盖的最后一条消息 */
+export function saveSessionSummary(
+  sessionId: number,
+  summary: string,
+  lastMessageId: number
+): SessionSummaryState {
+  const db = getDb()
+  const existing = sessionId
+    ? db.select().from(sessionTable).where(eq(sessionTable.id, sessionId)).get()
+    : undefined
+  if (!existing) {
+    throw new Error(t('runtime.error.sessionMissing'))
+  }
+  const updateTime = new Date().toISOString()
+  db.update(sessionTable)
+    .set({ summary, summaryLastMessageId: lastMessageId, summaryUpdateTime: updateTime })
+    .where(eq(sessionTable.id, sessionId))
+    .run()
+  return { summary, lastMessageId, updateTime }
+}
+
+/* 清空会话摘要（摘要覆盖的消息被删除时重置，避免摘要与历史不一致） */
+export function clearSessionSummary(sessionId: number): void {
+  if (!sessionId) {
+    return
+  }
+  getDb()
+    .update(sessionTable)
+    .set({ summary: '', summaryLastMessageId: 0, summaryUpdateTime: '' })
+    .where(eq(sessionTable.id, sessionId))
+    .run()
+}
+
+/* 摘要游标之后的真实用户轮次（用于“对话轮次超过 20 次”判定） */
+export function countTurnsAfter(sessionId: number, afterId: number): number {
+  if (!sessionId) {
+    return 0
+  }
+  const condition = and(
+    eq(messageTable.sessionId, sessionId),
+    eq(messageTable.role, 'user'),
+    isNull(messageTable.source),
+    gt(messageTable.id, afterId)
+  )
+  return getDb().select({ value: count() }).from(messageTable).where(condition).get()?.value ?? 0
 }
 
 /* 项目下的会话 ID 集合（项目删除 / 记忆重建时清理运行时） */
@@ -341,6 +428,11 @@ export function appendMessages(sessionId: number, messages: AppendMessageInput[]
 export function deleteMessages(sessionId: number, ids: number[]): void {
   if (!sessionId || ids.length === 0) {
     return
+  }
+  /* 删除范围触及摘要覆盖区：摘要已失真，清空后下一轮重新压缩 */
+  const summary = getSessionSummary(sessionId)
+  if (summary.summary && ids.some((id) => id <= summary.lastMessageId)) {
+    clearSessionSummary(sessionId)
   }
   getDb()
     .delete(messageTable)

@@ -23,7 +23,7 @@
     "deleted": "Project deleted",
     "needProject": "Please select a project first",
     "duplicate": "A project already exists for this folder",
-    "settingsTip": "A project binds a local folder and owns its sessions; memory is controlled per project.",
+    "settingsTip": "A project binds a local folder and owns its sessions; long-term memory is controlled per project.",
     "name": "Name",
     "path": "Folder"
   }

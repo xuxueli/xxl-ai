@@ -12,6 +12,8 @@ export interface ProjectDTO {
   path: string
   /* 是否启用项目长期记忆 */
   memoryEnabled: boolean
+  /* 记忆生成时间（ISO），未生成过为空串 */
+  memoryUpdateTime: string
   /* 创建时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

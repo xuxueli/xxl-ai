@@ -17,7 +17,8 @@ import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendMessages, getSession, isSessionRemoved, listMessages, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
+import { appendMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
+import { maybeCompressSession } from './sessionSummaryService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
@@ -282,12 +283,18 @@ export async function sendChat(
   let contextReady = false
   /* 本轮是否已完整落库；异常兜底据此避免重复追加失败轮次 */
   let committed = false
+  /* 本轮最后一次上下文用量：对话结束后用于判断是否触发会话压缩 */
+  let roundUsage: { used: number; window: number } | null = null
   const settings = getSettings()
   const language = settings.language
   const emitEvent = (event: HostEvent): void => {
     /* 会话已删除：迟到的流式/错误事件一律丢弃，避免渲染层重建已删会话状态 */
     if (isSessionRemoved(sessionId)) {
       return
+    }
+    /* 记录上下文用量，供本轮结束后的压缩判定使用 */
+    if (event.type === 'usage') {
+      roundUsage = { used: event.used, window: event.window }
     }
     /* 用户已终止：错误事件转成正常结束，避免弹出「调用失败」 */
     if (event.type === 'error' && abortRequested.has(sessionId)) {
@@ -355,18 +362,27 @@ export async function sendChat(
     /* 注意：系统提示词在会话 Agent 创建时固化，以下任一来源变更都必须 evictAgent / resetAgents 重建 */
     const memory = project.memoryEnabled ? getAgentMemory(project.id) : ''
     const memoryPrompt = memory ? translate(language, 'agent.memoryInject', [memory]) : ''
+    /* 会话摘要：历史轮次压缩后的结论；已有摘要时只传摘要与上次摘要后的增量消息 */
+    const summary = getSessionSummary(sessionId)
+    const summaryPrompt = summary.summary
+      ? translate(language, 'agent.summaryInject', [summary.summary])
+      : ''
     const systemPrompt = [
       agent.systemPrompt || '',
       memoryPrompt,
+      summaryPrompt,
       buildSkillPrompt(skills),
       modeSystemHint(mode),
       toolUsageSystemHint(),
       hitlSystemHint(agent.tools.interaction)
     ].join('')
     /* 历史消息不携带 system 提示：系统指令始终取当前设置，保证旧对话也随设置变更生效 */
-    /* 模型上下文与完整历史分离：这里只构造最近窗口，数据库仍保留完整历史 */
+    /* 模型上下文与完整历史分离：无摘要时取最近窗口，有摘要时取上次摘要后的全部增量 */
+    const historyRows = summary.summary
+      ? listMessagesAfter(sessionId, summary.lastMessageId)
+      : listMessages(sessionId)
     const history = trimHistory(
-      listMessages(sessionId)
+      historyRows
         .map((message) => ({
           message: (() => {
             try {
@@ -378,7 +394,8 @@ export async function sendChat(
           source: message.source
         }))
         .filter((item) => item.message !== null),
-      settings.language
+      settings.language,
+      Boolean(summary.summary)
     )
 
     /* 交运行时进程执行：只下发模型上下文，结束后回传本轮新增消息供追加落库 */
@@ -464,6 +481,10 @@ export async function sendChat(
       })
     appendMessages(sessionId, serialized)
     committed = true
+    /* 会话压缩异步执行：满足无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 才真正压缩，失败不阻断对话 */
+    void maybeCompressSession({ sessionId, usage: roundUsage }).catch((error) => {
+      log.warn(`[chat] 会话摘要生成异常 session=${sessionId}`, error)
+    })
     /* 记忆生成异步执行：会话数据由本域提供，避免 agent 反向依赖 chat；失败只记日志（保留旧记忆） */
     void maybeGenerateAgentMemory({
       session,

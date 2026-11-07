@@ -12,7 +12,7 @@ export const llmTraceTable = sqliteTable('desk_llm_trace', {
   step: integer('step').notNull().default(0), /* 本轮第几次模型调用 */
   providerId: integer('provider_id').notNull().default(0), /* 供应商 ID */
   modelId: text('model_id').notNull().default(''), /* 模型 ID */
-  phase: text('phase').notNull().default('chat'), /* chat 对话 / memory 记忆生成 */
+  phase: text('phase').notNull().default('chat'), /* chat 对话 / memory 记忆生成 / summary 会话摘要 */
   status: text('status').notNull().default('success'), /* success / error / aborted */
   httpStatus: integer('http_status').notNull().default(0), /* HTTP 状态码 */
   durationMs: integer('duration_ms').notNull().default(0), /* 请求到响应耗时 */

@@ -10,6 +10,9 @@ export const projectTable = sqliteTable('desk_project', {
   name: text('name').notNull().default(''),
   path: text('path').notNull().default(''), /* 绑定的本地目录绝对路径 */
   memoryEnabled: integer('memory_enabled').notNull().default(0), /* 1=启用项目长期记忆 */
+  memory: text('memory').notNull().default(''), /* 长期记忆正文（Markdown，≤2000 字） */
+  memoryLastTime: text('memory_last_time').notNull().default(''), /* 上次生成纳入的最后一条消息时间（项目级游标） */
+  memoryUpdateTime: text('memory_update_time').notNull().default(''), /* 记忆生成时间（ISO） */
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')
 })

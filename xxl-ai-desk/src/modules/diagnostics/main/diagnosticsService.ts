@@ -45,9 +45,12 @@ function normalizeStatus(status: string): LlmTraceDTO['status'] {
   return status === 'error' ? 'error' : status === 'aborted' ? 'aborted' : 'success'
 }
 
-/* 通讯来源归一：仅记忆生成单独区分，其余按对话处理 */
+/* 通讯来源归一：记忆生成 / 会话摘要单独区分，其余按对话处理 */
 function normalizePhase(phase: string): LlmTraceDTO['phase'] {
-  return phase === 'memory' ? 'memory' : 'chat'
+  if (phase === 'memory' || phase === 'summary') {
+    return phase
+  }
+  return 'chat'
 }
 
 /* 会话消息分页：消息读取能力由组合根注入，诊断只做分页编排 */

@@ -8,6 +8,9 @@ import type { MessageStatus } from './messageStatus'
 /* 对话模式：plan 只读只规划；build 全量读写（默认） */
 export type ChatMode = 'plan' | 'build'
 
+/* 会话摘要固定长度上限（字符） */
+export const SESSION_SUMMARY_MAX_CHARS = 2000
+
 /* 会话（归属某项目，并绑定一个 Agent） */
 export interface SessionDTO {
   /* 主键 */

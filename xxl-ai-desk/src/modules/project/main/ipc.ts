@@ -9,7 +9,7 @@ import { t } from '@common/main/i18n'
 import { PROJECT_IPC } from '../shared/ipc'
 import { createProject, deleteProject, getProject, listProjects, renameProject, setProjectMemoryEnabled } from './projectService'
 import { abortChat, deleteSession, discardSessionRuns, listSessionIdsByProject } from '@modules/chat/main'
-import { evictAgent, clearSessionPermissions, removeAgentMemory } from '@modules/agent/main'
+import { evictAgent, clearSessionPermissions } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
 
 export function registerProjectIpc(ipc: IpcContext): void {
@@ -40,7 +40,6 @@ export function registerProjectIpc(ipc: IpcContext): void {
       clearTraces(sessionId)
       deleteSession(sessionId)
     }
-    removeAgentMemory(id)
     deleteProject(id)
   })
   ipc.handle(PROJECT_IPC.reveal, (_event, id: number) => {

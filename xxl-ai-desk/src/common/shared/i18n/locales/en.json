@@ -128,6 +128,8 @@
       "runtimeProcessExited": "The Agent runtime process exited unexpectedly; try again",
       "memoryGenerateFailed": "Memory generation failed",
       "memoryGenerateTimeout": "Memory generation timed out",
+      "summaryGenerateFailed": "Session summary generation failed",
+      "summaryGenerateTimeout": "Session summary generation timed out",
       "versionInfoMissing": "No version information was returned",
       "responseParseFailed": "Failed to parse the response",
       "gitCommandFailed": "Git command failed",

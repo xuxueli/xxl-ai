@@ -1,5 +1,5 @@
 /*
- * Agent 表建表片段：Agent 配置与项目记忆。
+ * Agent 表建表片段：Agent 配置。
  * @author xuxueli 2026-11-07
  */
 
@@ -23,13 +23,4 @@ CREATE TABLE IF NOT EXISTS desk_agent (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS i_desk_agent_name ON desk_agent (name);
 CREATE INDEX IF NOT EXISTS i_desk_agent_builtin ON desk_agent (builtin);
-CREATE TABLE IF NOT EXISTS desk_agent_memory (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id      INTEGER NOT NULL DEFAULT 0,
-  content         TEXT NOT NULL DEFAULT '',
-  last_time       TEXT NOT NULL DEFAULT '',
-  add_time        TEXT NOT NULL DEFAULT '',
-  update_time     TEXT NOT NULL DEFAULT ''
-);
-CREATE UNIQUE INDEX IF NOT EXISTS i_desk_agent_memory_project ON desk_agent_memory (project_id);
 `
