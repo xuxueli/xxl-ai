@@ -204,7 +204,7 @@ public class SessionServiceImpl implements SessionService {
      */
     @Override
     public void fail(long msgId, long sessionId) {
-        sessionMsgMapper.updateAssistant(msgId, "", null, SessionConstant.MSG_STATUS_FAILED);
+        sessionMsgMapper.updateAssistant(msgId, "", null, SessionConstant.MSG_STATUS_FAILED, null);
         sessionMapper.touch(sessionId);
     }
 

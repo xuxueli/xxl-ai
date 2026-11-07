@@ -1,5 +1,6 @@
 package com.xxl.ai.api.business.harness.llm;
 
+import com.xxl.ai.api.business.harness.chat.TraceCollector;
 import com.xxl.ai.api.business.supplier.model.SupplierRuntime;
 import com.xxl.tool.core.StringTool;
 import jakarta.annotation.Resource;
@@ -9,6 +10,8 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.stereotype.Component;
@@ -37,19 +40,7 @@ public class LlmChatTool {
     private LlmModelFactory llmModelFactory;
 
     /**
-     * 流式对话：装配消息 → 附加工具/Advisor → 增量输出
-     *
-     * @param runtime      模型运行时配置（需为对话模型）
-     * @param systemPrompt 系统指令（已由调用方解析，可为空）
-     * @param roleList     历史消息角色（user/assistant）
-     * @param contentList  历史消息内容（与 roleList 平行）
-     * @param content      当前用户消息
-     * @param tools        已装配的工具（ToolCallback / @Tool 对象，可为空）
-     * @param advisorObjects  已装配的对话 Advisor（可为空）
-     * @param sessionId    会话标识（Header {session} 占位替换）
-     * @param onThinking   思考过程增量回调（可空）
-     * @param onContent    回复内容增量回调（可空）
-     * @return 完整回复（内容 + 思考过程）
+     * 流式对话（兼容原有简化签名）
      */
     public ChatText chat(SupplierRuntime runtime,
                          String systemPrompt,
@@ -61,6 +52,39 @@ public class LlmChatTool {
                          String sessionId,
                          Consumer<String> onThinking,
                          Consumer<String> onContent) {
+        return chat(runtime, systemPrompt, roleList, contentList, content,
+                tools, advisorObjects, sessionId, onThinking, onContent, null, null);
+    }
+
+    /**
+     * 流式对话（带全链路可观测 TraceCollector 与 Usage 回调）：装配消息 → 附加工具/Advisor → 增量输出
+     *
+     * @param runtime        模型运行时配置（需为对话模型）
+     * @param systemPrompt   系统指令（已由调用方解析，可为空）
+     * @param roleList       历史消息角色（user/assistant）
+     * @param contentList    历史消息内容（与 roleList 平行）
+     * @param content        当前用户消息
+     * @param tools          已装配的工具（ToolCallback / @Tool 对象，可为空）
+     * @param advisorObjects 已装配的对话 Advisor（可为空）
+     * @param sessionId      会话标识（Header {session} 占位替换）
+     * @param onThinking     思考过程增量回调（可空）
+     * @param onContent      回复内容增量回调（可空）
+     * @param traceCollector 全链路追踪收集器（可空）
+     * @param onUsageEvent   Token 消耗更新回调（可空）
+     * @return 完整回复（内容 + 思考过程）
+     */
+    public ChatText chat(SupplierRuntime runtime,
+                         String systemPrompt,
+                         List<String> roleList,
+                         List<String> contentList,
+                         String content,
+                         Object[] tools,
+                         List<Object> advisorObjects,
+                         String sessionId,
+                         Consumer<String> onThinking,
+                         Consumer<String> onContent,
+                         TraceCollector traceCollector,
+                         Consumer<String> onUsageEvent) {
 
         // 创建 ChatClient（spring-ai）
         ChatClient chatClient = llmModelFactory.chatClient(runtime, sessionId);
@@ -87,8 +111,8 @@ public class LlmChatTool {
             }
         }
 
-        // 流式对话并经回调输出：思考过程增量 / 回复内容增量
-        return stream(spec, onThinking, onContent);
+        // 流式对话并经回调输出：思考过程增量 / 回复内容增量 / Token Usage 采集
+        return stream(spec, onThinking, onContent, traceCollector, onUsageEvent);
     }
 
     /**
@@ -117,14 +141,24 @@ public class LlmChatTool {
     }
 
     /**
-     * 流式对话并经回调输出：思考过程增量 / 回复内容增量
+     * 流式对话并经回调输出：思考过程增量 / 回复内容增量 / Token 消耗统计
      *
      * 同步消费流式响应：回调抛出（如会话终止）或线程中断时由循环直接中断。
      * 增量仅判空、不判空白——模型会单独下发换行（如 "\n"），用 isNotBlank 会吞掉换行。
      */
     private ChatText stream(ChatClient.ChatClientRequestSpec spec,
                             Consumer<String> onThinking,
-                            Consumer<String> onContent) {
+                            Consumer<String> onContent,
+                            TraceCollector traceCollector,
+                            Consumer<String> onUsageEvent) {
+
+        // 开启 LLM 流式推理阶段 Span
+        TraceCollector.TraceSpan llmSpan = traceCollector != null
+                ? traceCollector.startSpan("llm", "LLM 流式推理与生成")
+                : null;
+        if (traceCollector != null) {
+            traceCollector.addLog("INFO", "llm", "发起模型流式推理请求");
+        }
 
         // 流式对话响应
         Flux<ChatResponse> chatResponses = spec.stream().chatResponse();
@@ -133,40 +167,90 @@ public class LlmChatTool {
 
         // 思考过程增量计算：与上轮累积内容比较，取首现差异子串；无变化返回 null
         String prevReasoning = "";
+        boolean usageRecorded = false;
+        // 避免同一轮尾帧重复上报相同的 usage
+        int lastPromptTokens = -1;
+        int lastCompletionTokens = -1;
+        int lastTotalTokens = -1;
 
-        // 逐条消费流式响应
-        for (ChatResponse chatResponse : chatResponses.toIterable()) {
+        try {
+            // 逐条消费流式响应
+            for (ChatResponse chatResponse : chatResponses.toIterable()) {
+                if (chatResponse == null) {
+                    continue;
+                }
 
-            // 获取生成结果（包含思考过程与回复内容）
-            Generation generation = chatResponse.getResult();
-            if (generation == null || generation.getOutput() == null) {
-                continue;
-            }
-            Message output = generation.getOutput();
-            Object reasoningObj = output.getMetadata().get(KEY_REASONING);
-            String reasoning = reasoningObj instanceof String value ? value : null;
+                // 1、采集流式帧携带的 Token Usage 元数据（OpenAI stream_options.include_usage=true 在每轮尾帧返回）
+                ChatResponseMetadata metadata = chatResponse.getMetadata();
+                if (metadata != null && metadata.getUsage() != null && traceCollector != null) {
+                    Usage usage = metadata.getUsage();
+                    int prompt = usage.getPromptTokens() != null ? usage.getPromptTokens() : 0;
+                    int completion = usage.getCompletionTokens() != null ? usage.getCompletionTokens() : 0;
+                    int total = usage.getTotalTokens() != null ? usage.getTotalTokens() : (prompt + completion);
+                    if ((prompt > 0 || completion > 0 || total > 0)
+                            && (prompt != lastPromptTokens || completion != lastCompletionTokens || total != lastTotalTokens)) {
+                        lastPromptTokens = prompt;
+                        lastCompletionTokens = completion;
+                        lastTotalTokens = total;
+                        usageRecorded = true;
+                        traceCollector.addTokenUsage(prompt, completion, total);
+                        traceCollector.addLog("INFO", "llm",
+                                "模型推理轮次统计：输入 " + prompt + " tokens，输出 " + completion + " tokens，合计 " + total + " tokens");
+                        if (onUsageEvent != null) {
+                            onUsageEvent.accept(traceCollector.toUsageJson());
+                        }
+                    }
+                }
 
-            // 思考过程增量输出
-            String delta = computeReasoningDelta(prevReasoning, reasoning);
-            if (StringTool.isNotEmpty(delta)) {
-                prevReasoning = reasoning;
-                thinkText.append(delta);
-                if (onThinking != null) {
-                    onThinking.accept(delta);
+                // 2、获取生成结果（包含思考过程与回复内容）
+                Generation generation = chatResponse.getResult();
+                if (generation == null || generation.getOutput() == null) {
+                    continue;
+                }
+                Message output = generation.getOutput();
+                Object reasoningObj = output.getMetadata().get(KEY_REASONING);
+                String reasoning = reasoningObj instanceof String value ? value : null;
+
+                // 3、思考过程增量输出
+                String delta = computeReasoningDelta(prevReasoning, reasoning);
+                if (StringTool.isNotEmpty(delta)) {
+                    if (traceCollector != null) {
+                        traceCollector.markFirstToken();
+                    }
+                    prevReasoning = reasoning;
+                    thinkText.append(delta);
+                    if (onThinking != null) {
+                        onThinking.accept(delta);
+                    }
+                }
+
+                // 4、回复内容增量输出
+                String chunk = output.getText();
+                if (StringTool.isNotEmpty(chunk)) {
+                    if (traceCollector != null) {
+                        traceCollector.markFirstToken();
+                    }
+                    fullText.append(chunk);
+                    if (onContent != null) {
+                        onContent.accept(chunk);
+                    }
                 }
             }
 
-            // 回复内容增量输出
-            String chunk = output.getText();
-            if (StringTool.isNotEmpty(chunk)) {
-                fullText.append(chunk);
-                if (onContent != null) {
-                    onContent.accept(chunk);
-                }
+            if (traceCollector != null) {
+                traceCollector.incrementRoundIfNoUsage(usageRecorded);
+                int rounds = traceCollector.getTokenUsage().getRounds();
+                int totalTokens = traceCollector.getTokenUsage().getTotalTokens();
+                traceCollector.finishSpan(llmSpan, "SUCCESS",
+                        "推理 " + rounds + " 轮，Token " + totalTokens + "，生成字符 " + fullText.length());
             }
-
+            return new ChatText(fullText.toString(), thinkText.toString());
+        } catch (Throwable e) {
+            if (traceCollector != null) {
+                traceCollector.finishSpan(llmSpan, "ERROR", e.getMessage());
+            }
+            throw e;
         }
-        return new ChatText(fullText.toString(), thinkText.toString());
     }
 
     /**

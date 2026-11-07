@@ -1,6 +1,6 @@
 <!--
   Session（对话管理）
-  按业务空间查看访客对话列表（Agent/标题/访客ID 过滤），点击行右侧抽屉查看消息明细
+  按业务空间查看访客对话列表（Agent/标题/访客ID 过滤），点击行右侧抽屉查看消息明细与全链路可观测追踪
 -->
 <template>
   <div class="app-container">
@@ -105,7 +105,55 @@
           <div v-for="(msg, index) in drawer.messages" :key="index" class="detail-msg" :class="msg.role">
             <div class="detail-msg-role">{{ msg.role === 'user' ? t('business.chat.roleUser') : t('business.chat.roleAssistant') }}</div>
             <div class="detail-msg-bubble">
-              <!-- 思考过程：可折叠展示 -->
+              <!-- 1、RAG 知识库引用折叠卡片 -->
+              <div
+                v-if="msg.role === 'assistant' && msg.extData?.references && msg.extData.references.length > 0"
+                class="detail-msg-references"
+              >
+                <div class="detail-msg-references-toggle" @click="toggleReferences(index)">
+                  <el-icon><Collection /></el-icon>
+                  <span>{{
+                    msg.showReferences
+                      ? t('business.chat.hideReferences', [msg.extData.references.length])
+                      : t('business.chat.referencesTitle', [msg.extData.references.length])
+                  }}</span>
+                  <el-icon class="reasoning-arrow" :class="{ open: msg.showReferences }"><ArrowDown /></el-icon>
+                </div>
+                <div v-if="msg.showReferences" class="detail-msg-references-body">
+                  <div
+                    v-for="(refItem, rIdx) in msg.extData.references"
+                    :key="rIdx"
+                    class="detail-ref-item"
+                    @click="openTraceDrawer(msg, 'references')"
+                  >
+                    <div class="detail-ref-head">
+                      <span>[{{ rIdx + 1 }}] {{ refItem.kbName }} / {{ refItem.docName }}</span>
+                      <span>{{ t('business.chat.refScore', [Number(refItem.score || 0).toFixed(2)]) }}</span>
+                    </div>
+                    <div class="detail-ref-snippet">{{ refItem.content }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2、工具调用证据胶囊列表 -->
+              <div
+                v-if="msg.role === 'assistant' && msg.extData?.toolTraces && msg.extData.toolTraces.length > 0"
+                class="detail-msg-tools"
+              >
+                <div
+                  v-for="tool in msg.extData.toolTraces"
+                  :key="tool.callId"
+                  class="detail-tool-pill"
+                  :class="'status-' + (tool.status || 'SUCCESS').toLowerCase()"
+                  @click="openTraceDrawer(msg, 'tools')"
+                >
+                  <span class="pill-type">{{ tool.toolType }}</span>
+                  <span class="pill-name">{{ tool.toolName }}</span>
+                  <span class="pill-ms" v-if="tool.elapsedMs != null">{{ formatMs(tool.elapsedMs) }}</span>
+                </div>
+              </div>
+
+              <!-- 3、思考过程：可折叠展示 -->
               <div v-if="msg.reasoning" class="detail-msg-reasoning">
                 <div class="detail-msg-reasoning-toggle" @click="toggleThinking(index)">
                   <el-icon class="reasoning-icon"><MagicStick /></el-icon>
@@ -120,6 +168,21 @@
               <div class="detail-msg-time">
                 <span>{{ msg.addTime }}</span>
                 <span class="detail-msg-id">{{ t('business.session.msgId') }}：{{ msg.id }}</span>
+                <template v-if="msg.role === 'assistant' && hasTraceMeta(msg)">
+                  <span v-if="msg.extData?.runMeta?.modelName" class="detail-trace-tag">
+                    {{ msg.extData.runMeta.modelName }}
+                  </span>
+                  <span v-if="msg.extData?.runMeta?.totalElapsedMs" class="detail-trace-tag">
+                    {{ formatMs(msg.extData.runMeta.totalElapsedMs) }}
+                  </span>
+                  <span v-if="msg.extData?.tokenUsage?.totalTokens" class="detail-trace-tag">
+                    Tokens {{ msg.extData.tokenUsage.totalTokens }}
+                  </span>
+                  <span class="detail-trace-btn" @click="openTraceDrawer(msg, 'waterfall')">
+                    <el-icon><DataAnalysis /></el-icon>
+                    <span>{{ t('business.chat.viewTrace') }}</span>
+                  </span>
+                </template>
               </div>
             </div>
           </div>
@@ -136,6 +199,14 @@
         />
       </template>
     </el-drawer>
+
+    <!-- 全链路可观测追踪抽屉 -->
+    <TraceInspectorDrawer
+      v-model:visible="traceDrawer.visible"
+      :msg-id="traceDrawer.msgId"
+      :trace-data="traceDrawer.data"
+      :default-tab="traceDrawer.tab"
+    />
   </div>
 </template>
 
@@ -146,7 +217,8 @@ import { useRoute } from 'vue-router'
 import { listSessionMsg, pageSession } from '../api'
 import { useAgentOptions } from '@/modules/business/agent/composables/useAgentOptions'
 import MarkdownView from '@/modules/business/chat/components/MarkdownView.vue'
-import type { SessionDTO, SessionMsg, SessionQuery } from '../types'
+import TraceInspectorDrawer from '@/modules/business/chat/components/TraceInspectorDrawer.vue'
+import { parseSessionMsgExt, type SessionDTO, type SessionMsg, type SessionMsgExt, type SessionQuery } from '../types'
 import { useFormReset } from '@/composables/useFormReset'
 import { usePageParams } from '@/composables/usePageParams'
 import { Pagination } from '@/components'
@@ -156,9 +228,11 @@ import { ref } from 'vue'
 const route = useRoute()
 const resetForm = useFormReset()
 
-/** 对话消息（含前端折叠状态 showThinking） */
+/** 对话消息（含前端折叠状态与解析后的全链路可观测数据） */
 interface SessionMsgItem extends SessionMsg {
   showThinking?: boolean
+  showReferences?: boolean
+  extData?: SessionMsgExt
 }
 
 // --------------------------------- ref data ---------------------------------
@@ -187,6 +261,18 @@ const drawer = ref<{
   pageNum: number
   pageSize: number
 }>({ visible: false, loading: false, session: {}, messages: [], total: 0, pageNum: 1, pageSize: 10 })
+
+const traceDrawer = ref<{
+  visible: boolean
+  msgId?: number
+  data?: SessionMsgExt
+  tab: 'waterfall' | 'tools' | 'references' | 'logs'
+}>({
+  visible: false,
+  msgId: undefined,
+  data: undefined,
+  tab: 'waterfall'
+})
 
 // --------------------------------- fun ---------------------------------
 function getList() {
@@ -231,7 +317,12 @@ function loadMessages() {
   const offset = (drawer.value.pageNum - 1) * drawer.value.pageSize
   listSessionMsg(drawer.value.session.id, queryParams.value.agentId, offset, drawer.value.pageSize)
     .then((response) => {
-      drawer.value.messages = response.data.data.map((msg) => ({ ...msg, showThinking: false }))
+      drawer.value.messages = response.data.data.map((msg) => ({
+        ...msg,
+        showThinking: false,
+        showReferences: false,
+        extData: parseSessionMsgExt(msg.extJson)
+      }))
       drawer.value.total = response.data.total
     })
     .finally(() => {
@@ -243,6 +334,37 @@ function loadMessages() {
 function toggleThinking(index: number) {
   const msg = drawer.value.messages[index]
   if (msg) msg.showThinking = !msg.showThinking
+}
+
+/** 展开/收起 RAG 引用来源 */
+function toggleReferences(index: number) {
+  const msg = drawer.value.messages[index]
+  if (msg) msg.showReferences = !msg.showReferences
+}
+
+function hasTraceMeta(msg: SessionMsgItem): boolean {
+  const ext = msg.extData
+  if (!ext) return false
+  return Boolean(
+    ext.runMeta ||
+      (ext.tokenUsage && ext.tokenUsage.totalTokens > 0) ||
+      (ext.toolTraces && ext.toolTraces.length > 0) ||
+      (ext.references && ext.references.length > 0) ||
+      (ext.spans && ext.spans.length > 0)
+  )
+}
+
+function openTraceDrawer(msg: SessionMsgItem, tab: 'waterfall' | 'tools' | 'references' | 'logs' = 'waterfall') {
+  traceDrawer.value.msgId = msg.id ?? msg.extData?.runMeta?.runId
+  traceDrawer.value.data = msg.extData || parseSessionMsgExt(msg.extJson)
+  traceDrawer.value.tab = tab
+  traceDrawer.value.visible = true
+}
+
+function formatMs(ms?: number): string {
+  if (ms == null || ms < 0) return ''
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(2)}s`
 }
 
 // --------------------------------- page init ---------------------------------
@@ -370,19 +492,149 @@ getList()
   white-space: pre-wrap;
 }
 
-/* 助手 Markdown：重置块间源码换行的额外渲染，避免行距异常 */
 .detail-msg.assistant .detail-msg-content {
   white-space: normal;
 }
 
 .detail-msg-time {
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--el-border-color-extra-light);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
   color: var(--el-text-color-placeholder);
 }
 
 .detail-msg-id {
-  margin-left: 10px;
+  margin-left: 2px;
+}
+
+.detail-trace-tag {
+  font-family: monospace;
+  color: var(--el-text-color-secondary);
+}
+
+.detail-trace-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-color-primary);
+  font-weight: 500;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* RAG 引用折叠区 */
+.detail-msg-references {
+  margin-bottom: 8px;
+  border: 1px solid #cce8e3;
+  background: #f0fdfa;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.detail-msg-references-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d9488;
+  cursor: pointer;
+  user-select: none;
+}
+
+.detail-msg-references-body {
+  padding: 6px 10px 8px;
+  border-top: 1px dashed #bce3dc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-ref-item {
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid #e2f2ef;
+  cursor: pointer;
+  &:hover {
+    border-color: #14b8a6;
+  }
+}
+
+.detail-ref-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  margin-bottom: 2px;
+}
+
+.detail-ref-snippet {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 工具调用胶囊 */
+.detail-msg-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.detail-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+  &:hover {
+    border-color: #8b5cf6;
+  }
+}
+
+.detail-tool-pill.status-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.pill-type {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.pill-name {
+  font-weight: 600;
+}
+
+.pill-ms {
+  font-size: 11px;
+  opacity: 0.85;
 }
 
 /* 思考过程：可折叠 */
