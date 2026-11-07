@@ -9,7 +9,7 @@
 import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
 import { AGENT_IPC } from '../shared/ipc'
-import { listAgentMemories, removeAgentMemory, saveAgentMemory } from './agentMemoryService'
+import { listAgentMemories, saveAgentMemory } from './agentMemoryService'
 import { deleteAgent, getAgentById, listAgents, saveAgent } from './agentService'
 import { evictAgent } from './host/runtimeHost'
 
@@ -61,9 +61,5 @@ export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): v
     /* 记忆变更：清理项目下会话运行时，下一轮注入最新内容 */
     evictSessions(sessions.listSessionIdsByProject(saved.projectId))
     return saved
-  })
-  ipc.handle(AGENT_IPC.memoryRemove, (_event, projectId: string) => {
-    removeAgentMemory(projectId)
-    evictSessions(sessions.listSessionIdsByProject(projectId))
   })
 }

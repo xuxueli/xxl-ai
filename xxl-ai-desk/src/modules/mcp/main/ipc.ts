@@ -4,20 +4,27 @@
  */
 
 import type { IpcContext } from '@common/main/ipc'
+import { t } from '@common/main/i18n'
 import { MCP_IPC } from '../shared/ipc'
 import { deleteMcp, listMcps, saveMcp } from './service'
 import { listMcpTools, testMcp } from './runtime'
 import { discoverMcp, discoverMcpDetail, listMcpCategories } from './discover'
-import { resetAgents } from '@modules/agent/main'
+import { countAgentsByMcpId, resetAgents } from '@modules/agent/main'
 
 export function registerMcpIpc(ipc: IpcContext): void {
-  ipc.handle(MCP_IPC.list, () => listMcps())
+  ipc.handle(MCP_IPC.list, () =>
+    listMcps().map((mcp) => ({ ...mcp, agentCount: countAgentsByMcpId(mcp.id) }))
+  )
   ipc.handle(MCP_IPC.save, (_event, dto) => {
     const saved = saveMcp(dto)
     resetAgents()
     return saved
   })
   ipc.handle(MCP_IPC.remove, (_event, id: string) => {
+    const agentCount = countAgentsByMcpId(id)
+    if (agentCount > 0) {
+      throw new Error(t('runtime.error.mcpInUse', [agentCount]))
+    }
     deleteMcp(id)
     resetAgents()
   })

@@ -32,10 +32,9 @@
     "memoryEnabled": "Enable memory",
     "memorySessionHeader": "## Session: {0}",
     "memorySessionUntitled": "Untitled session",
-    "memoryView": "View",
+    "memoryView": "View Memory",
     "memoryDialogTitle": "Memory of \"{0}\"",
     "memoryOff": "Memory is disabled, project memory content is empty",
-    "memoryDeleteConfirm": "Delete the memory of project \"{0}\"? This cannot be undone.",
     "memoryContentPlaceholder": "Maintain project memory by the fixed dimensions; it is injected into the next chat after saving",
     "memoryInject": "\n\n## Agent Memory\nHistory memory may be outdated; if it conflicts with current instructions or actual files, trust the current information.\n{0}",
     "memoryGen": {

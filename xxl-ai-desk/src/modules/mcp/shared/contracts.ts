@@ -50,6 +50,8 @@ export interface McpDTO {
   remark: string
   /* 最近检测结果 */
   health: McpHealth | null
+  /* 引用该 MCP 的 Agent 数量（列表补充，删除前置校验） */
+  agentCount: number
   /* 新增时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

@@ -154,6 +154,30 @@ export function saveAgent(input: AgentSaveInput): AgentDTO {
   return toAgentDTO(record)
 }
 
+/* 统计引用指定 SKILL 的 Agent 数量（SKILL 删除前置校验） */
+export function countAgentsBySkillId(skillId: string): number {
+  if (!skillId) {
+    return 0
+  }
+  return getDb()
+    .select()
+    .from(agentTable)
+    .all()
+    .filter((row) => parseIds(row.skillIds).includes(skillId)).length
+}
+
+/* 统计引用指定 MCP 的 Agent 数量（MCP 删除前置校验） */
+export function countAgentsByMcpId(mcpId: string): number {
+  if (!mcpId) {
+    return 0
+  }
+  return getDb()
+    .select()
+    .from(agentTable)
+    .all()
+    .filter((row) => parseIds(row.mcpIds).includes(mcpId)).length
+}
+
 /* 删除 Agent：默认 Agent 禁止删除（会话占用由 IPC 层校验） */
 export function deleteAgent(id: string): void {
   const existing = getDb().select().from(agentTable).where(eq(agentTable.id, id)).get()

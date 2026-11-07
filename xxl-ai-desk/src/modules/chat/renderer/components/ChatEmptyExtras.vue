@@ -48,8 +48,13 @@ function onAgentChange(value: string): void {
   agent.selectAgent(value)
 }
 
-/* 空态示例：点击直接以该内容发起新对话 */
-const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
+/* 空态示例：展示短任务名，点击以完整指令发起新对话 */
+const examples = [
+  { title: 'chat.example1Title', prompt: 'chat.example1Prompt' },
+  { title: 'chat.example2Title', prompt: 'chat.example2Prompt' },
+  { title: 'chat.example3Title', prompt: 'chat.example3Prompt' },
+  { title: 'chat.example4Title', prompt: 'chat.example4Prompt' }
+]
 </script>
 
 <template>
@@ -93,12 +98,12 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
 
   <AgentEditDrawer v-model:visible="agentDrawerVisible" />
 
-  <!-- 空态示例：输入框下方以文字入口平铺，点击直接发起对话 -->
+  <!-- 空态示例：输入框下方以文字入口平铺，点击以完整指令发起对话 -->
   <div class="empty-examples">
     <span class="examples-label">{{ t('chat.examplesLabel') }}</span>
-    <template v-for="(key, index) in examples" :key="key">
+    <template v-for="(item, index) in examples" :key="item.title">
       <span v-if="index > 0" class="examples-sep">{{ t('chat.examplesSep') }}</span>
-      <a class="example-link" @click="emit('example', t(key))">{{ t(key) }}</a>
+      <a class="example-link" @click="emit('example', t(item.prompt))">{{ t(item.title) }}</a>
     </template>
   </div>
 </template>
@@ -177,6 +182,8 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  /* 四个示例在窄窗口换行时保留行间距 */
+  row-gap: 6px;
   font-size: var(--desk-font-sm);
   color: var(--desk-text-tertiary);
 }

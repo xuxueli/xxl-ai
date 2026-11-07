@@ -154,7 +154,16 @@ async function onDelete(row: McpDTO): Promise<void> {
             <el-button text type="primary" @click="emit('edit', row)">
               {{ t('common.edit') }}
             </el-button>
-            <el-button text type="danger" @click="onDelete(row)">
+            <el-tooltip
+              v-if="row.agentCount > 0"
+              :content="t('runtime.error.mcpInUse', [row.agentCount])"
+              placement="top"
+            >
+              <span>
+                <el-button text type="danger" disabled>{{ t('common.delete') }}</el-button>
+              </span>
+            </el-tooltip>
+            <el-button v-else text type="danger" @click="onDelete(row)">
               {{ t('common.delete') }}
             </el-button>
           </div>

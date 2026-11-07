@@ -32,10 +32,9 @@
     "memoryEnabled": "启用记忆",
     "memorySessionHeader": "## 会话：{0}",
     "memorySessionUntitled": "未命名会话",
-    "memoryView": "查看",
+    "memoryView": "查看记忆",
     "memoryDialogTitle": "「{0}」的项目记忆",
     "memoryOff": "记忆已关闭，项目记忆内容为空",
-    "memoryDeleteConfirm": "确定删除项目「{0}」的记忆？该操作不可恢复。",
     "memoryContentPlaceholder": "按固定维度维护项目记忆，保存后在下次对话注入",
     "memoryInject": "\n\n## Agent 记忆\n以下为历史记忆，可能过时；如与当前指令或实际文件冲突，以当前信息为准。\n{0}",
     "memoryGen": {

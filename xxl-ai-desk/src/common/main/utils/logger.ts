@@ -1,6 +1,6 @@
 /*
- * 主进程运行日志：文件统一落到数据目录的 tmp 下（与 GitHub 下载同目录），按天分片。
- *   - 文件名 log-yyyy-mm-dd.log，跨天自动切换；
+ * 主进程运行日志：文件统一落到数据目录的 tmp/log 下，按天分片。
+ *   - 文件名 yyyy-mm-dd.log，跨天自动切换；
  *   - 未捕获异常与 Promise 拒绝写入同一文件，避免只停留在控制台；
  *   - IPC 处理器异常统一经 logIpcError 记录，参数脱敏后再落盘。
  *
@@ -10,14 +10,14 @@
 import { join } from 'path'
 import log from 'electron-log/main'
 import { RUNTIME_LOG_FORMAT, dailyLogFileName } from '@common/shared/runtimeLog'
-import { ensureTempDir, getTempDir } from '@common/main/config/paths'
+import { ensureLogDir, getLogDir } from '@common/main/config/paths'
 
 /* 初始化运行日志：按天切换文件，并接管未处理异常 */
 export function initLogger(): void {
-  ensureTempDir()
+  ensureLogDir()
   log.initialize()
   /* 每次写入时按当前日期解析路径，跨天自动落到新文件 */
-  log.transports.file.resolvePathFn = () => join(getTempDir(), dailyLogFileName())
+  log.transports.file.resolvePathFn = () => join(getLogDir(), dailyLogFileName())
   log.transports.file.format = RUNTIME_LOG_FORMAT
   /* 一天一个文件，关闭同文件大小滚动 */
   log.transports.file.maxSize = 0

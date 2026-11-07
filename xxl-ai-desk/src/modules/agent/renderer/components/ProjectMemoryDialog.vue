@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /*
- * 项目记忆弹窗：查看 / 编辑 / 删除单个项目的长期记忆，供系统设置「项目」页复用。
+ * 项目记忆弹窗：查看 / 编辑单个项目的长期记忆，供系统设置「项目」页复用。
  * @author xuxueli 2026-11-07
  */
 import { computed, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useAgentStore } from '@modules/agent/renderer/store'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
@@ -49,27 +49,6 @@ async function onSave(): Promise<void> {
   }
 }
 
-/* 删除项目记忆 */
-async function onRemove(): Promise<void> {
-  try {
-    await ElMessageBox.confirm(
-      t('agent.memoryDeleteConfirm', [props.projectName]),
-      t('common.confirm'),
-      { type: 'warning' }
-    )
-  } catch {
-    return
-  }
-  try {
-    await agent.removeMemory(props.projectId)
-    content.value = ''
-    ElMessage.success(t('common.deleted'))
-    visible.value = false
-  } catch (error) {
-    ElMessage.error(ipcErrorMessage(error))
-  }
-}
-
 /* 打开时确保记忆列表已加载并同步内容 */
 watch(visible, async (opened) => {
   if (!opened) {
@@ -100,9 +79,6 @@ watch(visible, async (opened) => {
       :placeholder="t('agent.memoryContentPlaceholder')"
     />
     <template #footer>
-      <el-button v-if="memoryEnabled" text type="danger" @click="onRemove">
-        {{ t('common.delete') }}
-      </el-button>
       <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
       <el-button type="primary" :loading="saving" @click="onSave">
         {{ t('common.save') }}

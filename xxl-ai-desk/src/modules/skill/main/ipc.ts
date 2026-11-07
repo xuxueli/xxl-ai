@@ -8,7 +8,7 @@ import { dialog, shell } from 'electron'
 import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
 import { SKILL_IPC } from '../shared/ipc'
-import { resetAgents } from '@modules/agent/main'
+import { countAgentsBySkillId, resetAgents } from '@modules/agent/main'
 import {
   deleteSkill,
   getSkillContent,
@@ -23,7 +23,9 @@ import { discoverSkillDetail, discoverSkills, installDiscoveredSkill } from './d
 import { cancelGithubSkills, inspectGithubSkills, installGithubSkill } from './github'
 
 export function registerSkillIpc(ipc: IpcContext): void {
-  ipc.handle(SKILL_IPC.list, () => listSkills())
+  ipc.handle(SKILL_IPC.list, () =>
+    listSkills().map((skill) => ({ ...skill, agentCount: countAgentsBySkillId(skill.id) }))
+  )
   ipc.handle(SKILL_IPC.detail, (_event, id: string) => getSkillDetail(id))
   ipc.handle(SKILL_IPC.content, (_event, id: string, offset: number) => getSkillContent(id, offset))
   ipc.handle(SKILL_IPC.importDir, async () => {
@@ -52,6 +54,10 @@ export function registerSkillIpc(ipc: IpcContext): void {
     return imported
   })
   ipc.handle(SKILL_IPC.remove, (_event, id: string) => {
+    const agentCount = countAgentsBySkillId(id)
+    if (agentCount > 0) {
+      throw new Error(t('runtime.error.skillInUse', [agentCount]))
+    }
     deleteSkill(id)
     resetAgents()
   })

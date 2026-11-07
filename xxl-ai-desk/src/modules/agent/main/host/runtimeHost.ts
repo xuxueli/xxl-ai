@@ -8,7 +8,7 @@ import { join } from 'path'
 import { execFileSync, spawn } from 'child_process'
 import { utilityProcess, type UtilityProcess } from 'electron'
 import log from 'electron-log/main'
-import { getTempDir } from '@common/main/config/paths'
+import { getLogDir } from '@common/main/config/paths'
 import { t } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
 import { recordTrace } from '@modules/diagnostics/main'
@@ -66,7 +66,7 @@ function ensureWorker(): Promise<UtilityProcess> {
     /* 运行时进程与主进程写入同一目录的运行日志（按天分片） */
     env: {
       ...process.env,
-      XXL_AI_RUNTIME_LOG_DIR: getTempDir()
+      XXL_AI_RUNTIME_LOG_DIR: getLogDir()
     }
   })
   worker = proc

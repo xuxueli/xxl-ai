@@ -73,6 +73,16 @@ export function ensureTempDir(): void {
   mkdirSync(getTempDir(), { recursive: true })
 }
 
+/* 运行日志目录（数据目录下的 tmp/log，与下载等临时文件同根便于清理） */
+export function getLogDir(): string {
+  return join(getTempDir(), 'log')
+}
+
+/* 确保运行日志目录存在 */
+export function ensureLogDir(): void {
+  mkdirSync(getLogDir(), { recursive: true })
+}
+
 /*
  * 保存运行时数据目录：空值或等于默认目录时清除配置。
  * 仅持久化配置并创建目录，实际切换在应用重启后生效。

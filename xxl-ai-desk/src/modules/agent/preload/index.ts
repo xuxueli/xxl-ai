@@ -12,6 +12,5 @@ export const agentApi: AgentApi = {
   save: (input) => ipcRenderer.invoke(AGENT_IPC.save, input),
   remove: (id: string) => ipcRenderer.invoke(AGENT_IPC.remove, id),
   memoryList: () => ipcRenderer.invoke(AGENT_IPC.memoryList),
-  memorySave: (input) => ipcRenderer.invoke(AGENT_IPC.memorySave, input),
-  memoryRemove: (projectId: string) => ipcRenderer.invoke(AGENT_IPC.memoryRemove, projectId)
+  memorySave: (input) => ipcRenderer.invoke(AGENT_IPC.memorySave, input)
 }

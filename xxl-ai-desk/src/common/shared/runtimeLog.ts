@@ -5,12 +5,12 @@
  * @author xuxueli 2026-10-31
  */
 
-/* 按本地日期生成文件名：log-yyyy-mm-dd.log */
+/* 按本地日期生成文件名：yyyy-mm-dd.log（所在目录为 tmp/log） */
 export function dailyLogFileName(date = new Date()): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return `log-${year}-${month}-${day}.log`
+  return `${year}-${month}-${day}.log`
 }
 
 /* 单行运行日志格式：时间 + 级别 + 内容 */

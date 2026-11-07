@@ -229,7 +229,16 @@ async function onRefresh(): Promise<void> {
             <el-button text type="primary" @click="onReveal(row)">
               {{ t('plugin.skillCenter.folder') }}
             </el-button>
-            <el-button text type="danger" @click="onDelete(row)">
+            <el-tooltip
+              v-if="row.agentCount > 0"
+              :content="t('runtime.error.skillInUse', [row.agentCount])"
+              placement="top"
+            >
+              <span>
+                <el-button text type="danger" disabled>{{ t('plugin.skillCenter.delete') }}</el-button>
+              </span>
+            </el-tooltip>
+            <el-button v-else text type="danger" @click="onDelete(row)">
               {{ t('plugin.skillCenter.delete') }}
             </el-button>
           </div>

@@ -40,6 +40,7 @@ function toDTO(row: SkillRow): SkillDTO {
     version: row.version,
     source: normalizeSource(row.source),
     sourceId: row.sourceId,
+    agentCount: 0,
     addTime: row.addTime,
     updateTime: row.updateTime
   }

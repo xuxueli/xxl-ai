@@ -89,17 +89,6 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
-  /* 删除项目记忆（仅清内容，保留项目） */
-  async function removeMemory(projectId: string): Promise<void> {
-    await api.agent.memoryRemove(projectId)
-    const target = memories.value.find((item) => item.projectId === projectId)
-    if (target) {
-      target.content = ''
-      target.lastMessageTime = ''
-      target.updateTime = ''
-    }
-  }
-
   return {
     agents,
     currentId,
@@ -114,7 +103,6 @@ export const useAgentStore = defineStore('agent', () => {
     saveAgent,
     removeAgent,
     loadMemories,
-    saveMemory,
-    removeMemory
+    saveMemory
   }
 })

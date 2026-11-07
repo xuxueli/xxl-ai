@@ -13,5 +13,4 @@ export interface AgentApi {
   /* 项目记忆 */
   memoryList(): Promise<AgentMemoryDTO[]>
   memorySave(input: AgentMemorySaveInput): Promise<AgentMemoryDTO>
-  memoryRemove(projectId: string): Promise<void>
 }

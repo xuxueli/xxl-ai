@@ -91,6 +91,7 @@ function toDTO(row: McpRow): McpDTO {
     config: row.config,
     remark: row.remark,
     health: parseHealth(row.health),
+    agentCount: 0,
     addTime: row.addTime,
     updateTime: row.updateTime
   }
@@ -299,6 +300,7 @@ export function buildRuntimeConfig(input: Partial<McpDTO>): McpRuntimeConfig {
       config: '',
       remark: '',
       health: null,
+      agentCount: 0,
       addTime: '',
       updateTime: ''
     }),

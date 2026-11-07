@@ -19,6 +19,8 @@ export interface SkillDTO {
   source: SkillSource
   /* skills.sh 技能标识（source/skillId），本地为空 */
   sourceId: string
+  /* 引用该 SKILL 的 Agent 数量（列表补充，删除前置校验） */
+  agentCount: number
   /* 新增时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */
