@@ -9,7 +9,7 @@ import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/render
 import { t } from '@renderer/shell/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
-import { hasVisiblePart, messageStatusOf } from '@modules/chat/shared'
+import { hasVisiblePart } from '@modules/chat/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 
 /* 持久化的 Pi 原始消息结构（仅取渲染所需字段） */
@@ -164,8 +164,8 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     if (record.role !== 'assistant') continue
 
     const parts = Array.isArray(raw?.content) ? raw.content : []
-    /* 状态优先取落库列；旧库 status 为空时现场归一，待本地库统一重建后移除 */
-    const status = record.status || messageStatusOf(raw ?? {})
+    /* 状态由落库时统一生成 */
+    const status = record.status
     const aborted = status === 'aborted'
     /* 用户主动终止不是异常；失败、截断、只有 thinking / 空内容才标记 error */
     const failed = !aborted && (status === 'error' || status === 'truncated')
