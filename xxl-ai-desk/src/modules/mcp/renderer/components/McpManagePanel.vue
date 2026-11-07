@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /*
- * MCP 管理面板：MCP 服务列表（启用开关 / 连接测试 / 工具 / 编辑 / 删除）。
+ * MCP 管理面板：MCP 服务列表（连接测试 / 工具 / 编辑 / 删除）。
  * @author xuxueli 2026-10-24
  */
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMcpStore } from '@modules/mcp/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
@@ -18,6 +18,8 @@ const emit = defineEmits<{
 }>()
 
 const mcp = useMcpStore()
+/* 正在测试连接的服务 id（按钮 loading，避免误以为无响应） */
+const testingId = ref('')
 
 /* 首次进入加载列表（已加载则复用 store 状态） */
 onMounted(() => {
@@ -26,33 +28,20 @@ onMounted(() => {
   }
 })
 
-/* 启停开关：未验证连通的服务启用前二次确认 */
-async function onToggle(row: McpDTO, value: boolean): Promise<void> {
-  if (value && !row.health?.ok) {
-    try {
-      await ElMessageBox.confirm(
-        t('plugin.mcpCenter.enableConfirm'),
-        t('plugin.mcpCenter.enabled'),
-        {
-          type: 'warning',
-          confirmButtonText: t('common.confirm'),
-          cancelButtonText: t('common.cancel')
-        }
-      )
-    } catch {
-      return
-    }
+/* 启停开关已移除：MCP 是否参与对话由 Agent 勾选决定 */
+
+/* 新建 MCP：下拉选择新建或去市场页浏览 */
+function onCreate(command: 'new' | 'discover'): void {
+  if (command === 'new') {
+    emit('create')
+    return
   }
-  try {
-    await mcp.saveServer({ id: row.id, enabled: value })
-    ElMessage.success(value ? t('plugin.mcpCenter.enabledOn') : t('plugin.mcpCenter.enabledOff'))
-  } catch (error) {
-    ElMessage.error(ipcErrorMessage(error))
-  }
+  emit('discover')
 }
 
 /* 测试连接：结果写回 health 并由列表刷新展示 */
 async function onTest(row: McpDTO): Promise<void> {
+  testingId.value = row.id
   try {
     const result = await mcp.testServer({ id: row.id })
     if (result.ok) {
@@ -62,6 +51,8 @@ async function onTest(row: McpDTO): Promise<void> {
     }
   } catch (error) {
     ElMessage.error(ipcErrorMessage(error))
+  } finally {
+    testingId.value = ''
   }
 }
 
@@ -103,10 +94,22 @@ async function onDelete(row: McpDTO): Promise<void> {
         </template>
       </el-input>
       <div class="toolbar-actions">
-        <span class="enabled-tip">{{ t('plugin.mcpCenter.enabledCount', [mcp.enabledCount]) }}</span>
-        <el-button type="primary" @click="emit('create')">
-          <el-icon><Plus /></el-icon>{{ t('plugin.mcpCenter.new') }}
-        </el-button>
+        <el-dropdown trigger="click" @command="onCreate">
+          <el-button type="primary">
+            <el-icon><Plus /></el-icon>{{ t('plugin.mcpCenter.new') }}
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="new">
+                <el-icon><Plus /></el-icon>{{ t('plugin.mcpCenter.new') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="discover" divided>
+                <el-icon><Search /></el-icon>{{ t('plugin.mcpCenter.browseDiscover') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -142,18 +145,10 @@ async function onDelete(row: McpDTO): Promise<void> {
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column :label="t('plugin.mcpCenter.enabled')" width="100">
-        <template #default="{ row }">
-          <el-switch
-            :model-value="row.enabled"
-            @update:model-value="(value: boolean) => onToggle(row, value)"
-          />
-        </template>
-      </el-table-column>
       <el-table-column :label="t('common.actions')" width="168" align="center">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button text type="primary" @click="onTest(row)">
+            <el-button text type="primary" :loading="testingId === row.id" @click="onTest(row)">
               {{ t('plugin.mcpCenter.test') }}
             </el-button>
             <el-button text type="primary" @click="emit('edit', row)">
@@ -204,11 +199,6 @@ async function onDelete(row: McpDTO): Promise<void> {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.enabled-tip {
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
 }
 
 .empty-tip {

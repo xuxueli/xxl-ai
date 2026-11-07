@@ -11,4 +11,5 @@ export interface ProjectApi {
   rename(id: string, name: string): Promise<ProjectDTO>
   remove(id: string): Promise<void>
   reveal(id: string): Promise<void>
+  setMemoryEnabled(id: string, enabled: boolean): Promise<ProjectDTO>
 }

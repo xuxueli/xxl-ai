@@ -1,0 +1,125 @@
+<script setup lang="ts">
+/*
+ * 项目记忆弹窗：查看 / 编辑 / 删除单个项目的长期记忆，供系统设置「项目」页复用。
+ * @author xuxueli 2026-11-07
+ */
+import { computed, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAgentStore } from '@modules/agent/renderer/store'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
+import { t } from '@renderer/shell/i18n'
+import { AGENT_MEMORY_MAX_CHARS } from '@modules/agent/shared'
+
+const visible = defineModel<boolean>('visible', { default: false })
+const props = defineProps<{
+  /* 项目主键 */
+  projectId: string
+  /* 项目名（标题展示） */
+  projectName: string
+  /* 项目记忆开关 */
+  memoryEnabled: boolean
+}>()
+
+const agent = useAgentStore()
+
+/* 当前项目记忆（未生成时为空对象） */
+const memory = computed(() => agent.memories.find((item) => item.projectId === props.projectId))
+const content = ref('')
+const saving = ref(false)
+
+/* 按当前项目同步编辑区 */
+function syncContent(): void {
+  content.value = memory.value?.content ?? ''
+}
+
+/* 保存 */
+async function onSave(): Promise<void> {
+  if (!props.projectId) {
+    return
+  }
+  saving.value = true
+  try {
+    await agent.saveMemory(props.projectId, content.value)
+    ElMessage.success(t('common.saved'))
+    visible.value = false
+  } catch (error) {
+    ElMessage.error(ipcErrorMessage(error))
+  } finally {
+    saving.value = false
+  }
+}
+
+/* 删除项目记忆 */
+async function onRemove(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      t('agent.memoryDeleteConfirm', [props.projectName]),
+      t('common.confirm'),
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await agent.removeMemory(props.projectId)
+    content.value = ''
+    ElMessage.success(t('common.deleted'))
+    visible.value = false
+  } catch (error) {
+    ElMessage.error(ipcErrorMessage(error))
+  }
+}
+
+/* 打开时确保记忆列表已加载并同步内容 */
+watch(visible, async (opened) => {
+  if (!opened) {
+    return
+  }
+  if (!agent.memoriesLoaded) {
+    await agent.loadMemories()
+  }
+  syncContent()
+})
+</script>
+
+<template>
+  <el-dialog
+    v-model="visible"
+    :title="t('agent.memoryDialogTitle', [projectName])"
+    width="900px"
+    append-to-body
+    class="agent-memory-dialog"
+  >
+    <div v-if="!memoryEnabled" class="memory-off">{{ t('agent.memoryOff') }}</div>
+    <el-input
+      v-model="content"
+      type="textarea"
+      :rows="14"
+      :maxlength="AGENT_MEMORY_MAX_CHARS"
+      show-word-limit
+      :placeholder="t('agent.memoryContentPlaceholder')"
+    />
+    <template #footer>
+      <el-button v-if="memoryEnabled" text type="danger" @click="onRemove">
+        {{ t('common.delete') }}
+      </el-button>
+      <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="saving" @click="onSave">
+        {{ t('common.save') }}
+      </el-button>
+    </template>
+  </el-dialog>
+</template>
+
+<style scoped lang="scss">
+.memory-off {
+  margin-bottom: 12px;
+  font-size: var(--desk-font-sm);
+  color: var(--desk-text-secondary);
+}
+
+:global(.agent-memory-dialog) {
+  --el-font-size-base: 14px;
+  max-width: calc(100vw - 48px);
+}
+</style>

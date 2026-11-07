@@ -5,11 +5,12 @@
 
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
-/* 会话表：一次会话绑定一个供应商与模型，并保存对话模式；归属某项目 */
+/* 会话表：一次会话绑定一个项目、Agent、供应商与模型，并保存对话模式 */
 export const sessionTable = sqliteTable('desk_session', {
   id: text('id').primaryKey(),
   title: text('title').notNull().default(''),
   projectId: text('project_id').notNull().default(''), /* 归属项目 ID */
+  agentId: text('agent_id').notNull().default(''), /* 绑定的 Agent ID（创建后不可修改） */
   providerId: text('provider_id').notNull().default(''), /* 绑定供应商 ID */
   modelId: text('model_id').notNull().default(''), /* 绑定模型 ID */
   mode: text('mode').notNull().default('build'), /* 对话模式 plan / build */

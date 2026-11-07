@@ -3,15 +3,20 @@
  * 对话空态扩展：项目选择与示例入口（位于输入框下方）。
  * @author xuxueli 2026-10-25
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '@modules/project/renderer'
+import { AgentAvatar, AgentEditDrawer, useAgentStore } from '@modules/agent/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 
 const emit = defineEmits<{ example: [text: string] }>()
 
 const project = useProjectStore()
+const agent = useAgentStore()
+
+/* 新建 Agent 抽屉 */
+const agentDrawerVisible = ref(false)
 
 /* 空态项目选择：当前项目名（未选择时展示占位文案） */
 const currentProjectName = computed(
@@ -29,6 +34,18 @@ async function onProjectChange(value: string): Promise<void> {
     return
   }
   project.selectProject(value)
+}
+
+/* 当前 Agent 名称（未选择时展示占位文案） */
+const currentAgentName = computed(() => agent.currentAgent?.name || t('agent.selectAgent'))
+
+/* 选择 Agent；选到「新建 Agent」时打开编辑抽屉 */
+function onAgentChange(value: string): void {
+  if (value === '__new__') {
+    agentDrawerVisible.value = true
+    return
+  }
+  agent.selectAgent(value)
 }
 
 /* 空态示例：点击直接以该内容发起新对话 */
@@ -54,8 +71,27 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <!-- Agent 选择：与项目选择同一交互，首项为新建入口 -->
+      <el-dropdown trigger="click" @command="onAgentChange">
+        <span class="project-trigger" :title="t('agent.agent')">
+          <AgentAvatar :avatar="agent.currentAgent?.avatar" :size="18" :show-title="false" />
+          <span class="project-name">{{ currentAgentName }}</span>
+          <el-icon class="project-arrow"><ArrowDown /></el-icon>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="__new__">+ {{ t('agent.new') }}</el-dropdown-item>
+            <el-dropdown-item v-for="item in agent.agents" :key="item.id" :command="item.id">
+              {{ item.name }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </div>
+
+  <AgentEditDrawer v-model:visible="agentDrawerVisible" />
 
   <!-- 空态示例：输入框下方以文字入口平铺，点击直接发起对话 -->
   <div class="empty-examples">
@@ -84,6 +120,7 @@ const examples = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 4px;
   min-height: 34px;
   padding: 0 10px;
   background: var(--desk-segment-bg);

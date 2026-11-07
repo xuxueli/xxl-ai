@@ -3,7 +3,6 @@
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@modules/chat/renderer'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
-import { SECTION_ENTRY } from '@renderer/shell/config/nav'
 import type { QuickAction } from '@common/shared'
 
 export function useQuickAction(): (action: QuickAction) => void {
@@ -22,11 +21,14 @@ export function useQuickAction(): (action: QuickAction) => void {
       chat.startNewChat()
       router.push('/')
     } else if (action === 'agent') {
-      /* 打开 Agent 板块 */
-      router.push(SECTION_ENTRY.agent)
-    } else if (action === 'plugin') {
-      /* 打开插件中心 */
-      router.push(SECTION_ENTRY.plugin)
+      /* 打开扩展中心 → Agent */
+      router.push('/plugin/agent')
+    } else if (action === 'mcp') {
+      /* 打开扩展中心 → MCP 工具 */
+      router.push('/plugin/mcp')
+    } else if (action === 'skill') {
+      /* 打开扩展中心 → SKILL 技能 */
+      router.push('/plugin/skill')
     } else if (action === 'settings') {
       /* 打开设置页 */
       router.push('/settings')

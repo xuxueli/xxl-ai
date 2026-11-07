@@ -28,8 +28,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const updateInfo = ref<UpdateInfo | null>(null)
   const updateChecking = ref(false)
 
-  /* 系统设置子菜单当前分类（UI 选中态，供左侧子菜单与设置页共享） */
-  const activeTab = ref('general')
+  /* 系统设置子菜单当前分类（UI 选中态，供左侧子菜单与设置页共享），默认模型供应商 */
+  const activeTab = ref('providers')
 
   /* 已启用的供应商 */
   /* 应用外观与主题预设到 DOM（Element Plus 深色模式依赖 html.dark） */

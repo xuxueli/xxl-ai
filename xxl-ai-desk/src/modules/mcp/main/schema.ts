@@ -3,7 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const mcpTable = sqliteTable('desk_mcp', {
   id: text('id').primaryKey(),
@@ -18,7 +18,6 @@ export const mcpTable = sqliteTable('desk_mcp', {
   cwd: text('cwd').notNull().default(''), /* 本地工作目录 */
   config: text('config').notNull().default('{}'), /* 规范配置 JSON */
   remark: text('remark').notNull().default(''), /* 备注 */
-  enabled: integer('enabled').notNull().default(0), /* 1 生效 / 0 停用 */
   health: text('health').notNull().default(''), /* 最近检测结果 JSON */
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')

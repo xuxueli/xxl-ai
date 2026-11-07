@@ -1,9 +1,9 @@
 /*
- * SKILL 技能表结构：目录内容为权威，本表保存启停、来源等可变状态。
+ * SKILL 技能表结构：目录内容为权威，本表保存来源等可变状态。
  * @author xuxueli 2026-11-07
  */
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const skillTable = sqliteTable('desk_skill', {
   id: text('id').primaryKey(), /* 技能目录名 */
@@ -12,7 +12,6 @@ export const skillTable = sqliteTable('desk_skill', {
   version: text('version').notNull().default(''), /* 版本（可选） */
   source: text('source').notNull().default('local'), /* local / skillssh / github */
   sourceId: text('source_id').notNull().default(''), /* owner/repo/slug 统一标识 */
-  enabled: integer('enabled').notNull().default(1), /* 1 启用 / 0 停用 */
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')
 })

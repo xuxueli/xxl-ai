@@ -39,8 +39,7 @@ const form = ref({
   argsText: '',
   env: [{ key: '', value: '' }] as KeyValueRow[],
   cwd: '',
-  remark: '',
-  enabled: false
+  remark: ''
 })
 
 /* JSON 导入文本与显隐 */
@@ -90,8 +89,7 @@ function resetForm(): void {
     argsText: (draft.args ?? []).join('\n'),
     env: toRows(draft.env),
     cwd: draft.cwd ?? '',
-    remark: draft.remark ?? '',
-    enabled: draft.enabled ?? false
+    remark: draft.remark ?? ''
   }
   testResult.value = null
   testedSnapshot.value = ''
@@ -171,8 +169,7 @@ function buildDTO(): Partial<McpDTO> {
       : [],
     env: form.value.type === 'local' ? toMap(form.value.env) : {},
     cwd: form.value.type === 'local' ? form.value.cwd.trim() : '',
-    remark: form.value.remark.trim(),
-    enabled: form.value.enabled
+    remark: form.value.remark.trim()
   }
 }
 
@@ -248,7 +245,7 @@ async function onSave(): Promise<void> {
       }
     }
     await mcp.saveServer(dto)
-    ElMessage.success(dto.enabled ? t('plugin.mcpCenter.savedEnabled') : t('plugin.mcpCenter.saved'))
+    ElMessage.success(t('plugin.mcpCenter.saved'))
     visible.value = false
     emit('saved')
   } catch (error) {
@@ -359,13 +356,6 @@ watch(visible, (value) => {
         />
       </el-form-item>
 
-      <el-form-item :label="t('plugin.mcpCenter.enabled')">
-        <div class="switch-row">
-          <el-switch v-model="form.enabled" />
-          <span class="switch-tip">{{ t('plugin.mcpCenter.enabledTip') }}</span>
-        </div>
-      </el-form-item>
-
       <!-- JSON 片段导入：粘贴社区配置自动回填 -->
       <div class="json-box">
         <div class="json-head">
@@ -444,17 +434,6 @@ watch(visible, (value) => {
 .kv-value {
   flex: 1;
   min-width: 0;
-}
-
-.switch-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.switch-tip {
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
 }
 
 .json-box {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /*
- * 项目文件选择弹框：目录懒加载、文件多选与已加载节点搜索。
- *   - 只允许选择文件，目录仅用于展开；
+ * 项目文件选择弹框：目录懒加载、文件 / 文件夹多选与已加载节点搜索。
+ *   - 文件与文件夹均可勾选，目录同时支持展开；
  *   - 选择结果由调用方合并，弹框关闭后不保留勾选状态。
  * @author xuxueli 2026-11-07
  */
@@ -23,7 +23,7 @@ const emit = defineEmits<{ confirm: [files: FsEntry[]] }>()
 /* 弹框显隐与搜索关键字 */
 const visible = defineModel<boolean>('visible', { default: false })
 const keyword = ref('')
-/* 已勾选文件（目录不可勾选） */
+/* 已勾选文件或文件夹 */
 const checked = ref<FsEntry[]>([])
 
 /* el-tree 依赖的最小句柄：仅提供已勾选节点读取 */
@@ -33,12 +33,11 @@ interface TreeHandle {
 }
 const treeRef = ref<TreeHandle | null>(null)
 
-/* 树节点配置：目录可展开、文件为叶子、目录禁用勾选 */
+/* 树节点配置：目录可展开也可勾选，文件为叶子 */
 const treeProps = {
   label: 'name',
   children: 'children',
-  isLeaf: (data: FsEntry): boolean => !data.isDir,
-  disabled: (data: FsEntry): boolean => data.isDir
+  isLeaf: (data: FsEntry): boolean => !data.isDir
 }
 
 /* 懒加载目录：根层取项目根目录子项，其余按节点路径展开 */
@@ -65,10 +64,9 @@ function filterNode(value: string, data: FsEntry): boolean {
   return !word || data.name.toLowerCase().includes(word)
 }
 
-/* 同步勾选结果（过滤掉目录节点） */
+/* 同步勾选结果（文件与文件夹均保留） */
 function syncChecked(): void {
-  const nodes = treeRef.value?.getCheckedNodes() ?? []
-  checked.value = nodes.filter((node) => !node.isDir)
+  checked.value = treeRef.value?.getCheckedNodes() ?? []
 }
 
 /* 打开时重置搜索；关闭时清空勾选，避免下次误带旧选择 */
@@ -86,7 +84,7 @@ watch(keyword, (value) => {
   treeRef.value?.filter(value)
 })
 
-/* 确认：把已勾选文件交给调用方 */
+/* 确认：把已勾选文件 / 文件夹交给调用方 */
 function onConfirm(): void {
   if (checked.value.length === 0) {
     return

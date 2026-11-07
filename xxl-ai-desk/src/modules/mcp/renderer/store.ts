@@ -1,5 +1,5 @@
 /*
- * MCP 插件中心状态：MCP 服务列表（管理）与社区检索结果（发现）。
+ * MCP 扩展中心状态：MCP 服务列表（管理）与社区检索结果（发现）。
  *   - 保存/删除后刷新列表，主进程已清空运行时缓存，下一轮对话自动生效；
  *   - 检索结果按「关键字 + 页码」缓存，减少重复抓取。
  */
@@ -17,9 +17,6 @@ export const useMcpStore = defineStore('mcp', () => {
   const loaded = ref(false)
   /* 列表关键字过滤 */
   const keyword = ref('')
-
-  /* 已生效服务数量（顶部提示用） */
-  const enabledCount = computed(() => servers.value.filter((item) => item.enabled).length)
 
   /* 过滤后的服务列表 */
   const visibleServers = computed(() => {
@@ -191,7 +188,6 @@ export const useMcpStore = defineStore('mcp', () => {
     servers,
     loaded,
     keyword,
-    enabledCount,
     visibleServers,
     discovering,
     discoverError,

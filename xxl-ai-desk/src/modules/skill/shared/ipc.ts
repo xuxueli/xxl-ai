@@ -9,7 +9,6 @@ export const SKILL_IPC = {
   content: 'desk:skill:content',
   importDir: 'desk:skill:import-dir',
   importZip: 'desk:skill:import-zip',
-  setEnabled: 'desk:skill:set-enabled',
   remove: 'desk:skill:remove',
   reveal: 'desk:skill:reveal',
   refresh: 'desk:skill:refresh',

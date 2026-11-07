@@ -1,14 +1,17 @@
 /*
- * Agent 域 preload API 片段。
+ * Agent 域 preload API 片段：Agent 配置与项目记忆。
  * @author xuxueli 2026-11-07
  */
 
 import { ipcRenderer } from 'electron'
-import type { AgentMemoryApi } from '../shared/api'
+import type { AgentApi } from '../shared/api'
 import { AGENT_IPC } from '../shared/ipc'
 
-export const agentMemoryApi: AgentMemoryApi = {
-  list: () => ipcRenderer.invoke(AGENT_IPC.memoryList),
-  save: (input) => ipcRenderer.invoke(AGENT_IPC.memorySave, input),
-  remove: (projectId: string) => ipcRenderer.invoke(AGENT_IPC.memoryRemove, projectId)
+export const agentApi: AgentApi = {
+  list: () => ipcRenderer.invoke(AGENT_IPC.list),
+  save: (input) => ipcRenderer.invoke(AGENT_IPC.save, input),
+  remove: (id: string) => ipcRenderer.invoke(AGENT_IPC.remove, id),
+  memoryList: () => ipcRenderer.invoke(AGENT_IPC.memoryList),
+  memorySave: (input) => ipcRenderer.invoke(AGENT_IPC.memorySave, input),
+  memoryRemove: (projectId: string) => ipcRenderer.invoke(AGENT_IPC.memoryRemove, projectId)
 }

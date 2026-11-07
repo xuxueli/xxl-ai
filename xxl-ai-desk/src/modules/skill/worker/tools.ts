@@ -1,7 +1,7 @@
 /*
- * 技能类内置工具：读取「已启用」技能的 SKILL.md 与附属文件。
+ * 技能类内置工具：读取当前 Agent 已配置技能的 SKILL.md 与附属文件。
  *   - 只读，Plan / Build 均可用；
- *   - 「启用」决定 Agent 能否主动使用技能（read_skill 入口）；
+ *   - Agent 勾选决定能否主动使用技能（read_skill 入口）；
  *   - 技能库的文件读取权限是另一维度：整库只读放行，永不弹审批（见 shared.ts）。
  */
 
@@ -38,7 +38,7 @@ async function resolveSkillFile(
 /* 构建技能类工具 */
 export async function createSkillTools(context: ToolContext): Promise<ToolEntry[]> {
   const skills = context.skills ?? []
-  /* 未启用任何技能：不装配 read_skill（文件读取仍可经 fs 工具访问技能库） */
+  /* 当前 Agent 未配置任何技能：不装配 read_skill（文件读取仍可经 fs 工具访问技能库） */
   if (skills.length === 0) {
     return []
   }
@@ -57,8 +57,8 @@ export async function createSkillTools(context: ToolContext): Promise<ToolEntry[
     name: 'read_skill',
     label: '读取技能说明',
     description: describe(
-      '读取已启用技能的 SKILL.md 完整说明或技能目录内的附属文件；任务与技能描述匹配时，先调用本工具再执行。',
-      'Read the full SKILL.md or a supporting file of an enabled skill before following it.'
+      '读取当前 Agent 已配置技能的 SKILL.md 完整说明或技能目录内的附属文件；任务与技能描述匹配时，先调用本工具再执行。',
+      'Read the full SKILL.md or a supporting file of a skill assigned to the current agent before following it.'
     ),
     parameters: Type.Object({
       name: Type.String({ description: '技能名称或目录名' }),

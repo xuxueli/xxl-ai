@@ -41,8 +41,6 @@ export interface AppSettings {
   providerId: string
   /* 当前模型 ID */
   modelId: string
-  /* 系统提示词（自定义指令） */
-  systemPrompt: string
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string
@@ -56,18 +54,6 @@ export interface AppSettings {
   runtimePythonPath: string
   /* 启动时自动检查客户端更新 */
   updateAutoCheck: boolean
-  /* 浏览器类内置工具是否启用（关闭后模型不再获得 open_browser / read_browser） */
-  builtinToolBrowserEnabled: boolean
-  /* 文件类内置工具是否启用（关闭后模型不再获得文件读写能力） */
-  builtinToolFsEnabled: boolean
-  /* 终端类内置工具是否启用（关闭后模型不再获得 run_command） */
-  builtinToolShellEnabled: boolean
-  /* 通用类内置工具是否启用（关闭后模型不再获得时间等通用能力） */
-  builtinToolGeneralEnabled: boolean
-  /* 人机交互工具是否启用（关闭后模型不再获得 ask_user，改为在正文直接询问） */
-  builtinToolInteractionEnabled: boolean
-  /* Agent 记忆是否启用（开启后每 30 轮对话异步压缩生成项目记忆） */
-  agentMemoryEnabled: boolean
   /* 开发者模式：开启后记录模型通讯 trace，并在工具面板展示「会话日志」 */
   developerMode: boolean
 }

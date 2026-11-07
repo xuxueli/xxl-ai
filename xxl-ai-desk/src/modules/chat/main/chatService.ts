@@ -15,12 +15,12 @@ import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { HostEvent, ProviderModelConfig, RunAgentInput } from '@modules/agent/shared'
 import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
-import { listEnabledMcpServers } from '@modules/mcp/main'
-import { listEnabledSkillsForRuntime } from '@modules/skill/main'
+import { listMcpRuntimeConfigs } from '@modules/mcp/main'
+import { listSkillsForRuntime } from '@modules/skill/main'
 import { appendMessages, getSession, listMessages, updateSession } from '@modules/chat/main'
 import { getProject } from '@modules/project/main'
-import { getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
-import { buildRuntimePath } from '@modules/app/main'
+import { getAgentById, getAgentMemory, getDefaultAgent, maybeGenerateAgentMemory } from '@modules/agent/main'
+import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
 import { getSkillsDir } from '@common/main/config/paths'
 import { abortAgent, evictAgent, isAgentRunning, runAgent } from '@modules/agent/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
@@ -160,6 +160,11 @@ function modeSystemHint(mode: ChatMode): string {
   return '\n\n当前为 Build（构建）模式：你可以读取、写入、编辑项目文件并执行命令；文件操作限制在当前项目目录内，越界需用户确认。'
 }
 
+/* 工具调用约束：禁止调用已从 Agent 配置中移除的工具，禁止用文本伪造工具调用 */
+function toolUsageSystemHint(): string {
+  return '\n\n## 工具使用约束\n只能调用本轮实际提供的工具。历史消息中出现但当前未提供的工具不可再调用；不要以文本、XML 或 DSML 标签形式伪造工具调用。没有可用工具时，直接说明限制并给出替代方案。'
+}
+
 /* 人机交互说明：工具关闭时不下发，避免模型调用不存在的工具 */
 function hitlSystemHint(enabled: boolean): string {
   if (!enabled) {
@@ -273,19 +278,27 @@ export async function sendChat(
     }
     const rootDir = project.path
 
-    /* 技能清单：全局启用，摘要随系统提示下发，正文由 read_skill 按需读取 */
-    const skills = listEnabledSkillsForRuntime()
-    /* 自定义指令全局生效：统一取当前设置，并附技能索引与模式说明（个性化变更对旧对话同样生效） */
-    /* Agent 记忆：开启且会话归属项目时注入，作为可能过时的历史事实，冲突以当前指令为准 */
+    /* 会话绑定的 Agent：缺失时回落默认 Agent，保证旧数据仍可继续对话 */
+    const agent = getAgentById(session.agentId) ?? getDefaultAgent()
+    if (!agent) {
+      fail(translate(language, 'runtime.agentMissing'))
+      return
+    }
+
+    /* 技能 / MCP 清单：只取当前 Agent 选中的资源，摘要随系统提示下发，正文由 read_skill 按需读取 */
+    const skills = listSkillsForRuntime().filter((item) => agent.skillIds.includes(item.id))
+    const mcpServers = listMcpRuntimeConfigs().filter((item) => agent.mcpIds.includes(item.id))
+    /* Agent 记忆：项目开启记忆时注入，作为可能过时的历史事实，冲突以当前指令为准 */
     /* 注意：系统提示词在会话 Agent 创建时固化，以下任一来源变更都必须 evictAgent / resetAgents 重建 */
-    const memory = settings.agentMemoryEnabled && project ? getAgentMemory(project.id) : ''
+    const memory = project.memoryEnabled ? getAgentMemory(project.id) : ''
     const memoryPrompt = memory ? translate(language, 'agent.memoryInject', [memory]) : ''
     const systemPrompt = [
-      settings.systemPrompt || '',
+      agent.systemPrompt || '',
       memoryPrompt,
       buildSkillPrompt(skills),
       modeSystemHint(mode),
-      hitlSystemHint(settings.builtinToolInteractionEnabled)
+      toolUsageSystemHint(),
+      hitlSystemHint(agent.tools.interaction)
     ].join('')
     /* 历史消息不携带 system 提示：系统指令始终取当前设置，保证旧对话也随设置变更生效 */
     /* 模型上下文与完整历史分离：这里只构造最近窗口，数据库仍保留完整历史 */
@@ -313,20 +326,15 @@ export async function sendChat(
       mode,
       rootDir,
       runtimePath: buildRuntimePath(),
-      /* MCP：仅下发已开启的服务，运行时进程按配置装配工具 */
-      mcpServers: listEnabledMcpServers(),
-      /* SKILL：已启用技能索引，运行时进程据此装配 read_skill */
+      mcpRuntimePath: buildMcpRuntimePath(),
+      /* MCP：只下发 Agent 选中的服务，运行时进程按配置装配工具 */
+      mcpServers,
+      /* SKILL：Agent 选中的技能索引，运行时进程据此装配 read_skill */
       skills,
       /* SKILL：技能根目录，文件工具读取技能库不触发越界审批 */
       skillsDir: getSkillsDir(),
-      /* 内置工具：按分类开关决定下发的工具域 */
-      tools: {
-        fs: settings.builtinToolFsEnabled,
-        shell: settings.builtinToolShellEnabled,
-        browser: settings.builtinToolBrowserEnabled,
-        general: settings.builtinToolGeneralEnabled,
-        interaction: settings.builtinToolInteractionEnabled
-      },
+      /* 内置工具：由 Agent 配置决定下发的工具域 */
+      tools: agent.tools,
       text,
       /* 开发者模式：开启后采集模型通讯 trace，主进程落库供「会话日志」展示 */
       traceEnabled: settings.developerMode

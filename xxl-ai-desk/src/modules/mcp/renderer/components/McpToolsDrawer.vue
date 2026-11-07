@@ -43,6 +43,7 @@ watch(visible, async (value) => {
     append-to-body
   >
     <div v-loading="loading" class="tools-body">
+      <div v-if="loading" class="tools-loading-tip">{{ t('plugin.mcpCenter.toolsLoadingTip') }}</div>
       <el-empty v-if="!loading && tools.length === 0" :description="t('plugin.mcpCenter.noTools')" />
       <div v-for="tool in tools" :key="tool.name" class="tool-item">
         <div class="tool-head">
@@ -61,6 +62,13 @@ watch(visible, async (value) => {
 .tools-body {
   position: relative;
   min-height: 160px;
+}
+
+.tools-loading-tip {
+  padding: 8px 0;
+  font-size: var(--desk-font-xs);
+  color: var(--desk-text-tertiary);
+  line-height: 1.5;
 }
 
 .tool-item {

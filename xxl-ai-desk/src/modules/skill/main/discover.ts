@@ -106,7 +106,7 @@ function parseSourceId(id: string): { source: string; skillId: string } {
 
 /*
  * 安装在线技能：已安装直接返回；否则从 GitHub 下载并登记。
- * 安装后默认启用，缓存失效由调用方统一触发。
+ * 安装后写入技能库，需在 Agent 中勾选后参与对话；缓存失效由调用方统一触发。
  */
 export async function installDiscoveredSkill(id: string): Promise<SkillDTO> {
   const sourceId = id.trim()

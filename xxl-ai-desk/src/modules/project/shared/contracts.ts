@@ -10,6 +10,8 @@ export interface ProjectDTO {
   name: string
   /* 绑定的本地磁盘目录绝对路径 */
   path: string
+  /* 是否启用项目长期记忆 */
+  memoryEnabled: boolean
   /* 创建时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

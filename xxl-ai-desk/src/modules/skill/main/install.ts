@@ -251,7 +251,7 @@ export async function installFromGithub(input: InstallFromGithubInput): Promise<
   /* copy=true：保留缓存中的完整仓库，30 分钟内重新扫描仍能看到全部技能 */
   const item = await commitSkillRoot(skillDir, true)
   const saved = registerSkill(item, input.origin, sourceId)
-  /* 新技能默认启用：清空运行时缓存，下一轮对话即可使用 */
+  /* 新技能写库后清空运行时缓存；需在 Agent 中勾选后参与对话 */
   resetAgents()
   return saved
 }

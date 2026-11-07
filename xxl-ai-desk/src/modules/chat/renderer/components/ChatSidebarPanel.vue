@@ -106,7 +106,7 @@ async function onSelect(id: string): Promise<void> {
 <template>
   <SidebarHeader title-key="chat.title" />
 
-  <!-- 新建对话：与插件/设置子菜单项使用同一列表行 -->
+  <!-- 新建对话：与扩展中心/设置子菜单项使用同一列表行 -->
   <div class="new-chat">
     <SidebarRow @click="onNew">
       <template #icon>

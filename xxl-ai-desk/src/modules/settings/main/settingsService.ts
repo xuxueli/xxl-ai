@@ -1,13 +1,10 @@
 /*
- * 应用设置服务：以 key-value 持久化外观、主题预设、语言、默认模型、系统指令等配置。
+ * 应用设置服务：以 key-value 持久化外观、主题预设、语言、默认模型等配置。
  *   - 读取时逐项回退默认值；保存为部分更新（upsert）。
  */
 
 import { getDb } from '@common/main/db'
 import { settingTable } from '@modules/settings/main/schema'
-import {
-  AGENT_INSTRUCTION_MAX_CHARS
-} from '@modules/agent/shared'
 import {
   APPEARANCES,
   THEME_PRESETS,
@@ -15,7 +12,6 @@ import {
 } from '@modules/settings/shared/contracts'
 import { DEFAULT_APP_SETTINGS } from '@modules/settings/shared/defaults'
 import { DEFAULT_SHORTCUTS } from '@common/shared/contracts/quickAction'
-import { translate } from '@common/shared/i18n'
 
 /* 外观取值集合（用于配置合法性校验） */
 const APPEARANCE_VALUES = new Set<string>(APPEARANCES)
@@ -54,7 +50,14 @@ function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
   try {
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const merged = { ...DEFAULT_SHORTCUTS, ...parsed }
+      /* 只接受当前快捷操作清单内的键，避免已移除动作（如扩展中心）的旧绑定残留 */
+      const allowed = new Set(Object.keys(DEFAULT_SHORTCUTS))
+      const merged: AppSettings['shortcuts'] = { ...DEFAULT_SHORTCUTS }
+      for (const [action, binding] of Object.entries(parsed)) {
+        if (allowed.has(action) && typeof binding === 'string' && binding) {
+          merged[action as keyof AppSettings['shortcuts']] = binding
+        }
+      }
       /* 统一附加 Shift：避开 Cmd/Ctrl+A、Cmd/Ctrl+F、Cmd/Ctrl+S 等系统默认快捷键 */
       for (const action of Object.keys(merged) as (keyof AppSettings['shortcuts'])[]) {
         const binding = merged[action]
@@ -98,7 +101,6 @@ export function getSettings(): AppSettings {
     language,
     providerId: map.get('providerId') || DEFAULT_APP_SETTINGS.providerId,
     modelId: map.get('modelId') || DEFAULT_APP_SETTINGS.modelId,
-    systemPrompt: map.get('systemPrompt') ?? translate(language, 'agent.presets.general.prompt'),
     appName: map.get('appName') ?? DEFAULT_APP_SETTINGS.appName,
     slogan: map.get('slogan') ?? DEFAULT_APP_SETTINGS.slogan,
     shortcuts: parseShortcuts(map.get('shortcuts')),
@@ -106,12 +108,6 @@ export function getSettings(): AppSettings {
     runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULT_APP_SETTINGS.runtimeNodePath,
     runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULT_APP_SETTINGS.runtimePythonPath,
     updateAutoCheck: readBoolean(map, 'updateAutoCheck'),
-    builtinToolBrowserEnabled: readBoolean(map, 'builtinToolBrowserEnabled'),
-    builtinToolFsEnabled: readBoolean(map, 'builtinToolFsEnabled'),
-    builtinToolShellEnabled: readBoolean(map, 'builtinToolShellEnabled'),
-    builtinToolGeneralEnabled: readBoolean(map, 'builtinToolGeneralEnabled'),
-    builtinToolInteractionEnabled: readBoolean(map, 'builtinToolInteractionEnabled'),
-    agentMemoryEnabled: readBoolean(map, 'agentMemoryEnabled'),
     developerMode: readBoolean(map, 'developerMode')
   }
 }
@@ -123,10 +119,7 @@ export function saveSettings(patch: Partial<AppSettings>): AppSettings {
     if (value === undefined || value === null) {
       continue
     }
-    /* Agent 指令固定上限：主进程兜底截断，避免超长提示词进入上下文 */
-    const normalized =
-      key === 'systemPrompt' ? String(value).slice(0, AGENT_INSTRUCTION_MAX_CHARS) : value
-    const text = typeof normalized === 'object' ? JSON.stringify(normalized) : String(normalized)
+    const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
     db.insert(settingTable)
       .values({ key, value: text })
       .onConflictDoUpdate({ target: settingTable.key, set: { value: text } })

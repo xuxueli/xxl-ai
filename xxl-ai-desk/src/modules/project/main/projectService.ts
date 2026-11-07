@@ -18,6 +18,7 @@ function toDTO(row: ProjectRow): ProjectDTO {
     id: row.id,
     name: row.name,
     path: row.path,
+    memoryEnabled: row.memoryEnabled === 1,
     addTime: row.addTime,
     updateTime: row.updateTime
   }
@@ -51,6 +52,7 @@ export function createProject(input: ProjectCreateInput): ProjectDTO {
     id: randomUUID(),
     name: (input.name ?? '').trim() || basename(path) || path,
     path,
+    memoryEnabled: 0,
     addTime: now,
     updateTime: now
   }
@@ -77,4 +79,20 @@ export function renameProject(id: string, name: string): ProjectDTO {
 /* 删除项目：仅删除项目记录；会话 / 消息 / 记忆 / 终端由项目 IPC 编排各域 service 清理 */
 export function deleteProject(id: string): void {
   getDb().delete(projectTable).where(eq(projectTable.id, id)).run()
+}
+
+/* 切换项目记忆开关（内容保留；运行时由 IPC 层清理） */
+export function setProjectMemoryEnabled(id: string, enabled: boolean): ProjectDTO {
+  const db = getDb()
+  const existing = db.select().from(projectTable).where(eq(projectTable.id, id)).get()
+  if (!existing) {
+    throw new Error('项目不存在')
+  }
+  const record = {
+    ...existing,
+    memoryEnabled: enabled ? 1 : 0,
+    updateTime: new Date().toISOString()
+  }
+  db.update(projectTable).set(record).where(eq(projectTable.id, id)).run()
+  return toDTO(record)
 }

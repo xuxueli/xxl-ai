@@ -5,6 +5,7 @@
 
 import { initDatabase } from '@common/main/db'
 import { AGENT_DDL } from '@modules/agent/main/ddl'
+import { seedDefaultAgent } from '@modules/agent/main/seed'
 import { CHAT_DDL } from '@modules/chat/main/ddl'
 import { DIAGNOSTICS_DDL } from '@modules/diagnostics/main/ddl'
 import { MCP_DDL } from '@modules/mcp/main/ddl'
@@ -19,5 +20,5 @@ const DDL = [PROVIDER_DDL, PROJECT_DDL, CHAT_DDL, SETTINGS_DDL, MCP_DDL, SKILL_D
 
 /* 初始化本地数据库（应用就绪后调用） */
 export function initDatabaseFromModules(): void {
-  initDatabase(DDL, [seedMcpServers])
+  initDatabase(DDL, [seedMcpServers, seedDefaultAgent])
 }

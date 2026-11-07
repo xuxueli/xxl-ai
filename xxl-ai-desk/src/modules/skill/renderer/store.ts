@@ -26,9 +26,6 @@ export const useSkillStore = defineStore('skill', () => {
   /* 导入状态（目录 / Zip 共用一个防重复标记） */
   const importing = ref(false)
 
-  /* 已启用数量 */
-  const enabledCount = computed(() => skills.value.filter((item) => item.enabled).length)
-
   /* 过滤后的技能列表 */
   const visibleSkills = computed(() => {
     const key = keyword.value.trim().toLowerCase()
@@ -110,13 +107,6 @@ export const useSkillStore = defineStore('skill', () => {
     } finally {
       importing.value = false
     }
-  }
-
-  /* 启用 / 停用：回读列表保持「启用优先」排序 */
-  async function setEnabled(id: string, enabled: boolean): Promise<SkillDTO> {
-    const saved = await api.skill.setEnabled(id, enabled)
-    await loadSkills()
-    return saved
   }
 
   /* 删除技能 */
@@ -268,7 +258,6 @@ export const useSkillStore = defineStore('skill', () => {
     loaded,
     keyword,
     importing,
-    enabledCount,
     visibleSkills,
     discovering,
     discoverError,
@@ -287,7 +276,6 @@ export const useSkillStore = defineStore('skill', () => {
     refresh,
     importDirectory,
     importZip,
-    setEnabled,
     remove,
     reveal,
     detail,

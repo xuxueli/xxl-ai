@@ -11,7 +11,6 @@ export interface SkillApi {
   content(id: string, offset: number): Promise<SkillContentChunk>
   importDirectory(): Promise<SkillImportResult | null>
   importZip(): Promise<SkillImportResult | null>
-  setEnabled(id: string, enabled: boolean): Promise<SkillDTO>
   remove(id: string): Promise<void>
   reveal(id: string): Promise<void>
   refresh(): Promise<SkillDTO[]>

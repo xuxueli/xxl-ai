@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
   id            TEXT PRIMARY KEY,
   title         TEXT NOT NULL DEFAULT '',
   project_id    TEXT NOT NULL DEFAULT '',
+  agent_id      TEXT NOT NULL DEFAULT '',
   provider_id   TEXT NOT NULL DEFAULT '',
   model_id      TEXT NOT NULL DEFAULT '',
   mode          TEXT NOT NULL DEFAULT 'build',
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
   update_time   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS i_desk_session_project ON desk_session (project_id);
+CREATE INDEX IF NOT EXISTS i_desk_session_agent ON desk_session (agent_id);
 CREATE TABLE IF NOT EXISTS desk_message (
   id         TEXT PRIMARY KEY,
   session_id TEXT NOT NULL,

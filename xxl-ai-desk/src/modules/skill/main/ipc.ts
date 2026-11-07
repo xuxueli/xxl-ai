@@ -1,5 +1,5 @@
 /*
- * SKILL 域 IPC 注册：导入 / 启停 / 删除 / 发现安装。
+ * SKILL 域 IPC 注册：导入 / 删除 / 发现安装。
  * @author xuxueli 2026-11-07
  */
 
@@ -14,8 +14,7 @@ import {
   importSkillsFromDirectory,
   importSkillsFromZip,
   listSkills,
-  refreshSkills,
-  setSkillEnabled
+  refreshSkills
 } from './service'
 import { discoverSkillDetail, discoverSkills, installDiscoveredSkill } from './discover'
 import { cancelGithubSkills, inspectGithubSkills, installGithubSkill } from './github'
@@ -43,9 +42,6 @@ export function registerSkillIpc(ipc: IpcContext): void {
       ? null
       : importSkillsFromZip(result.filePaths[0])
   })
-  ipc.handle(SKILL_IPC.setEnabled, (_event, id: string, enabled: boolean) =>
-    setSkillEnabled(id, enabled)
-  )
   ipc.handle(SKILL_IPC.remove, (_event, id: string) => deleteSkill(id))
   ipc.handle(SKILL_IPC.reveal, (_event, id: string) => {
     shell.showItemInFolder(getSkillRevealPath(id))

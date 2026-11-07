@@ -7,6 +7,7 @@
 import type { ChatMode } from '@modules/chat/shared'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
+import type { AgentToolSwitches } from './contracts'
 import type { BrowserAction, BrowserActionResult } from '@modules/browser/shared'
 import type { InteractionRequest, InteractionResult } from '@modules/chat/shared'
 import type { LlmTraceInput } from '@modules/diagnostics/shared'
@@ -42,19 +43,8 @@ export type HostEvent =
 /* 越界访问动作类型（文案区分用）：command 表示 shell 命令访问目录外路径 */
 export type PathAction = 'read' | 'write' | 'command'
 
-/* 内置工具分类开关：主进程按设置组装，运行时据 domain 决定装配哪些工具 */
-export interface BuiltinToolSwitches {
-  /* 文件类工具 */
-  fs: boolean
-  /* 终端类工具 */
-  shell: boolean
-  /* 浏览器类工具 */
-  browser: boolean
-  /* 通用工具 */
-  general: boolean
-  /* 人机交互工具 */
-  interaction: boolean
-}
+/* 内置工具分类开关：主进程按 Agent 配置组装，运行时据 domain 决定装配哪些工具 */
+export type BuiltinToolSwitches = AgentToolSwitches
 
 /* 一次对话运行入参 */
 export interface RunAgentInput {
@@ -74,8 +64,10 @@ export interface RunAgentInput {
   mode: ChatMode
   /* 项目根目录（文件沙箱根） */
   rootDir: string
-  /* 运行时 PATH（含设置的 Node / Python 环境，供 run_command 与 MCP stdio 使用） */
+  /* 运行时 PATH（含设置的 Node / Python 环境，供 run_command 使用） */
   runtimePath: string
+  /* MCP stdio 专用 PATH：优先系统 Node，避免 Electron-as-Node 子进程产生 Dock 图标 */
+  mcpRuntimePath: string
   /* 已生效的 MCP 服务配置（未开启的不下发） */
   mcpServers: McpRuntimeConfig[]
   /* 已启用的技能清单（只下发索引，正文由 read_skill 按需读取） */

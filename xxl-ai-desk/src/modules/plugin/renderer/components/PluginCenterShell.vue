@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 插件中心外壳：统一顶部 TAB / 说明区与可滚动正文，供 MCP / SKILL / 内置工具三个子页复用。
+ * 扩展中心外壳：统一顶部 TAB / 说明区与可滚动正文，供 MCP / SKILL / 内置工具 / Agent 子页复用。
  * @author xuxueli 2026-10-25
  */
 import { t } from '@renderer/shell/i18n'

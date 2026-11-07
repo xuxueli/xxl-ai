@@ -26,10 +26,15 @@ export function loadPiMcp(): Promise<PiMcpModule> {
 const CONNECT_TIMEOUT = 30000
 
 /*
- * 对话装配期握手超时：首次 npx / uvx 需现场安装依赖（实测可达 1 分钟），
- * 装配已移出首字关键路径（见 session.ts 预算），故放宽以允许冷安装一次完成。
+ * 首次运行握手超时：npx / uvx 首次会下载并安装依赖（uvx 实测可达数分钟），
+ * 装配已移出首字关键路径（见 session.ts 预算），放宽以允许冷安装一次完成。
  */
-export const ASSEMBLY_CONNECT_TIMEOUT = 120000
+export const ASSEMBLY_CONNECT_TIMEOUT = 300000
+
+/* 按传输类型取握手超时：本地 stdio 首次安装依赖较慢，远程保持较短超时 */
+function connectTimeoutFor(server: McpRuntimeConfig): number {
+  return server.transport === 'stdio' ? ASSEMBLY_CONNECT_TIMEOUT : CONNECT_TIMEOUT
+}
 
 /* 连接失败冷却：同一配置在冷却期内直接快速失败，避免每个新会话重复等待超时 */
 const FAILURE_COOLDOWN = 5 * 60 * 1000
@@ -147,6 +152,10 @@ function describeConnectError(error: Error, stderr: string, server: McpRuntimeCo
     parts.push(base)
   }
   if (stderr) {
+    /* 首次安装依赖的提示：避免用户把正常下载误判为服务故障 */
+    if (/Downloading|Installing|Resolving|Building/i.test(stderr)) {
+      parts.push('该 MCP 依赖首次安装耗时较长，请等待安装完成后重试')
+    }
     parts.push(`服务输出：${stderr}`)
   }
   return parts.join('；')
@@ -286,7 +295,7 @@ export async function callMcpTool(
   args: Record<string, unknown>,
   signal?: AbortSignal
 ): Promise<CallToolResult> {
-  const { client } = await getMcpConnection(server)
+  const { client } = await getMcpConnection(server, connectTimeoutFor(server))
   return client.callTool(toolName, args, {
     timeoutMs: CALL_TIMEOUT,
     signal
@@ -302,7 +311,7 @@ export async function testMcpServer(
   const start = Date.now()
   let client: McpClient | null = null
   try {
-    client = await connect(server, CONNECT_TIMEOUT)
+    client = await connect(server, connectTimeoutFor(server))
     const tools = await listTools(client)
     const elapsedMs = Date.now() - start
     return {
@@ -341,6 +350,6 @@ export async function testMcpServer(
 
 /* 列举已连接服务的工具（复用缓存） */
 export async function listServerTools(server: McpRuntimeConfig): Promise<McpToolMeta[]> {
-  const { tools } = await getMcpConnection(server)
+  const { tools } = await getMcpConnection(server, connectTimeoutFor(server))
   return tools.map(toToolMeta)
 }

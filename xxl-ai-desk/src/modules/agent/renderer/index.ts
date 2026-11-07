@@ -4,3 +4,6 @@
  */
 
 export { useAgentStore } from './store'
+export { default as AgentAvatar } from './components/AgentAvatar.vue'
+export { default as AgentEditDrawer } from './components/AgentEditDrawer.vue'
+export { default as ProjectMemoryDialog } from './components/ProjectMemoryDialog.vue'

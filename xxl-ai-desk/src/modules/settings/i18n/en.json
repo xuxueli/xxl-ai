@@ -32,8 +32,6 @@
     "namePlaceholder": "App name shown at the top-left corner",
     "slogan": "Slogan",
     "sloganPlaceholder": "Welcome text on the empty state, e.g. What can I help you with?",
-    "systemPrompt": "System prompt",
-    "systemPromptPlaceholder": "Define the agent's role and behavior",
     "providers": "Model providers",
     "providerListTitle": "Provider list",
     "providerName": "Name",
@@ -99,6 +97,7 @@
     "docs": "Documentation",
     "headersExample": "Example: ",
     "languageZh": "中文",
-    "languageEn": "English"
+    "languageEn": "English",
+    "projects": "Projects"
   }
 }

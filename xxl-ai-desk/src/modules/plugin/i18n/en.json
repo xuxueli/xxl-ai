@@ -1,6 +1,6 @@
 {
   "plugin": {
-    "title": "Plugin Center",
+    "title": "Extension Center",
     "mcp": "MCP Tools",
     "skill": "SKILL Skills",
     "builtin": "Built-in Tools",
@@ -12,7 +12,6 @@
       "editTitle": "Edit MCP",
       "new": "New MCP",
       "filterPlaceholder": "Filter by name / URL / command",
-      "enabledCount": "{0} enabled",
       "name": "Name",
       "type": "Type",
       "typeRemote": "Remote",
@@ -31,8 +30,6 @@
       "cwdPlaceholder": "Leave empty to use the project directory",
       "remark": "Note",
       "remarkPlaceholder": "Optional: describe this MCP server",
-      "enabled": "Enabled",
-      "enabledTip": "Takes part in chat once enabled (next turn)",
       "importJson": "Import from JSON",
       "jsonPlaceholder": "Paste an mcpServers config snippet",
       "jsonApply": "Parse and fill",
@@ -43,11 +40,7 @@
       "nameRequired": "Please enter a name",
       "urlRequired": "Please enter the server URL",
       "commandRequired": "Please enter the startup command",
-      "saved": "Saved. Takes effect for subsequent turns once enabled.",
-      "savedEnabled": "Saved and enabled",
-      "enableConfirm": "This server has not been verified. Enable anyway?",
-      "enabledOn": "Enabled for subsequent turns",
-      "enabledOff": "Disabled",
+      "saved": "Saved. Select it in an Agent to use it.",
       "delete": "Delete MCP",
       "deleteConfirm": "Delete MCP \"{0}\"?",
       "access": "Access",
@@ -85,7 +78,8 @@
       "sortName": "Name",
       "stars": "Stars",
       "remoteServer": "Remote",
-      "copyFail": "Copy failed"
+      "copyFail": "Copy failed",
+      "toolsLoadingTip": "Connecting to the MCP server. The first local run may need to install dependencies and can take several minutes."
     },
     "skillCenter": {
       "tabManage": "SKILL Management",
@@ -98,7 +92,6 @@
       "refresh": "Refresh",
       "refreshTip": "Rescan the skills folder in the data directory",
       "refreshed": "Refreshed",
-      "enabledCount": "{0} enabled",
       "name": "Name",
       "folderName": "Folder",
       "description": "Description",
@@ -108,9 +101,6 @@
       "sourceGithub": "GitHub",
       "sourceId": "Source ID",
       "installs": "Installs",
-      "enabled": "Enabled",
-      "enabledOn": "Enabled",
-      "enabledOff": "Disabled",
       "updateTime": "Updated",
       "detail": "Details",
       "folder": "Folder",
@@ -142,7 +132,7 @@
       "install": "Install",
       "installed": "Installed",
       "notInstallable": "This source cannot be installed yet (GitHub only)",
-      "installSuccess": "Installed and enabled \"{0}\"",
+      "installSuccess": "Installed \"{0}\". Select it in an Agent to use it.",
       "installFromGithub": "Install from GitHub",
       "githubDialogTitle": "Install skill from GitHub",
       "githubUrlPlaceholder": "GitHub repository or skill URL",
@@ -158,9 +148,7 @@
       "loadedCount": "Loaded {0} / {1}"
     },
     "builtinTool": {
-      "intro": "This page displays the built-in tools currently available and their capabilities. Each category can be enabled or disabled as needed, with changes taking effect on the next chat turn.",
-      "enabledOn": "Enabled for subsequent turns",
-      "enabledOff": "Disabled for subsequent turns",
+      "intro": "This page lists built-in client tools. Whether a tool is enabled is configured per Agent.",
       "tool": "Tool",
       "identifier": "ID",
       "permission": "Access",
@@ -178,11 +166,11 @@
         "interaction": "Human interaction"
       },
       "categoryDesc": {
-        "fs": "Read, search, edit, delete and move files inside the project directory. Writes require Build mode; out-of-scope access needs approval. When disabled, the model no longer receives file tools.",
-        "shell": "Run shell commands inside the project directory. Dangerous commands are blocked; Build mode only. When disabled, the model can no longer run commands.",
-        "browser": "Open pages, read content and structure, click and fill forms, take screenshots and run diagnostics. When disabled, the model no longer receives browser tools.",
-        "general": "General, side-effect-free capabilities such as the current time.",
-        "interaction": "The Agent asks the user to pick among candidate options during a task. When disabled, the model asks directly in chat."
+        "fs": "Read, search, edit, delete and move files inside the project; writes are only available in Build mode and out-of-root access requires approval.",
+        "shell": "Run shell commands inside the project; dangerous commands are blocked and only available in Build mode.",
+        "browser": "Open pages, read content and structure, click and fill forms, take screenshots and inspect errors.",
+        "general": "General side-effect-free capabilities such as reading the current time.",
+        "interaction": "Let the user decide between candidate options during a task."
       },
       "desc": {
         "readFile": "Read a text file by line range inside the project directory",
@@ -210,6 +198,7 @@
         "time": "Get the current local date and time, with an optional IANA timezone",
         "askUser": "Let the user pick among 2-20 candidate options, with single or multiple selection and an \"Other\" free-form entry"
       }
-    }
+    },
+    "agent": "Agent"
   }
 }

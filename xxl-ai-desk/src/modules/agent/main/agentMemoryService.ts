@@ -224,16 +224,14 @@ function evictProjectAgents(projectId: string): void {
  */
 export async function maybeGenerateAgentMemory(sessionId: string): Promise<void> {
   const settings = getSettings()
-  if (!settings.agentMemoryEnabled) {
-    return
-  }
   const session = getSession(sessionId)
   /* 记忆归属项目：未归属项目的会话不生成 */
   if (!session || !session.projectId) {
     return
   }
   const project = getProject(session.projectId)
-  if (!project || generatingProjects.has(project.id)) {
+  /* 记忆开关按项目配置：关闭时不生成 */
+  if (!project || !project.memoryEnabled || generatingProjects.has(project.id)) {
     return
   }
   const memory = getDb()

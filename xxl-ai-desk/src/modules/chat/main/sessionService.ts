@@ -9,6 +9,7 @@ import { getDb } from '@common/main/db'
 import { messageTable, sessionTable } from '@modules/chat/main/schema'
 import { disposeTerminalsBySession } from '@modules/terminal/main'
 import { getProject } from '@modules/project/main'
+import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import type { SessionDTO, StoredMessage } from '@modules/chat/shared'
 
@@ -21,6 +22,7 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     id: row.id,
     title: row.title,
     projectId: row.projectId,
+    agentId: row.agentId,
     providerId: row.providerId,
     modelId: row.modelId,
     mode: row.mode === 'plan' ? 'plan' : 'build',
@@ -61,16 +63,30 @@ function assertProject(projectId: string): void {
   }
 }
 
+/* 校验 Agent：新建会话必须显式绑定一个已存在的 Agent */
+function assertAgent(agentId: string): string {
+  if (!agentId) {
+    throw new Error('请选择 Agent 后再创建会话')
+  }
+  const agent = getAgentById(agentId)
+  if (!agent) {
+    throw new Error('Agent 不存在，请重新选择')
+  }
+  return agent.id
+}
+
 /* 创建会话 */
 export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
   const db = getDb()
   const projectId = input.projectId || ''
   assertProject(projectId)
+  const agentId = assertAgent(input.agentId || '')
   const now = new Date().toISOString()
   const record = {
     id: input.id || randomUUID(),
     title: input.title || NEW_CHAT_TITLE,
     projectId,
+    agentId,
     providerId: input.providerId || '',
     modelId: input.modelId || '',
     mode: input.mode === 'plan' ? 'plan' : 'build',
@@ -81,21 +97,16 @@ export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
   return toSessionDTO(record)
 }
 
-/* 更新会话（标题/模型等） */
+/* 更新会话（标题/模型/模式等；项目与 Agent 绑定创建后不可修改） */
 export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDTO {
   const db = getDb()
   const existing = db.select().from(sessionTable).where(eq(sessionTable.id, id)).get()
   if (!existing) {
     throw new Error('会话不存在')
   }
-  /* 重新绑定项目时必须指向有效项目；缺省保持原项目不变 */
-  if (patch.projectId !== undefined) {
-    assertProject(patch.projectId)
-  }
   const record = {
     ...existing,
     title: patch.title ?? existing.title,
-    projectId: patch.projectId ?? existing.projectId,
     providerId: patch.providerId ?? existing.providerId,
     modelId: patch.modelId ?? existing.modelId,
     mode: patch.mode ?? existing.mode,
@@ -133,6 +144,31 @@ export function listSessionIdsByProject(projectId: string): string[] {
     .where(eq(sessionTable.projectId, projectId))
     .all()
     .map((row) => row.id)
+}
+
+/* Agent 下的会话 ID 集合（Agent 修改后清理运行时 / 删除前校验占用） */
+export function listSessionIdsByAgent(agentId: string): string[] {
+  if (!agentId) {
+    return []
+  }
+  return getDb()
+    .select({ id: sessionTable.id })
+    .from(sessionTable)
+    .where(eq(sessionTable.agentId, agentId))
+    .all()
+    .map((row) => row.id)
+}
+
+/* Agent 绑定会话数 */
+export function countSessionsByAgent(agentId: string): number {
+  if (!agentId) {
+    return 0
+  }
+  return getDb()
+    .select({ value: count() })
+    .from(sessionTable)
+    .where(eq(sessionTable.agentId, agentId))
+    .get()?.value ?? 0
 }
 
 /* 项目内晚于游标的消息：按会话分组，供 Agent 记忆生成 */

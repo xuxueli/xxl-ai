@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 左侧常驻导航图标栏：首页 / Agent / 插件 / 底部系统设置，切换一级板块
+ * 左侧常驻导航图标栏：首页 / 扩展中心 / 底部系统设置，切换一级板块
  * @author xuxueli 2026-10-18
  */
 import { computed } from 'vue'
@@ -25,7 +25,6 @@ interface RailEntry {
 const RAIL_GROUPS: RailEntry[][] = [
   [
     { key: 'home', labelKey: 'chat.title' },
-    { key: 'agent', labelKey: 'agent.title' },
     { key: 'plugin', labelKey: 'plugin.title' }
   ],
   [{ key: 'settings', labelKey: 'settings.title' }]

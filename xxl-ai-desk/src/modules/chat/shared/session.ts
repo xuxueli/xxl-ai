@@ -5,7 +5,7 @@
 /* 对话模式：plan 只读只规划；build 全量读写（默认） */
 export type ChatMode = 'plan' | 'build'
 
-/* 会话（归属某项目） */
+/* 会话（归属某项目，并绑定一个 Agent） */
 export interface SessionDTO {
   /* 主键 */
   id: string
@@ -13,6 +13,8 @@ export interface SessionDTO {
   title: string
   /* 归属项目主键 */
   projectId: string
+  /* 绑定的 Agent 主键（创建后不可修改） */
+  agentId: string
   /* 绑定的供应商主键 */
   providerId: string
   /* 选用的模型 ID */

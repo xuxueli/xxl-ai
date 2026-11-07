@@ -4,7 +4,7 @@
  *   - 连接、协议、工具列举由 runtimeHost → 运行时进程（pi-mcp）完成。
  */
 
-import { buildRuntimePath } from '@modules/app/main'
+import { buildMcpRuntimePath } from '@modules/app/main'
 import { buildRuntimeConfig, getMcp, saveMcpHealth } from '@modules/mcp/main'
 import { listMcpToolsByRuntime, testMcpByRuntime } from '@modules/agent/main'
 import type { McpDTO, McpHealth, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
@@ -12,7 +12,7 @@ import type { McpDTO, McpHealth, McpTestResult, McpToolMeta } from '@modules/mcp
 /* 连通测试：支持未保存草稿；已保存记录回写检测结果 */
 export async function testMcp(input: Partial<McpDTO>): Promise<McpTestResult> {
   const config = buildRuntimeConfig(input)
-  const result = await testMcpByRuntime(config, buildRuntimePath())
+  const result = await testMcpByRuntime(config, buildMcpRuntimePath())
 
   /* 仅已保存记录回写 health（草稿没有存储实体） */
   if (input.id) {
@@ -34,5 +34,5 @@ export async function listMcpTools(id: string): Promise<McpToolMeta[]> {
   if (!dto) {
     throw new Error('MCP 服务不存在')
   }
-  return listMcpToolsByRuntime(buildRuntimeConfig(dto), buildRuntimePath())
+  return listMcpToolsByRuntime(buildRuntimeConfig(dto), buildMcpRuntimePath())
 }

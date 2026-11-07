@@ -1,5 +1,6 @@
 /*
- * Agent 域跨进程契约：Agent 记忆（按项目维度保存，一个项目一条）。
+ * Agent 域跨进程契约：Agent 配置、预设标识与项目记忆（按项目维度保存，一个项目一条）。
+ * @author xuxueli 2026-11-07
  */
 
 import { HISTORY_MAX_MESSAGES } from '@modules/chat/shared'
@@ -10,11 +11,92 @@ export const AGENT_MEMORY_MAX_CHARS = 2000
 /* Agent 指令长度上限（字符） */
 export const AGENT_INSTRUCTION_MAX_CHARS = 2000
 
+/* Agent 名称 / 描述长度上限（字符） */
+export const AGENT_NAME_MAX_CHARS = 40
+export const AGENT_DESCRIPTION_MAX_CHARS = 200
+
+/* 默认内置 Agent 主键（旧会话缺省绑定与种子共用） */
+export const DEFAULT_AGENT_ID = 'default-agent'
+
+/* 默认 Agent 标识预设 id */
+export const DEFAULT_AGENT_AVATAR = 'assistant'
+
+/* 新 Agent 默认内置工具开关：文件 / 终端 / 浏览器开启，通用与人机交互按需开启 */
+export const DEFAULT_AGENT_TOOLS: AgentToolSwitches = {
+  fs: true,
+  shell: true,
+  browser: true,
+  general: false,
+  interaction: false
+}
+
 /*
  * 记忆生成触发阈值：项目内自上次生成后积压的消息数达到该值即压缩。
  * 与上下文历史窗口保持一致：积压超过窗口，意味着最早的内容即将被挤出上下文。
  */
 export const AGENT_MEMORY_MESSAGE_LIMIT = HISTORY_MAX_MESSAGES
+
+/* Agent 内置工具分类开关 */
+export interface AgentToolSwitches {
+  /* 文件类工具 */
+  fs: boolean
+  /* 终端类工具 */
+  shell: boolean
+  /* 浏览器类工具 */
+  browser: boolean
+  /* 通用工具 */
+  general: boolean
+  /* 人机交互工具 */
+  interaction: boolean
+}
+
+/* Agent 配置 */
+export interface AgentDTO {
+  /* 主键 */
+  id: string
+  /* 名称 */
+  name: string
+  /* 描述 */
+  description: string
+  /* 预设标识 id（图标 + 颜色） */
+  avatar: string
+  /* 系统指令 */
+  systemPrompt: string
+  /* 选用的技能 id 列表 */
+  skillIds: string[]
+  /* 选用的 MCP 服务 id 列表 */
+  mcpIds: string[]
+  /* 内置工具分类开关 */
+  tools: AgentToolSwitches
+  /* 是否默认内置 Agent（禁止删除） */
+  builtin: boolean
+  /* 绑定该 Agent 的会话数（列表展示用，可选） */
+  sessionCount: number
+  /* 创建时间（ISO） */
+  addTime: string
+  /* 更新时间（ISO） */
+  updateTime: string
+}
+
+/* 保存 Agent 入参：缺省字段沿用已存记录 */
+export interface AgentSaveInput {
+  /* 主键（空表示新建） */
+  id?: string
+  /* 名称 */
+  name?: string
+  /* 描述 */
+  description?: string
+  /* 预设标识 id */
+  avatar?: string
+  /* 系统指令 */
+  systemPrompt?: string
+  /* 技能 id 列表 */
+  skillIds?: string[]
+  /* MCP id 列表 */
+  mcpIds?: string[]
+  /* 内置工具分类开关 */
+  tools?: Partial<AgentToolSwitches>
+}
 
 /* 项目记忆：无记忆时 content / lastMessageTime / updateTime 为空串 */
 export interface AgentMemoryDTO {

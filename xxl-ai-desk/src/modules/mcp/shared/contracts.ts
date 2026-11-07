@@ -48,8 +48,6 @@ export interface McpDTO {
   config: string
   /* 备注 */
   remark: string
-  /* 是否生效（开启后才参与对话） */
-  enabled: boolean
   /* 最近检测结果 */
   health: McpHealth | null
   /* 新增时间（ISO） */

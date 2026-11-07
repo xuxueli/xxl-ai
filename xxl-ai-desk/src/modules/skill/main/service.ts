@@ -1,6 +1,6 @@
 /*
- * SKILL 业务服务：技能目录扫描对账、详情、启停、删除与运行时清单。
- *   - 目录内容为权威：列表以扫描 {数据目录}/skills 为准，本表只保存启停与来源等状态；
+ * SKILL 业务服务：技能目录扫描对账、详情、删除与运行时清单。
+ *   - 目录内容为权威：列表以扫描 {数据目录}/skills 为准，本表只保存来源等状态；
  *   - 唯一读写 desk_skill 的出口；文件解析与落位由 skillImportService 负责。
  */
 
@@ -40,7 +40,6 @@ function toDTO(row: SkillRow): SkillDTO {
     version: row.version,
     source: normalizeSource(row.source),
     sourceId: row.sourceId,
-    enabled: row.enabled === 1,
     addTime: row.addTime,
     updateTime: row.updateTime
   }
@@ -76,7 +75,7 @@ function scanSkillDirs(): string[] {
 
 /*
  * 技能列表：扫描目录 → 解析 SKILL.md → 与数据库对账。
- * 目录存在但 DB 无记录时自动补登（默认启用）；DB 有记录但目录已删除时清理。
+ * 目录存在但 DB 无记录时自动补登；DB 有记录但目录已删除时清理。
  */
 export function listSkills(): SkillDTO[] {
   const db = getDb()
@@ -104,12 +103,7 @@ export function listSkills(): SkillDTO[] {
   return [...rowMap.values()]
     .filter((row) => validIds.has(row.id))
     .map(toDTO)
-    .sort((a, b) => {
-      if (a.enabled !== b.enabled) {
-        return a.enabled ? -1 : 1
-      }
-      return NAME_COLLATOR.compare(a.name, b.name)
-    })
+    .sort((a, b) => NAME_COLLATOR.compare(a.name, b.name))
 }
 
 /* 同步单个技能元信息：解析失败返回 false；字段变化时才更新，避免 update_time 漂移 */
@@ -130,7 +124,6 @@ function syncSkillRow(id: string, rowMap: Map<string, SkillRow>, now: string): b
       version: meta.version,
       source: 'local',
       sourceId: '',
-      enabled: 1,
       addTime: now,
       updateTime: now
     }
@@ -172,7 +165,6 @@ export function registerSkill(
     version: item.version,
     source,
     sourceId,
-    enabled: existing?.enabled ?? 1,
     addTime: existing?.addTime ?? now,
     updateTime: now
   }
@@ -181,20 +173,6 @@ export function registerSkill(
     .onConflictDoUpdate({ target: skillTable.id, set: record })
     .run()
   return toDTO(record as SkillRow)
-}
-
-/* 切换启用状态 */
-export function setSkillEnabled(id: string, enabled: boolean): SkillDTO {
-  const db = getDb()
-  const existing = db.select().from(skillTable).where(eq(skillTable.id, id)).get()
-  if (!existing) {
-    throw new Error('技能不存在，请刷新列表')
-  }
-  const patch = { enabled: enabled ? 1 : 0, updateTime: new Date().toISOString() }
-  db.update(skillTable).set(patch).where(eq(skillTable.id, id)).run()
-  /* 启停后清空会话运行时，下一轮对话按新清单装配工具 */
-  resetAgents()
-  return toDTO({ ...existing, ...patch })
 }
 
 /* 删除技能：先删目录，再删记录（目录不存在也允许清理记录） */
@@ -228,12 +206,11 @@ export function getSkillContent(id: string, offset: number): SkillContentChunk {
   return readSkillContentChunk(getSkillDir(id), offset)
 }
 
-/* 已启用技能（对话下发用；目录缺失的自动跳过，避免每轮对话全量扫描） */
-export function listEnabledSkillsForRuntime(): SkillRuntimeConfig[] {
+/* 技能运行时清单（会话按 Agent 选中的 id 过滤；目录缺失的自动跳过） */
+export function listSkillsForRuntime(): SkillRuntimeConfig[] {
   return getDb()
     .select()
     .from(skillTable)
-    .where(eq(skillTable.enabled, 1))
     .all()
     .map((row) => ({
       id: row.id,

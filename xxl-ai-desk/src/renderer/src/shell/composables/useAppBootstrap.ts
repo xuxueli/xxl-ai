@@ -7,6 +7,7 @@ import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'
+import { useAgentStore } from '@modules/agent/renderer'
 import { useQuickAction } from '@renderer/shell/composables/useQuickAction'
 import { useSessionLifecycle } from '@renderer/shell/composables/useSessionLifecycle'
 import { matchShortcut } from '@common/renderer/utils/shortcut'
@@ -20,6 +21,7 @@ export function useAppBootstrap(): void {
   const provider = useProviderStore()
   const chat = useChatStore()
   const project = useProjectStore()
+  const agent = useAgentStore()
   const runQuickAction = useQuickAction()
   const sessionLifecycle = useSessionLifecycle()
 
@@ -51,6 +53,7 @@ export function useAppBootstrap(): void {
     await settings.load()
     await provider.load()
     await project.loadProjects()
+    await agent.loadAgents()
     await chat.loadSessions()
     /* 校准并开始监听会话生命周期：清理已删除会话遗留的工具面板 / 浏览器 / 对话 UI 持久化 */
     sessionLifecycle.start(chat.sessions.map((session) => session.id))

@@ -12,5 +12,7 @@ export const projectApi: ProjectApi = {
   create: (input) => ipcRenderer.invoke(PROJECT_IPC.create, input),
   rename: (id: string, name: string) => ipcRenderer.invoke(PROJECT_IPC.rename, id, name),
   remove: (id: string) => ipcRenderer.invoke(PROJECT_IPC.remove, id),
-  reveal: (id: string) => ipcRenderer.invoke(PROJECT_IPC.reveal, id)
+  reveal: (id: string) => ipcRenderer.invoke(PROJECT_IPC.reveal, id),
+  setMemoryEnabled: (id: string, enabled: boolean) =>
+    ipcRenderer.invoke(PROJECT_IPC.setMemoryEnabled, id, enabled)
 }

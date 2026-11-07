@@ -89,7 +89,6 @@ function toDTO(row: McpRow): McpDTO {
     cwd: row.cwd,
     config: row.config,
     remark: row.remark,
-    enabled: row.enabled === 1,
     health: parseHealth(row.health),
     addTime: row.addTime,
     updateTime: row.updateTime
@@ -199,7 +198,6 @@ function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<M
     cwd: type === 'local' ? cwd : '',
     config,
     remark: (input.remark ?? existing?.remark ?? '').trim(),
-    enabled: (input.enabled ?? existing?.enabled ?? false) ? 1 : 0,
     /* 本次测试结果或未变更配置的历史结果；配置已变更则清空，避免展示过期状态 */
     health: providedHealth || (unchangedConfig && existing?.health ? JSON.stringify(existing.health) : '')
   }
@@ -262,11 +260,9 @@ function toRuntimeConfig(dto: McpDTO): McpRuntimeConfig {
   }
 }
 
-/* 已生效的 MCP 服务（对话下发用，未开启的不返回） */
-export function listEnabledMcpServers(): McpRuntimeConfig[] {
-  return listMcps()
-    .filter((item) => item.enabled)
-    .map(toRuntimeConfig)
+/* MCP 运行时配置（会话运行时按 Agent 选中的 id 过滤） */
+export function listMcpRuntimeConfigs(): McpRuntimeConfig[] {
+  return listMcps().map(toRuntimeConfig)
 }
 
 /* 将运行时检测结果回写配置表（health 属配置元数据，由配置模块维护） */
@@ -301,7 +297,6 @@ export function buildRuntimeConfig(input: Partial<McpDTO>): McpRuntimeConfig {
       cwd: '',
       config: '',
       remark: '',
-      enabled: false,
       health: null,
       addTime: '',
       updateTime: ''

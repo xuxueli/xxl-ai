@@ -6,7 +6,7 @@
 import { dialog, shell } from 'electron'
 import type { IpcContext } from '@common/main/ipc'
 import { PROJECT_IPC } from '../shared/ipc'
-import { createProject, deleteProject, getProject, listProjects, renameProject } from './projectService'
+import { createProject, deleteProject, getProject, listProjects, renameProject, setProjectMemoryEnabled } from './projectService'
 import { abortChat, deleteSession, discardSessionRuns, listSessionIdsByProject } from '@modules/chat/main'
 import { evictAgent, clearSessionPermissions, removeAgentMemory } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
@@ -46,5 +46,11 @@ export function registerProjectIpc(ipc: IpcContext): void {
     if (project) {
       shell.showItemInFolder(project.path)
     }
+  })
+  ipc.handle(PROJECT_IPC.setMemoryEnabled, (_event, id: string, enabled: boolean) => {
+    const saved = setProjectMemoryEnabled(id, enabled)
+    /* 记忆注入状态变化：清理项目下会话运行时，下一轮重新装配系统提示 */
+    listSessionIdsByProject(id).forEach((sessionId) => evictAgent(sessionId))
+    return saved
   })
 }

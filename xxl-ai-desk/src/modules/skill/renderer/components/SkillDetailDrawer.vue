@@ -93,19 +93,6 @@ watch(
   }
 )
 
-/* 启停：同步更新抽屉与列表 */
-async function onToggle(value: boolean): Promise<void> {
-  if (!detail.value) {
-    return
-  }
-  try {
-    const saved = await skill.setEnabled(detail.value.id, value)
-    detail.value = { ...detail.value, enabled: saved.enabled }
-  } catch (error) {
-    ElMessage.error(ipcErrorMessage(error))
-  }
-}
-
 /* 在文件管理器中显示技能目录 */
 async function onReveal(): Promise<void> {
   if (!detail.value) {
@@ -141,11 +128,6 @@ async function onReveal(): Promise<void> {
               }}
             </el-tag>
             <span v-if="detail.version" class="meta-version">v{{ detail.version }}</span>
-            <el-switch
-              class="meta-switch"
-              :model-value="detail.enabled"
-              @update:model-value="(value: boolean) => onToggle(value)"
-            />
           </div>
           <div class="meta-row">
             <span class="meta-label">{{ t('plugin.skillCenter.detailFolder') }}</span>
@@ -227,10 +209,6 @@ async function onReveal(): Promise<void> {
 .meta-version {
   font-size: var(--desk-font-xs);
   color: var(--desk-text-tertiary);
-}
-
-.meta-switch {
-  margin-left: auto;
 }
 
 .meta-action {

@@ -19,8 +19,6 @@ export interface SkillDTO {
   source: SkillSource
   /* skills.sh 技能标识（source/skillId），本地为空 */
   sourceId: string
-  /* 是否启用（启用后参与对话） */
-  enabled: boolean
   /* 新增时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

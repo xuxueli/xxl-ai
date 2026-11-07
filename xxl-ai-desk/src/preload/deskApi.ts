@@ -4,7 +4,7 @@
  */
 
 import type { AppApi, ShellApi, UpdateApi } from '@modules/app/shared'
-import type { AgentMemoryApi } from '@modules/agent/shared'
+import type { AgentApi } from '@modules/agent/shared'
 import type { BrowserApi } from '@modules/browser/shared'
 import type { ChatApi, SessionApi } from '@modules/chat/shared'
 import type { DiagnosticsApi } from '@modules/diagnostics/shared'
@@ -21,7 +21,7 @@ export interface DeskApi {
   app: AppApi
   update: UpdateApi
   settings: SettingsApi
-  agentMemory: AgentMemoryApi
+  agent: AgentApi
   provider: ProviderApi
   project: ProjectApi
   git: GitApi

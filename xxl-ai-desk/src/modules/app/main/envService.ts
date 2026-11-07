@@ -163,6 +163,36 @@ export function buildRuntimePath(basePath: string = process.env.PATH ?? ''): str
   return joinUniqueDirs(runtimePathPrefix(), merged)
 }
 
+/*
+ * MCP stdio 专用 PATH：优先使用系统 Node，避免 npx 通过内置 Node shim
+ * 启动 Electron-as-Node 子进程（macOS 会为这些子进程显示额外的 Dock 图标）。
+ * 系统没有 Node 时回退内置 shim，保证 uvx 等其它命令仍可用。
+ */
+export function buildMcpRuntimePath(basePath: string = process.env.PATH ?? ''): string {
+  const settings = getSettings()
+  const dirs: string[] = []
+  const customNodePath = settings.runtimeNodePath.trim()
+  if (settings.runtimeNodeMode === 'custom' && customNodePath) {
+    dirs.push(dirname(customNodePath))
+  }
+  const login = loginShellPath()
+  if (login) {
+    dirs.push(...login.split(delimiter))
+  }
+  dirs.push(...commonBinDirs())
+  dirs.push(...basePath.split(delimiter))
+
+  /* 排除内置 shim 目录，优先让 npx 命中系统 Node */
+  const shimDir = getRuntimeBinDir()
+  const candidates = dirs.filter((dir) => Boolean(dir) && dir !== shimDir)
+  const nodeName = process.platform === 'win32' ? 'node.exe' : 'node'
+  const hasSystemNode = candidates.some((dir) => existsSync(join(dir, nodeName)))
+  if (!hasSystemNode) {
+    return buildRuntimePath(basePath)
+  }
+  return joinUniqueDirs(candidates, basePath)
+}
+
 /* 终端 shell 包装脚本目录（按设置的优先级重排 PATH） */
 export function getRuntimeShellDir(): string {
   return join(getDataDir(), 'runtime', 'shell')

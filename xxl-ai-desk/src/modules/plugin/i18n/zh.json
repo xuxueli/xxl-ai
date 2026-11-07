@@ -1,6 +1,6 @@
 {
   "plugin": {
-    "title": "插件中心",
+    "title": "扩展中心",
     "mcp": "MCP工具",
     "skill": "SKILL技能",
     "builtin": "内置工具",
@@ -12,7 +12,6 @@
       "editTitle": "编辑 MCP",
       "new": "新建 MCP",
       "filterPlaceholder": "按名称 / 地址 / 命令过滤",
-      "enabledCount": "已生效 {0} 个",
       "name": "名称",
       "type": "服务类型",
       "typeRemote": "远程",
@@ -31,8 +30,6 @@
       "cwdPlaceholder": "留空则使用项目目录",
       "remark": "备注",
       "remarkPlaceholder": "可选：说明该 MCP 的用途",
-      "enabled": "生效状态",
-      "enabledTip": "开启后参与对话（下一轮生效）",
       "importJson": "从 JSON 导入",
       "jsonPlaceholder": "粘贴 mcpServers 配置片段",
       "jsonApply": "解析并填充",
@@ -43,11 +40,7 @@
       "nameRequired": "请填写 MCP 名称",
       "urlRequired": "请填写服务地址",
       "commandRequired": "请填写启动命令",
-      "saved": "已保存，开启后对后续对话生效",
-      "savedEnabled": "已保存并生效",
-      "enableConfirm": "该服务尚未验证连通，仍要开启吗？",
-      "enabledOn": "已开启，后续对话生效",
-      "enabledOff": "已停用",
+      "saved": "已保存，请在 Agent 中勾选后使用",
       "delete": "删除 MCP",
       "deleteConfirm": "确定删除 MCP「{0}」吗？",
       "access": "接入方式",
@@ -85,7 +78,8 @@
       "sortName": "名称排序",
       "stars": "星标数",
       "remoteServer": "远程",
-      "copyFail": "复制失败"
+      "copyFail": "复制失败",
+      "toolsLoadingTip": "正在连接 MCP 服务；本地服务首次运行需要下载依赖，可能需要几分钟，请稍候…"
     },
     "skillCenter": {
       "tabManage": "SKILL 管理",
@@ -98,7 +92,6 @@
       "refresh": "刷新",
       "refreshTip": "重新扫描数据目录下的 skills",
       "refreshed": "已刷新",
-      "enabledCount": "已启用 {0} 个",
       "name": "名称",
       "folderName": "文件夹",
       "description": "描述",
@@ -108,9 +101,6 @@
       "sourceGithub": "GitHub",
       "sourceId": "来源标识",
       "installs": "安装量",
-      "enabled": "启用状态",
-      "enabledOn": "已启用",
-      "enabledOff": "已关闭",
       "updateTime": "更新时间",
       "detail": "详情",
       "folder": "目录",
@@ -142,7 +132,7 @@
       "install": "安装",
       "installed": "已安装",
       "notInstallable": "该来源暂不支持安装（仅支持 GitHub 仓库）",
-      "installSuccess": "已安装并启用「{0}」",
+      "installSuccess": "已安装「{0}」，请在 Agent 中勾选使用",
       "installFromGithub": "从 GitHub 安装",
       "githubDialogTitle": "从 GitHub 安装技能",
       "githubUrlPlaceholder": "GitHub 仓库地址或技能地址",
@@ -158,9 +148,7 @@
       "loadedCount": "已加载 {0} / {1}"
     },
     "builtinTool": {
-      "intro": "本页用于展示当前可用的内置工具及其能力说明。各分类均可按需启用或停用，相关变更将在下一轮对话中生效。",
-      "enabledOn": "已启用，下一轮对话生效",
-      "enabledOff": "已停用，下一轮对话生效",
+      "intro": "本页展示客户端内置工具能力目录；是否启用由 Agent 配置决定。",
       "tool": "工具",
       "identifier": "标识",
       "permission": "权限",
@@ -178,11 +166,11 @@
         "interaction": "人机交互"
       },
       "categoryDesc": {
-        "fs": "读取、查找、编辑、删除与移动项目目录内的文件；写操作仅在 Build 模式可用，越界需审批。关闭后模型不再获得文件读写工具。",
-        "shell": "在项目目录内执行 shell 命令；危险命令会被拦截，仅 Build 模式可用。关闭后模型不再获得命令执行能力。",
-        "browser": "打开网页、读取正文与页面结构、点击与填写表单、截图与诊断；关闭后模型不再获得浏览器工具。",
+        "fs": "读取、查找、编辑、删除与移动项目目录内的文件；写操作仅在 Build 模式可用，越界需审批。",
+        "shell": "在项目目录内执行 shell 命令；危险命令会被拦截，仅 Build 模式可用。",
+        "browser": "打开网页、读取正文与页面结构、点击与填写表单、截图与诊断。",
         "general": "获取当前时间等通用、无副作用的能力。",
-        "interaction": "Agent 在任务执行中让用户在多个候选方案中拍板；关闭后模型改为在对话正文直接询问。"
+        "interaction": "Agent 在任务执行中让用户在多个候选方案中拍板。"
       },
       "desc": {
         "readFile": "按行范围读取项目目录内的文本文件",
@@ -210,6 +198,7 @@
         "time": "获取本地当前日期与时间，支持指定 IANA 时区",
         "askUser": "在多个候选方案中让用户拍板：提供 2~20 个选项，支持单选/多选，并默认允许填写「其他」"
       }
-    }
+    },
+    "agent": "Agent"
   }
 }

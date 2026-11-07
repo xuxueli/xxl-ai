@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 设置页：按左侧子菜单分类渲染「常规 / 个性化 / 供应商 / 运行设置 / 关于」。
+ * 设置页：按左侧子菜单分类渲染「常规 / 个性化 / 供应商 / 运行设置 / 项目 / 关于」。
  * 分类内容由 components 下各职责组件承载，本页只负责外壳与 TAB 路由。
  * @author xuxueli 2026-10-25
  */
@@ -13,6 +13,7 @@ import CommandRuntimeSettings from '@modules/settings/renderer/components/Comman
 import DeveloperSettings from '@modules/settings/renderer/components/DeveloperSettings.vue'
 import PersonalizationSettings from '@modules/settings/renderer/components/PersonalizationSettings.vue'
 import { ProviderSettings } from '@modules/provider/renderer'
+import { ProjectSettings } from '@modules/project/renderer'
 import AboutSettings from '@modules/settings/renderer/components/AboutSettings.vue'
 
 const route = useRoute()
@@ -44,6 +45,9 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
               <CommandRuntimeSettings />
               <DeveloperSettings />
             </div>
+          </el-tab-pane>
+          <el-tab-pane :label="t('settings.projects')" name="projects">
+            <ProjectSettings />
           </el-tab-pane>
           <el-tab-pane :label="t('settings.about')" name="about">
             <AboutSettings />

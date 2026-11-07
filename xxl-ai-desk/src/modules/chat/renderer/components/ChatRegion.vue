@@ -12,6 +12,7 @@ import EmptyState from '@modules/chat/renderer/components/EmptyState.vue'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useProjectStore } from '@modules/project/renderer'
+import { useAgentStore } from '@modules/agent/renderer'
 import { DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
 import { useChatUiStore } from '@modules/chat/renderer/store/ui'
 import { t } from '@renderer/shell/i18n'
@@ -21,6 +22,7 @@ const router = useRouter()
 const chat = useChatStore()
 const provider = useProviderStore()
 const project = useProjectStore()
+const agent = useAgentStore()
 const chatUi = useChatUiStore()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
@@ -183,9 +185,13 @@ async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
     router.push('/settings')
     return
   }
-  /* 强要求：新建对话必须先选择项目 */
+  /* 强要求：新建对话必须先选择项目与 Agent */
   if (!chat.currentId && !project.currentId) {
     ElMessage.warning(t('project.needProject'))
+    return
+  }
+  if (!chat.currentId && !agent.currentId) {
+    ElMessage.warning(t('agent.needAgent'))
     return
   }
   await chat.send(text, mode)

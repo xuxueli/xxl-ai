@@ -32,8 +32,6 @@
     "namePlaceholder": "显示在左上角的应用名称",
     "slogan": "Slogan",
     "sloganPlaceholder": "空态欢迎语，如：需要我帮你做什么？",
-    "systemPrompt": "系统指令",
-    "systemPromptPlaceholder": "设定 Agent 的角色与行为",
     "providers": "模型供应商",
     "providerListTitle": "供应商列表",
     "providerName": "名称",
@@ -99,6 +97,7 @@
     "docs": "官方文档",
     "headersExample": "示例：",
     "languageZh": "中文",
-    "languageEn": "English"
+    "languageEn": "English",
+    "projects": "项目"
   }
 }

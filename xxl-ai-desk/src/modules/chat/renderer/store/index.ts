@@ -6,6 +6,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api } from '@common/renderer/api'
 import { useProjectStore } from '@modules/project/renderer'
+import { useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
@@ -82,6 +83,7 @@ export const useChatStore = defineStore('chat', () => {
     const target = sessions.value.find((item) => item.id === id)
     if (target) {
       useProjectStore().selectProject(target.projectId)
+      useAgentStore().selectAgent(target.agentId)
     }
     loading.value = true
     try {
@@ -113,14 +115,21 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 新建会话（归属当前选中项目，默认 Build 模式） */
-  async function createSession(projectId?: string, mode: ChatMode = 'build'): Promise<SessionDTO> {
+  /* 新建会话（归属当前选中项目与 Agent，默认 Build 模式） */
+  async function createSession(
+    projectId?: string,
+    mode: ChatMode = 'build',
+    agentId?: string
+  ): Promise<SessionDTO> {
     const settings = useSettingsStore()
     const project = useProjectStore()
+    const agent = useAgentStore()
     const targetProjectId = projectId || project.currentId
+    const targetAgentId = agentId || agent.currentId || agent.defaultAgent?.id || ''
     const session = await api.session.create({
       title: NEW_CHAT_TITLE,
       projectId: targetProjectId,
+      agentId: targetAgentId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
       mode
@@ -128,6 +137,7 @@ export const useChatStore = defineStore('chat', () => {
     sessions.value = [session, ...sessions.value]
     currentId.value = session.id
     messages.value = []
+    agent.selectAgent(session.agentId)
     /* 草稿工具面板迁移给新建会话：切回该会话时保留开新对话前的面板状态 */
     useToolPanelStore().adoptDraft(session.id)
     return session
@@ -138,6 +148,9 @@ export const useChatStore = defineStore('chat', () => {
     /* 允许在其它会话生成时进入新对话草稿：各会话生成状态相互独立 */
     currentId.value = ''
     messages.value = []
+    /* 新建对话默认选中排序第一个项目与默认 Agent */
+    useProjectStore().selectFirstProject()
+    useAgentStore().selectDefaultAgent()
     /* 确保草稿工具面板状态已创建（含本地持久化恢复） */
     useToolPanelStore().ensure(DRAFT_SESSION_KEY)
   }
@@ -214,8 +227,8 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
     if (!currentId.value) {
-      /* 强要求：新建会话必须先选择项目 */
-      if (!useProjectStore().currentId) {
+      /* 强要求：新建会话必须先选择项目与 Agent */
+      if (!useProjectStore().currentId || !useAgentStore().currentId) {
         return
       }
       await createSession(undefined, mode)

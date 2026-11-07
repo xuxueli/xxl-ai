@@ -4,6 +4,9 @@
  */
 
 export const AGENT_IPC = {
+  list: 'desk:agent:list',
+  save: 'desk:agent:save',
+  remove: 'desk:agent:remove',
   memoryList: 'desk:agent-memory:list',
   memorySave: 'desk:agent-memory:save',
   memoryRemove: 'desk:agent-memory:remove'

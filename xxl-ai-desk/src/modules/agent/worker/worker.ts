@@ -142,8 +142,8 @@ async function handleRun(input: RunAgentInput): Promise<void> {
     clearSessionAbort(input.sessionId)
     /* 应用本轮运行时 PATH（设置中的 Node / Python 环境），供 run_command 使用 */
     setRuntimePath(input.runtimePath)
-    /* MCP stdio 与 run_command 共用同一 PATH，保证 npx / uvx 可解析 */
-    setMcpRuntimePath(input.runtimePath)
+    /* MCP stdio 使用独立 PATH：优先系统 Node，避免产生额外 Dock 图标 */
+    setMcpRuntimePath(input.mcpRuntimePath)
     const agent = await getAgent({
       sessionId: input.sessionId,
       provider: input.provider,
@@ -152,7 +152,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
       mode: input.mode,
       rootDir: input.rootDir,
       language: input.language,
-      runtimePath: input.runtimePath,
+      runtimePath: input.mcpRuntimePath,
       mcpServers: input.mcpServers ?? [],
       skills: input.skills ?? [],
       skillsDir: input.skillsDir,

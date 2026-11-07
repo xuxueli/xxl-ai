@@ -1,12 +1,11 @@
 <script setup lang="ts">
 /*
- * 内置工具页：按分类展示内置工具能力；浏览器 / 通用 / 人机交互支持开关启用。
+ * 内置工具页：按分类展示客户端内置工具能力（只读目录）。
+ *   - 是否启用由 Agent 配置决定，本页不再提供全局开关；
+ *   - 分类与工具清单按产品白名单维护。
  * @author xuxueli 2026-10-25
  */
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { useSettingsStore } from '@modules/settings/renderer'
-import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import {
   BUILTIN_TOOL_CATALOG,
   BUILTIN_TOOL_CATEGORIES,
@@ -16,19 +15,12 @@ import PluginCenterShell from '@modules/plugin/renderer/components/PluginCenterS
 import { t } from '@renderer/shell/i18n'
 import type { ChatMode } from '@modules/chat/shared'
 
-const settings = useSettingsStore()
-
 /* 分类 + 其下工具（顺序取自共享目录） */
 const groups = computed(() =>
   BUILTIN_TOOL_CATEGORIES.map((category) => ({
     ...category,
     tools: BUILTIN_TOOL_CATALOG.filter((tool) => tool.category === category.key)
   }))
-)
-
-/* 分类 → 开关设置字段（固定启用分类无此字段） */
-const TOGGLE_FIELDS = new Map(
-  BUILTIN_TOOL_CATEGORIES.map((category) => [category.key, category.toggleField] as const)
 )
 
 /* 已展开的分类（默认全部折叠，点击分类行展开/收起工具明细） */
@@ -44,28 +36,6 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
   expandedKeys.value = isExpanded(key)
     ? expandedKeys.value.filter((item) => item !== key)
     : [...expandedKeys.value, key]
-}
-
-/* 分类当前是否启用 */
-function isEnabled(key: BuiltinToolCategoryKey): boolean {
-  const field = TOGGLE_FIELDS.get(key)
-  return field ? settings.settings[field] : true
-}
-
-/* 切换可开关分类（保存设置后由主进程清理运行时缓存，下一轮对话生效） */
-async function onToggle(key: BuiltinToolCategoryKey, value: boolean): Promise<void> {
-  const field = TOGGLE_FIELDS.get(key)
-  if (!field) {
-    return
-  }
-  try {
-    await settings.saveSetting(field, value)
-    ElMessage.success(
-      value ? t('plugin.builtinTool.enabledOn') : t('plugin.builtinTool.enabledOff')
-    )
-  } catch (error) {
-    ElMessage.error(ipcErrorMessage(error))
-  }
 }
 
 /* 适用模式文案 */
@@ -93,13 +63,6 @@ function modeLabel(modes: ChatMode[]): string {
             </div>
             <div class="group-desc">{{ t(group.descriptionKey) }}</div>
           </div>
-          <div class="group-actions" @click.stop>
-            <el-switch
-              v-if="group.toggleField"
-              :model-value="isEnabled(group.key)"
-              @update:model-value="(value: boolean) => onToggle(group.key, value)"
-            />
-          </div>
         </div>
 
         <div v-if="isExpanded(group.key)" class="group-detail">
@@ -124,14 +87,6 @@ function modeLabel(modes: ChatMode[]): string {
             </el-table-column>
             <el-table-column :label="t('plugin.builtinTool.modes')" min-width="110">
               <template #default="{ row }">{{ modeLabel(row.modes) }}</template>
-            </el-table-column>
-            <el-table-column :label="t('common.status')" min-width="100">
-              <template #default>
-                <el-tag v-if="isEnabled(group.key)" size="small" type="success">
-                  {{ t('common.enabled') }}
-                </el-tag>
-                <el-tag v-else size="small" type="info">{{ t('common.disabled') }}</el-tag>
-              </template>
             </el-table-column>
           </el-table>
         </div>
@@ -211,16 +166,6 @@ function modeLabel(modes: ChatMode[]): string {
 .group-count {
   font-size: var(--desk-font-xs);
   color: var(--desk-text-tertiary);
-}
-
-/* 右侧操作列：固定启用标签与浏览器开关同列左对齐 */
-.group-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 96px;
-  padding-top: 1px;
 }
 
 .group-detail {

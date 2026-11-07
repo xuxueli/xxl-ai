@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS desk_project (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL DEFAULT '',
   path        TEXT NOT NULL DEFAULT '',
+  memory_enabled INTEGER NOT NULL DEFAULT 0,
   add_time    TEXT NOT NULL DEFAULT '',
   update_time TEXT NOT NULL DEFAULT ''
 );

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * SKILL 管理面板：技能列表（过滤 / 启停 / 详情 / 目录 / 删除）与本地目录、Zip 导入。
+ * SKILL 管理面板：技能列表（过滤 / 详情 / 目录 / 删除）与本地目录、Zip 导入。
  * @author xuxueli 2026-10-25
  */
 import { onMounted, ref } from 'vue'
@@ -34,16 +34,6 @@ function formatTime(iso: string): string {
   }
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString()
-}
-
-/* 启停开关：成功后采用主进程返回值，失败保持原状态 */
-async function onToggle(row: SkillDTO, value: boolean): Promise<void> {
-  try {
-    await skill.setEnabled(row.id, value)
-    ElMessage.success(value ? t('plugin.skillCenter.enabledOn') : t('plugin.skillCenter.enabledOff'))
-  } catch (error) {
-    ElMessage.error(ipcErrorMessage(error))
-  }
 }
 
 /* 删除技能（二次确认，目录一并删除） */
@@ -157,9 +147,6 @@ async function onRefresh(): Promise<void> {
         </template>
       </el-input>
       <div class="toolbar-actions">
-        <span class="enabled-tip">
-          {{ t('plugin.skillCenter.enabledCount', [skill.enabledCount]) }}
-        </span>
         <el-dropdown trigger="click" :disabled="skill.importing" @command="onCreate">
           <el-button type="primary" :loading="skill.importing">
             <el-icon><Plus /></el-icon>{{ t('plugin.skillCenter.newSkill') }}
@@ -230,14 +217,6 @@ async function onRefresh(): Promise<void> {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column :label="t('plugin.skillCenter.enabled')" width="100">
-        <template #default="{ row }">
-          <el-switch
-            :model-value="row.enabled"
-            @update:model-value="(value: boolean) => onToggle(row, value)"
-          />
-        </template>
-      </el-table-column>
       <el-table-column :label="t('plugin.skillCenter.updateTime')" width="170">
         <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
       </el-table-column>
@@ -300,11 +279,6 @@ async function onRefresh(): Promise<void> {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.enabled-tip {
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
 }
 
 .row-actions {

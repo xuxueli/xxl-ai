@@ -3,10 +3,15 @@
  * @author xuxueli 2026-11-07
  */
 
-import type { AgentMemoryDTO, AgentMemorySaveInput } from './contracts'
+import type { AgentDTO, AgentMemoryDTO, AgentMemorySaveInput, AgentSaveInput } from './contracts'
 
-export interface AgentMemoryApi {
-  list(): Promise<AgentMemoryDTO[]>
-  save(input: AgentMemorySaveInput): Promise<AgentMemoryDTO>
-  remove(projectId: string): Promise<void>
+export interface AgentApi {
+  /* Agent 配置 */
+  list(): Promise<AgentDTO[]>
+  save(input: AgentSaveInput): Promise<AgentDTO>
+  remove(id: string): Promise<void>
+  /* 项目记忆 */
+  memoryList(): Promise<AgentMemoryDTO[]>
+  memorySave(input: AgentMemorySaveInput): Promise<AgentMemoryDTO>
+  memoryRemove(projectId: string): Promise<void>
 }

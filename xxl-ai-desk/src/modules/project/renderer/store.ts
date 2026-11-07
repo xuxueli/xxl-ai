@@ -35,6 +35,12 @@ export const useProjectStore = defineStore('project', () => {
     currentId.value = id
   }
 
+  /* 选中默认项目：与侧栏默认排序（名称升序）的第一个项目一致 */
+  function selectFirstProject(): void {
+    const first = [...projects.value].sort((a, b) => a.name.localeCompare(b.name, 'zh'))[0]
+    currentId.value = first?.id ?? ''
+  }
+
   /* 项目是否展开 */
   function isExpanded(id: string): boolean {
     return Boolean(expanded.value[id])
@@ -93,6 +99,15 @@ export const useProjectStore = defineStore('project', () => {
     await api.project.reveal(id)
   }
 
+  /* 切换项目记忆开关（保留已存记忆内容） */
+  async function setMemoryEnabled(id: string, value: boolean): Promise<void> {
+    const updated = await api.project.setMemoryEnabled(id, value)
+    const target = projects.value.find((item) => item.id === id)
+    if (target) {
+      target.memoryEnabled = updated.memoryEnabled
+    }
+  }
+
   return {
     projects,
     currentId,
@@ -100,12 +115,14 @@ export const useProjectStore = defineStore('project', () => {
     currentProject,
     loadProjects,
     selectProject,
+    selectFirstProject,
     isExpanded,
     setExpanded,
     toggleExpanded,
     createProject,
     renameProject,
     removeProject,
-    revealProject
+    revealProject,
+    setMemoryEnabled
   }
 })

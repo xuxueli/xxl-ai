@@ -4,6 +4,23 @@
  */
 
 export type { HostEvent, ProviderModelConfig, RunAgentInput } from './agentProtocol'
-export type { AgentMemoryApi } from './api'
-export { AGENT_INSTRUCTION_MAX_CHARS, AGENT_MEMORY_MAX_CHARS, AGENT_MEMORY_MESSAGE_LIMIT } from './contracts'
-export type { AgentMemoryDTO, AgentMemorySaveInput } from './contracts'
+export type { AgentApi } from './api'
+export { AGENT_AVATAR_PRESETS, resolveAgentAvatar, resolvePresetTools } from './agentPresets'
+export type { AgentAvatarPreset } from './agentPresets'
+export {
+  AGENT_DESCRIPTION_MAX_CHARS,
+  AGENT_INSTRUCTION_MAX_CHARS,
+  AGENT_MEMORY_MAX_CHARS,
+  AGENT_MEMORY_MESSAGE_LIMIT,
+  AGENT_NAME_MAX_CHARS,
+  DEFAULT_AGENT_AVATAR,
+  DEFAULT_AGENT_ID,
+  DEFAULT_AGENT_TOOLS
+} from './contracts'
+export type {
+  AgentDTO,
+  AgentMemoryDTO,
+  AgentMemorySaveInput,
+  AgentSaveInput,
+  AgentToolSwitches
+} from './contracts'

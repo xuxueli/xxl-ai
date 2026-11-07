@@ -3,6 +3,6 @@
  * @author xuxueli 2026-11-07
  */
 
-export { buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
+export { buildMcpRuntimePath, buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
 export { registerAppIpc } from './ipc'
 export { registerLocalFileProtocol } from './localFileProtocol'

@@ -13,4 +13,4 @@ export { commitSkillRoot, importSkillDirectory, importSkillZip, listSkillFiles, 
 export type { ImportedSkill, ParsedSkillMeta } from './import'
 export { cancelGithubRepo, inspectGithubRepo, installFromGithub } from './install'
 export { registerSkillIpc } from './ipc'
-export { findSkillBySourceId, listEnabledSkillsForRuntime, listInstalledSourceIds, listSkills, registerSkill } from './service'
+export { findSkillBySourceId, listInstalledSourceIds, listSkills, listSkillsForRuntime, registerSkill } from './service'

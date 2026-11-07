@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '@modules/project/renderer'
+import { useAgentStore } from '@modules/agent/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
@@ -21,6 +22,7 @@ const draft = defineModel<string>('draft', { default: '' })
 
 const router = useRouter()
 const project = useProjectStore()
+const agent = useAgentStore()
 const chat = useChatStore()
 const settings = useSettingsStore()
 const provider = useProviderStore()
@@ -151,9 +153,13 @@ function onSend(): void {
   if (!canSend.value || props.streaming || props.disabled) {
     return
   }
-  /* 强要求：新建对话必须先选择项目 */
+  /* 强要求：新建对话必须先选择项目与 Agent */
   if (!chat.currentId && !project.currentId) {
     ElMessage.warning(t('project.needProject'))
+    return
+  }
+  if (!chat.currentId && !agent.currentId) {
+    ElMessage.warning(t('agent.needAgent'))
     return
   }
   /* 关联文件以相对项目根目录的路径追加，Agent 可按需通过文件工具读取 */
@@ -201,7 +207,10 @@ function onKeydown(event: KeyboardEvent): void {
           class="composer-file"
           :title="file.path"
         >
-          <el-icon class="composer-file-icon"><Document /></el-icon>
+          <el-icon class="composer-file-icon">
+            <FolderOpened v-if="file.isDir" />
+            <Document v-else />
+          </el-icon>
           <span class="composer-file-name">{{ file.name }}</span>
           <button
             type="button"

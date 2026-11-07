@@ -1,8 +1,8 @@
 /*
- * 内置工具目录（插件模块内静态目录）：
- *   - 描述内置工具的名称、分类、权限与适用模式，供「插件 → 内置工具」页面只读展示；
+ * 内置工具目录（扩展中心内静态目录）：
+ *   - 描述内置工具的名称、分类、权限与适用模式，供「扩展中心 → 内置工具」页面只读展示；
  *   - 工具名必须与 agent/worker/tools 下的内置工具保持一致；
- *   - 可开关分类用 toggleField 指向应用设置字段，启用状态不在此落库。
+ *   - 是否启用由 Agent 配置决定，本目录只描述能力。
  * @author xuxueli 2026-10-25
  */
 
@@ -27,14 +27,6 @@ export interface BuiltinToolCatalogItem {
   modes: ChatMode[]
 }
 
-/* 可开关分类对应的设置字段（与 AppSettings 同名，供页面读写） */
-type BuiltinToolToggleField =
-  | 'builtinToolBrowserEnabled'
-  | 'builtinToolFsEnabled'
-  | 'builtinToolShellEnabled'
-  | 'builtinToolGeneralEnabled'
-  | 'builtinToolInteractionEnabled'
-
 /* 分类定义 */
 export interface BuiltinToolCategory {
   /* 分类标识 */
@@ -43,8 +35,6 @@ export interface BuiltinToolCategory {
   titleKey: string
   /* 分类说明文案 key */
   descriptionKey: string
-  /* 开关对应的设置字段；缺省表示固定启用 */
-  toggleField?: BuiltinToolToggleField
 }
 
 /* 内置工具分类列表（展示顺序即渲染顺序） */
@@ -52,32 +42,27 @@ export const BUILTIN_TOOL_CATEGORIES: BuiltinToolCategory[] = [
   {
     key: 'fs',
     titleKey: 'plugin.builtinTool.category.fs',
-    descriptionKey: 'plugin.builtinTool.categoryDesc.fs',
-    toggleField: 'builtinToolFsEnabled'
+    descriptionKey: 'plugin.builtinTool.categoryDesc.fs'
   },
   {
     key: 'shell',
     titleKey: 'plugin.builtinTool.category.shell',
-    descriptionKey: 'plugin.builtinTool.categoryDesc.shell',
-    toggleField: 'builtinToolShellEnabled'
+    descriptionKey: 'plugin.builtinTool.categoryDesc.shell'
   },
   {
     key: 'browser',
     titleKey: 'plugin.builtinTool.category.browser',
-    descriptionKey: 'plugin.builtinTool.categoryDesc.browser',
-    toggleField: 'builtinToolBrowserEnabled'
+    descriptionKey: 'plugin.builtinTool.categoryDesc.browser'
   },
   {
     key: 'general',
     titleKey: 'plugin.builtinTool.category.general',
-    descriptionKey: 'plugin.builtinTool.categoryDesc.general',
-    toggleField: 'builtinToolGeneralEnabled'
+    descriptionKey: 'plugin.builtinTool.categoryDesc.general'
   },
   {
     key: 'interaction',
     titleKey: 'plugin.builtinTool.category.interaction',
-    descriptionKey: 'plugin.builtinTool.categoryDesc.interaction',
-    toggleField: 'builtinToolInteractionEnabled'
+    descriptionKey: 'plugin.builtinTool.categoryDesc.interaction'
   }
 ]
 

@@ -11,10 +11,8 @@ CREATE TABLE IF NOT EXISTS desk_skill (
   version     TEXT NOT NULL DEFAULT '',
   source      TEXT NOT NULL DEFAULT 'local',
   source_id   TEXT NOT NULL DEFAULT '',
-  enabled     INTEGER NOT NULL DEFAULT 1,
   add_time    TEXT NOT NULL DEFAULT '',
   update_time TEXT NOT NULL DEFAULT ''
 );
 CREATE UNIQUE INDEX IF NOT EXISTS i_desk_skill_source_id ON desk_skill (source_id) WHERE source_id <> '';
-CREATE INDEX IF NOT EXISTS i_desk_skill_enabled ON desk_skill (enabled);
 `

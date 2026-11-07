@@ -4,3 +4,4 @@
  */
 
 export { useProjectStore } from './store'
+export { default as ProjectSettings } from './components/ProjectSettings.vue'

@@ -4,7 +4,7 @@
 */
 
 /* 一级板块标识 */
-export type SectionKey = 'home' | 'agent' | 'plugin' | 'settings'
+export type SectionKey = 'home' | 'plugin' | 'settings'
 
 /* 子菜单项公共字段 */
 interface NavItemBase {
@@ -12,6 +12,8 @@ interface NavItemBase {
   labelKey: string
   /* 已全局注册的图标组件名 */
   icon?: string
+  /* 在该条目上方展示分隔线（用于系统设置顶部功能组与常规组之间） */
+  divider?: boolean
 }
 
 /* 子菜单项：路由项跳 path，设置项切 tab（二者互斥，避免运行时靠真值猜测） */
@@ -27,22 +29,14 @@ export interface NavSection {
   items: NavItem[]
 }
 
-/* Agent / 插件 / 系统设置 三个板块的子菜单 */
+/* 扩展中心 / 系统设置 两个板块的子菜单 */
 export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
-  agent: {
-    key: 'agent',
-    titleKey: 'agent.title',
-    entryPath: '/agent/instructions',
-    items: [
-      { key: 'instructions', labelKey: 'agent.instructions', icon: 'Document', path: '/agent/instructions' },
-      { key: 'memory', labelKey: 'agent.memory', icon: 'Clock', path: '/agent/memory' }
-    ]
-  },
   plugin: {
     key: 'plugin',
     titleKey: 'plugin.title',
-    entryPath: '/plugin/mcp',
+    entryPath: '/plugin/agent',
     items: [
+      { key: 'agent', labelKey: 'plugin.agent', icon: 'MagicStick', path: '/plugin/agent' },
       { key: 'mcp', labelKey: 'plugin.mcp', icon: 'Connection', path: '/plugin/mcp' },
       { key: 'skill', labelKey: 'plugin.skill', icon: 'Notebook', path: '/plugin/skill' },
       { key: 'builtin', labelKey: 'plugin.builtin', icon: 'Operation', path: '/plugin/builtin' }
@@ -53,15 +47,16 @@ export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
     titleKey: 'settings.title',
     entryPath: '/settings',
     items: [
-      { key: 'general', labelKey: 'settings.general', icon: 'Setting', tab: 'general' },
+      { key: 'providers', labelKey: 'settings.providers', icon: 'Cpu', tab: 'providers' },
+      { key: 'runtime', labelKey: 'settings.runtimeTab', icon: 'Monitor', tab: 'runtime' },
+      { key: 'projects', labelKey: 'settings.projects', icon: 'Folder', tab: 'projects' },
+      { key: 'general', labelKey: 'settings.general', icon: 'Setting', tab: 'general', divider: true },
       {
         key: 'personalization',
         labelKey: 'settings.personalization',
         icon: 'User',
         tab: 'personalization'
       },
-      { key: 'providers', labelKey: 'settings.providers', icon: 'Cpu', tab: 'providers' },
-      { key: 'runtime', labelKey: 'settings.runtimeTab', icon: 'Monitor', tab: 'runtime' },
       { key: 'about', labelKey: 'settings.about', icon: 'InfoFilled', tab: 'about' }
     ]
   }
@@ -70,7 +65,6 @@ export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
 /* 各板块入口路径（图标栏切换用） */
 export const SECTION_ENTRY: Record<SectionKey, string> = {
   home: '/',
-  agent: NAV_SECTIONS.agent.entryPath,
   plugin: NAV_SECTIONS.plugin.entryPath,
   settings: NAV_SECTIONS.settings.entryPath
 }
@@ -78,16 +72,12 @@ export const SECTION_ENTRY: Record<SectionKey, string> = {
 /* 各板块图标（全局注册的图标组件名）：图标栏与顶栏标题共用同一来源 */
 export const SECTION_ICON: Record<SectionKey, string> = {
   home: 'ChatDotRound',
-  agent: 'MagicStick',
   plugin: 'SetUp',
   settings: 'Setting'
 }
 
 /* 由路由路径解析所属一级板块 */
 export function sectionOfPath(path: string): SectionKey {
-  if (path.startsWith('/agent')) {
-    return 'agent'
-  }
   if (path.startsWith('/plugin')) {
     return 'plugin'
   }

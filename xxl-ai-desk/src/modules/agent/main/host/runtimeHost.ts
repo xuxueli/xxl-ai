@@ -32,8 +32,8 @@ const pendingMcp = new Map<
   { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
 >()
 
-/* MCP 请求超时（毫秒）：握手 30s + 列举 30s，留出余量 */
-const MCP_REQUEST_TIMEOUT = 90000
+/* MCP 请求超时（毫秒）：需覆盖 stdio 首次下载依赖（最长 5 分钟）+ 列举余量 */
+const MCP_REQUEST_TIMEOUT = 360000
 
 /* 记忆生成超时（毫秒）：一次非流式补全，留出足够生成 2000 字的余量 */
 const MEMORY_REQUEST_TIMEOUT = 180000

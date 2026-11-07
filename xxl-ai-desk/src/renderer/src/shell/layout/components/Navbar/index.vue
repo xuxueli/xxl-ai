@@ -12,6 +12,7 @@ import {
 } from '@modules/chat/renderer'
 import { ToolPanelToggle } from '@modules/toolPanel/renderer'
 import { useChatStore } from '@modules/chat/renderer'
+import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { NAV_SECTIONS, sectionOfPath } from '@renderer/shell/config/nav'
 import { t } from '@renderer/shell/i18n'
@@ -19,6 +20,7 @@ import { t } from '@renderer/shell/i18n'
 const route = useRoute()
 const router = useRouter()
 const chat = useChatStore()
+const agentStore = useAgentStore()
 const settings = useSettingsStore()
 /* 搜索命令面板显隐（顶栏入口与面板共享） */
 const { visible: commandPaletteVisible } = useCommandPalette()
@@ -46,6 +48,17 @@ const pageTitle = computed(() => {
 /* 是否有标题：仅在有标题时才展示板块图标与标题 */
 const hasTitle = computed(() => pageTitle.value.trim().length > 0)
 
+/* 当前会话绑定的 Agent：旧会话缺失时回退默认 Agent */
+const boundAgent = computed(() => {
+  if (section.value !== 'home' || !chat.currentId) {
+    return null
+  }
+  return (
+    agentStore.agents.find((item) => item.id === chat.currentSession?.agentId) ??
+    agentStore.defaultAgent
+  )
+})
+
 /* 软件名称：优先取用户自定义名称，未设置时回落应用默认名称 */
 const appName = computed(() => settings.settings.appName || t('app.name'))
 </script>
@@ -62,6 +75,10 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
       <!-- 有标题时展示分隔线（｜），分隔软件名称与标题 -->
       <span v-if="hasTitle" class="topbar-sep" aria-hidden="true"></span>
       <div v-if="hasTitle" class="desk-topbar-context">
+        <span v-if="boundAgent" class="topbar-agent">
+          <AgentAvatar :avatar="boundAgent.avatar" :size="18" :show-title="false" />
+          <span class="topbar-agent-name">{{ boundAgent.name }}</span>
+        </span>
         <span class="topbar-title">{{ pageTitle }}</span>
       </div>
     </div>
@@ -164,6 +181,28 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
   white-space: nowrap;
   font-size: var(--desk-font-base);
   font-weight: 500;
+  color: var(--desk-text-secondary);
+}
+
+/* 会话绑定的 Agent：位于标题左侧 */
+.topbar-agent {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  margin-right: 10px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  background: var(--desk-segment-bg);
+}
+
+.topbar-agent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--desk-font-xs);
   color: var(--desk-text-secondary);
 }
 </style>

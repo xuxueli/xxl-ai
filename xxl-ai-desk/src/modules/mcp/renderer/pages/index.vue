@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * MCP 插件中心：MCP 管理 / MCP 市场两个 TAB + 各面板与抽屉编排。
+ * MCP 扩展中心：MCP 管理 / MCP 市场两个 TAB + 各面板与抽屉编排。
  * @author xuxueli 2026-10-24
  */
 import { ref } from 'vue'
@@ -59,8 +59,7 @@ function onImport(detail: McpDiscoverDetail, snippet: string): void {
   const usable = parseUsable(snippet, detail)
   editorDraft.value = {
     name: detail.name,
-    remark: detail.description,
-    enabled: false
+    remark: detail.description
   }
   editorJson.value = usable
   editorVisible.value = true

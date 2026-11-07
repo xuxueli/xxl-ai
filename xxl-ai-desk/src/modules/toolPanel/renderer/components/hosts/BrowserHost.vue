@@ -37,7 +37,7 @@ watch(
   { immediate: true }
 )
 
-/* 是否对话页：离开对话页（插件/设置）时宿主不应覆盖正文 */
+/* 是否对话页：离开对话页（扩展中心/设置）时宿主不应覆盖正文 */
 const isChatPage = computed(() => sectionOfPath(route.path) === 'home')
 
 /* 当前会话是否正在展示浏览器工具（决定宿主是否可见） */

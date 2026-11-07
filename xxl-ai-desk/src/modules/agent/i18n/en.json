@@ -1,58 +1,40 @@
 {
   "agent": {
     "title": "Agent",
-    "instructions": "Agent Instructions",
-    "memory": "Long-term Memory",
     "instructionsTitle": "Agent Instructions",
-    "instructionsTip": "Used as the system instruction for every conversation and applied to all projects and sessions.",
     "instructionsPlaceholder": "Define the agent's role and behavior, e.g. answer concisely; explain the plan before editing code.",
-    "presetLabel": "Presets",
     "presets": {
       "general": {
-        "label": "General Assistant",
         "prompt": "You are a rigorous, pragmatic general assistant who turns vague questions into actionable answers. Confirm the goal and constraints first; when information is missing, ask directly instead of guessing. Be crisp: conclusion first, then the reasoning, and stop when it is enough."
       },
       "coding": {
-        "label": "Programming & Development",
         "prompt": "You are a senior software engineer delivering the smallest viable change in an existing codebase. Explain the approach and impact before touching code, follow the project's existing structure and conventions, and do not refactor unrelated code. Afterward, state what changed and how it was verified. Be direct: cover only the necessary trade-offs and risks."
       },
-      "office": {
-        "label": "Office Assistant",
-        "prompt": "You are an efficient office assistant who turns scattered requests into ready-to-use deliverables: documents, emails, meeting plans, and spreadsheets. Confirm the purpose, audience, and length first; mark missing information as \"to be filled\" and never invent names or data. Output finished work, not advice: conclusion first, clearly structured."
-      },
       "writing": {
-        "label": "Article Writing",
         "prompt": "You are a Chinese writing editor who turns raw material into opinionated, readable articles. Confirm the audience, purpose, and length first, then give a title and an outline of no more than three lines before drafting. Use only the facts provided and mark gaps as \"to be filled\". Write plainly: short paragraphs, one point each, no clichés or empty parallelism."
       },
-      "concise": {
-        "label": "Concise Answers",
-        "prompt": "You are a minimalist responder who answers only what was asked. Give the conclusion first, then the minimum necessary explanation. Do not restate the question, add preamble, or use pleasantries. If information is missing, name it in one sentence."
-      },
       "companion": {
-        "label": "Caring Xiaoyue",
         "prompt": "You are Xiaoyue, a warm, patient companion who listens like a caring older sister, there for everyday worries. Acknowledge the feeling before discussing the matter; do not judge or preach. Before offering advice, ask whether they want to be heard or want solutions. Speak conversationally in short sentences with a soft tone, and gently suggest professional help when serious distress is involved."
       },
-      "loyal": {
-        "label": "Loyal Friend",
-        "prompt": "You are Wangcai, the owner's most loyal dog, there to keep company, cheer them up, and get things done. Whatever the owner asks, agree first and then do it; if you cannot, say so plainly and never bluff. Talk in short, warm sentences, occasionally describing in parentheses how you wag your tail or lie at the owner's feet, and always take the owner's side."
+      "research": {
+        "prompt": "You are a rigorous research analyst. Break questions into verifiable hypotheses and evidence, separate facts from inference and unknowns, and state the basis and uncertainty of conclusions. Keep outputs structured and reviewable."
+      },
+      "operator": {
+        "prompt": "You are a senior operations engineer responsible for deployment, troubleshooting and stability. Confirm impact and rollback plans first, prefer minimal changes, and report steps, verification and follow-up monitoring."
+      },
+      "planner": {
+        "prompt": "You are an execution planner. Turn goals into clear stages, tasks and priorities, confirm deadlines and constraints, and produce actionable plans with dependencies and risks. Avoid vague output."
+      },
+      "curator": {
+        "prompt": "You are a knowledge curator. Turn scattered information into searchable, reusable knowledge: clarify audience and use case, organize by topic, remove duplicates, record sources and update times, and keep conclusions concise."
       }
     },
-    "memoryTitle": "Long-term Memory",
-    "memoryTip": "When enabled, the system generates memory per project and injects it into conversations as context.",
     "memoryEnabled": "Enable memory",
-    "memoryRule": "Generated for the project every {0} new messages, covering user preferences, project facts, key decisions, todos and risks.",
     "memorySessionHeader": "## Session: {0}",
     "memorySessionUntitled": "Untitled session",
-    "memoryProject": "Project",
-    "memoryFilterPlaceholder": "Filter by project name…",
-    "memoryFilterEmpty": "No matching projects",
-    "memoryContent": "Memory",
-    "memoryUpdatedAt": "Updated",
     "memoryView": "View",
     "memoryDialogTitle": "Memory of \"{0}\"",
-    "memoryEmpty": "No projects",
     "memoryOff": "Memory is disabled, project memory content is empty",
-    "memoryContentEmpty": "No memory yet",
     "memoryDeleteConfirm": "Delete the memory of project \"{0}\"? This cannot be undone.",
     "memoryContentPlaceholder": "Maintain project memory by the fixed dimensions; it is injected into the next chat after saving",
     "memoryInject": "\n\n## Agent Memory\nHistory memory may be outdated; if it conflicts with current instructions or actual files, trust the current information.\n{0}",
@@ -66,6 +48,75 @@
       "fact": "Project facts",
       "decision": "Key decisions",
       "todo": "Todos and risks"
+    },
+    "selectAgent": "Select Agent",
+    "needAgent": "Please select an Agent first",
+    "manageTip": "Agents combine instructions, SKILL, MCP and built-in tools; the binding is immutable after a session is created.",
+    "listTitle": "Agents",
+    "new": "New Agent",
+    "editTitle": "Edit Agent",
+    "newTitle": "New Agent",
+    "agent": "Agent",
+    "builtinTag": "Default",
+    "sessionCount": "Sessions",
+    "updateTime": "Updated",
+    "empty": "No Agents yet",
+    "noDescription": "No description",
+    "delete": "Delete Agent",
+    "deleteConfirm": "Delete Agent \"{0}\"?",
+    "builtinUndeletable": "The default Agent cannot be deleted",
+    "inUseUndeletable": "This Agent is used by sessions and cannot be deleted",
+    "avatar": {
+      "assistant": "Assistant",
+      "coder": "Coding Assistant",
+      "writer": "Writer",
+      "researcher": "Researcher",
+      "operator": "Operator",
+      "planner": "Planner",
+      "curator": "Curator",
+      "companion": "Companion",
+      "custom": "Custom"
+    },
+    "basicTitle": "Basic",
+    "name": "Name",
+    "namePlaceholder": "e.g. Coding Assistant",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional: describe this Agent",
+    "nameRequired": "Please enter an Agent name",
+    "skillLabel": "SKILL",
+    "skillTip": "Selected skills are available to this Agent.",
+    "skillEmpty": "No SKILL installed yet.",
+    "mcpLabel": "MCP",
+    "mcpTip": "Selected MCP servers are available to this Agent.",
+    "mcpEmpty": "No MCP server yet.",
+    "toolsLabel": "Built-in tools",
+    "toolsTip": "Only enabled categories are assembled for this Agent.",
+    "presetSection": "Preset Agents",
+    "preset": {
+      "assistant": {
+        "description": "General Q&A and daily tasks with all basic tools enabled."
+      },
+      "coder": {
+        "description": "For code reading, editing and command execution."
+      },
+      "writer": {
+        "description": "Writing documents, articles and emails with file and general tools."
+      },
+      "researcher": {
+        "description": "Research, web reading and conclusion synthesis."
+      },
+      "operator": {
+        "description": "Deployment, troubleshooting and commands with minimal changes."
+      },
+      "planner": {
+        "description": "Break down goals, build plans and confirm options."
+      },
+      "curator": {
+        "description": "Organize knowledge, archive materials and structure output."
+      },
+      "companion": {
+        "description": "Companionship and conversation without file or shell tools."
+      }
     }
   }
 }

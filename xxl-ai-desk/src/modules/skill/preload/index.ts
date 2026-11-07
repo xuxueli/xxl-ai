@@ -13,8 +13,6 @@ export const skillApi: SkillApi = {
   content: (id: string, offset: number) => ipcRenderer.invoke(SKILL_IPC.content, id, offset),
   importDirectory: () => ipcRenderer.invoke(SKILL_IPC.importDir),
   importZip: () => ipcRenderer.invoke(SKILL_IPC.importZip),
-  setEnabled: (id: string, enabled: boolean) =>
-    ipcRenderer.invoke(SKILL_IPC.setEnabled, id, enabled),
   remove: (id: string) => ipcRenderer.invoke(SKILL_IPC.remove, id),
   reveal: (id: string) => ipcRenderer.invoke(SKILL_IPC.reveal, id),
   refresh: () => ipcRenderer.invoke(SKILL_IPC.refresh),

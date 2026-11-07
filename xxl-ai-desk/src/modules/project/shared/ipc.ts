@@ -8,5 +8,6 @@ export const PROJECT_IPC = {
   create: 'desk:project:create',
   rename: 'desk:project:rename',
   remove: 'desk:project:remove',
-  reveal: 'desk:project:reveal'
+  reveal: 'desk:project:reveal',
+  setMemoryEnabled: 'desk:project:set-memory-enabled'
 } as const

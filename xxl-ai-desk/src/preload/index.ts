@@ -5,7 +5,7 @@
 
 import { contextBridge } from 'electron'
 import { appApi, shellApi, updateApi } from '@modules/app/preload'
-import { agentMemoryApi } from '@modules/agent/preload'
+import { agentApi } from '@modules/agent/preload'
 import { browserApi } from '@modules/browser/preload'
 import { chatApi, sessionApi } from '@modules/chat/preload'
 import { diagnosticsApi } from '@modules/diagnostics/preload'
@@ -23,7 +23,7 @@ const api: DeskApi = {
   app: appApi,
   update: updateApi,
   settings: settingsApi,
-  agentMemory: agentMemoryApi,
+  agent: agentApi,
   provider: providerApi,
   project: projectApi,
   git: gitApi,
