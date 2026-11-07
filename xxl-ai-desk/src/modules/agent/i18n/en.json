@@ -51,14 +51,16 @@
     },
     "summaryInject": "\n\n## Session Summary\nBelow is a compressed summary of earlier conversation; details may be omitted. If it conflicts with recent messages, trust the recent messages.\n{0}",
     "summaryGen": {
-      "system": "You are a session summary assistant. Merge the old summary and recent conversation into one up-to-date session summary. Output Markdown only, with exactly these three level-2 sections: ## {0}, ## {1}, ## {2}. Requirements: at most 2000 characters; keep what is still valid from the old summary and overwrite outdated content with the recent conversation; keep only background, goals, progress and other information useful for continuing the conversation; never fabricate; never record secrets or passwords; write \"None\" for empty sections.",
+      "system": "You are a session summary assistant. Merge the old summary and recent conversation into one up-to-date session summary. Output Markdown only, with exactly these five level-2 sections: ## {0}, ## {1}, ## {2}, ## {3}, ## {4}. Requirements: at most 2000 characters; keep what is still valid from the old summary and overwrite outdated content with the recent conversation; keep only information useful for continuing the conversation; use the latest goal state and mark abandoned goals as \"changed\"; preserve exact file names, API names, commands and error messages, but never record secrets or passwords; use \"- \" bullets and avoid long paragraphs; never fabricate; write \"None\" for empty sections.",
       "user": "Old summary:\n{0}\n\nRecent conversation:\n{1}",
       "empty": "(none)"
     },
     "summaryDim": {
-      "background": "Background",
+      "background": "Background and constraints",
       "goal": "Goals",
-      "progress": "Progress"
+      "decision": "Key decisions",
+      "progress": "Progress and artifacts",
+      "todo": "Todos and risks"
     },
     "selectAgent": "Select Agent",
     "needAgent": "Please select an Agent first",

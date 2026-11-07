@@ -22,7 +22,9 @@ function dimensions(language: 'zh' | 'en'): string[] {
   return [
     translate(language, 'agent.summaryDim.background'),
     translate(language, 'agent.summaryDim.goal'),
-    translate(language, 'agent.summaryDim.progress')
+    translate(language, 'agent.summaryDim.decision'),
+    translate(language, 'agent.summaryDim.progress'),
+    translate(language, 'agent.summaryDim.todo')
   ]
 }
 
