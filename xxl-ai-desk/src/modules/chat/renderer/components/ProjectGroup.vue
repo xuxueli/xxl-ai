@@ -125,7 +125,7 @@ async function onDeleteSession(id: string): Promise<void> {
       <template #icon>
         <el-icon class="project-icon">
           <FolderOpened v-if="expanded" />
-          <Folder v-else />
+          <FolderAdd v-else />
         </el-icon>
       </template>
       {{ project.name }}
