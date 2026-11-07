@@ -10,7 +10,7 @@ import { setBrowserOpener } from '@modules/agent/main'
 
 export function registerBrowserIpc(ipc: IpcContext): void {
   setBrowserOpener((sessionId, url, newTab) => {
-    ipc.send(BROWSER_IPC.openTab, { sessionId, url, newTab })
+    ipc.send(BROWSER_IPC.openTab, { sessionId: String(sessionId), url, newTab })
   })
   setBrowserActionSender((request) => {
     ipc.send(BROWSER_IPC.actionRequest, request)

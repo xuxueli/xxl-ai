@@ -27,7 +27,7 @@ const settings = useSettingsStore()
 const { visible: commandPaletteVisible } = useCommandPalette()
 
 /* 搜索面板选中会话：定位会话并回到对话页 */
-async function onPickSession(sessionId: string): Promise<void> {
+async function onPickSession(sessionId: number): Promise<void> {
   await chat.selectSession(sessionId)
   void router.push('/')
 }

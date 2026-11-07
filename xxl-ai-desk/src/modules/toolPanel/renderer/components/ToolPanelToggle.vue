@@ -5,7 +5,7 @@
  */
 import { computed, watch } from 'vue'
 import { useChatStore } from '@modules/chat/renderer'
-import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
+import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { SidePanelIcon } from '@common/renderer/components/icons'
 import { t } from '@renderer/shell/i18n'
 
@@ -13,7 +13,7 @@ const chat = useChatStore()
 const toolPanel = useToolPanelStore()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
-const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+const sessionKey = computed(() => sessionKeyOf(chat.currentId))
 /* 当前会话的工具面板状态 */
 const panelState = computed(() => toolPanel.sliceOf(sessionKey.value))
 

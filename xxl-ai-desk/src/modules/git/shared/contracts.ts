@@ -47,7 +47,7 @@ export interface GitStatus {
 
 /* 差异查询入参 */
 export interface GitDiffInput {
-  projectId: string
+  projectId: number
   path: string
   staged: boolean
 }
@@ -63,7 +63,7 @@ export interface GitDiffResult {
 
 /* 提交入参 */
 export interface GitCommitInput {
-  projectId: string
+  projectId: number
   message: string
 }
 

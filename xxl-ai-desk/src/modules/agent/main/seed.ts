@@ -9,7 +9,7 @@
 import type Database from 'better-sqlite3'
 import { translate } from '@common/shared/i18n'
 import { AGENT_AVATAR_PRESETS } from '@modules/agent/shared/agentPresets'
-import { DEFAULT_AGENT_ID, DEFAULT_AGENT_TOOLS } from '@modules/agent/shared/contracts'
+import { DEFAULT_AGENT_TOOLS } from '@modules/agent/shared/contracts'
 
 /* 内置 Agent 初始化标记：写入成功后不再重置，避免用户删除后被重新写回 */
 const AGENT_SEED_KEY = 'seed.agent'
@@ -37,19 +37,10 @@ export function seedDefaultAgent(db: Database.Database): void {
 
   const insert = db.prepare(`
     INSERT OR IGNORE INTO desk_agent
-      (id, name, description, avatar, system_prompt, skill_ids, mcp_ids,
+      (name, description, avatar, system_prompt, skill_ids, mcp_ids,
        tool_fs, tool_shell, tool_browser, tool_general, tool_interaction,
        builtin, add_time, update_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
-  /* 已存在的同 id 记录同步为预设配置（首次种子只执行一次） */
-  const update = db.prepare(`
-    UPDATE desk_agent SET
-      name = ?, description = ?, avatar = ?, system_prompt = ?,
-      skill_ids = ?, mcp_ids = ?,
-      tool_fs = ?, tool_shell = ?, tool_browser = ?, tool_general = ?, tool_interaction = ?,
-      builtin = ?, update_time = ?
-    WHERE id = ?
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const markSeeded = db.prepare('INSERT OR REPLACE INTO desk_setting (key, value) VALUES (?, ?)')
 
@@ -60,7 +51,6 @@ export function seedDefaultAgent(db: Database.Database): void {
         continue
       }
       const builtin = index === 0 ? 1 : 0
-      const id = builtin === 1 ? DEFAULT_AGENT_ID : `preset-agent-${preset.id}`
       const name = translate(language, preset.labelKey)
       const description = translate(language, preset.preset.descriptionKey)
       const systemPrompt = translate(language, preset.preset.promptKey)
@@ -73,7 +63,6 @@ export function seedDefaultAgent(db: Database.Database): void {
         tools.interaction ? 1 : 0
       ]
       insert.run(
-        id,
         name,
         description,
         preset.id,
@@ -84,18 +73,6 @@ export function seedDefaultAgent(db: Database.Database): void {
         builtin,
         now,
         now
-      )
-      update.run(
-        name,
-        description,
-        preset.id,
-        systemPrompt,
-        skillIds,
-        mcpIds,
-        ...toolValues,
-        builtin,
-        now,
-        id
       )
     }
     markSeeded.run(AGENT_SEED_KEY, now)

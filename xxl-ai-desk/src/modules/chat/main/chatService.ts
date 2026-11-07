@@ -8,7 +8,7 @@
 import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
-import type { ChatMode, InteractionResult, SessionDTO } from '@modules/chat/shared'
+import type { ChatMode, HistoryEntry, InteractionResult, SessionDTO } from '@modules/chat/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -19,39 +19,33 @@ import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
 import { appendMessages, getSession, listMessages, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
 import { getProject } from '@modules/project/main'
-import { getAgentById, getAgentMemory, getDefaultAgent, maybeGenerateAgentMemory } from '@modules/agent/main'
+import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
 import { getSkillsDir } from '@common/main/config/paths'
 import { abortAgent, evictAgent, isAgentRunning, runAgent } from '@modules/agent/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
 
 /* 下发到渲染层的对话事件负载（携带会话上下文） */
-export type ChatEventPayload = { sessionId: string } & HostEvent
+export type ChatEventPayload = { sessionId: number } & HostEvent
 
 /* 已请求终止的会话：终止轮次不再展示/落库「调用失败」提示 */
-const abortRequested = new Set<string>()
+const abortRequested = new Set<number>()
 /* 已丢弃结果的会话：删除会话/清空消息后，正在运行的轮次不再回写，避免产生孤儿数据 */
-const discardedSessions = new Set<string>()
+const discardedSessions = new Set<number>()
 
 /* 将 Agent 消息内容归一化为纯正文（用于落库预览与记忆转录）：只保留 text 块 */
 function contentToText(message: unknown): string {
   const content = (message as { content?: unknown })?.content
-  if (typeof content === 'string') {
-    return content
+  if (!Array.isArray(content)) {
+    return ''
   }
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (typeof part === 'string') {
-          return part
-        }
-        const block = part as { type?: string; text?: string }
-        /* thinking / toolCall / toolResult 不进入正文，避免思考与工具参数落库 */
-        return block.type === 'text' ? (block.text ?? '') : ''
-      })
-      .join('')
-  }
-  return ''
+  return content
+    .map((part) => {
+      const block = part as { type?: string; text?: string }
+      /* thinking / toolCall / toolResult 不进入正文，避免思考与工具参数落库 */
+      return block.type === 'text' ? (block.text ?? '') : ''
+    })
+    .join('')
 }
 
 /* 将底层异常翻译为可读提示：明确指向具体供应商与模型 */
@@ -114,7 +108,7 @@ function resolveRuntimeTarget(
  * 用户提问取本轮发送时刻，错误提示取失败时刻：长轮次失败时两者不应显示为同一时间。
  */
 function persistFailureRound(
-  sessionId: string,
+  sessionId: number,
   text: string,
   tip: string,
   startedAt: number
@@ -134,7 +128,9 @@ function persistFailureRound(
         content: [{ type: 'text', text }],
         timestamp: startedAt
       }),
-      timestamp: startedAt
+      timestamp: startedAt,
+      /* 真实用户提问：其自增 id 将作为本轮 turnId */
+      turnStart: true
     },
     {
       role: 'assistant',
@@ -228,7 +224,7 @@ function toRuntimeConfig(provider: ProviderDTO): ProviderModelConfig {
  * 流式事件经 emit 回调交给 ipc.ts 转发渲染层。
  */
 export async function sendChat(
-  input: { sessionId: string; text: string },
+  input: { sessionId: number; text: string },
   emit: (payload: ChatEventPayload) => void
 ): Promise<void> {
   const { sessionId, text } = input
@@ -303,8 +299,8 @@ export async function sendChat(
     }
     const rootDir = project.path
 
-    /* 会话绑定的 Agent：缺失时回落默认 Agent，保证旧数据仍可继续对话 */
-    const agent = getAgentById(session.agentId) ?? getDefaultAgent()
+    /* 会话绑定的 Agent：创建会话时已校验存在，缺失即视为数据异常 */
+    const agent = getAgentById(session.agentId)
     if (!agent) {
       fail(translate(language, 'runtime.agentMissing'))
       return
@@ -329,14 +325,17 @@ export async function sendChat(
     /* 模型上下文与完整历史分离：这里只构造最近窗口，数据库仍保留完整历史 */
     const history = trimHistory(
       listMessages(sessionId)
-        .map((message) => {
-          try {
-            return normalizeHistoryMessage(JSON.parse(message.data))
-          } catch {
-            return null
-          }
-        })
-        .filter((item) => item !== null),
+        .map((message) => ({
+          message: (() => {
+            try {
+              return normalizeHistoryMessage(JSON.parse(message.data))
+            } catch {
+              return null
+            }
+          })(),
+          injected: message.injected
+        }))
+        .filter((item) => item.message !== null),
       settings.language
     )
 
@@ -380,14 +379,32 @@ export async function sendChat(
       return
     }
     /* 落库：只追加本轮新增消息，完整历史始终由数据库持有 */
+    /* 首条真实用户提问标记为轮次头，其自增 id 由落库层回填为 turnId */
+    let turnStarted = false
     const serialized = result.messages
       .filter((message) => (message as { role?: string }).role !== 'system')
-      .map((message) => ({
-        role: (message as { role?: string }).role ?? '',
-        content: contentToText(message),
-        data: JSON.stringify(message),
-        timestamp: messageDisplayTime(message)
-      }))
+      .map((message) => {
+        const role = (message as { role?: string }).role ?? ''
+        const content = contentToText(message)
+        /* 注入标记只做持久化字段，不写回 Agent 原始消息 JSON */
+        const { injected: injectedFlag, ...raw } = message as {
+          role?: string
+          injected?: boolean
+        } & Record<string, unknown>
+        const injected = role === 'user' && injectedFlag === true
+        const turnStart = role === 'user' && !injected && !turnStarted
+        if (turnStart) {
+          turnStarted = true
+        }
+        return {
+          role,
+          content,
+          data: JSON.stringify(raw),
+          timestamp: messageDisplayTime(raw),
+          turnStart,
+          injected
+        }
+      })
     appendMessages(sessionId, serialized)
     committed = true
     /* 记忆生成异步执行：会话数据由本域提供，避免 agent 反向依赖 chat；失败只记日志（保留旧记忆） */
@@ -412,7 +429,7 @@ export async function sendChat(
 }
 
 /* 中止指定会话的当前生成 */
-export async function abortChat(sessionId: string): Promise<void> {
+export async function abortChat(sessionId: number): Promise<void> {
   abortRequested.add(sessionId)
   /* 先关闭该会话仍打开的交互弹窗，再通知运行时代为结算 */
   cancelInteractionsOf(sessionId)
@@ -420,7 +437,7 @@ export async function abortChat(sessionId: string): Promise<void> {
 }
 
 /* 丢弃指定会话正在运行/后续回写的结果（删除会话、清空消息时调用） */
-export function discardSessionRuns(sessionId: string): void {
+export function discardSessionRuns(sessionId: number): void {
   discardedSessions.add(sessionId)
 }
 

@@ -16,15 +16,15 @@ import { evictAgent } from './host/runtimeHost'
 /* 会话域注入能力 */
 interface AgentSessionDeps {
   /* 各 Agent 绑定会话数（一次分组统计） */
-  countSessionsByAgents(): Record<string, number>
+  countSessionsByAgents(): Record<number, number>
   /* Agent 绑定会话 ID 列表 */
-  listSessionIdsByAgent(agentId: string): string[]
+  listSessionIdsByAgent(agentId: number): number[]
   /* 项目下会话 ID 列表 */
-  listSessionIdsByProject(projectId: string): string[]
+  listSessionIdsByProject(projectId: number): number[]
 }
 
 /* 清理指定会话运行时：配置或记忆变更后下一轮重新装配 */
-function evictSessions(sessionIds: string[]): void {
+function evictSessions(sessionIds: number[]): void {
   sessionIds.forEach((sessionId) => evictAgent(sessionId))
 }
 
@@ -40,7 +40,7 @@ export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): v
     const sessionCount = sessions.countSessionsByAgents()[saved.id] ?? 0
     return { ...saved, sessionCount }
   })
-  ipc.handle(AGENT_IPC.remove, (_event, id: string) => {
+  ipc.handle(AGENT_IPC.remove, (_event, id: number) => {
     const existing = getAgentById(id)
     if (!existing) {
       return

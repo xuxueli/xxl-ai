@@ -6,7 +6,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
 export const providerTable = sqliteTable('desk_provider', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   baseUrl: text('base_url').notNull().default(''), /* OpenAI 兼容端点地址 */
   apiKey: text('api_key').notNull().default(''), /* 密钥（编码后存储） */

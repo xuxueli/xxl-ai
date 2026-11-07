@@ -10,5 +10,5 @@ import type { DiagnosticsQuery, LlmTraceDTO } from './contracts'
 export interface DiagnosticsApi {
   messages(query: DiagnosticsQuery): Promise<PageResult<StoredMessage>>
   traces(query: DiagnosticsQuery): Promise<PageResult<LlmTraceDTO>>
-  clearTraces(sessionId: string): Promise<void>
+  clearTraces(sessionId: number): Promise<void>
 }

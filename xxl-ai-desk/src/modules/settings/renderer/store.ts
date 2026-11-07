@@ -158,7 +158,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   /* 切换当前供应商（同步默认模型） */
-  async function selectProvider(providerId: string, modelId = ''): Promise<void> {
+  async function selectProvider(providerId: number, modelId = ''): Promise<void> {
     await saveSettings({ providerId, modelId })
   }
 

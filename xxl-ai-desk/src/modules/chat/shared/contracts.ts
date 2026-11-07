@@ -5,7 +5,7 @@
 /* 对话流式事件（主 → 渲染） */
 export interface ChatEvent {
   /* 所属会话主键 */
-  sessionId: string
+  sessionId: number
   /* 事件类型：delta 增量文本 / thinking 思考 / tool_start / tool_end / usage 上下文用量 / notice 非致命提示 / error 致命错误 / done / aborted */
   type:
     | 'delta'
@@ -96,7 +96,7 @@ export interface ChatInteractionPrompt {
   /* 交互请求 ID */
   requestId: string
   /* 所属会话主键 */
-  sessionId: string
+  sessionId: number
   /* 交互内容 */
   request: InteractionRequest
 }

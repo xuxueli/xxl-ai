@@ -6,12 +6,12 @@
 import type { GitCommitInput, GitCommitResult, GitDiffInput, GitDiffResult, GitOperationResult, GitStatus } from './contracts'
 
 export interface GitApi {
-  status(projectId: string): Promise<GitStatus>
+  status(projectId: number): Promise<GitStatus>
   diff(input: GitDiffInput): Promise<GitDiffResult>
-  stage(projectId: string, path: string, oldPath?: string): Promise<GitOperationResult>
-  unstage(projectId: string, path: string, oldPath?: string): Promise<GitOperationResult>
+  stage(projectId: number, path: string, oldPath?: string): Promise<GitOperationResult>
+  unstage(projectId: number, path: string, oldPath?: string): Promise<GitOperationResult>
   commit(input: GitCommitInput): Promise<GitCommitResult>
-  watch(projectId: string): Promise<void>
-  unwatch(projectId: string): Promise<void>
-  onChange(cb: (projectId: string) => void): () => void
+  watch(projectId: number): Promise<void>
+  unwatch(projectId: number): Promise<void>
+  onChange(cb: (projectId: number) => void): () => void
 }

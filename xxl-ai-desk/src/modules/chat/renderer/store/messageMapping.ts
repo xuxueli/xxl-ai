@@ -6,7 +6,6 @@
  */
 
 import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/renderer/types'
-import { isAutoContinuePrompt } from '@common/shared/i18n'
 import { t } from '@renderer/shell/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
@@ -39,9 +38,22 @@ export interface RawMessage {
   durationMs?: number
 }
 
-/* 生成 UI 消息 id */
+/* 生成工具调用兜底 id（字符串） */
 export function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+/* 生成流式期间本地消息 id（负数，避免与数据库自增正数冲突） */
+let localMessageSeq = 0
+export function nextLocalMessageId(): number {
+  localMessageSeq -= 1
+  return localMessageSeq
+}
+
+/* ISO 时间 → 毫秒时间戳（无效值返回 undefined） */
+function toTimestamp(iso: string): number | undefined {
+  const value = Date.parse(iso)
+  return Number.isFinite(value) ? value : undefined
 }
 
 /* 安全解析持久化的原始消息 JSON */
@@ -114,13 +126,20 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
   const result: UiMessage[] = []
   /* toolCallId → 工具片段引用，供后续 toolResult 回填状态与结果 */
   const toolParts = new Map<string, ToolCallState>()
+  /* 当前轮次标识：消息行 turnId，助手片段据此归组 */
+  let currentTurnId = 0
+  /* 各轮次开始时间：取真实用户提问消息的落库时间，重载后仍可展示本轮耗时 */
+  const turnStarts = new Map<number, number | undefined>()
 
   for (const record of stored) {
+    const raw = parseData(record.data)
     if (record.role === 'user') {
-      /* 自动续写消息仅驱动模型，不进入界面 */
-      if (isAutoContinuePrompt(record.content)) {
+      /* 自动续写提示仅驱动模型，不进入界面 */
+      if (record.injected) {
         continue
       }
+      currentTurnId = record.turnId
+      turnStarts.set(record.turnId, toTimestamp(record.addTime))
       result.push({
         id: record.id,
         role: 'user',
@@ -132,7 +151,6 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     }
     /* 工具结果：回填到对应工具片段 */
     if (record.role === 'toolResult') {
-      const raw = parseData(record.data)
       const tool = raw?.toolCallId ? toolParts.get(raw.toolCallId) : undefined
       if (tool) {
         tool.status = raw?.isError ? 'error' : 'done'
@@ -144,7 +162,6 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     }
     if (record.role !== 'assistant') continue
 
-    const raw = parseData(record.data)
     const parts = Array.isArray(raw?.content) ? raw.content : []
     const hasVisiblePart = parts.some((part) => part.type === 'text' || part.type === 'toolCall')
     const aborted = raw?.stopReason === 'aborted'
@@ -153,21 +170,31 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
       !aborted &&
       (raw?.stopReason === 'error' || raw?.stopReason === 'length' || !hasVisiblePart)
 
-    /* 合并到本轮已存在的助手消息 */
+    /* 本轮起止时间：开始取用户提问时间，结束取本轮最后一次助手落库时间 */
+    const startedAt = turnStarts.get(record.turnId)
+    const endedAt = toTimestamp(record.addTime)
+    const turnId = record.turnId
+
+    /* 同一 turnId 的助手片段合并为一条消息 */
     let last = result[result.length - 1]
-    if (!last || last.role !== 'assistant') {
+    if (!last || last.role !== 'assistant' || turnId !== currentTurnId) {
       last = {
         id: record.id,
         role: 'assistant',
         content: '',
         parts: [],
-        addTime: record.addTime
+        addTime: record.addTime,
+        startedAt,
+        endedAt
       }
       result.push(last)
     } else {
       /* 合并后的展示时间取本轮最后一次响应完成时刻，避免长时间执行仍显示开始时间 */
       last.addTime = record.addTime
+      last.startedAt = startedAt
+      last.endedAt = endedAt
     }
+    currentTurnId = turnId
 
     /* 记录本次模型响应的上下文用量，供顶栏展示占用占比 */
     const tokens = contextTokensOfUsage(raw?.usage)

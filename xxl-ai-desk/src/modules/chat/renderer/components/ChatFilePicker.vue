@@ -14,7 +14,7 @@ import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{
   /* 项目主键（文件系统访问边界） */
-  projectId: string
+  projectId: number
   /* 项目根目录 */
   root: string
 }>()

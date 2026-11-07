@@ -10,12 +10,12 @@ import { TRACE_REQUEST_MAX_CHARS, TRACE_RESPONSE_MAX_CHARS, TRACE_TOOL_RESULT_MA
 import type { LlmTraceInput, ToolCallTraceDTO } from '@modules/diagnostics/shared'
 
 /* 回传通道：由 worker 入口注入（parentPort.postMessage） */
-export type TraceSink = (sessionId: string, trace: LlmTraceInput) => void
+export type TraceSink = (sessionId: number, trace: LlmTraceInput) => void
 
 /* 采集目标：会话 + 来源，贯穿一轮采集的所有回调 */
 export interface TraceTarget {
   /* 归属会话 */
-  sessionId: string
+  sessionId: number
   /* 对话 / 记忆生成 */
   phase: 'chat' | 'memory'
 }
@@ -38,7 +38,7 @@ interface PendingToolCall extends ToolCallTraceDTO {
 /* 采集中的一次模型调用 */
 interface PendingTrace {
   step: number
-  providerId: string
+  providerId: number
   modelId: string
   startedAt: number
   /* 响应结束时间（未拿到响应为 0） */
@@ -73,7 +73,7 @@ function runKey(target: TraceTarget): string {
 
 /* 创建采集目标（phase 默认对话） */
 export function createTraceTarget(
-  sessionId: string,
+  sessionId: number,
   phase: 'chat' | 'memory' = 'chat'
 ): TraceTarget {
   return { sessionId, phase }
@@ -160,7 +160,7 @@ export interface TraceHooks {
 /* 创建采集钩子：模型信息缺失时回落到调用方传入的供应商 / 模型 */
 export function createTraceHooks(
   target: TraceTarget,
-  fallbackProviderId: string,
+  fallbackProviderId: number,
   fallbackModelId: string
 ): TraceHooks {
   return {
@@ -168,7 +168,7 @@ export function createTraceHooks(
       handleTracePayload(
         target,
         payload,
-        model.provider ?? fallbackProviderId,
+        Number(model.provider) || fallbackProviderId,
         model.id ?? fallbackModelId
       )
       return undefined
@@ -183,7 +183,7 @@ export function createTraceHooks(
 export function handleTracePayload(
   target: TraceTarget,
   payload: unknown,
-  providerId: string,
+  providerId: number,
   modelId: string
 ): void {
   const run = runs.get(runKey(target))
@@ -304,7 +304,7 @@ export function endTraceRun(target: TraceTarget, error = '', aborted = false): v
 }
 
 /* 释放采集状态：会话 Evict / 运行时重置时调用，避免状态滞留 */
-export function clearTraceRuns(sessionId?: string): void {
+export function clearTraceRuns(sessionId?: number): void {
   if (!sessionId) {
     runs.clear()
     return

@@ -14,11 +14,11 @@ import { appendPart, refreshContent, uid } from '@modules/chat/renderer/store/me
 /* 流式状态机依赖的响应式上下文 */
 export interface ChatStreamContext {
   /* 当前展示的会话 id */
-  currentId: Ref<string>
+  currentId: Ref<number>
   /* 当前展示的消息列表 */
   messages: Ref<UiMessage[]>
   /* 正在生成的会话集合 */
-  streamingIds: Ref<Record<string, boolean>>
+  streamingIds: Ref<Record<number, boolean>>
 }
 
 /* 单会话增量缓冲 */
@@ -34,14 +34,14 @@ const FLUSH_INTERVAL = 80
 /* 创建对话流式状态机 */
 export function createChatStream(context: ChatStreamContext) {
   /* 各会话的当前流式目标（sessionId → 本地助手消息 id） */
-  const streamTargets = new Map<string, string>()
+  const streamTargets = new Map<number, number>()
   /* 各会话的增量缓冲与节流定时器 */
-  const streamBuffers = new Map<string, StreamBuffer>()
+  const streamBuffers = new Map<number, StreamBuffer>()
   /* 各会话生成中的消息数组缓存：切走后仍持续累积，切回即还原 */
-  const liveMessages = new Map<string, UiMessage[]>()
+  const liveMessages = new Map<number, UiMessage[]>()
 
   /* 取（或创建）某会话的增量缓冲 */
-  function bufferOf(sessionId: string): StreamBuffer {
+  function bufferOf(sessionId: number): StreamBuffer {
     let buffer = streamBuffers.get(sessionId)
     if (!buffer) {
       buffer = { delta: '', thinking: '', timer: null }
@@ -51,7 +51,7 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 取某会话当前的消息数组：展示中的用 messages，后台生成中的用其缓存 */
-  function sessionMessages(sessionId: string): UiMessage[] | undefined {
+  function sessionMessages(sessionId: number): UiMessage[] | undefined {
     if (context.currentId.value === sessionId) {
       return context.messages.value
     }
@@ -59,7 +59,7 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 定位某会话正在流式的助手消息（响应式代理） */
-  function streamAssistant(sessionId: string): UiMessage | undefined {
+  function streamAssistant(sessionId: number): UiMessage | undefined {
     const id = streamTargets.get(sessionId)
     if (!id) {
       return undefined
@@ -68,7 +68,7 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 刷新某会话缓冲的增量：写入该会话消息数组（后台会话亦累积，供切回还原） */
-  function flushBuffers(sessionId: string): void {
+  function flushBuffers(sessionId: number): void {
     const buffer = streamBuffers.get(sessionId)
     if (!buffer) {
       return
@@ -93,7 +93,7 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 调度某会话的节流刷新 */
-  function scheduleFlush(sessionId: string): void {
+  function scheduleFlush(sessionId: number): void {
     const buffer = bufferOf(sessionId)
     if (buffer.timer !== null) {
       return
@@ -102,7 +102,7 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 开始一轮生成：登记目标消息并重置缓冲 */
-  function beginRound(sessionId: string, assistantId: string): void {
+  function beginRound(sessionId: number, assistantId: number): void {
     streamTargets.set(sessionId, assistantId)
     const buffer = bufferOf(sessionId)
     buffer.delta = ''
@@ -114,7 +114,7 @@ export function createChatStream(context: ChatStreamContext) {
    * 结束一轮生成：落定缓冲并清理会话缓存。
    * 返回本轮是否仍为该会话的当前流（避免被同一会话的新一轮取代）。
    */
-  function completeRound(sessionId: string, assistantId: string): boolean {
+  function completeRound(sessionId: number, assistantId: number): boolean {
     if (streamTargets.get(sessionId) !== assistantId) {
       return false
     }
@@ -126,29 +126,29 @@ export function createChatStream(context: ChatStreamContext) {
   }
 
   /* 丢弃会话的全部流式缓存（删除会话时调用） */
-  function discard(sessionId: string): void {
+  function discard(sessionId: number): void {
     liveMessages.delete(sessionId)
     streamTargets.delete(sessionId)
     streamBuffers.delete(sessionId)
   }
 
   /* 读取生成中的消息缓存（切回会话时优先还原） */
-  function liveMessagesOf(sessionId: string): UiMessage[] | undefined {
+  function liveMessagesOf(sessionId: number): UiMessage[] | undefined {
     return liveMessages.get(sessionId)
   }
 
   /* 记录生成中的消息缓存（如应用重启后补占位助手消息） */
-  function setLiveMessages(sessionId: string, list: UiMessage[]): void {
+  function setLiveMessages(sessionId: number, list: UiMessage[]): void {
     liveMessages.set(sessionId, list)
   }
 
   /* 当前流式目标消息 id（生成中但无内存缓存时用于补占位） */
-  function targetIdOf(sessionId: string): string | undefined {
+  function targetIdOf(sessionId: number): number | undefined {
     return streamTargets.get(sessionId)
   }
 
   /* 当前流式助手消息（读取/更新 pending 状态） */
-  function assistantOf(sessionId: string): UiMessage | undefined {
+  function assistantOf(sessionId: number): UiMessage | undefined {
     return streamAssistant(sessionId)
   }
 

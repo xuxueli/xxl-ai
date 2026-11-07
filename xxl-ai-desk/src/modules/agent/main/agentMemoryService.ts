@@ -4,7 +4,6 @@
  *   - 生成失败只记录日志并保留旧记忆，不阻断对话主流程。
  */
 
-import { randomUUID } from 'crypto'
 import log from 'electron-log/main'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
@@ -33,14 +32,14 @@ export interface AgentMemoryGenerationContext {
 }
 
 /* 生成中的项目：同一项目同时只跑一个记忆任务，避免多会话并发覆盖 */
-const generatingProjects = new Set<string>()
+const generatingProjects = new Set<number>()
 
 /* 生成入参最大转录长度（字符）：超长从最旧内容截断，控制压缩请求成本 */
 const TRANSCRIPT_MAX_CHARS = 60_000
 
 /* 行记录 → DTO（无记忆时字段为空串） */
 function toDTO(row: {
-  projectId: string
+  projectId: number
   projectName: string
   content?: string | null
   lastMessageTime?: string | null
@@ -74,7 +73,7 @@ export function listAgentMemories(): AgentMemoryDTO[] {
 }
 
 /* 读取单个项目的记忆正文（未生成返回空串） */
-export function getAgentMemory(projectId: string): string {
+export function getAgentMemory(projectId: number): string {
   if (!projectId) {
     return ''
   }
@@ -88,11 +87,14 @@ export function getAgentMemory(projectId: string): string {
 
 /* 保存记忆：以项目为唯一键幂等 upsert */
 function upsertMemory(
-  projectId: string,
+  projectId: number,
   content: string,
   lastMessageTime: string
 ): AgentMemoryDTO {
   const db = getDb()
+  if (!projectId) {
+    throw new Error(t('runtime.error.projectMissing'))
+  }
   const now = new Date().toISOString()
   const existing = db
     .select()
@@ -100,18 +102,21 @@ function upsertMemory(
     .where(eq(agentMemoryTable.projectId, projectId))
     .get()
   const record = {
-    id: existing?.id ?? randomUUID(),
     projectId,
     content,
     lastMessageTime,
     addTime: existing?.addTime ?? now,
     updateTime: now
   }
-  db.insert(agentMemoryTable)
-    .values(record)
-    .onConflictDoUpdate({ target: agentMemoryTable.projectId, set: record })
-    .run()
-  return toDTO({ ...record, projectName: getProject(projectId)?.name ?? '' })
+  if (existing) {
+    db.update(agentMemoryTable).set(record).where(eq(agentMemoryTable.id, existing.id)).run()
+  } else {
+    db.insert(agentMemoryTable).values(record).run()
+  }
+  return toDTO({
+    ...record,
+    projectName: getProject(projectId)?.name ?? ''
+  })
 }
 
 /* 手动保存记忆（内容截断到固定上限） */
@@ -133,7 +138,10 @@ export function saveAgentMemory(input: AgentMemorySaveInput): AgentMemoryDTO {
 }
 
 /* 删除项目记忆（保留项目本身；运行时清理由调用方编排） */
-export function removeAgentMemory(projectId: string): void {
+export function removeAgentMemory(projectId: number): void {
+  if (!projectId) {
+    return
+  }
   getDb().delete(agentMemoryTable).where(eq(agentMemoryTable.projectId, projectId)).run()
 }
 
@@ -175,24 +183,18 @@ function extractMessageText(row: { content: string; data: string }): string {
   }
   try {
     const content = (JSON.parse(row.data) as { content?: unknown }).content
-    if (typeof content === 'string') {
-      return content.trim()
-    }
     if (!Array.isArray(content)) {
       return row.content.trim()
     }
     return content
       .map((part) => {
-        if (typeof part === 'string') {
-          return part
-        }
         const block = part as { type?: string; text?: string }
         return block.type === 'text' ? (block.text ?? '') : ''
       })
       .join('')
       .trim()
   } catch {
-    /* 历史脏数据无法解析时退回归一化正文，保证记忆生成不中断 */
+    /* 解析失败退回归一化正文，保证记忆生成不中断 */
     return row.content.trim()
   }
 }
@@ -201,7 +203,7 @@ function extractMessageText(row: { content: string; data: string }): string {
 function buildTranscript(sessions: ProjectMessageGroup[], language: string): string {
   const blocks = sessions.map((session) => {
     const body = session.messages
-      .filter((row) => row.role === 'user' || row.role === 'assistant')
+      .filter((row) => (row.role === 'user' || row.role === 'assistant') && !row.injected)
       .map((row) => ({ role: row.role, text: extractMessageText(row) }))
       .filter((row) => row.text)
       .map((row) => `${row.role}: ${row.text}`)

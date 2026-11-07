@@ -30,7 +30,7 @@ interface KeyValueRow {
 
 /* 表单状态 */
 const form = ref({
-  id: '',
+  id: 0,
   name: '',
   type: 'remote' as McpType,
   url: '',
@@ -80,7 +80,7 @@ function toMap(rows: KeyValueRow[]): Record<string, string> {
 function resetForm(): void {
   const draft = props.draft ?? {}
   form.value = {
-    id: draft.id ?? '',
+    id: draft.id ?? 0,
     name: draft.name ?? '',
     type: draft.type ?? 'remote',
     url: draft.url ?? '',

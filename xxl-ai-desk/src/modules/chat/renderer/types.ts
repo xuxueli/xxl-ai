@@ -33,7 +33,7 @@ export type MessagePart =
 
 /* 对话消息（UI 渲染用） */
 export interface UiMessage {
-  id: string
+  id: number
   role: 'user' | 'assistant' | 'system'
   /* 用户消息文本；助手消息为全部正文片段的拼接（供复制与列表预览） */
   content: string

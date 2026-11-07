@@ -8,17 +8,17 @@ import type { SessionDTO, StoredMessage } from './session'
 
 export interface SessionApi {
   list(): Promise<SessionDTO[]>
-  create(input?: Partial<SessionDTO>): Promise<SessionDTO>
-  update(id: string, patch: Partial<SessionDTO>): Promise<SessionDTO>
-  rename(id: string, title: string): Promise<void>
-  remove(id: string): Promise<void>
-  messages(sessionId: string): Promise<StoredMessage[]>
-  removeMessages(sessionId: string, ids: string[]): Promise<void>
+  create(input?: Omit<Partial<SessionDTO>, 'id'>): Promise<SessionDTO>
+  update(id: number, patch: Partial<SessionDTO>): Promise<SessionDTO>
+  rename(id: number, title: string): Promise<void>
+  remove(id: number): Promise<void>
+  messages(sessionId: number): Promise<StoredMessage[]>
+  removeMessages(sessionId: number, ids: number[]): Promise<void>
 }
 
 export interface ChatApi {
-  send(input: { sessionId: string; text: string }): Promise<void>
-  abort(sessionId: string): Promise<void>
+  send(input: { sessionId: number; text: string }): Promise<void>
+  abort(sessionId: number): Promise<void>
   onEvent(cb: (event: ChatEvent) => void): () => void
   onInteraction(cb: (prompt: ChatInteractionPrompt) => void): () => void
   onInteractionCancel(cb: (payload: ChatInteractionCancel) => void): () => void

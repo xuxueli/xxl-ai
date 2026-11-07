@@ -5,7 +5,7 @@
 
 export const AGENT_DDL = `
 CREATE TABLE IF NOT EXISTS desk_agent (
-  id               TEXT PRIMARY KEY,
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
   name             TEXT NOT NULL DEFAULT '',
   description      TEXT NOT NULL DEFAULT '',
   avatar           TEXT NOT NULL DEFAULT 'assistant',
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS desk_agent (
 CREATE UNIQUE INDEX IF NOT EXISTS i_desk_agent_name ON desk_agent (name);
 CREATE INDEX IF NOT EXISTS i_desk_agent_builtin ON desk_agent (builtin);
 CREATE TABLE IF NOT EXISTS desk_agent_memory (
-  id              TEXT PRIMARY KEY,
-  project_id      TEXT NOT NULL DEFAULT '',
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id      INTEGER NOT NULL DEFAULT 0,
   content         TEXT NOT NULL DEFAULT '',
   last_time       TEXT NOT NULL DEFAULT '',
   add_time        TEXT NOT NULL DEFAULT '',

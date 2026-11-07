@@ -57,7 +57,7 @@ export function usePagedList<T>(options: PagedListOptions<T>): PagedListState<T>
     error.value = ''
     try {
       const result = await options.fetchPage({
-        sessionId: options.sessionId(),
+        sessionId: Number(options.sessionId()) || 0,
         page: page.value,
         pageSize
       })

@@ -3,7 +3,7 @@
  * @author xuxueli 2026-10-25
  */
 
-export { DRAFT_SESSION_KEY, useToolPanelStore } from './store'
+export { DRAFT_SESSION_KEY, sessionKeyOf, useToolPanelStore } from './store'
 export type { ToolPanelTab } from './store'
 export { defaultTreeWidth } from './store/state'
 export type { TerminalTabState, ToolPanelState } from './store/state'

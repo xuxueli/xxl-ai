@@ -5,11 +5,11 @@
 
 export const DIAGNOSTICS_DDL = `
 CREATE TABLE IF NOT EXISTS desk_llm_trace (
-  id               TEXT PRIMARY KEY,
-  session_id       TEXT NOT NULL DEFAULT '',
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id       INTEGER NOT NULL DEFAULT 0,
   run_id           TEXT NOT NULL DEFAULT '',
   step             INTEGER NOT NULL DEFAULT 0,
-  provider_id      TEXT NOT NULL DEFAULT '',
+  provider_id      INTEGER NOT NULL DEFAULT 0,
   model_id         TEXT NOT NULL DEFAULT '',
   phase            TEXT NOT NULL DEFAULT 'chat',
   status           TEXT NOT NULL DEFAULT 'success',

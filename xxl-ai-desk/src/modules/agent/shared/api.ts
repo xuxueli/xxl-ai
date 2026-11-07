@@ -9,7 +9,7 @@ export interface AgentApi {
   /* Agent 配置 */
   list(): Promise<AgentDTO[]>
   save(input: AgentSaveInput): Promise<AgentDTO>
-  remove(id: string): Promise<void>
+  remove(id: number): Promise<void>
   /* 项目记忆 */
   memoryList(): Promise<AgentMemoryDTO[]>
   memorySave(input: AgentMemorySaveInput): Promise<AgentMemoryDTO>

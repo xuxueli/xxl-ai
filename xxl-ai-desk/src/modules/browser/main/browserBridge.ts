@@ -37,7 +37,7 @@ export function resolveBrowserAction(requestId: string, result: BrowserActionRes
 
 /* 请求执行页面动作；无窗口/超时统一转为失败结果 */
 export function requestBrowserAction(
-  sessionId: string,
+  sessionId: number,
   action: BrowserAction
 ): Promise<BrowserActionResult> {
   const send = sender
@@ -51,7 +51,7 @@ export function requestBrowserAction(
       resolve({ ok: false, error: '浏览器动作超时：请确认右侧浏览器已打开页面后重试' })
     }, ACTION_TIMEOUT)
     pending.set(requestId, { resolve, timer })
-    send({ requestId, sessionId, action })
+    send({ requestId, sessionId: String(sessionId), action })
   })
 }
 

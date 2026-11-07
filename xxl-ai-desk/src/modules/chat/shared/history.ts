@@ -7,13 +7,19 @@
  * @author xuxueli 2026-10-26
  */
 
-import { isAutoContinuePrompt, translate } from '@common/shared/i18n'
+import { translate } from '@common/shared/i18n'
 
 /* 历史窗口：最多保留的最近消息条数 */
 export const HISTORY_MAX_MESSAGES = 50
 
 /* 历史窗口：总字符上限（超过后从最旧轮次继续丢弃） */
 export const HISTORY_MAX_CHARS = 120_000
+
+/* 历史条目：消息本体 + 运行时注入标记（注入消息不算真实用户轮次） */
+export interface HistoryEntry {
+  message: HistoryMessage | null
+  injected: boolean
+}
 
 /* 运行期消息最小结构 */
 interface HistoryMessage {
@@ -28,15 +34,9 @@ export function contentBlocks(message: { content?: unknown }): unknown[] {
   return Array.isArray(message.content) ? message.content : []
 }
 
-/* 是否为真实用户轮次（自动续写消息不算新一轮） */
-function isTurnStart(message: HistoryMessage): boolean {
-  if (message.role !== 'user') {
-    return false
-  }
-  const first = contentBlocks(message)[0] as { type?: string; text?: string } | undefined
-  return !(
-    first?.type === 'text' && typeof first.text === 'string' && isAutoContinuePrompt(first.text)
-  )
+/* 是否为真实用户轮次（注入消息不算新一轮） */
+function isTurnStart(entry: HistoryEntry): boolean {
+  return entry.message?.role === 'user' && !entry.injected
 }
 
 /*
@@ -73,10 +73,13 @@ function stripThinking(message: HistoryMessage, language: string): HistoryMessag
 }
 
 /* 按消息条数与字符上限裁剪历史 */
-export function trimHistory(input: unknown[], language = 'zh'): unknown[] {
-  const cleaned = (input as HistoryMessage[])
-    .map((message) => stripThinking(message, language))
-    .filter((message): message is HistoryMessage => message !== null)
+export function trimHistory(input: HistoryEntry[], language = 'zh'): unknown[] {
+  const cleaned = input
+    .map((entry) => ({
+      message: stripThinking(entry.message as HistoryMessage, language),
+      injected: entry.injected
+    }))
+    .filter((entry): entry is HistoryEntry & { message: HistoryMessage } => entry.message !== null)
 
   /* 最近 50 条；若起点在半轮中间，向后对齐到真实用户消息 */
   let result = cleaned.slice(-HISTORY_MAX_MESSAGES)
@@ -86,9 +89,12 @@ export function trimHistory(input: unknown[], language = 'zh'): unknown[] {
   }
 
   /* 字符超限：继续从最旧轮次丢弃 */
-  while (result.length > 1 && JSON.stringify(result).length > HISTORY_MAX_CHARS) {
-    const nextTurn = result.findIndex((message, index) => index > 0 && isTurnStart(message))
+  while (
+    result.length > 1 &&
+    JSON.stringify(result.map((entry) => entry.message)).length > HISTORY_MAX_CHARS
+  ) {
+    const nextTurn = result.findIndex((entry, index) => index > 0 && isTurnStart(entry))
     result = result.slice(nextTurn > 0 ? nextTurn : 1)
   }
-  return result
+  return result.map((entry) => entry.message)
 }

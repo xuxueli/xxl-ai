@@ -9,7 +9,7 @@ import SidebarContent from '@renderer/shell/layout/components/Sidebar/SidebarCon
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import { useLayoutStore } from '@renderer/shell/stores/layout'
 import { useChatStore } from '@modules/chat/renderer'
-import { DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
+import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { usePanelWidths } from '@renderer/shell/layout/composables/usePanelWidths'
 import { t } from '@renderer/shell/i18n'
 
@@ -17,7 +17,7 @@ const layout = useLayoutStore()
 const chat = useChatStore()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
-const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+const sessionKey = computed(() => sessionKeyOf(chat.currentId))
 
 /* 侧栏宽度：按窗口、工具面板与会话区最小宽度动态约束 */
 const { sidebarWidth, resetSidebarWidth } = usePanelWidths(() => sessionKey.value)

@@ -10,6 +10,6 @@ import { PROVIDER_IPC } from '../shared/ipc'
 export const providerApi: ProviderApi = {
   list: () => ipcRenderer.invoke(PROVIDER_IPC.list),
   save: (dto) => ipcRenderer.invoke(PROVIDER_IPC.save, dto),
-  remove: (id: string) => ipcRenderer.invoke(PROVIDER_IPC.remove, id),
+  remove: (id: number) => ipcRenderer.invoke(PROVIDER_IPC.remove, id),
   remoteModels: (input) => ipcRenderer.invoke(PROVIDER_IPC.remoteModels, input)
 }

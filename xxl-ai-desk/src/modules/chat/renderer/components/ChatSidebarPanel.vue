@@ -25,12 +25,12 @@ const project = useProjectStore()
 const sortBy = ref<'time' | 'name'>('name')
 
 /* 项目 → 其下会话 */
-function sessionsOf(projectId: string): SessionDTO[] {
+function sessionsOf(projectId: number): SessionDTO[] {
   return chat.sessions.filter((item) => item.projectId === projectId)
 }
 
 /* 按当前排序方式排序的会话 */
-function sortedSessionsOf(projectId: string): SessionDTO[] {
+function sortedSessionsOf(projectId: number): SessionDTO[] {
   const list = sessionsOf(projectId)
   if (sortBy.value === 'name') {
     return [...list].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh'))
@@ -60,12 +60,12 @@ function onSortCommand(command: string): void {
 }
 
 /* 展开状态（由 project store 维护，组件重挂载后仍保留） */
-function isExpanded(projectId: string): boolean {
+function isExpanded(projectId: number): boolean {
   return project.isExpanded(projectId)
 }
 
 /* 点击项目：选中并折叠/展开 */
-function toggleProject(projectId: string): void {
+function toggleProject(projectId: number): void {
   project.selectProject(projectId)
   project.toggleExpanded(projectId)
 }
@@ -96,7 +96,7 @@ function onNew(): void {
 }
 
 /* 选中会话并回到对话页 */
-async function onSelect(id: string): Promise<void> {
+async function onSelect(id: number): Promise<void> {
   await chat.selectSession(id)
   router.push('/')
 }

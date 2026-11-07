@@ -88,9 +88,3 @@ export function translate(
   const text = lookup(target, key) ?? lookup(dictionaries.zh, key)
   return text === undefined ? key : interpolate(text, params)
 }
-
-/* 是否为自动续写提示（兼容中英文） */
-export function isAutoContinuePrompt(value: string): boolean {
-  return value === translate('zh', 'runtime.continuePrompt') ||
-    value === translate('en', 'runtime.continuePrompt')
-}

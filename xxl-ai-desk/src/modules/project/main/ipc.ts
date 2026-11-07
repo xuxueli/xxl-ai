@@ -28,8 +28,8 @@ export function registerProjectIpc(ipc: IpcContext): void {
     }
     return createProject({ name: input?.name, path })
   })
-  ipc.handle(PROJECT_IPC.rename, (_event, id: string, name: string) => renameProject(id, name))
-  ipc.handle(PROJECT_IPC.remove, async (_event, id: string) => {
+  ipc.handle(PROJECT_IPC.rename, (_event, id: number, name: string) => renameProject(id, name))
+  ipc.handle(PROJECT_IPC.remove, async (_event, id: number) => {
     const sessionIds = listSessionIdsByProject(id)
     deleteProject(id)
     for (const sessionId of sessionIds) {
@@ -42,13 +42,13 @@ export function registerProjectIpc(ipc: IpcContext): void {
     }
     removeAgentMemory(id)
   })
-  ipc.handle(PROJECT_IPC.reveal, (_event, id: string) => {
+  ipc.handle(PROJECT_IPC.reveal, (_event, id: number) => {
     const project = getProject(id)
     if (project) {
       shell.showItemInFolder(project.path)
     }
   })
-  ipc.handle(PROJECT_IPC.setMemoryEnabled, (_event, id: string, enabled: boolean) => {
+  ipc.handle(PROJECT_IPC.setMemoryEnabled, (_event, id: number, enabled: boolean) => {
     const saved = setProjectMemoryEnabled(id, enabled)
     /* 记忆注入状态变化：清理项目下会话运行时，下一轮重新装配系统提示 */
     listSessionIdsByProject(id).forEach((sessionId) => evictAgent(sessionId))

@@ -5,7 +5,7 @@
 
 export const PROJECT_DDL = `
 CREATE TABLE IF NOT EXISTS desk_project (
-  id          TEXT PRIMARY KEY,
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL DEFAULT '',
   path        TEXT NOT NULL DEFAULT '',
   memory_enabled INTEGER NOT NULL DEFAULT 0,

@@ -30,7 +30,7 @@ export async function testMcp(input: Partial<McpDTO>): Promise<McpTestResult> {
 }
 
 /* 列举已保存服务的工具（复用运行时连接缓存） */
-export async function listMcpTools(id: string): Promise<McpToolMeta[]> {
+export async function listMcpTools(id: number): Promise<McpToolMeta[]> {
   const dto = getMcp(id)
   if (!dto) {
     throw new Error(t('runtime.error.mcpNotFound'))

@@ -16,7 +16,7 @@ import type { LlmTraceInput } from '@modules/diagnostics/shared'
 /* 供应商运行时配置（主进程解密后传给运行时，与 Pi Models 构建入参一致） */
 export interface ProviderModelConfig {
   /* 供应商主键 */
-  id: string
+  id: number
   /* 供应商名 */
   name: string
   /* 接口基址 */
@@ -28,7 +28,7 @@ export interface ProviderModelConfig {
   /* 可选模型列表 */
   models: ModelDescriptor[]
   /* 关联会话 ID（供 {session} 占位替换） */
-  sessionId?: string
+  sessionId?: number
 }
 
 /* 运行时进程向主进程推送的对话流式事件 */
@@ -51,7 +51,7 @@ export type BuiltinToolSwitches = AgentToolSwitches
 /* 一次对话运行入参 */
 export interface RunAgentInput {
   /* 会话主键 */
-  sessionId: string
+  sessionId: number
   /* 供应商运行时配置 */
   provider: ProviderModelConfig
   /* 模型 ID */
@@ -89,7 +89,7 @@ export interface MemoryGenerateInput {
   /* 请求标识（结果回传关联） */
   requestId: string
   /* 归属会话（trace 记录用） */
-  sessionId: string
+  sessionId: number
   /* 开发者模式：开启后采集本次模型调用 trace */
   traceEnabled: boolean
   /* 供应商运行时配置 */
@@ -107,9 +107,9 @@ export interface MemoryGenerateInput {
 /* 主进程 → 运行时进程 */
 export type WorkerRequest =
   | { type: 'run'; input: RunAgentInput } /* 启动一轮对话 */
-  | { type: 'abort'; sessionId: string } /* 中止指定会话生成 */
-  | { type: 'evict'; sessionId: string } /* 释放会话缓存 */
-  | { type: 'clear-permissions'; sessionId: string } /* 清空会话越界白名单 */
+  | { type: 'abort'; sessionId: number } /* 中止指定会话生成 */
+  | { type: 'evict'; sessionId: number } /* 释放会话缓存 */
+  | { type: 'clear-permissions'; sessionId: number } /* 清空会话越界白名单 */
   | { type: 'reset' } /* 重置全部运行时状态 */
   | { type: 'shutdown' } /* 退出前优雅关闭：释放 MCP 子进程后自行退出 */
   | { type: 'interaction-response'; requestId: string; result: InteractionResult } /* 回传用户交互结果 */
@@ -120,15 +120,15 @@ export type WorkerRequest =
 
 /* 运行时进程 → 主进程 */
 export type WorkerMessage =
-  | { type: 'event'; sessionId: string; event: HostEvent } /* 流式事件 */
-  | { type: 'open-browser'; sessionId: string; url: string; newTab?: boolean } /* 在右侧「浏览器」面板打开页面（Agent 工具触发） */
-  | { type: 'browser-action'; requestId: string; sessionId: string; action: BrowserAction } /* 执行页面动作（跨进程请求渲染层） */
-  | { type: 'run-done'; sessionId: string; messages: unknown[] } /* 运行完成（只返回本轮新增消息） */
-  | { type: 'run-error'; sessionId: string; message: string } /* 运行失败 */
-  | { type: 'interaction-request'; requestId: string; sessionId: string; request: InteractionRequest } /* 人机交互请求 */
+  | { type: 'event'; sessionId: number; event: HostEvent } /* 流式事件 */
+  | { type: 'open-browser'; sessionId: number; url: string; newTab?: boolean } /* 在右侧「浏览器」面板打开页面（Agent 工具触发） */
+  | { type: 'browser-action'; requestId: string; sessionId: number; action: BrowserAction } /* 执行页面动作（跨进程请求渲染层） */
+  | { type: 'run-done'; sessionId: number; messages: unknown[] } /* 运行完成（只返回本轮新增消息） */
+  | { type: 'run-error'; sessionId: number; message: string } /* 运行失败 */
+  | { type: 'interaction-request'; requestId: string; sessionId: number; request: InteractionRequest } /* 人机交互请求 */
   | { type: 'interaction-cancel'; requestId: string } /* 交互取消（关闭渲染层弹窗） */
   | { type: 'mcp-test-result'; requestId: string; result: McpTestResult } /* 连通测试结果 */
   | { type: 'mcp-tools-result'; requestId: string; tools: McpToolMeta[] } /* 工具列表结果 */
   | { type: 'memory-result'; requestId: string; ok: boolean; content?: string; message?: string } /* 记忆生成结果 */
   | { type: 'mcp-result-error'; requestId: string; message: string } /* MCP 操作失败 */
-  | { type: 'llm-trace'; sessionId: string; trace: LlmTraceInput } /* 模型通讯 trace（开发者模式） */
+  | { type: 'llm-trace'; sessionId: number; trace: LlmTraceInput } /* 模型通讯 trace（开发者模式） */

@@ -65,7 +65,7 @@ export const useMcpStore = defineStore('mcp', () => {
   }
 
   /* 删除 MCP 并刷新列表 */
-  async function removeServer(id: string): Promise<void> {
+  async function removeServer(id: number): Promise<void> {
     await api.mcp.remove(id)
     await loadServers()
   }
@@ -80,7 +80,7 @@ export const useMcpStore = defineStore('mcp', () => {
   }
 
   /* 读取已保存服务的工具列表 */
-  async function loadTools(id: string): Promise<McpToolMeta[]> {
+  async function loadTools(id: number): Promise<McpToolMeta[]> {
     return api.mcp.tools(id)
   }
 

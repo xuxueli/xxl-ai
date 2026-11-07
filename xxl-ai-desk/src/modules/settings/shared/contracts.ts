@@ -37,8 +37,8 @@ export interface AppSettings {
   themePreset: ThemePreset
   /* 界面语言（不支持运行时切换，需重启生效） */
   language: 'zh' | 'en'
-  /* 当前供应商主键 */
-  providerId: string
+  /* 当前供应商主键（0 表示未选择） */
+  providerId: number
   /* 当前模型 ID */
   modelId: string
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
@@ -58,5 +58,5 @@ export interface AppSettings {
   developerMode: boolean
 }
 
-/* 兼容旧引用：快捷操作相关类型由 common 契约提供 */
+/* 快捷操作类型由 common 契约统一提供 */
 export type { QuickAction, ShortcutMap }

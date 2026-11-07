@@ -9,7 +9,7 @@ import { computed, onBeforeUnmount, onMounted, watch, type ComponentPublicInstan
 import { useRoute } from 'vue-router'
 import { api } from '@common/renderer/api'
 import { useChatStore } from '@modules/chat/renderer'
-import { useToolPanelStore, DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
+import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { useBrowserSessionStore } from '@modules/browser/renderer'
 import { sectionOfPath } from '@renderer/shell/config/nav'
 import {
@@ -28,7 +28,7 @@ const browser = useBrowserSessionStore()
 const route = useRoute()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
-const currentKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+const currentKey = computed(() => sessionKeyOf(chat.currentId))
 
 /* 固定当前会话：后台会话执行 Agent 动作时不淘汰当前可见 webview */
 watch(

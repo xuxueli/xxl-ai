@@ -5,7 +5,7 @@
 
 export const PROVIDER_DDL = `
 CREATE TABLE IF NOT EXISTS desk_provider (
-  id          TEXT PRIMARY KEY,
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL DEFAULT '',
   base_url    TEXT NOT NULL DEFAULT '',
   api_key     TEXT NOT NULL DEFAULT '',

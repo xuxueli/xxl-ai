@@ -4,7 +4,6 @@
  * @author xuxueli 2026-11-07
  */
 
-import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
@@ -34,10 +33,33 @@ function parseIds(value: string): string[] {
   }
 }
 
+/* 安全解析数字 id 列表（MCP）：过滤非法项并去重 */
+function parseNumberIds(value: string): number[] {
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return [
+      ...new Set(
+        parsed.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item > 0)
+      )
+    ]
+  } catch {
+    return []
+  }
+}
+
 /* 去重、去空：未传值时沿用已存列表 */
 function normalizeIds(ids: string[] | undefined, fallback: string[]): string[] {
   const source = ids ?? fallback
   return [...new Set(source.map((item) => item.trim()).filter(Boolean))]
+}
+
+/* 数字 id 去重去非法：未传值时沿用已存列表 */
+function normalizeNumberIds(ids: number[] | undefined, fallback: number[]): number[] {
+  const source = ids ?? fallback
+  return [...new Set(source.filter((item) => Number.isInteger(item) && item > 0))]
 }
 
 /* 工具开关归一：缺省字段沿用已存值或默认值 */
@@ -63,7 +85,7 @@ export function toAgentDTO(row: AgentRow): AgentDTO {
     avatar: resolveAgentAvatar(row.avatar).id,
     systemPrompt: row.systemPrompt,
     skillIds: parseIds(row.skillIds),
-    mcpIds: parseIds(row.mcpIds),
+    mcpIds: parseNumberIds(row.mcpIds),
     tools: {
       fs: row.toolFs === 1,
       shell: row.toolShell === 1,
@@ -90,7 +112,7 @@ export function listAgents(): AgentDTO[] {
 }
 
 /* 按主键读取 Agent */
-export function getAgentById(id: string): AgentDTO | null {
+export function getAgentById(id: number): AgentDTO | null {
   if (!id) {
     return null
   }
@@ -98,16 +120,12 @@ export function getAgentById(id: string): AgentDTO | null {
   return row ? toAgentDTO(row) : null
 }
 
-/* 默认内置 Agent */
-export function getDefaultAgent(): AgentDTO | null {
-  const row = getDb().select().from(agentTable).where(eq(agentTable.builtin, 1)).get()
-  return row ? toAgentDTO(row) : null
-}
-
 /* 保存 Agent：新建按默认值，更新按缺省字段回落已存值 */
 export function saveAgent(input: AgentSaveInput): AgentDTO {
   const db = getDb()
-  const existing = input.id ? db.select().from(agentTable).where(eq(agentTable.id, input.id)).get() : null
+  const existing = input.id
+    ? db.select().from(agentTable).where(eq(agentTable.id, input.id)).get()
+    : null
 
   const name = (input.name ?? existing?.name ?? '').trim()
   if (!name) {
@@ -127,17 +145,15 @@ export function saveAgent(input: AgentSaveInput): AgentDTO {
     throw new Error(t('runtime.error.agentNameDuplicate', [name]))
   }
 
-  const id = input.id || randomUUID()
   const now = new Date().toISOString()
   const tools = normalizeTools(input.tools, existing ? toAgentDTO(existing).tools : DEFAULT_AGENT_TOOLS)
-  const record: AgentRow = {
-    id,
+  const record = {
     name,
     description: (input.description ?? existing?.description ?? '').trim().slice(0, AGENT_DESCRIPTION_MAX_CHARS),
     avatar: resolveAgentAvatar(input.avatar ?? existing?.avatar ?? DEFAULT_AGENT_AVATAR).id,
     systemPrompt: (input.systemPrompt ?? existing?.systemPrompt ?? '').slice(0, AGENT_INSTRUCTION_MAX_CHARS),
     skillIds: JSON.stringify(normalizeIds(input.skillIds, existing ? parseIds(existing.skillIds) : [])),
-    mcpIds: JSON.stringify(normalizeIds(input.mcpIds, existing ? parseIds(existing.mcpIds) : [])),
+    mcpIds: JSON.stringify(normalizeNumberIds(input.mcpIds, existing ? parseNumberIds(existing.mcpIds) : [])),
     toolFs: tools.fs ? 1 : 0,
     toolShell: tools.shell ? 1 : 0,
     toolBrowser: tools.browser ? 1 : 0,
@@ -147,11 +163,16 @@ export function saveAgent(input: AgentSaveInput): AgentDTO {
     addTime: existing?.addTime ?? now,
     updateTime: now
   }
-  db.insert(agentTable)
+  if (existing) {
+    db.update(agentTable).set(record).where(eq(agentTable.id, existing.id)).run()
+    return toAgentDTO({ ...existing, ...record })
+  }
+  const inserted = db
+    .insert(agentTable)
     .values(record)
-    .onConflictDoUpdate({ target: agentTable.id, set: record })
-    .run()
-  return toAgentDTO(record)
+    .returning({ id: agentTable.id })
+    .get()
+  return toAgentDTO({ id: inserted.id, ...record })
 }
 
 /* 统计引用指定 SKILL 的 Agent 数量（SKILL 删除前置校验） */
@@ -167,7 +188,7 @@ export function countAgentsBySkillId(skillId: string): number {
 }
 
 /* 统计引用指定 MCP 的 Agent 数量（MCP 删除前置校验） */
-export function countAgentsByMcpId(mcpId: string): number {
+export function countAgentsByMcpId(mcpId: number): number {
   if (!mcpId) {
     return 0
   }
@@ -175,17 +196,17 @@ export function countAgentsByMcpId(mcpId: string): number {
     .select()
     .from(agentTable)
     .all()
-    .filter((row) => parseIds(row.mcpIds).includes(mcpId)).length
+    .filter((row) => parseNumberIds(row.mcpIds).includes(mcpId)).length
 }
 
 /* 删除 Agent：默认 Agent 禁止删除（会话占用由 IPC 层校验） */
-export function deleteAgent(id: string): void {
-  const existing = getDb().select().from(agentTable).where(eq(agentTable.id, id)).get()
+export function deleteAgent(id: number): void {
+  const existing = id ? getDb().select().from(agentTable).where(eq(agentTable.id, id)).get() : undefined
   if (!existing) {
     return
   }
   if (existing.builtin === 1) {
     throw new Error(t('runtime.error.agentBuiltinUndeletable'))
   }
-  getDb().delete(agentTable).where(eq(agentTable.id, id)).run()
+  getDb().delete(agentTable).where(eq(agentTable.id, existing.id)).run()
 }

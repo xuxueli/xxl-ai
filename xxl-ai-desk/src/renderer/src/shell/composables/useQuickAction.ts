@@ -2,7 +2,7 @@
 
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@modules/chat/renderer'
-import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
+import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import type { QuickAction } from '@common/shared'
 
 export function useQuickAction(): (action: QuickAction) => void {
@@ -12,7 +12,7 @@ export function useQuickAction(): (action: QuickAction) => void {
 
   /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
   function sessionKey(): string {
-    return chat.currentId || DRAFT_SESSION_KEY
+    return sessionKeyOf(chat.currentId)
   }
 
   return (action: QuickAction): void => {

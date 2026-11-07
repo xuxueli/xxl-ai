@@ -19,7 +19,6 @@ export function seedMcpServers(db: Database.Database): void {
   /* Filesystem 服务限定用户主目录，随安装机器自动适配 */
   const servers = [
     {
-      id: 'seed-mcp-fetch',
       name: 'Fetch MCP Server',
       command: 'uvx',
       args: ['mcp-server-fetch'],
@@ -27,7 +26,6 @@ export function seedMcpServers(db: Database.Database): void {
         '网页抓取：获取网页内容并转换为 Markdown 返回给 Agent，适合阅读和总结网页。依赖本机可用的 uv/uvx。'
     },
     {
-      id: 'seed-mcp-filesystem',
       name: 'Filesystem MCP Server',
       command: 'npx',
       args: ['-y', '@modelcontextprotocol/server-filesystem', homedir()],
@@ -35,7 +33,6 @@ export function seedMcpServers(db: Database.Database): void {
         '本地文件：支持读取、写入、编辑、移动与搜索文件，访问范围仅限当前用户主目录，防止越界访问。依赖 Node.js/npx。'
     },
     {
-      id: 'seed-mcp-playwright',
       name: 'Playwright MCP Server',
       command: 'npx',
       args: ['@playwright/mcp@latest', '--headless'],
@@ -46,8 +43,8 @@ export function seedMcpServers(db: Database.Database): void {
 
   const insert = db.prepare(`
     INSERT OR IGNORE INTO desk_mcp
-      (id, name, type, transport, url, headers, command, args, env, cwd, config, remark, health, add_time, update_time)
-    VALUES (?, ?, 'local', 'stdio', '', '{}', ?, ?, '{}', '', ?, ?, '', ?, ?)
+      (name, type, transport, url, headers, command, args, env, cwd, config, remark, health, add_time, update_time)
+    VALUES (?, 'local', 'stdio', '', '{}', ?, ?, '{}', '', ?, ?, '', ?, ?)
   `)
   const markSeeded = db.prepare('INSERT OR REPLACE INTO desk_setting (key, value) VALUES (?, ?)')
 
@@ -61,7 +58,6 @@ export function seedMcpServers(db: Database.Database): void {
         cwd: ''
       })
       insert.run(
-        server.id,
         server.name,
         server.command,
         JSON.stringify(server.args),

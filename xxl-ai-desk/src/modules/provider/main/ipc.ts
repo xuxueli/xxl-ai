@@ -15,7 +15,7 @@ export function registerProviderIpc(ipc: IpcContext): void {
     resetAgents()
     return saved
   })
-  ipc.handle(PROVIDER_IPC.remove, (_event, id: string) => {
+  ipc.handle(PROVIDER_IPC.remove, (_event, id: number) => {
     deleteProvider(id)
     resetAgents()
   })

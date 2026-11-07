@@ -33,7 +33,7 @@ async function onProjectChange(value: string): Promise<void> {
     }
     return
   }
-  project.selectProject(value)
+  project.selectProject(Number(value))
 }
 
 /* 当前 Agent 名称（未选择时展示占位文案） */
@@ -45,7 +45,7 @@ function onAgentChange(value: string): void {
     agentDrawerVisible.value = true
     return
   }
-  agent.selectAgent(value)
+  agent.selectAgent(Number(value))
 }
 
 /* 空态示例：展示短任务名，点击以完整指令发起新对话 */

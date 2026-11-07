@@ -16,7 +16,7 @@ const props = defineProps<{
   /* 当前项目名称 */
   projectName?: string
   /* 当前项目主键（Git 工具使用） */
-  projectId?: string
+  projectId?: number
 }>()
 
 /* 工具面板状态与宽度约束（首次读取时自动创建会话切片） */

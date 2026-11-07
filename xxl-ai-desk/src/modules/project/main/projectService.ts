@@ -4,7 +4,6 @@
  */
 
 import { basename } from 'path'
-import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
@@ -32,7 +31,10 @@ export function listProjects(): ProjectDTO[] {
 }
 
 /* 按主键读取项目 */
-export function getProject(id: string): ProjectDTO | null {
+export function getProject(id: number): ProjectDTO | null {
+  if (!id) {
+    return null
+  }
   const row = getDb().select().from(projectTable).where(eq(projectTable.id, id)).get()
   return row ? toDTO(row) : null
 }
@@ -50,21 +52,24 @@ export function createProject(input: ProjectCreateInput): ProjectDTO {
   }
   const now = new Date().toISOString()
   const record = {
-    id: randomUUID(),
     name: (input.name ?? '').trim() || basename(path) || path,
     path,
     memoryEnabled: 0,
     addTime: now,
     updateTime: now
   }
-  getDb().insert(projectTable).values(record).run()
-  return toDTO(record)
+  const inserted = getDb()
+    .insert(projectTable)
+    .values(record)
+    .returning({ id: projectTable.id })
+    .get()
+  return toDTO({ id: inserted.id, ...record })
 }
 
 /* 重命名项目（仅改名称，目录绑定不变） */
-export function renameProject(id: string, name: string): ProjectDTO {
+export function renameProject(id: number, name: string): ProjectDTO {
   const db = getDb()
-  const existing = db.select().from(projectTable).where(eq(projectTable.id, id)).get()
+  const existing = id ? db.select().from(projectTable).where(eq(projectTable.id, id)).get() : undefined
   if (!existing) {
     throw new Error(t('runtime.error.projectMissing'))
   }
@@ -73,19 +78,22 @@ export function renameProject(id: string, name: string): ProjectDTO {
     throw new Error(t('runtime.error.projectNameRequired'))
   }
   const record = { ...existing, name: value, updateTime: new Date().toISOString() }
-  db.update(projectTable).set(record).where(eq(projectTable.id, id)).run()
+  db.update(projectTable).set(record).where(eq(projectTable.id, existing.id)).run()
   return toDTO(record)
 }
 
 /* 删除项目：仅删除项目记录；会话 / 消息 / 记忆 / 终端由项目 IPC 编排各域 service 清理 */
-export function deleteProject(id: string): void {
+export function deleteProject(id: number): void {
+  if (!id) {
+    return
+  }
   getDb().delete(projectTable).where(eq(projectTable.id, id)).run()
 }
 
 /* 切换项目记忆开关（内容保留；运行时由 IPC 层清理） */
-export function setProjectMemoryEnabled(id: string, enabled: boolean): ProjectDTO {
+export function setProjectMemoryEnabled(id: number, enabled: boolean): ProjectDTO {
   const db = getDb()
-  const existing = db.select().from(projectTable).where(eq(projectTable.id, id)).get()
+  const existing = id ? db.select().from(projectTable).where(eq(projectTable.id, id)).get() : undefined
   if (!existing) {
     throw new Error(t('runtime.error.projectMissing'))
   }
@@ -94,6 +102,6 @@ export function setProjectMemoryEnabled(id: string, enabled: boolean): ProjectDT
     memoryEnabled: enabled ? 1 : 0,
     updateTime: new Date().toISOString()
   }
-  db.update(projectTable).set(record).where(eq(projectTable.id, id)).run()
+  db.update(projectTable).set(record).where(eq(projectTable.id, existing.id)).run()
   return toDTO(record)
 }

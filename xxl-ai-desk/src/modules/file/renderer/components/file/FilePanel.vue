@@ -24,7 +24,7 @@ import type { OpenWithApp } from '@modules/app/shared'
 
 const props = defineProps<{
   sessionId: string
-  projectId?: string
+  projectId?: number
   root?: string
   projectName?: string
 }>()

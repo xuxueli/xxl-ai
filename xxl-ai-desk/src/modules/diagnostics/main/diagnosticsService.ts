@@ -6,7 +6,6 @@
  * @author xuxueli 2026-11-01
  */
 
-import { randomUUID } from 'crypto'
 import { and, count, desc, eq, inArray, lt } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { llmTraceTable } from '@modules/diagnostics/main/schema'
@@ -53,7 +52,7 @@ function normalizePhase(phase: string): LlmTraceDTO['phase'] {
 
 /* 会话消息分页：消息读取能力由组合根注入，诊断只做分页编排 */
 export type MessagePageLoader = (
-  sessionId: string,
+  sessionId: number,
   limit: number,
   offset: number
 ) => { items: StoredMessage[]; total: number }
@@ -109,7 +108,7 @@ function toTraceDTO(row: typeof llmTraceTable.$inferSelect): LlmTraceDTO {
 }
 
 /* 写入一条模型通讯记录：开发者模式关闭时直接丢弃 */
-export function recordTrace(sessionId: string, trace: LlmTraceInput): void {
+export function recordTrace(sessionId: number, trace: LlmTraceInput): void {
   if (!sessionId) {
     return
   }
@@ -119,11 +118,10 @@ export function recordTrace(sessionId: string, trace: LlmTraceInput): void {
   const db = getDb()
   db.insert(llmTraceTable)
     .values({
-      id: randomUUID(),
       sessionId,
       runId: trace.runId ?? '',
       step: Number(trace.step) || 0,
-      providerId: trace.providerId ?? '',
+      providerId: trace.providerId || 0,
       modelId: trace.modelId ?? '',
       phase: normalizePhase(trace.phase),
       status: normalizeStatus(trace.status),
@@ -143,8 +141,11 @@ export function recordTrace(sessionId: string, trace: LlmTraceInput): void {
 }
 
 /* 单会话超出上限时删除最旧记录 */
-function enforceSessionLimit(sessionId: string): void {
+function enforceSessionLimit(sessionId: number): void {
   const db = getDb()
+  if (!sessionId) {
+    return
+  }
   const staleIds = db
     .select({ id: llmTraceTable.id })
     .from(llmTraceTable)
@@ -198,6 +199,9 @@ export function listTraces(query: DiagnosticsQuery): PageResult<LlmTraceDTO> {
 }
 
 /* 清空指定会话的通讯记录 */
-export function clearTraces(sessionId: string): void {
+export function clearTraces(sessionId: number): void {
+  if (!sessionId) {
+    return
+  }
   getDb().delete(llmTraceTable).where(eq(llmTraceTable.sessionId, sessionId)).run()
 }

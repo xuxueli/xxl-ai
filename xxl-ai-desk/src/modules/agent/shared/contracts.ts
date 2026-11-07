@@ -15,9 +15,6 @@ export const AGENT_INSTRUCTION_MAX_CHARS = 2000
 export const AGENT_NAME_MAX_CHARS = 40
 export const AGENT_DESCRIPTION_MAX_CHARS = 200
 
-/* 默认内置 Agent 主键（旧会话缺省绑定与种子共用） */
-export const DEFAULT_AGENT_ID = 'default-agent'
-
 /* 默认 Agent 标识预设 id */
 export const DEFAULT_AGENT_AVATAR = 'assistant'
 
@@ -53,7 +50,7 @@ export interface AgentToolSwitches {
 /* Agent 配置 */
 export interface AgentDTO {
   /* 主键 */
-  id: string
+  id: number
   /* 名称 */
   name: string
   /* 描述 */
@@ -65,7 +62,7 @@ export interface AgentDTO {
   /* 选用的技能 id 列表 */
   skillIds: string[]
   /* 选用的 MCP 服务 id 列表 */
-  mcpIds: string[]
+  mcpIds: number[]
   /* 内置工具分类开关 */
   tools: AgentToolSwitches
   /* 是否默认内置 Agent（禁止删除） */
@@ -81,7 +78,7 @@ export interface AgentDTO {
 /* 保存 Agent 入参：缺省字段沿用已存记录 */
 export interface AgentSaveInput {
   /* 主键（空表示新建） */
-  id?: string
+  id?: number
   /* 名称 */
   name?: string
   /* 描述 */
@@ -93,7 +90,7 @@ export interface AgentSaveInput {
   /* 技能 id 列表 */
   skillIds?: string[]
   /* MCP id 列表 */
-  mcpIds?: string[]
+  mcpIds?: number[]
   /* 内置工具分类开关 */
   tools?: Partial<AgentToolSwitches>
 }
@@ -101,7 +98,7 @@ export interface AgentSaveInput {
 /* 项目记忆：无记忆时 content / lastMessageTime / updateTime 为空串 */
 export interface AgentMemoryDTO {
   /* 项目主键（记忆唯一键） */
-  projectId: string
+  projectId: number
   /* 项目名 */
   projectName: string
   /* 记忆正文（Markdown，固定四段） */
@@ -115,7 +112,7 @@ export interface AgentMemoryDTO {
 /* 保存记忆入参（手动编辑） */
 export interface AgentMemorySaveInput {
   /* 项目主键 */
-  projectId: string
+  projectId: number
   /* 记忆正文 */
   content: string
 }

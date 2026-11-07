@@ -26,7 +26,7 @@ import {
 
 /* 创建/获取会话 Agent 所需的运行时配置 */
 export interface AgentRuntimeOptions {
-  sessionId: string
+  sessionId: number
   provider: ProviderModelConfig
   modelId: string
   systemPrompt: string
@@ -50,10 +50,10 @@ export interface AgentRuntimeOptions {
 }
 
 /* 会话级 Agent 运行时缓存：同一会话复用上下文 */
-const runtimes = new Map<string, Promise<Agent>>()
+const runtimes = new Map<number, Promise<Agent>>()
 
 /* 已请求终止的会话：覆盖「Agent 尚未创建完成就点击终止」的场景 */
-const abortedSessions = new Set<string>()
+const abortedSessions = new Set<number>()
 
 /*
  * MCP 装配等待（毫秒）：连接已就绪（缓存命中）时几毫秒返回，本轮即有 MCP 工具；
@@ -75,12 +75,12 @@ function withinBudget<T>(task: Promise<T>, budgetMs: number): Promise<T | null> 
 }
 
 /* 标记会话开始新一轮（清除上一次终止标记） */
-export function clearSessionAbort(sessionId: string): void {
+export function clearSessionAbort(sessionId: number): void {
   abortedSessions.delete(sessionId)
 }
 
 /* 会话是否已被请求终止 */
-export function isSessionAborted(sessionId: string): boolean {
+export function isSessionAborted(sessionId: number): boolean {
   return abortedSessions.has(sessionId)
 }
 
@@ -100,6 +100,7 @@ interface RuntimeMessage {
   stopReason?: string
   errorMessage?: string
   timestamp?: number
+  injected?: boolean
 }
 
 /* 助手消息的上下文用量：非助手消息返回 0 */
@@ -118,6 +119,24 @@ function hasUserText(agent: Agent, text: string): boolean {
           (block as { text?: string }).text === text
       )
   )
+}
+
+/* 标记本轮新增的运行时注入提示：落库时据此不展示、不切分轮次 */
+function markInjectedPrompt(agent: Agent, start: number, promptText: string): void {
+  const messages = (agent.state.messages as RuntimeMessage[]).slice(start)
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (
+      message.role === 'user' &&
+      contentBlocks(message).some(
+        (block) => (block as { type?: string; text?: string }).type === 'text' &&
+          (block as { text?: string }).text === promptText
+      )
+    ) {
+      message.injected = true
+      return
+    }
+  }
 }
 
 /* 用户终止：在当前助手消息或新消息中写入终止备注 */
@@ -171,7 +190,7 @@ function isAbortError(error: unknown): boolean {
 async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   const { Agent: AgentClass } = await import('@earendil-works/pi-agent-core')
   const models = await buildModels([{ ...options.provider, sessionId: options.sessionId }])
-  const model = models.getModel(options.provider.id, options.modelId)
+  const model = models.getModel(String(options.provider.id), options.modelId)
   if (!model) {
     throw new Error(
       translate(options.language, 'runtime.error.modelNotFound', [
@@ -251,12 +270,12 @@ export function getAgent(options: AgentRuntimeOptions): Promise<Agent> {
 }
 
 /* 释放会话 Agent（删除会话/切换模型时） */
-export function evictAgent(sessionId: string): void {
+export function evictAgent(sessionId: number): void {
   runtimes.delete(sessionId)
 }
 
 /* 中断会话当前生成：先登记终止标记（Agent 未就绪也不会丢），再中止运行中的 Agent */
-export async function abortAgent(sessionId: string): Promise<void> {
+export async function abortAgent(sessionId: number): Promise<void> {
   abortedSessions.add(sessionId)
   const runtime = runtimes.get(sessionId)
   if (runtime) {
@@ -322,7 +341,7 @@ export async function runPrompt(
   agent: Agent,
   text: string,
   sink: (event: HostEvent) => void,
-  sessionId = '',
+  sessionId = 0,
   language: AppLanguage = 'zh'
 ): Promise<RuntimeMessage[]> {
   const tr = (key: string, params?: Array<string | number>): string =>
@@ -394,12 +413,18 @@ export async function runPrompt(
       }
 
       let thrown: unknown = null
+      const continuePrompt = !first
       const promptText = first ? text : tr('runtime.continuePrompt')
       first = false
       try {
         await agent.prompt(promptText)
       } catch (error) {
         thrown = error
+      } finally {
+        /* 续写提示由运行时注入：标记后落库时不进入界面、不切分轮次 */
+        if (continuePrompt) {
+          markInjectedPrompt(agent, start, promptText)
+        }
       }
 
       /* 用户终止：直接结束 */

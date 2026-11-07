@@ -54,7 +54,7 @@ async function clearTraces(): Promise<void> {
     return
   }
   try {
-    await api.diagnostics.clearTraces(props.sessionId)
+    await api.diagnostics.clearTraces(Number(props.sessionId) || 0)
     changePage(1)
     ElMessage.success(t('toolPanel.diagnostics.cleared'))
   } catch (cause) {

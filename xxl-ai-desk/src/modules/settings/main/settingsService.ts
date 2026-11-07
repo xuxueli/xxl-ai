@@ -50,12 +50,13 @@ function parseShortcuts(raw: string | undefined): AppSettings['shortcuts'] {
   try {
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      /* 只接受当前快捷操作清单内的键，避免已移除动作（如扩展中心）的旧绑定残留 */
-      const allowed = new Set(Object.keys(DEFAULT_SHORTCUTS))
+      const stored = parsed as Record<string, unknown>
       const merged: AppSettings['shortcuts'] = { ...DEFAULT_SHORTCUTS }
-      for (const [action, binding] of Object.entries(parsed)) {
-        if (allowed.has(action) && typeof binding === 'string' && binding) {
-          merged[action as keyof AppSettings['shortcuts']] = binding
+      /* 只读取当前快捷键清单内的键，未知键直接忽略 */
+      for (const action of Object.keys(DEFAULT_SHORTCUTS) as (keyof AppSettings['shortcuts'])[]) {
+        const binding = stored[action]
+        if (typeof binding === 'string' && binding) {
+          merged[action] = binding
         }
       }
       /* 统一附加 Shift：避开 Cmd/Ctrl+A、Cmd/Ctrl+F、Cmd/Ctrl+S 等系统默认快捷键 */
@@ -99,7 +100,7 @@ export function getSettings(): AppSettings {
     appearance: normalizeAppearance(map.get('appearance')),
     themePreset: normalizeTheme(map.get('themePreset')),
     language,
-    providerId: map.get('providerId') || DEFAULT_APP_SETTINGS.providerId,
+    providerId: Number(map.get('providerId')) || DEFAULT_APP_SETTINGS.providerId,
     modelId: map.get('modelId') || DEFAULT_APP_SETTINGS.modelId,
     appName: map.get('appName') ?? DEFAULT_APP_SETTINGS.appName,
     slogan: map.get('slogan') ?? DEFAULT_APP_SETTINGS.slogan,

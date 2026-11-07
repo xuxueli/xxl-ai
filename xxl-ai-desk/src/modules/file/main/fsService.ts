@@ -19,7 +19,7 @@ const MAX_TEXT_BYTES = 10 * 1024 * 1024
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 /* 由项目主键解析沙箱根：调用方只能按项目访问，不能自带任意根目录 */
-function rootOf(projectId: string): string {
+function rootOf(projectId: number): string {
   const project = getProject(projectId)
   if (!project) {
     throw new Error(t('runtime.error.projectMissing'))
@@ -28,14 +28,14 @@ function rootOf(projectId: string): string {
 }
 
 /* 校验目标目录属于该项目，返回原路径（目录监听的边界校验） */
-export function assertProjectDir(projectId: string, dir: string): string {
+export function assertProjectDir(projectId: number, dir: string): string {
   const root = rootOf(projectId)
   assertInside(root, dir || root)
   return dir
 }
 
 /* 列出目录内容：目录在前、名称升序（不递归，子目录按需懒加载） */
-export async function listDir(projectId: string, dir: string): Promise<FsEntry[]> {
+export async function listDir(projectId: number, dir: string): Promise<FsEntry[]> {
   const root = rootOf(projectId)
   assertInside(root, dir || root)
   try {
@@ -79,7 +79,7 @@ async function readImageDataUrl(file: string, size: number): Promise<string | un
 }
 
 /* 写入文件：覆盖写入 UTF-8 文本（限定项目目录内） */
-export async function writeFile(projectId: string, file: string, content: string): Promise<void> {
+export async function writeFile(projectId: number, file: string, content: string): Promise<void> {
   const root = rootOf(projectId)
   assertInside(root, file)
   const info = await stat(file)
@@ -90,7 +90,7 @@ export async function writeFile(projectId: string, file: string, content: string
 }
 
 /* 删除文件：移入系统废纸篓（限定项目目录内，且不允许删除根目录） */
-export async function trashFile(projectId: string, file: string): Promise<void> {
+export async function trashFile(projectId: number, file: string): Promise<void> {
   const root = rootOf(projectId)
   assertInside(root, file)
   const target = resolve(file)
@@ -101,7 +101,7 @@ export async function trashFile(projectId: string, file: string): Promise<void> 
 }
 
 /* 读取文件：文本截断读取；二进制判定；图片附带 dataUrl */
-export async function readFile(projectId: string, file: string): Promise<FileContent> {
+export async function readFile(projectId: number, file: string): Promise<FileContent> {
   const root = rootOf(projectId)
   assertInside(root, file)
   const info = await stat(file)

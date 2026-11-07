@@ -8,6 +8,6 @@ import type { ProviderDTO, ProviderModelQuery } from './contracts'
 export interface ProviderApi {
   list(): Promise<ProviderDTO[]>
   save(dto: Partial<ProviderDTO>): Promise<ProviderDTO>
-  remove(id: string): Promise<void>
+  remove(id: number): Promise<void>
   remoteModels(input: ProviderModelQuery): Promise<string[]>
 }

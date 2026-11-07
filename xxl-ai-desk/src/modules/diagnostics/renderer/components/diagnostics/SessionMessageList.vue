@@ -61,7 +61,7 @@ function openDetail(item: StoredMessage): void {
       >
         <div class="diagnostics-row-head">
           <span class="diagnostics-role">{{ row.item.role || '—' }}</span>
-          <span class="diagnostics-meta">#{{ row.item.seq }}</span>
+          <span class="diagnostics-meta">#{{ row.item.id }}</span>
           <span class="diagnostics-meta">{{ formatDateTime(row.item.addTime) }}</span>
         </div>
         <div class="diagnostics-text" :class="row.preview.kind">
@@ -96,7 +96,7 @@ function openDetail(item: StoredMessage): void {
       <div v-if="detail" class="detail-body">
         <div class="detail-meta">
           <span>{{ detail.role }}</span>
-          <span>#{{ detail.seq }}</span>
+          <span>#{{ detail.id }}</span>
           <span>{{ formatDateTime(detail.addTime) }}</span>
         </div>
         <div class="detail-section">

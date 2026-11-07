@@ -3,7 +3,8 @@
  *
  * 展示顺序以 contracts/app.ts 的 THEME_PRESETS 为准，第一套为安装默认（极简灰）。
  * 每套预设定义浅色 / 深色两组颜色种子；语义 token 由 tokens.scss 的 mixin 统一推导。
- * 表面层级（由亮到暗）：content > sidebar > panel > chrome；elevated 为悬浮层，浅色下比 content 略暗。
+ * 表面层级（由亮到暗）：content > sidebar > chrome；工具面板与侧栏合并，统一使用 sidebar 种子；
+ * elevated 为悬浮层，浅色下略暗于 content、不低于 sidebar。
  * 新增主题：在此追加浅色 / 深色两组种子，并在 contracts/app.ts 的 THEME_PRESETS 登记。
  *
  * @author xuxueli 2026-10-31
@@ -19,7 +20,6 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #f0f3f6;
   --theme-sidebar: #f6f8fa;
-  --theme-panel: #f2f5f8;
   --theme-content: #ffffff;
   --theme-elevated: #f6f8fa;
   --theme-border: #d8dee4;
@@ -44,9 +44,8 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #f2f2f4;
   --theme-sidebar: #fafafa;
-  --theme-panel: #f7f7f9;
   --theme-content: #ffffff;
-  --theme-elevated: #f4f4f6;
+  --theme-elevated: #fafafa;
   --theme-border: #e7e7ea;
   --theme-text: #27272a;
   --theme-text-secondary: #5e5e66;
@@ -69,16 +68,15 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #eef0f3;
   --theme-sidebar: #f6f7f9;
-  --theme-panel: #f2f3f6;
   --theme-content: #fbfbfc;
   --theme-elevated: #f7f8fa;
   --theme-border: #e2e4e9;
   --theme-text: #383a42;
   --theme-text-secondary: #696c77;
   --theme-text-tertiary: #8b8e98;
-  --theme-success: #50a14f;
-  --theme-warning: #c18401;
-  --theme-danger: #e45649;
+  --theme-success: #40803f;
+  --theme-warning: #9a6901;
+  --theme-danger: #c44a3f;
   --theme-info: #2f63d8;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #1f2329;
@@ -94,7 +92,6 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #e4e7ee;
   --theme-sidebar: #f7f8fb;
-  --theme-panel: #f0f2f7;
   --theme-content: #ffffff;
   --theme-elevated: #f7f9fc;
   --theme-border: #d9dde8;
@@ -103,7 +100,7 @@
   --theme-text-tertiary: #7a82a3;
   --theme-success: #587539;
   --theme-warning: #8c6c3e;
-  --theme-danger: #f52a65;
+  --theme-danger: #de265c;
   --theme-info: #1f63c4;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #1a1b26;
@@ -119,16 +116,15 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #e9edf3;
   --theme-sidebar: #f5f7fb;
-  --theme-panel: #f0f3f8;
   --theme-content: #ffffff;
-  --theme-elevated: #f4f6fa;
+  --theme-elevated: #f5f7fb;
   --theme-border: #dde2ea;
   --theme-text: #2e3440;
   --theme-text-secondary: #4c566a;
   --theme-text-tertiary: #6f7a8d;
   --theme-success: #3f7d4e;
-  --theme-warning: #b07a1e;
-  --theme-danger: #bf616a;
+  --theme-warning: #9b6c1b;
+  --theme-danger: #b25a63;
   --theme-info: #4c6a93;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #2e3440;
@@ -144,16 +140,15 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #e9e2b8;
   --theme-sidebar: #f7f1c9;
-  --theme-panel: #f2ecbc;
   --theme-content: #fbf6d6;
-  --theme-elevated: #f6f0c4;
+  --theme-elevated: #f7f1c9;
   --theme-border: #ddd5a6;
   --theme-text: #545464;
   --theme-text-secondary: #6b6a75;
   --theme-text-tertiary: #8a8980;
-  --theme-success: #6f894e;
-  --theme-warning: #cc6d00;
-  --theme-danger: #c84053;
+  --theme-success: #607643;
+  --theme-warning: #a95b00;
+  --theme-danger: #c43f52;
   --theme-info: #4d699b;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #1f1f28;
@@ -169,15 +164,14 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #ebdbb2;
   --theme-sidebar: #f7edcd;
-  --theme-panel: #f3e6bd;
   --theme-content: #fbf1c7;
   --theme-elevated: #f9efc4;
   --theme-border: #e0d0a8;
   --theme-text: #3c3836;
   --theme-text-secondary: #665c54;
   --theme-text-tertiary: #85796b;
-  --theme-success: #79740e;
-  --theme-warning: #b57614;
+  --theme-success: #746f0d;
+  --theme-warning: #966111;
   --theme-danger: #9d0006;
   --theme-info: #076678;
   --theme-mix-base: #ffffff;
@@ -194,17 +188,16 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #edf7f5;
   --theme-sidebar: #f7fbfa;
-  --theme-panel: #f3faf8;
   --theme-content: #ffffff;
-  --theme-elevated: #f4fbf9;
+  --theme-elevated: #f7fbfa;
   --theme-border: #dfeee9;
   --theme-text: #102a28;
   --theme-text-secondary: #516f6b;
   --theme-text-tertiary: #6f8c88;
-  --theme-success: #0e9f6e;
-  --theme-warning: #c98518;
-  --theme-danger: #e04b4f;
-  --theme-info: #0f8fb3;
+  --theme-success: #0c855c;
+  --theme-warning: #9f6a13;
+  --theme-danger: #cd4548;
+  --theme-info: #0d7fa0;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #05201c;
   --theme-shadow: #0b2b27;
@@ -219,15 +212,14 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #e9ecf3;
   --theme-sidebar: #f6f7fb;
-  --theme-panel: #f1f3f8;
   --theme-content: #ffffff;
   --theme-elevated: #f7f8fc;
   --theme-border: #dce0e8;
   --theme-text: #4c4f69;
   --theme-text-secondary: #6c6f85;
   --theme-text-tertiary: #8c8fa3;
-  --theme-success: #40a02b;
-  --theme-warning: #df8e1d;
+  --theme-success: #358524;
+  --theme-warning: #a36815;
   --theme-danger: #d20f39;
   --theme-info: #1e66f5;
   --theme-mix-base: #ffffff;
@@ -244,16 +236,15 @@
   --theme-brand-contrast: #ffffff;
   --theme-chrome: #f2e9e1;
   --theme-sidebar: #faf4ed;
-  --theme-panel: #f6efe7;
   --theme-content: #fffaf3;
   --theme-elevated: #fdf7f0;
   --theme-border: #eadfd6;
   --theme-text: #575279;
   --theme-text-secondary: #797593;
-  --theme-text-tertiary: #9893a5;
+  --theme-text-tertiary: #948fa1;
   --theme-success: #286983;
-  --theme-warning: #ea9d34;
-  --theme-danger: #b4637a;
+  --theme-warning: #9a6822;
+  --theme-danger: #a65c71;
   --theme-info: #7a6391;
   --theme-mix-base: #ffffff;
   --theme-mix-strong: #191724;
@@ -272,7 +263,6 @@
   --theme-brand-contrast: #0d1117;
   --theme-chrome: #010409;
   --theme-sidebar: #0d1117;
-  --theme-panel: #0a0d12;
   --theme-content: #161b22;
   --theme-elevated: #1c2129;
   --theme-border: #30363d;
@@ -294,7 +284,6 @@
   --theme-brand-contrast: #1c1c1f;
   --theme-chrome: #111113;
   --theme-sidebar: #19191c;
-  --theme-panel: #151518;
   --theme-content: #1d1d20;
   --theme-elevated: #252529;
   --theme-border: #303035;
@@ -316,7 +305,6 @@
   --theme-brand-contrast: #1e2229;
   --theme-chrome: #1b1f24;
   --theme-sidebar: #22262e;
-  --theme-panel: #1f2329;
   --theme-content: #282c34;
   --theme-elevated: #31363f;
   --theme-border: #3e4451;
@@ -325,7 +313,7 @@
   --theme-text-tertiary: #7f8694;
   --theme-success: #98c379;
   --theme-warning: #e5c07b;
-  --theme-danger: #e06c75;
+  --theme-danger: #e1737b;
   --theme-info: #61afef;
   --theme-mix-base: #000000;
   --theme-mix-strong: #ffffff;
@@ -338,7 +326,6 @@
   --theme-brand-contrast: #1a1b26;
   --theme-chrome: #13131a;
   --theme-sidebar: #1a1b26;
-  --theme-panel: #17171f;
   --theme-content: #1f2335;
   --theme-elevated: #292e42;
   --theme-border: #3b4261;
@@ -360,7 +347,6 @@
   --theme-brand-contrast: #1e2430;
   --theme-chrome: #21262f;
   --theme-sidebar: #2a303a;
-  --theme-panel: #262c36;
   --theme-content: #323945;
   --theme-elevated: #3b4252;
   --theme-border: #4c566a;
@@ -369,8 +355,8 @@
   --theme-text-tertiary: #a3adc0;
   --theme-success: #a3be8c;
   --theme-warning: #ebcb8b;
-  --theme-danger: #bf616a;
-  --theme-info: #81a1c1;
+  --theme-danger: #d39298;
+  --theme-info: #88a7c5;
   --theme-mix-base: #000000;
   --theme-mix-strong: #ffffff;
   --theme-shadow: #000000;
@@ -382,16 +368,15 @@
   --theme-brand-contrast: #1f1f28;
   --theme-chrome: #16161d;
   --theme-sidebar: #1f1f28;
-  --theme-panel: #1b1b23;
   --theme-content: #2a2a37;
   --theme-elevated: #363646;
   --theme-border: #4a4a5e;
   --theme-text: #dcd7ba;
   --theme-text-secondary: #b9b4a0;
-  --theme-text-tertiary: #727169;
+  --theme-text-tertiary: #74746c;
   --theme-success: #98bb6c;
   --theme-warning: #e6c384;
-  --theme-danger: #e82424;
+  --theme-danger: #ef6868;
   --theme-info: #7e9cd8;
   --theme-mix-base: #000000;
   --theme-mix-strong: #ffffff;
@@ -404,7 +389,6 @@
   --theme-brand-contrast: #282828;
   --theme-chrome: #1d2021;
   --theme-sidebar: #282828;
-  --theme-panel: #242626;
   --theme-content: #32302f;
   --theme-elevated: #3c3836;
   --theme-border: #504945;
@@ -413,7 +397,7 @@
   --theme-text-tertiary: #928374;
   --theme-success: #b8bb26;
   --theme-warning: #fabd2f;
-  --theme-danger: #fb4934;
+  --theme-danger: #fc6b59;
   --theme-info: #83a598;
   --theme-mix-base: #000000;
   --theme-mix-strong: #ffffff;
@@ -426,7 +410,6 @@
   --theme-brand-contrast: #06201c;
   --theme-chrome: #06100e;
   --theme-sidebar: #0e1917;
-  --theme-panel: #0a1513;
   --theme-content: #121f1c;
   --theme-elevated: #192825;
   --theme-border: #203630;
@@ -448,7 +431,6 @@
   --theme-brand-contrast: #1e1e2e;
   --theme-chrome: #11111b;
   --theme-sidebar: #181825;
-  --theme-panel: #14141f;
   --theme-content: #1e1e2e;
   --theme-elevated: #313244;
   --theme-border: #45475a;
@@ -470,7 +452,6 @@
   --theme-brand-contrast: #191724;
   --theme-chrome: #121020;
   --theme-sidebar: #191724;
-  --theme-panel: #15131f;
   --theme-content: #1f1d2e;
   --theme-elevated: #26233a;
   --theme-border: #403d52;

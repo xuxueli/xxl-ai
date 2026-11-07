@@ -11,16 +11,16 @@ export const sessionApi: SessionApi = {
   list: () => ipcRenderer.invoke(SESSION_IPC.list),
   create: (input) => ipcRenderer.invoke(SESSION_IPC.create, input),
   update: (id, patch) => ipcRenderer.invoke(SESSION_IPC.update, id, patch),
-  rename: (id: string, title: string) => ipcRenderer.invoke(SESSION_IPC.rename, id, title),
-  remove: (id: string) => ipcRenderer.invoke(SESSION_IPC.remove, id),
-  messages: (sessionId: string) => ipcRenderer.invoke(SESSION_IPC.messages, sessionId),
-  removeMessages: (sessionId: string, ids: string[]) =>
+  rename: (id: number, title: string) => ipcRenderer.invoke(SESSION_IPC.rename, id, title),
+  remove: (id: number) => ipcRenderer.invoke(SESSION_IPC.remove, id),
+  messages: (sessionId: number) => ipcRenderer.invoke(SESSION_IPC.messages, sessionId),
+  removeMessages: (sessionId: number, ids: number[]) =>
     ipcRenderer.invoke(SESSION_IPC.deleteMessages, sessionId, ids)
 }
 
 export const chatApi: ChatApi = {
   send: (input) => ipcRenderer.invoke(CHAT_IPC.send, input),
-  abort: (sessionId: string) => ipcRenderer.invoke(CHAT_IPC.abort, sessionId),
+  abort: (sessionId: number) => ipcRenderer.invoke(CHAT_IPC.abort, sessionId),
   onEvent: (callback) => {
     const listener = (_event: unknown, payload: Parameters<typeof callback>[0]): void =>
       callback(payload)

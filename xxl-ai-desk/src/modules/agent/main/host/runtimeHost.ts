@@ -1,7 +1,7 @@
 /*
  * Agent 运行时管理（主进程侧）：
  * 拉起并托管 Agent 运行时进程（utilityProcess），转发流式事件与人机交互，
- * 使主进程只做 IPC 网关，不再承担模型调用与工具执行。对外 API 与旧 host 对齐。
+ * 使主进程只做 IPC 网关，不再承担模型调用与工具执行。对外 API 与既有调用方保持对齐。
  */
 
 import { join } from 'path'
@@ -27,7 +27,7 @@ interface PendingRun {
 let worker: UtilityProcess | null = null
 let workerReady: Promise<UtilityProcess> | null = null
 /* 进行中的运行：sessionId → 事件回调与结算（同一会话同时只允许一轮） */
-const pendingRuns = new Map<string, PendingRun>()
+const pendingRuns = new Map<number, PendingRun>()
 /* 进行中的 MCP 请求：requestId → 结算（连通测试 / 工具列表） */
 const pendingMcp = new Map<
   string,
@@ -47,11 +47,11 @@ const pendingMemory = new Map<
 >()
 
 /* 右侧「浏览器」面板打开回调（由 ipc.ts 注册，把 URL 转发到对应会话的渲染层标签页） */
-let browserOpener: ((sessionId: string, url: string, newTab: boolean) => void) | null = null
+let browserOpener: ((sessionId: number, url: string, newTab: boolean) => void) | null = null
 
 /* 注册浏览器打开回调（主进程窗口就绪后由 IPC 网关注入） */
 export function setBrowserOpener(
-  opener: (sessionId: string, url: string, newTab: boolean) => void
+  opener: (sessionId: number, url: string, newTab: boolean) => void
 ): void {
   browserOpener = opener
 }
@@ -198,7 +198,7 @@ function postRequest(request: WorkerRequest): void {
 }
 
 /* 指定会话是否已有正在运行的一轮（用于 IPC 层提前拒绝重复发送，避免落库错误轮次） */
-export function isAgentRunning(sessionId: string): boolean {
+export function isAgentRunning(sessionId: number): boolean {
   return pendingRuns.has(sessionId)
 }
 
@@ -224,17 +224,17 @@ export async function runAgent(
 }
 
 /* 中断会话当前生成 */
-export function abortAgent(sessionId: string): void {
+export function abortAgent(sessionId: number): void {
   postRequest({ type: 'abort', sessionId })
 }
 
 /* 释放会话运行时（删除会话/切换模型时） */
-export function evictAgent(sessionId: string): void {
+export function evictAgent(sessionId: number): void {
   postRequest({ type: 'evict', sessionId })
 }
 
 /* 清理会话越界白名单 */
-export function clearSessionPermissions(sessionId: string): void {
+export function clearSessionPermissions(sessionId: number): void {
   postRequest({ type: 'clear-permissions', sessionId })
 }
 

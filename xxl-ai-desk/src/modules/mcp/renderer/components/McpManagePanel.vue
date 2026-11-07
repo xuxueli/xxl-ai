@@ -19,7 +19,7 @@ const emit = defineEmits<{
 
 const mcp = useMcpStore()
 /* 正在测试连接的服务 id（按钮 loading，避免误以为无响应） */
-const testingId = ref('')
+const testingId = ref(0)
 
 /* 首次进入加载列表（已加载则复用 store 状态） */
 onMounted(() => {
@@ -52,7 +52,7 @@ async function onTest(row: McpDTO): Promise<void> {
   } catch (error) {
     ElMessage.error(ipcErrorMessage(error))
   } finally {
-    testingId.value = ''
+    testingId.value = 0
   }
 }
 

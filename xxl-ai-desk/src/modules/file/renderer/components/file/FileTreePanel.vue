@@ -15,7 +15,7 @@ import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{
   sessionId: string
-  projectId?: string
+  projectId?: number
   root?: string
   selectedPath: string
 }>()

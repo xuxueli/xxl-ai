@@ -9,22 +9,23 @@ import { useChatStore, useChatUiStore } from '@modules/chat/renderer'
 import { useToolPanelStore, DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
 import { cleanupBrowserSessions } from '@modules/browser/renderer'
 
-export function useSessionLifecycle(): { start: (validSessionIds: string[]) => void } {
+export function useSessionLifecycle(): { start: (validSessionIds: number[]) => void } {
   const chat = useChatStore()
   const toolPanel = useToolPanelStore()
   const chatUi = useChatUiStore()
   let started = false
 
   /* 按有效会话列表清理各域资源（草稿态 key 需要保留） */
-  function sync(validSessionIds: string[]): void {
-    const valid = [...validSessionIds, DRAFT_SESSION_KEY]
-    toolPanel.cleanup(valid)
-    chatUi.cleanup(valid)
-    cleanupBrowserSessions(valid)
+  function sync(validSessionIds: number[]): void {
+    /* 工具面板按数值会话 id 校准；对话 UI / 浏览器按字符串会话键存储（含草稿态） */
+    const validKeys = [...validSessionIds.map((id) => String(id)), DRAFT_SESSION_KEY]
+    toolPanel.cleanup(validSessionIds)
+    chatUi.cleanup(validKeys)
+    cleanupBrowserSessions(validKeys)
   }
 
   /* 应用启动后校准一次，并开始监听后续会话变化 */
-  function start(validSessionIds: string[]): void {
+  function start(validSessionIds: number[]): void {
     started = true
     sync(validSessionIds)
   }

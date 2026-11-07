@@ -5,6 +5,11 @@ import { LAYOUT } from '@common/renderer/config/layout'
 /* 新建对话草稿态使用的固定会话 key（首次发送创建会话后迁移给真实会话） */
 export const DRAFT_SESSION_KEY = '__draft__'
 
+/* 会话键：真实会话主键转字符串；草稿态使用固定 key（本地存储、终端、浏览器按字符串键隔离） */
+export function sessionKeyOf(sessionId: number | null | undefined): string {
+  return sessionId ? String(sessionId) : DRAFT_SESSION_KEY
+}
+
 /* 持久化键前缀与结构版本 */
 export const STORAGE_PREFIX = 'desk:toolPanel:'
 export const STORAGE_VERSION = 1

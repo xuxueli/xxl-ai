@@ -20,7 +20,7 @@ export function registerMcpIpc(ipc: IpcContext): void {
     resetAgents()
     return saved
   })
-  ipc.handle(MCP_IPC.remove, (_event, id: string) => {
+  ipc.handle(MCP_IPC.remove, (_event, id: number) => {
     const agentCount = countAgentsByMcpId(id)
     if (agentCount > 0) {
       throw new Error(t('runtime.error.mcpInUse', [agentCount]))
@@ -29,7 +29,7 @@ export function registerMcpIpc(ipc: IpcContext): void {
     resetAgents()
   })
   ipc.handle(MCP_IPC.test, (_event, dto) => testMcp(dto))
-  ipc.handle(MCP_IPC.tools, (_event, id: string) => listMcpTools(id))
+  ipc.handle(MCP_IPC.tools, (_event, id: number) => listMcpTools(id))
   ipc.handle(MCP_IPC.discover, (_event, query) => discoverMcp(query))
   ipc.handle(MCP_IPC.categories, () => listMcpCategories())
   ipc.handle(MCP_IPC.detail, (_event, slug: string) => discoverMcpDetail(slug))

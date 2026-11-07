@@ -1,9 +1,8 @@
 /*
  * 会话与消息服务：管理会话（绑定项目/供应商/模型/对话模式）及其消息的持久化。
- *   - 消息增量落库：按稳定前缀复用旧记录，仅增删尾部差异。
+ *   - 消息按轮次追加落库，历史完整保存在数据库。
  */
 
-import { randomUUID } from 'crypto'
 import { and, asc, count, desc, eq, gt, inArray } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
@@ -32,13 +31,14 @@ function toSessionDTO(row: SessionRow): SessionDTO {
   }
 }
 
-/* 行记录 → DTO（会话日志分页复用） */
+/* 行记录 → DTO */
 export function toMessageDTO(row: MessageRow): StoredMessage {
   return {
     id: row.id,
     sessionId: row.sessionId,
-    seq: row.seq,
+    turnId: row.turnId,
     role: row.role,
+    injected: row.injected,
     content: row.content,
     data: row.data,
     addTime: row.addTime
@@ -46,7 +46,10 @@ export function toMessageDTO(row: MessageRow): StoredMessage {
 }
 
 /* 按主键读取会话 */
-export function getSession(id: string): SessionDTO | null {
+export function getSession(id: number): SessionDTO | null {
+  if (!id) {
+    return null
+  }
   const row = getDb().select().from(sessionTable).where(eq(sessionTable.id, id)).get()
   return row ? toSessionDTO(row) : null
 }
@@ -58,14 +61,14 @@ export function listSessions(): SessionDTO[] {
 }
 
 /* 校验会话归属项目：会话必须绑定有效项目，避免无项目会话把沙箱根退化为用户主目录 */
-function assertProject(projectId: string): void {
+function assertProject(projectId: number): void {
   if (!projectId || !getProject(projectId)) {
     throw new Error(t('runtime.error.sessionProjectRequired'))
   }
 }
 
 /* 校验 Agent：新建会话必须显式绑定一个已存在的 Agent */
-function assertAgent(agentId: string): string {
+function assertAgent(agentId: number): number {
   if (!agentId) {
     throw new Error(t('runtime.error.sessionAgentRequired'))
   }
@@ -77,31 +80,34 @@ function assertAgent(agentId: string): string {
 }
 
 /* 创建会话 */
-export function createSession(input: Partial<SessionDTO> = {}): SessionDTO {
+export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): SessionDTO {
   const db = getDb()
-  const projectId = input.projectId || ''
+  const projectId = input.projectId ?? 0
   assertProject(projectId)
-  const agentId = assertAgent(input.agentId || '')
+  const agentId = assertAgent(input.agentId ?? 0)
   const now = new Date().toISOString()
   const record = {
-    id: input.id || randomUUID(),
     title: input.title || NEW_CHAT_TITLE,
     projectId,
     agentId,
-    providerId: input.providerId || '',
+    providerId: input.providerId ?? 0,
     modelId: input.modelId || '',
     mode: input.mode === 'plan' ? 'plan' : 'build',
     addTime: now,
     updateTime: now
   }
-  db.insert(sessionTable).values(record).run()
-  return toSessionDTO(record)
+  const inserted = db
+    .insert(sessionTable)
+    .values(record)
+    .returning({ id: sessionTable.id })
+    .get()
+  return toSessionDTO({ id: inserted.id, ...record })
 }
 
 /* 更新会话（标题/模型/模式等；项目与 Agent 绑定创建后不可修改） */
-export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDTO {
+export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDTO {
   const db = getDb()
-  const existing = db.select().from(sessionTable).where(eq(sessionTable.id, id)).get()
+  const existing = id ? db.select().from(sessionTable).where(eq(sessionTable.id, id)).get() : undefined
   if (!existing) {
     throw new Error(t('runtime.error.sessionMissing'))
   }
@@ -113,32 +119,41 @@ export function updateSession(id: string, patch: Partial<SessionDTO>): SessionDT
     mode: patch.mode ?? existing.mode,
     updateTime: new Date().toISOString()
   }
-  db.update(sessionTable).set(record).where(eq(sessionTable.id, id)).run()
+  db.update(sessionTable).set(record).where(eq(sessionTable.id, existing.id)).run()
   return toSessionDTO(record)
 }
 
 /* 删除会话及其消息 */
-export function deleteSession(id: string): void {
+export function deleteSession(id: number): void {
+  if (!id) {
+    return
+  }
   const db = getDb()
   db.delete(messageTable).where(eq(messageTable.sessionId, id)).run()
   db.delete(sessionTable).where(eq(sessionTable.id, id)).run()
   /* 级联回收该会话的终端进程（服务层统一闭环） */
-  disposeTerminalsBySession(id)
+  disposeTerminalsBySession(String(id))
 }
 
-/* 会话消息（按 seq 升序） */
-export function listMessages(sessionId: string): StoredMessage[] {
+/* 会话消息（按自增 id 升序） */
+export function listMessages(sessionId: number): StoredMessage[] {
+  if (!sessionId) {
+    return []
+  }
   const rows = getDb()
     .select()
     .from(messageTable)
     .where(eq(messageTable.sessionId, sessionId))
-    .orderBy(asc(messageTable.seq))
+    .orderBy(asc(messageTable.id))
     .all()
   return rows.map(toMessageDTO)
 }
 
 /* 项目下的会话 ID 集合（项目删除 / 记忆重建时清理运行时） */
-export function listSessionIdsByProject(projectId: string): string[] {
+export function listSessionIdsByProject(projectId: number): number[] {
+  if (!projectId) {
+    return []
+  }
   return getDb()
     .select({ id: sessionTable.id })
     .from(sessionTable)
@@ -148,7 +163,7 @@ export function listSessionIdsByProject(projectId: string): string[] {
 }
 
 /* Agent 下的会话 ID 集合（Agent 修改后清理运行时 / 删除前校验占用） */
-export function listSessionIdsByAgent(agentId: string): string[] {
+export function listSessionIdsByAgent(agentId: number): number[] {
   if (!agentId) {
     return []
   }
@@ -161,7 +176,7 @@ export function listSessionIdsByAgent(agentId: string): string[] {
 }
 
 /* 各 Agent 绑定会话数：一次分组统计，供列表批量回填 */
-export function countSessionsByAgents(): Record<string, number> {
+export function countSessionsByAgents(): Record<number, number> {
   const rows = getDb()
     .select({ agentId: sessionTable.agentId, value: count() })
     .from(sessionTable)
@@ -172,10 +187,13 @@ export function countSessionsByAgents(): Record<string, number> {
 
 /* 项目内晚于游标的消息：按会话分组，供 Agent 记忆生成 */
 export function listNewProjectMessages(
-  projectId: string,
+  projectId: number,
   lastMessageTime: string
 ): ProjectMessages {
   const db = getDb()
+  if (!projectId) {
+    return { sessions: [], total: 0, lastMessageTime }
+  }
   const sessions = db
     .select({ id: sessionTable.id, title: sessionTable.title })
     .from(sessionTable)
@@ -193,7 +211,7 @@ export function listNewProjectMessages(
       .select()
       .from(messageTable)
       .where(and(...conditions))
-      .orderBy(asc(messageTable.addTime), asc(messageTable.seq))
+      .orderBy(asc(messageTable.addTime), asc(messageTable.id))
       .all()
       .map(toMessageDTO)
     if (rows.length === 0) {
@@ -212,18 +230,21 @@ export function listNewProjectMessages(
 
 /* 会话消息分页（诊断视图复用） */
 export function listSessionMessagePage(
-  sessionId: string,
+  sessionId: number,
   limit: number,
   offset: number
 ): { items: StoredMessage[]; total: number } {
   const db = getDb()
+  if (!sessionId) {
+    return { items: [], total: 0 }
+  }
   const condition = eq(messageTable.sessionId, sessionId)
   const total = db.select({ value: count() }).from(messageTable).where(condition).get()?.value ?? 0
   const items = db
     .select()
     .from(messageTable)
     .where(condition)
-    .orderBy(desc(messageTable.seq))
+    .orderBy(desc(messageTable.id))
     .limit(limit)
     .offset(offset)
     .all()
@@ -231,23 +252,25 @@ export function listSessionMessagePage(
   return { items, total }
 }
 
-/* 追加本轮新增消息（完整历史由数据库持有；消息自带时间戳时按各自时间落库） */
-export function appendMessages(
-  sessionId: string,
-  messages: Array<{ role: string; content: string; data: string; timestamp?: number }>
-): void {
-  if (messages.length === 0) {
+/* 追加消息输入：turnStart 标记本轮真实用户提问，injected 标记运行时注入提示 */
+interface AppendMessageInput {
+  role: string
+  content: string
+  data: string
+  timestamp?: number
+  turnStart?: boolean
+  injected?: boolean
+}
+
+/*
+ * 追加本轮新增消息（完整历史由数据库持有；消息自带时间戳时按各自时间落库）。
+ * 真实用户提问插入后取其自增 id 作为本轮 turnId，后续消息统一挂到该轮次。
+ */
+export function appendMessages(sessionId: number, messages: AppendMessageInput[]): void {
+  if (!sessionId || messages.length === 0) {
     return
   }
   const db = getDb()
-  const last = db
-    .select({ seq: messageTable.seq })
-    .from(messageTable)
-    .where(eq(messageTable.sessionId, sessionId))
-    .orderBy(desc(messageTable.seq))
-    .limit(1)
-    .get()
-  const start = last?.seq ?? 0
   const now = new Date().toISOString()
   /* 模型跑一轮可能跨越较长时间：用户提问取发送时刻，助手回复取结束时刻，均来自运行时时间戳 */
   const addTimeOf = (timestamp: number | undefined): string =>
@@ -255,26 +278,32 @@ export function appendMessages(
       ? new Date(timestamp).toISOString()
       : now
   db.transaction((tx) => {
-    for (let index = 0; index < messages.length; index += 1) {
-      const message = messages[index]
-      tx.insert(messageTable)
+    let turnId = 0
+    for (const message of messages) {
+      const inserted = tx
+        .insert(messageTable)
         .values({
-          id: randomUUID(),
           sessionId,
-          seq: start + index + 1,
+          turnId: message.turnStart ? 0 : turnId,
           role: message.role,
+          injected: message.injected ?? false,
           content: message.content,
           data: message.data,
           addTime: addTimeOf(message.timestamp)
         })
         .run()
+      /* 轮次头：以自增主键回填 turn_id，使该轮后续消息统一归组 */
+      if (message.turnStart) {
+        turnId = Number(inserted.lastInsertRowid)
+        tx.update(messageTable).set({ turnId }).where(eq(messageTable.id, turnId)).run()
+      }
     }
   })
 }
 
 /* 删除指定的会话消息（按消息ID），与前端渲染保持一致 */
-export function deleteMessages(sessionId: string, ids: string[]): void {
-  if (ids.length === 0) {
+export function deleteMessages(sessionId: number, ids: number[]): void {
+  if (!sessionId || ids.length === 0) {
     return
   }
   getDb()

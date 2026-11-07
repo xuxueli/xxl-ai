@@ -19,7 +19,7 @@ import { requestInteraction } from '@modules/agent/worker/hitl'
 export type { PathAction }
 
 /* 会话级越界放行：用户在弹窗选择「本会话允许」后，该会话内所有越界访问不再询问 */
-const sessionTrusted = new Set<string>()
+const sessionTrusted = new Set<number>()
 
 /* 越界动作 → 文案 key */
 const ACTION_LABEL_KEY: Record<PathAction, string> = {
@@ -29,7 +29,7 @@ const ACTION_LABEL_KEY: Record<PathAction, string> = {
 }
 
 /* 清理会话的越界放行状态（删除/清空会话时调用） */
-export function clearSessionPermissions(sessionId: string): void {
+export function clearSessionPermissions(sessionId: number): void {
   sessionTrusted.delete(sessionId)
 }
 
@@ -45,7 +45,7 @@ export function outsidePath(rootDir: string, target: string): string | null {
  *   返回 allowed=false 时，reason 为可直接回填给模型的拦截说明。
  */
 export async function guardPath(options: {
-  sessionId: string
+  sessionId: number
   rootDir: string
   target?: string
   action: PathAction

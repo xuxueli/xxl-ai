@@ -13,7 +13,7 @@ import { AGENT_MEMORY_MAX_CHARS } from '@modules/agent/shared'
 const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{
   /* 项目主键 */
-  projectId: string
+  projectId: number
   /* 项目名（标题展示） */
   projectName: string
   /* 项目记忆开关 */

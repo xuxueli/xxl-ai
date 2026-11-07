@@ -6,11 +6,11 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
 export const llmTraceTable = sqliteTable('desk_llm_trace', {
-  id: text('id').primaryKey(),
-  sessionId: text('session_id').notNull().default(''), /* 归属会话 ID */
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  sessionId: integer('session_id').notNull().default(0), /* 归属会话 ID */
   runId: text('run_id').notNull().default(''), /* 一轮对话的运行标识 */
   step: integer('step').notNull().default(0), /* 本轮第几次模型调用 */
-  providerId: text('provider_id').notNull().default(''), /* 供应商 ID */
+  providerId: integer('provider_id').notNull().default(0), /* 供应商 ID */
   modelId: text('model_id').notNull().default(''), /* 模型 ID */
   phase: text('phase').notNull().default('chat'), /* chat 对话 / memory 记忆生成 */
   status: text('status').notNull().default('success'), /* success / error / aborted */

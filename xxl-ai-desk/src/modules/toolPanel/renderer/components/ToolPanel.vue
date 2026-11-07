@@ -18,7 +18,7 @@ const props = defineProps<{
   sessionId: string
   root?: string
   projectName?: string
-  projectId?: string
+  projectId?: number
 }>()
 
 /* 工具面板 store：提供本会话的显隐 / 宽度 / 当前 Tab / 布局模式 */

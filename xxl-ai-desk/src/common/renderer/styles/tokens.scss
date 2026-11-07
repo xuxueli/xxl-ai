@@ -11,8 +11,7 @@
  *
  * 区域语义：
  *   chrome   顶栏 + 左侧图标栏
- *   sidebar  左侧子菜单 / 会话列表
- *   panel    右侧工具面板
+ *   sidebar  左侧子菜单 / 会话列表 / 右侧工具面板（工具面板与侧栏合并同一层级）
  *   content  会话正文区
  *   elevated 输入框 / 卡片 / 悬浮件
  *
@@ -24,7 +23,8 @@
   /* 区域表面 */
   --desk-surface-chrome: var(--theme-chrome);
   --desk-surface-sidebar: var(--theme-sidebar);
-  --desk-surface-panel: var(--theme-panel);
+  /* 工具面板与侧栏合并同一层级，不再单独维护 panel 种子 */
+  --desk-surface-panel: var(--theme-sidebar);
   --desk-surface-content: var(--theme-content);
   --desk-surface-elevated: var(--theme-elevated);
   /* 兼容既有语义 token（组件逐步迁移到 surface-*） */

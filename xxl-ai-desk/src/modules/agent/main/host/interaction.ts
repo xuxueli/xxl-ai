@@ -15,7 +15,7 @@ import type { ChatInteractionPrompt, InteractionResult } from '@modules/chat/sha
 type InteractionResponder = (requestId: string, result: InteractionResult) => void
 
 /* 待响应交互：requestId → 会话与回传器 */
-const pending = new Map<string, { sessionId: string; respond: InteractionResponder }>()
+const pending = new Map<string, { sessionId: number; respond: InteractionResponder }>()
 
 /* 取当前窗口：优先聚焦窗口，其次首个窗口 */
 function activeWindow(): BrowserWindow | null {
@@ -58,7 +58,7 @@ export function cancelInteraction(requestId: string): void {
 }
 
 /* 取消某会话全部交互（会话终止 / 删除） */
-export function cancelInteractionsOf(sessionId: string): void {
+export function cancelInteractionsOf(sessionId: number): void {
   for (const [requestId, item] of pending) {
     if (item.sessionId === sessionId) {
       pending.delete(requestId)

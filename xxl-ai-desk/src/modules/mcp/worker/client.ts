@@ -57,7 +57,7 @@ interface CachedConnection {
   client: McpClient
   tools: Tool[]
 }
-const connections = new Map<string, CachedConnection>()
+const connections = new Map<number, CachedConnection>()
 
 /* 失败冷却记录：服务 ID → 指纹 / 到期时间 / 失败原因 */
 interface CachedFailure {
@@ -65,7 +65,7 @@ interface CachedFailure {
   until: number
   message: string
 }
-const failures = new Map<string, CachedFailure>()
+const failures = new Map<number, CachedFailure>()
 
 /* 进行中的握手：服务 ID + 指纹 → 连接 Promise（并发请求共享一次连接，避免重复拉起子进程） */
 const inflight = new Map<string, Promise<{ client: McpClient; tools: Tool[] }>>()
@@ -121,7 +121,7 @@ async function createTransport(server: McpRuntimeConfig): Promise<McpTransport> 
     if (!command) {
       throw new Error(translate(language, 'runtime.error.mcpLocalCommandMissing'))
     }
-    const stderrKey = server.id || fingerprintOf(server)
+    const stderrKey = server.id ? String(server.id) : fingerprintOf(server)
     return new StdioTransport({
       command,
       args: server.args ?? [],
@@ -175,7 +175,7 @@ function describeConnectError(error: Error, stderr: string, server: McpRuntimeCo
 async function connect(server: McpRuntimeConfig, timeoutMs = CONNECT_TIMEOUT): Promise<McpClient> {
   const { McpClient } = await loadPiMcp()
   const readStderr = (): string =>
-    stderrCapture.get(server.id || fingerprintOf(server)) ?? ''
+    stderrCapture.get(server.id ? String(server.id) : fingerprintOf(server)) ?? ''
   const transport = await createTransport(server)
   const client = new McpClient({
     ...CLIENT_INFO,

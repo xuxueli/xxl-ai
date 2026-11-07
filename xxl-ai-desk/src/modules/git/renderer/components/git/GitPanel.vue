@@ -18,7 +18,7 @@ import type { GitChange, GitStatus } from '@modules/git/shared'
 
 const props = defineProps<{
   sessionId: string
-  projectId?: string
+  projectId?: number
   /* 当前 Git Tab 是否处于可见激活态 */
   active?: boolean
 }>()
@@ -143,30 +143,31 @@ async function refresh(reloadDiff = false): Promise<void> {
 
 /* 拖拽暂存 / 取消暂存：按变更逐条处理，重命名同时处理新旧路径 */
 function onStageChanges(changes: GitChange[], target: 'staged' | 'unstaged'): void {
-  if (!props.projectId) {
+  const projectId = props.projectId
+  if (!projectId) {
     return
   }
   void run(async () => {
     for (const change of changes) {
       if (target === 'staged') {
-        await api.git.stage(props.projectId as string, change.path, change.oldPath)
+        await api.git.stage(projectId, change.path, change.oldPath)
       } else {
-        await api.git.unstage(props.projectId as string, change.path, change.oldPath)
+        await api.git.unstage(projectId, change.path, change.oldPath)
       }
     }
   })
 }
 
 /* 项目 / 激活态变化：同步 Git 变更监听 */
-let watchingProjectId = ''
+let watchingProjectId = 0
 let offGitChange: (() => void) | null = null
 let offFsChange: (() => void) | null = null
 
 async function syncWatch(): Promise<void> {
-  const next = props.active && props.projectId ? props.projectId : ''
+  const next = props.active && props.projectId ? props.projectId : 0
   if (watchingProjectId && watchingProjectId !== next) {
     await api.git.unwatch(watchingProjectId)
-    watchingProjectId = ''
+    watchingProjectId = 0
   }
   if (next && watchingProjectId !== next) {
     await api.git.watch(next)
@@ -210,7 +211,7 @@ onBeforeUnmount(() => {
   offFsChange = null
   if (watchingProjectId) {
     void api.git.unwatch(watchingProjectId)
-    watchingProjectId = ''
+    watchingProjectId = 0
   }
   window.removeEventListener('focus', onWindowFocus)
 })
@@ -237,12 +238,13 @@ async function run(action: () => Promise<unknown>, success?: string): Promise<vo
 /* 提交暂存区变更 */
 function commit(): void {
   const text = message.value.trim()
-  if (!text || !props.projectId) {
+  const projectId = props.projectId
+  if (!text || !projectId) {
     ElMessage.warning(t('git.commitEmpty'))
     return
   }
   void run(async () => {
-    const result = await api.git.commit({ projectId: props.projectId as string, message: text })
+    const result = await api.git.commit({ projectId, message: text })
     message.value = ''
     ElMessage.success(t('git.committed', [result.hash]))
   })

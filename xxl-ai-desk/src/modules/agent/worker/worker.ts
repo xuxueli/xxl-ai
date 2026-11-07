@@ -66,7 +66,7 @@ interface DeltaBuffer {
   thinking: string
   timer: ReturnType<typeof setTimeout> | null
 }
-const deltaBuffers = new Map<string, DeltaBuffer>()
+const deltaBuffers = new Map<number, DeltaBuffer>()
 
 /* 发送消息到主进程 */
 function post(message: WorkerMessage): void {
@@ -95,7 +95,7 @@ setBrowserActionInvoker(
 )
 
 /* 冲刷某会话缓冲的增量（保证在工具/完成等关键事件前先落文本，维持时序） */
-function flushDelta(sessionId: string): void {
+function flushDelta(sessionId: number): void {
   const buffer = deltaBuffers.get(sessionId)
   if (!buffer) {
     return
@@ -115,7 +115,7 @@ function flushDelta(sessionId: string): void {
 }
 
 /* 事件回传：增量事件合批，其余关键事件先冲刷再即时发送 */
-function emitEvent(sessionId: string, event: HostEvent): void {
+function emitEvent(sessionId: number, event: HostEvent): void {
   if (event.type === 'delta' || event.type === 'thinking') {
     let buffer = deltaBuffers.get(sessionId)
     if (!buffer) {

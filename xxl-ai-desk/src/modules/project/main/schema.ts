@@ -6,7 +6,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
 export const projectTable = sqliteTable('desk_project', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().default(''),
   path: text('path').notNull().default(''), /* 绑定的本地目录绝对路径 */
   memoryEnabled: integer('memory_enabled').notNull().default(0), /* 1=启用项目长期记忆 */

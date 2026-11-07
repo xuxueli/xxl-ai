@@ -34,12 +34,9 @@ const toolOpen = ref<Record<string, boolean>>({})
 /* 最后一个片段下标（用于判断是否处于流式跟随的尾段） */
 const lastIndex = computed(() => props.message.parts.length - 1)
 
-/* 轮次耗时：按「毫秒 / 秒 / 分秒」展示，与折叠摘要文案保持一致 */
+/* 轮次耗时：按「秒 / 分秒」展示，与折叠摘要文案保持一致（不足 1 秒也按 0 秒计） */
 function formatTurnDuration(ms: number): string {
-  if (ms < 1000) {
-    return t('chat.turnDurationMs', [Math.max(0, Math.round(ms))])
-  }
-  const totalSeconds = Math.round(ms / 1000)
+  const totalSeconds = Math.max(0, Math.round(ms / 1000))
   if (totalSeconds < 60) {
     return t('chat.turnDurationSec', [totalSeconds])
   }
@@ -187,14 +184,15 @@ function toolDetailsText(tool: ToolCallState): string {
 
 <template>
   <div class="timeline">
-    <!-- 轮次完成：过程明细折叠为摘要行，点击展开查看思考与工具调用 -->
-    <div v-if="!message.pending && hasProcess" class="turn-summary-row">
-      <button class="turn-summary" @click="toggleProcess">
-        <span class="turn-summary-label">{{ turnSummary }}</span>
+    <!-- 轮次完成：过程明细折叠为摘要行；有过程时可点击展开查看思考与工具调用 -->
+    <div v-if="!message.pending" class="turn-summary-row">
+      <button v-if="hasProcess" class="turn-summary" @click="toggleProcess">
+        <span>{{ turnSummary }}</span>
         <el-icon class="step-chevron" :class="{ open: processOpen }">
           <ArrowDown />
         </el-icon>
       </button>
+      <span v-else class="turn-summary is-static">{{ turnSummary }}</span>
     </div>
 
     <template v-for="(part, index) in message.parts" :key="index">
@@ -205,13 +203,13 @@ function toolDetailsText(tool: ToolCallState): string {
         :class="{ active: message.pending && isLastPart(index) }"
       >
         <button class="step-head" @click="toggleThinking(index)">
-          <span class="step-label">
-            {{ message.pending && isLastPart(index) ? t('chat.thinkingActive') : t('chat.thinkingDone') }}
-          </span>
           <el-icon class="step-icon">
             <Loading v-if="message.pending && isLastPart(index)" class="spin" />
             <Cpu v-else />
           </el-icon>
+          <span class="step-label">
+            {{ message.pending && isLastPart(index) ? t('chat.thinkingActive') : t('chat.thinkingDone') }}
+          </span>
           <el-icon class="step-chevron" :class="{ open: thinkingExpanded(index) }">
             <ArrowDown />
           </el-icon>
@@ -277,11 +275,6 @@ function toolDetailsText(tool: ToolCallState): string {
       <span class="generating-label">{{ pendingLabel }}</span>
       <span class="generating-dots"><span></span><span></span><span></span></span>
     </div>
-
-    <!-- 本轮耗时（无过程明细时单独展示，避免与摘要行重复） -->
-    <div v-if="turnDuration && !message.pending && !hasProcess" class="turn-meta">
-      {{ t('chat.turnElapsed', [turnDuration]) }}
-    </div>
   </div>
 </template>
 
@@ -311,17 +304,18 @@ function toolDetailsText(tool: ToolCallState): string {
   border: none;
   background: transparent;
   color: var(--desk-text-tertiary);
-  font-size: var(--desk-font-sm);
+  font-size: var(--desk-font-base);
   cursor: pointer;
   user-select: none;
 }
 
-.turn-summary:hover {
+.turn-summary:not(.is-static):hover {
   color: var(--desk-text-secondary);
 }
 
-.turn-summary-label {
-  font-weight: 500;
+/* 无执行过程时摘要仅作完成提示，不提供展开交互 */
+.turn-summary.is-static {
+  cursor: default;
 }
 
 /* 过程节点（思考/工具）：左侧竖线 + 可点击标题行 */
@@ -491,13 +485,6 @@ function toolDetailsText(tool: ToolCallState): string {
 
 .markdown-body.is-error {
   color: var(--desk-danger);
-}
-
-/* 本轮耗时：过程结束后的小字提示 */
-.turn-meta {
-  margin-top: 6px;
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
 }
 
 /* 生成中的尾部活动指示：小三点 + 文案，常驻直至本轮结束 */

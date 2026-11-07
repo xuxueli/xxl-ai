@@ -26,7 +26,7 @@ export const TRACE_ERROR_MAX_CHARS = 4000
 /* 诊断分页查询：会话 + 通用分页参数 */
 export interface DiagnosticsQuery extends PageQuery {
   /* 会话主键 */
-  sessionId: string
+  sessionId: number
 }
 
 /* 单次工具调用明细 */
@@ -52,7 +52,7 @@ export interface LlmTraceInput {
   /* 本轮第几次模型调用（从 1 开始） */
   step: number
   /* 供应商主键 */
-  providerId: string
+  providerId: number
   /* 模型 ID */
   modelId: string
   /* 来源：对话 / 记忆生成 */
@@ -82,9 +82,9 @@ export interface LlmTraceInput {
 /* 落库后的 trace（含主键与时间） */
 export interface LlmTraceDTO extends LlmTraceInput {
   /* 主键 */
-  id: string
+  id: number
   /* 会话主键 */
-  sessionId: string
+  sessionId: number
   /* 写入时间 */
   addTime: string
 }

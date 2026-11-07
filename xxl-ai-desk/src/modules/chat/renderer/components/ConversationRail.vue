@@ -21,7 +21,7 @@ const props = defineProps<{
 
 /* 轮次刻度：用户提问为起点，top 为相对滚动内容顶部的像素位置 */
 interface RailTurn {
-  id: string
+  id: number
   index: number
   question: string
   time: string
@@ -153,7 +153,7 @@ function measure(): void {
   }
   const viewportTop = el.getBoundingClientRect().top
   turns.value = buildTurns().map((turn) => {
-    const node = el.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(turn.id)}"]`)
+    const node = el.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(String(turn.id))}"]`)
     const top = node
       ? node.getBoundingClientRect().top - viewportTop + el.scrollTop
       : 0

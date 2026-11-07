@@ -13,7 +13,7 @@ export interface UseProjectFileTreeOptions {
   /* 项目根目录（响应式取值，用于路径展示与状态重置） */
   root: () => string | undefined
   /* 项目主键（文件系统 IPC 的唯一边界依据） */
-  projectId: () => string | undefined
+  projectId: () => number | undefined
   /* 外部维护的过滤关键字（按会话隔离时传入；缺省使用组件内部状态） */
   keyword?: Ref<string>
   /* 外部维护的目录展开态（按会话隔离时传入；缺省使用组件内部状态） */
@@ -69,7 +69,7 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     if (!watchedDirs.delete(dir)) {
       return
     }
-    void api.fs.unwatch(options.projectId() ?? '', dir)
+    void api.fs.unwatch(options.projectId() ?? 0, dir)
   }
 
   /*

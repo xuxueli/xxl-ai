@@ -15,7 +15,7 @@ import { GlobeIcon, TerminalIcon } from '@common/renderer/components/icons'
 import type { QuickAction } from '@common/shared'
 
 const visible = defineModel<boolean>('visible', { required: true })
-const emit = defineEmits<{ select: [sessionId: string] }>()
+const emit = defineEmits<{ select: [sessionId: number] }>()
 
 const chat = useChatStore()
 const settings = useSettingsStore()
@@ -47,7 +47,7 @@ const visibleSessions = computed(() =>
 )
 
 /* 项目名（会话结果右侧展示归属） */
-function projectNameOf(projectId: string): string {
+function projectNameOf(projectId: number): string {
   return project.projects.find((item) => item.id === projectId)?.name ?? ''
 }
 
@@ -65,7 +65,7 @@ function close(): void {
 }
 
 /* 选中会话：通知父组件定位并关闭 */
-function onPickSession(sessionId: string): void {
+function onPickSession(sessionId: number): void {
   emit('select', sessionId)
   close()
 }

@@ -3,10 +3,10 @@
  * @author xuxueli 2026-11-07
  */
 
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const mcpTable = sqliteTable('desk_mcp', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().default(''), /* MCP 名称（工具名前缀） */
   type: text('type').notNull().default('remote'), /* remote 远程 / local 本地 */
   transport: text('transport').notNull().default('streamable-http'), /* streamable-http / stdio */

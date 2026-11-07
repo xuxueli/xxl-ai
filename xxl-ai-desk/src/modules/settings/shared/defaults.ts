@@ -17,7 +17,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   /* 默认主题 = 预设列表第一项（极简灰），保证排序与默认值单一来源 */
   themePreset: THEME_PRESETS[0],
   language: 'zh',
-  providerId: '',
+  providerId: 0,
   modelId: '',
   appName: '',
   slogan: '',

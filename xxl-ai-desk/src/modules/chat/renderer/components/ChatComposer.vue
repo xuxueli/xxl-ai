@@ -118,7 +118,7 @@ async function onModelChange(command: string): Promise<void> {
   if (index < 0) {
     return
   }
-  await chat.selectModel(command.slice(0, index), command.slice(index + 2))
+  await chat.selectModel(Number(command.slice(0, index)), command.slice(index + 2))
 }
 
 /* 发送按钮可用条件：有文本或有待关联文件 */
@@ -318,7 +318,7 @@ function onKeydown(event: KeyboardEvent): void {
     <!-- 项目文件选择弹框：选择结果合并到本轮关联文件 -->
     <ChatFilePicker
       v-model:visible="pickerVisible"
-      :project-id="activeProject?.id ?? ''"
+      :project-id="activeProject?.id ?? 0"
       :root="activeProject?.path ?? ''"
       @confirm="onFilesSelected"
     />

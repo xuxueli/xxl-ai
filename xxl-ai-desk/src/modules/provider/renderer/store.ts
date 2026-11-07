@@ -34,16 +34,16 @@ export const useProviderStore = defineStore('provider', () => {
   }
 
   /* 删除供应商并刷新列表；删除当前供应商时切到列表首个 */
-  async function remove(id: string): Promise<void> {
+  async function remove(id: number): Promise<void> {
     await api.provider.remove(id)
     providers.value = await api.provider.list()
     if (settings.settings.providerId === id) {
-      await selectProvider(providers.value[0]?.id ?? '')
+      await selectProvider(providers.value[0]?.id ?? 0)
     }
   }
 
   /* 切换当前供应商（同步默认模型） */
-  async function selectProvider(providerId: string): Promise<void> {
+  async function selectProvider(providerId: number): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
     await settings.selectProvider(providerId, provider?.models[0]?.id ?? '')
   }

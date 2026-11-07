@@ -5,7 +5,7 @@
 
 export const MCP_DDL = `
 CREATE TABLE IF NOT EXISTS desk_mcp (
-  id          TEXT PRIMARY KEY,
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL DEFAULT '',
   type        TEXT NOT NULL DEFAULT 'remote',
   transport   TEXT NOT NULL DEFAULT 'streamable-http',

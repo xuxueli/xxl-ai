@@ -8,15 +8,15 @@ export type ChatMode = 'plan' | 'build'
 /* 会话（归属某项目，并绑定一个 Agent） */
 export interface SessionDTO {
   /* 主键 */
-  id: string
+  id: number
   /* 会话标题 */
   title: string
   /* 归属项目主键 */
-  projectId: string
+  projectId: number
   /* 绑定的 Agent 主键（创建后不可修改） */
-  agentId: string
-  /* 绑定的供应商主键 */
-  providerId: string
+  agentId: number
+  /* 绑定的供应商主键（0 表示未绑定，回退设置默认） */
+  providerId: number
   /* 选用的模型 ID */
   modelId: string
   /* 对话模式（plan 只读只规划 / build 全量读写） */
@@ -30,13 +30,15 @@ export interface SessionDTO {
 /* 已持久化的消息记录 */
 export interface StoredMessage {
   /* 主键 */
-  id: string
+  id: number
   /* 所属会话主键 */
-  sessionId: string
-  /* 会话内顺序号 */
-  seq: number
+  sessionId: number
+  /* 所属轮次：等于该轮真实用户提问消息 id */
+  turnId: number
   /* 角色（user / assistant 等） */
   role: string
+  /* 运行时注入消息（非用户输入）：不展示、不构成新一轮 */
+  injected: boolean
   /* 文本内容（列表预览用） */
   content: string
   /* Agent 原始消息 JSON */

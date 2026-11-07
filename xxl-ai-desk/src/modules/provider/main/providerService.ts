@@ -4,7 +4,6 @@
  *   - 首次运行播种预设供应商，供新用户开箱可用。
  */
 
-import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
@@ -35,12 +34,8 @@ function parseHeaders(raw: string): Record<string, string> {
   return {}
 }
 
-/* 归一化单个模型项：兼容旧数据 string[] 与新数据对象 */
+/* 归一化单个模型项：只接受对象格式，非法项丢弃 */
 function normalizeModel(item: unknown): ProviderModelDTO | null {
-  if (typeof item === 'string') {
-    const id = item.trim()
-    return id ? { id, contextWindow: CONTEXT_WINDOW_DEFAULT } : null
-  }
   if (!item || typeof item !== 'object') {
     return null
   }
@@ -72,7 +67,7 @@ function normalizeModels(items: unknown): ProviderModelDTO[] {
   return [...models.values()]
 }
 
-/* 解析模型列表：兼容旧数据 string[] 与新数据对象 */
+/* 解析模型列表：按 ID 去重，非法项丢弃 */
 function parseModels(raw: string): ProviderModelDTO[] {
   try {
     return normalizeModels(JSON.parse(raw))
@@ -104,7 +99,10 @@ export function listProviders(): ProviderDTO[] {
 }
 
 /* 按主键读取供应商 */
-export function getProvider(id: string): ProviderDTO | null {
+export function getProvider(id: number): ProviderDTO | null {
+  if (!id) {
+    return null
+  }
   const row = getDb().select().from(providerTable).where(eq(providerTable.id, id)).get()
   return row ? toDTO(row) : null
 }
@@ -113,17 +111,17 @@ export function getProvider(id: string): ProviderDTO | null {
 export function saveProvider(input: Partial<ProviderDTO>): ProviderDTO {
   const db = getDb()
   const now = new Date().toISOString()
-  const id = input.id || randomUUID()
-  const existing = db.select().from(providerTable).where(eq(providerTable.id, id)).get()
+  const existing = input.id
+    ? db.select().from(providerTable).where(eq(providerTable.id, input.id)).get()
+    : undefined
 
   /* 未传 apiKey 表示保持原值；显式空串表示清空 */
   const apiKey = input.apiKey !== undefined ? encryptSecret(input.apiKey) : (existing?.apiKey ?? '')
-  /* 写库前统一归一化模型：兼容旧 string[]、去重并保证窗口合法 */
+  /* 写库前统一归一化模型：去重并保证窗口合法 */
   const models = normalizeModels(
     input.models ?? (existing ? parseModels(existing.models) : [])
   )
   const record = {
-    id,
     name: input.name ?? existing?.name ?? '未命名供应商',
     baseUrl: input.baseUrl ?? existing?.baseUrl ?? '',
     apiKey,
@@ -135,16 +133,23 @@ export function saveProvider(input: Partial<ProviderDTO>): ProviderDTO {
     updateTime: now
   }
 
-  db.insert(providerTable)
+  if (existing) {
+    db.update(providerTable).set(record).where(eq(providerTable.id, existing.id)).run()
+    return toDTO({ ...existing, ...record })
+  }
+  const inserted = db
+    .insert(providerTable)
     .values(record)
-    .onConflictDoUpdate({ target: providerTable.id, set: record })
-    .run()
-
-  return toDTO(record)
+    .returning({ id: providerTable.id })
+    .get()
+  return toDTO({ id: inserted.id, ...record })
 }
 
 /* 删除供应商 */
-export function deleteProvider(id: string): void {
+export function deleteProvider(id: number): void {
+  if (!id) {
+    return
+  }
   getDb().delete(providerTable).where(eq(providerTable.id, id)).run()
 }
 

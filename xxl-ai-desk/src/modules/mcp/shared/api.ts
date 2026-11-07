@@ -8,9 +8,9 @@ import type { McpCategory, McpDiscoverDetail, McpDiscoverPage, McpDiscoverQuery,
 export interface McpApi {
   list(): Promise<McpDTO[]>
   save(dto: Partial<McpDTO>): Promise<McpDTO>
-  remove(id: string): Promise<void>
+  remove(id: number): Promise<void>
   test(dto: Partial<McpDTO>): Promise<McpTestResult>
-  tools(id: string): Promise<McpToolMeta[]>
+  tools(id: number): Promise<McpToolMeta[]>
   discover(query: McpDiscoverQuery): Promise<McpDiscoverPage>
   categories(): Promise<McpCategory[]>
   detail(slug: string): Promise<McpDiscoverDetail>

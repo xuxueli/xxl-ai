@@ -25,7 +25,7 @@ export interface McpHealth {
 /* MCP 服务（列表 / 编辑） */
 export interface McpDTO {
   /* 主键 */
-  id: string
+  id: number
   /* 名称（工具名前缀来源） */
   name: string
   /* 服务类型 */
@@ -158,7 +158,7 @@ export interface McpDiscoverDetail extends McpDiscoverItem {
 /* MCP 运行时配置：配置模块产出的纯数据，交运行时进程装配（不包含连接/协议逻辑） */
 export interface McpRuntimeConfig {
   /* 服务主键 */
-  id: string
+  id: number
   /* 服务名（工具名前缀） */
   name: string
   /* 传输协议：Streamable HTTP / stdio */

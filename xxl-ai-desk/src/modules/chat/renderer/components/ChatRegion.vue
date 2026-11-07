@@ -13,7 +13,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
-import { DRAFT_SESSION_KEY } from '@modules/toolPanel/renderer'
+import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { useChatUiStore } from '@modules/chat/renderer/store/ui'
 import { t } from '@renderer/shell/i18n'
 import type { ChatMode } from '@modules/chat/shared'
@@ -26,7 +26,7 @@ const agent = useAgentStore()
 const chatUi = useChatUiStore()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
-const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+const sessionKey = computed(() => sessionKeyOf(chat.currentId))
 /* 当前会话的对话 UI 切片（草稿、滚动位置） */
 const chatUiState = computed(() => chatUi.sliceOf(sessionKey.value))
 
@@ -203,7 +203,7 @@ function onEditMessage(content: string): void {
 }
 
 /* 删除当前消息：同步删除存储与前端渲染，保持一致 */
-async function onRemoveMessage(message: { id: string }): Promise<void> {
+async function onRemoveMessage(message: { id: number }): Promise<void> {
   try {
     await ElMessageBox.confirm(t('chat.deleteMessageConfirm'), t('chat.deleteMessage'), {
       type: 'warning',

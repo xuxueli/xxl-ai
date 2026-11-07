@@ -13,5 +13,5 @@ export function registerDiagnosticsIpc(ipc: IpcContext): void {
     listMessagePage(query, listSessionMessagePage)
   )
   ipc.handle(DIAGNOSTICS_IPC.traces, (_event, query) => listTraces(query))
-  ipc.handle(DIAGNOSTICS_IPC.clear, (_event, sessionId: string) => clearTraces(sessionId))
+  ipc.handle(DIAGNOSTICS_IPC.clear, (_event, sessionId: number) => clearTraces(sessionId))
 }

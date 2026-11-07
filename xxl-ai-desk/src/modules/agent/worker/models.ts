@@ -23,7 +23,7 @@ const DEFAULT_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
  */
 function buildRequestHeaders(
   headers: Record<string, string>,
-  sessionId?: string
+  sessionId?: number
 ): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [rawKey, rawValue] of Object.entries(headers ?? {})) {
@@ -36,7 +36,7 @@ function buildRequestHeaders(
       if (!sessionId) {
         continue
       }
-      result[key] = value.split(SESSION_PLACEHOLDER).join(sessionId)
+      result[key] = value.split(SESSION_PLACEHOLDER).join(String(sessionId))
     } else {
       result[key] = value
     }
@@ -81,6 +81,8 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
   const models = createModels()
 
   for (const config of configs) {
+    /* Pi 供应商 id 为字符串：数据库自增 id 在此边界转字符串 */
+    const providerId = String(config.id)
     const requestHeaders = buildRequestHeaders(config.headers, config.sessionId)
     /* 覆盖 Pi 内置默认 User-Agent（模型 headers 优先级高于内置默认）并压过自定义同名头，统一标识 */
     requestHeaders['User-Agent'] = USER_AGENT
@@ -93,7 +95,7 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
       id: model.id,
       name: model.id,
       api: 'openai-completions',
-      provider: config.id,
+      provider: providerId,
       baseUrl,
       reasoning: false,
       input: ['text'],
@@ -106,7 +108,7 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
 
     models.setProvider(
       createProvider({
-        id: config.id,
+        id: providerId,
         name: config.name,
         baseUrl,
         auth: {

@@ -12,7 +12,7 @@ import { useProviderStore } from '@modules/provider/renderer'
 import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
-import { mapStoredMessages, uid } from '@modules/chat/renderer/store/messageMapping'
+import { mapStoredMessages, nextLocalMessageId } from '@modules/chat/renderer/store/messageMapping'
 import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import type { ChatMode, SessionDTO } from '@modules/chat/shared'
@@ -23,7 +23,7 @@ export const useChatStore = defineStore('chat', () => {
   /* 会话列表（最近更新优先） */
   const sessions = ref<SessionDTO[]>([])
   /* 当前选中会话 id；空串表示处于「新建对话」草稿态 */
-  const currentId = ref('')
+  const currentId = ref(0)
   /* 当前会话的消息列表（UI 渲染用） */
   const messages = ref<UiMessage[]>([])
   /* 当前会话消息加载中标记 */
@@ -32,7 +32,7 @@ export const useChatStore = defineStore('chat', () => {
   let unbind: (() => void) | null = null
 
   /* 正在生成的会话集合（响应式）：支持多会话并发生成、互不阻塞 */
-  const streamingIds = ref<Record<string, boolean>>({})
+  const streamingIds = ref<Record<number, boolean>>({})
   /* 流式状态机：缓冲、目标消息与多会话内存缓存 */
   const stream = createChatStream({ currentId, messages, streamingIds })
 
@@ -49,7 +49,7 @@ export const useChatStore = defineStore('chat', () => {
     for (let index = messages.value.length - 1; index >= 0; index -= 1) {
       const message = messages.value[index]
       if (message.role === 'assistant' && message.contextTokens) {
-        /* 窗口优先取当前会话模型配置，历史消息/旧配置回退事件值与默认值 */
+        /* 窗口优先取当前会话模型配置，缺失时回退事件值与默认值 */
         const session = currentSession.value
         const provider = session
           ? useProviderStore().providers.find((item) => item.id === session.providerId)
@@ -95,13 +95,13 @@ export const useChatStore = defineStore('chat', () => {
   async function reloadSessions(): Promise<void> {
     await loadSessions()
     if (currentId.value && !sessions.value.some((item) => item.id === currentId.value)) {
-      currentId.value = ''
+      currentId.value = 0
       messages.value = []
     }
   }
 
   /* 选择会话并加载消息 */
-  async function selectSession(id: string): Promise<void> {
+  async function selectSession(id: number): Promise<void> {
     currentId.value = id
     const target = sessions.value.find((item) => item.id === id)
     if (target) {
@@ -140,15 +140,15 @@ export const useChatStore = defineStore('chat', () => {
 
   /* 新建会话（归属当前选中项目与 Agent，默认 Build 模式） */
   async function createSession(
-    projectId?: string,
+    projectId?: number,
     mode: ChatMode = 'build',
-    agentId?: string
+    agentId?: number
   ): Promise<SessionDTO> {
     const settings = useSettingsStore()
     const project = useProjectStore()
     const agent = useAgentStore()
-    const targetProjectId = projectId || project.currentId
-    const targetAgentId = agentId || agent.currentId || agent.defaultAgent?.id || ''
+    const targetProjectId = projectId ?? project.currentId
+    const targetAgentId = agentId ?? agent.currentId ?? agent.defaultAgent?.id ?? 0
     const session = await api.session.create({
       title: NEW_CHAT_TITLE,
       projectId: targetProjectId,
@@ -169,7 +169,7 @@ export const useChatStore = defineStore('chat', () => {
   /* 进入新对话草稿态：不立即落库，首次发送时才创建会话（避免空对话被反复创建） */
   function startNewChat(): void {
     /* 允许在其它会话生成时进入新对话草稿：各会话生成状态相互独立 */
-    currentId.value = ''
+    currentId.value = 0
     messages.value = []
     /* 新建对话默认选中排序第一个项目与默认 Agent */
     useProjectStore().selectFirstProject()
@@ -179,7 +179,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /* 删除会话 */
-  async function removeSession(id: string): Promise<void> {
+  async function removeSession(id: number): Promise<void> {
     await api.session.remove(id)
     /* 清理该会话的生成缓存与流式状态 */
     stream.discard(id)
@@ -189,7 +189,7 @@ export const useChatStore = defineStore('chat', () => {
     /* 清除「最后会话」记录：避免下次启动定位到已删除的会话 */
     clearLastSessionId(id)
     if (currentId.value === id) {
-      currentId.value = ''
+      currentId.value = 0
       messages.value = []
       /* 优先定位有归属项目的会话（无归属的历史会话不展示） */
       const next = sessions.value.find((item) => item.projectId)
@@ -200,7 +200,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /* 重命名会话 */
-  async function renameSession(id: string, title: string): Promise<void> {
+  async function renameSession(id: number, title: string): Promise<void> {
     await api.session.rename(id, title)
     const target = sessions.value.find((item) => item.id === id)
     if (target) {
@@ -209,7 +209,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /* 选择模型：写入全局默认值（下次新建对话沿用），并同步当前会话配置 */
-  async function selectModel(providerId: string, modelId: string): Promise<void> {
+  async function selectModel(providerId: number, modelId: string): Promise<void> {
     const settings = useSettingsStore()
     await settings.saveSettings({ providerId, modelId })
     if (!currentId.value) {
@@ -265,7 +265,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const assistantMessage: UiMessage = {
-      id: uid(),
+      id: nextLocalMessageId(),
       role: 'assistant',
       content: '',
       parts: [],
@@ -275,7 +275,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     messages.value.push({
-      id: uid(),
+      id: nextLocalMessageId(),
       role: 'user',
       content,
       parts: [],
@@ -311,7 +311,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /* 删除指定消息：同步删除存储与前端渲染，并重建会话上下文 */
-  async function removeMessages(ids: string[]): Promise<void> {
+  async function removeMessages(ids: number[]): Promise<void> {
     if (!currentId.value || ids.length === 0) {
       return
     }

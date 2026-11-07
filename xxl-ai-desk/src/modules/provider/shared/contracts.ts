@@ -10,7 +10,7 @@ export type ProviderModelDTO = ModelDescriptor
 /* 供应商（OpenAI 兼容端点） */
 export interface ProviderDTO {
   /* 主键 */
-  id: string
+  id: number
   /* 名称 */
   name: string
   /* 接口基址（OpenAI 兼容端点） */
@@ -34,7 +34,7 @@ export interface ProviderDTO {
 /* 远程模型查询入参（未保存的草稿可直接传表单值，已保存的可只传 id 复用库存密钥） */
 export interface ProviderModelQuery {
   /* 已保存供应商主键（用于复用库存配置） */
-  id?: string
+  id?: number
   /* 草稿接口基址 */
   baseUrl?: string
   /* 草稿访问密钥 */

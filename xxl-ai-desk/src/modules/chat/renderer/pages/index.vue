@@ -5,7 +5,7 @@ import ChatRegion from '@modules/chat/renderer/components/ChatRegion.vue'
 import { ToolPanelLayout } from '@modules/toolPanel/renderer'
 import { useTerminalTarget } from '@modules/terminal/renderer'
 import { useChatStore } from '@modules/chat/renderer'
-import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
+import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 
 const chat = useChatStore()
 const toolPanel = useToolPanelStore()
@@ -13,7 +13,7 @@ const toolPanel = useToolPanelStore()
 const { terminalProject } = useTerminalTarget()
 
 /* 当前会话 key：真实会话 id；新建对话草稿态使用固定 key */
-const sessionKey = computed(() => chat.currentId || DRAFT_SESSION_KEY)
+const sessionKey = computed(() => sessionKeyOf(chat.currentId))
 
 /* 确保当前会话的工具面板状态已创建（含本地持久化恢复） */
 watch(sessionKey, (key) => toolPanel.ensure(key), { immediate: true })

@@ -13,7 +13,7 @@ import type { InteractionRequest, InteractionResult } from '@modules/chat/shared
 /* 挂起中的交互请求 */
 interface PendingInteraction {
   /* 所属会话主键 */
-  sessionId: string
+  sessionId: number
   /* 结算回调 */
   resolve: (result: InteractionResult) => void
   /* 工具调用信号（终止时自动取消） */
@@ -58,7 +58,7 @@ function settle(requestId: string, result: InteractionResult, notify: boolean): 
 
 /* 发起交互并等待用户应答 */
 export function requestInteraction(
-  sessionId: string,
+  sessionId: number,
   request: InteractionRequest,
   signal?: AbortSignal
 ): Promise<InteractionResult> {
@@ -87,7 +87,7 @@ export function respondInteraction(requestId: string, result: InteractionResult)
 }
 
 /* 取消某会话的全部挂起交互（终止生成 / 释放会话） */
-export function cancelSessionInteractions(sessionId: string): void {
+export function cancelSessionInteractions(sessionId: number): void {
   for (const [requestId, item] of pending) {
     if (item.sessionId === sessionId) {
       settle(requestId, { status: 'cancelled' }, true)

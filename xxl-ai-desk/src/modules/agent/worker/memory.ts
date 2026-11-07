@@ -59,7 +59,7 @@ function textOf(message: { content: Array<{ type: string; text?: string }> }): s
 export async function generateMemoryContent(input: MemoryGenerateInput): Promise<string> {
   /* 记忆生成沿用当前会话：{session} 请求头（如 x-opencode-session）不能为空，否则供应商直接 400 */
   const models = await buildModels([{ ...input.provider, sessionId: input.sessionId }])
-  const model = models.getModel(input.provider.id, input.modelId)
+  const model = models.getModel(String(input.provider.id), input.modelId)
   if (!model) {
     throw new Error(
       translate(input.language, 'runtime.error.modelNotFound', [input.provider.id, input.modelId])

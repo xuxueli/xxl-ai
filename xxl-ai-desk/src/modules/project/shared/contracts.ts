@@ -5,7 +5,7 @@
 /* 项目：1:1 强绑定一个本地磁盘目录 */
 export interface ProjectDTO {
   /* 主键 */
-  id: string
+  id: number
   /* 项目名 */
   name: string
   /* 绑定的本地磁盘目录绝对路径 */

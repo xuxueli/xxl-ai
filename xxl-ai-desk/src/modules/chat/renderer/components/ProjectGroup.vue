@@ -20,9 +20,9 @@ const props = defineProps<{
   /* 是否展开 */
   expanded: boolean
   /* 当前选中会话（用于会话行高亮） */
-  activeSessionId: string
+  activeSessionId: number
 }>()
-const emit = defineEmits<{ toggle: []; select: [sessionId: string] }>()
+const emit = defineEmits<{ toggle: []; select: [sessionId: number] }>()
 
 const chat = useChatStore()
 const settings = useSettingsStore()
@@ -104,7 +104,7 @@ async function onRenameSession(session: SessionDTO): Promise<void> {
 }
 
 /* 删除会话：二次确认后移除 */
-async function onDeleteSession(id: string): Promise<void> {
+async function onDeleteSession(id: number): Promise<void> {
   try {
     await ElMessageBox.confirm(t('chat.deleteConfirm'), t('chat.deleteSession'), {
       type: 'warning',

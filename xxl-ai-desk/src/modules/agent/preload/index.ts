@@ -10,7 +10,7 @@ import { AGENT_IPC } from '../shared/ipc'
 export const agentApi: AgentApi = {
   list: () => ipcRenderer.invoke(AGENT_IPC.list),
   save: (input) => ipcRenderer.invoke(AGENT_IPC.save, input),
-  remove: (id: string) => ipcRenderer.invoke(AGENT_IPC.remove, id),
+  remove: (id: number) => ipcRenderer.invoke(AGENT_IPC.remove, id),
   memoryList: () => ipcRenderer.invoke(AGENT_IPC.memoryList),
   memorySave: (input) => ipcRenderer.invoke(AGENT_IPC.memorySave, input)
 }

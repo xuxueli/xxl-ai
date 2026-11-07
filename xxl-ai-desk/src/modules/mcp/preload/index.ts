@@ -10,9 +10,9 @@ import { MCP_IPC } from '../shared/ipc'
 export const mcpApi: McpApi = {
   list: () => ipcRenderer.invoke(MCP_IPC.list),
   save: (dto) => ipcRenderer.invoke(MCP_IPC.save, dto),
-  remove: (id: string) => ipcRenderer.invoke(MCP_IPC.remove, id),
+  remove: (id: number) => ipcRenderer.invoke(MCP_IPC.remove, id),
   test: (dto) => ipcRenderer.invoke(MCP_IPC.test, dto),
-  tools: (id: string) => ipcRenderer.invoke(MCP_IPC.tools, id),
+  tools: (id: number) => ipcRenderer.invoke(MCP_IPC.tools, id),
   discover: (query) => ipcRenderer.invoke(MCP_IPC.discover, query),
   categories: () => ipcRenderer.invoke(MCP_IPC.categories),
   detail: (slug: string) => ipcRenderer.invoke(MCP_IPC.detail, slug)

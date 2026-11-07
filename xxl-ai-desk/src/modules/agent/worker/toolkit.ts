@@ -18,7 +18,7 @@ import { guardPath, type PathAction } from '@modules/agent/worker/sandbox'
 export interface ToolContext {
   mode: ChatMode
   rootDir: string
-  sessionId: string
+  sessionId: number
   /* 应用语言：工具错误与摘要文案使用对应语言 */
   language: AppLanguage
   /* 已启用的技能索引（正文由 read_skill 按需读取） */

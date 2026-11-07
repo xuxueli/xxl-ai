@@ -13,9 +13,9 @@ export const useProjectStore = defineStore('project', () => {
   /* 项目列表（最近更新优先） */
   const projects = ref<ProjectDTO[]>([])
   /* 当前选中项目 id */
-  const currentId = ref('')
+  const currentId = ref(0)
   /* 项目展开状态（按项目 id 记录，切换板块/页面后保留） */
-  const expanded = ref<Record<string, boolean>>({})
+  const expanded = ref<Record<number, boolean>>({})
 
   /* 当前项目对象（未选中为 null） */
   const currentProject = computed(
@@ -26,33 +26,33 @@ export const useProjectStore = defineStore('project', () => {
   async function loadProjects(): Promise<void> {
     projects.value = await api.project.list()
     if (currentId.value && !projects.value.some((item) => item.id === currentId.value)) {
-      currentId.value = ''
+      currentId.value = 0
     }
   }
 
   /* 选择当前项目 */
-  function selectProject(id: string): void {
+  function selectProject(id: number): void {
     currentId.value = id
   }
 
   /* 选中默认项目：与侧栏默认排序（名称升序）的第一个项目一致 */
   function selectFirstProject(): void {
     const first = [...projects.value].sort((a, b) => a.name.localeCompare(b.name, 'zh'))[0]
-    currentId.value = first?.id ?? ''
+    currentId.value = first?.id ?? 0
   }
 
   /* 项目是否展开 */
-  function isExpanded(id: string): boolean {
+  function isExpanded(id: number): boolean {
     return Boolean(expanded.value[id])
   }
 
   /* 设置项目展开状态 */
-  function setExpanded(id: string, value: boolean): void {
+  function setExpanded(id: number, value: boolean): void {
     expanded.value = { ...expanded.value, [id]: value }
   }
 
   /* 折叠/展开项目 */
-  function toggleExpanded(id: string): void {
+  function toggleExpanded(id: number): void {
     setExpanded(id, !isExpanded(id))
   }
 
@@ -71,7 +71,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   /* 重命名项目 */
-  async function renameProject(id: string, name: string): Promise<void> {
+  async function renameProject(id: number, name: string): Promise<void> {
     const updated = await api.project.rename(id, name)
     const target = projects.value.find((item) => item.id === id)
     if (target) {
@@ -80,7 +80,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   /* 删除项目（主进程级联删除其下会话与消息） */
-  async function removeProject(id: string): Promise<void> {
+  async function removeProject(id: number): Promise<void> {
     await api.project.remove(id)
     projects.value = projects.value.filter((item) => item.id !== id)
     /* 同步清理已删除项目的展开状态 */
@@ -90,17 +90,17 @@ export const useProjectStore = defineStore('project', () => {
       expanded.value = next
     }
     if (currentId.value === id) {
-      currentId.value = ''
+      currentId.value = 0
     }
   }
 
   /* 在系统文件管理器中展示项目目录 */
-  async function revealProject(id: string): Promise<void> {
+  async function revealProject(id: number): Promise<void> {
     await api.project.reveal(id)
   }
 
   /* 切换项目记忆开关（保留已存记忆内容） */
-  async function setMemoryEnabled(id: string, value: boolean): Promise<void> {
+  async function setMemoryEnabled(id: number, value: boolean): Promise<void> {
     const updated = await api.project.setMemoryEnabled(id, value)
     const target = projects.value.find((item) => item.id === id)
     if (target) {

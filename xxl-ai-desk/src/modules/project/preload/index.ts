@@ -10,9 +10,9 @@ import { PROJECT_IPC } from '../shared/ipc'
 export const projectApi: ProjectApi = {
   list: () => ipcRenderer.invoke(PROJECT_IPC.list),
   create: (input) => ipcRenderer.invoke(PROJECT_IPC.create, input),
-  rename: (id: string, name: string) => ipcRenderer.invoke(PROJECT_IPC.rename, id, name),
-  remove: (id: string) => ipcRenderer.invoke(PROJECT_IPC.remove, id),
-  reveal: (id: string) => ipcRenderer.invoke(PROJECT_IPC.reveal, id),
-  setMemoryEnabled: (id: string, enabled: boolean) =>
+  rename: (id: number, name: string) => ipcRenderer.invoke(PROJECT_IPC.rename, id, name),
+  remove: (id: number) => ipcRenderer.invoke(PROJECT_IPC.remove, id),
+  reveal: (id: number) => ipcRenderer.invoke(PROJECT_IPC.reveal, id),
+  setMemoryEnabled: (id: number, enabled: boolean) =>
     ipcRenderer.invoke(PROJECT_IPC.setMemoryEnabled, id, enabled)
 }

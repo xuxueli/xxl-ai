@@ -50,7 +50,7 @@ async function runGit(
 }
 
 /* 读取项目目录 */
-function projectPath(projectId: string): string {
+function projectPath(projectId: number): string {
   const project = getProject(projectId)
   if (!project) {
     throw new Error(t('runtime.error.projectMissing'))
@@ -59,7 +59,7 @@ function projectPath(projectId: string): string {
 }
 
 /* 解析仓库根目录：非 Git 仓库返回空串 */
-async function repoRootOf(projectId: string): Promise<string> {
+async function repoRootOf(projectId: number): Promise<string> {
   const cwd = projectPath(projectId)
   try {
     const { stdout } = await runGit(cwd, ['rev-parse', '--show-toplevel'], 5_000)
@@ -73,7 +73,7 @@ async function repoRootOf(projectId: string): Promise<string> {
 }
 
 /* 要求项目必须是 Git 仓库 */
-async function requireRepo(projectId: string): Promise<string> {
+async function requireRepo(projectId: number): Promise<string> {
   const root = await repoRootOf(projectId)
   if (!root) {
     throw new Error(t('runtime.error.gitNotRepo'))
@@ -159,17 +159,17 @@ interface GitWatchState {
   paths: Set<string>
 }
 
-const gitWatchers = new Map<string, GitWatchState>()
-const gitTimers = new Map<string, ReturnType<typeof setTimeout>>()
-let onGitChange: ((projectId: string) => void) | null = null
+const gitWatchers = new Map<number, GitWatchState>()
+const gitTimers = new Map<number, ReturnType<typeof setTimeout>>()
+let onGitChange: ((projectId: number) => void) | null = null
 
 /* 注册变更回调（IPC 层转发到渲染窗口） */
-export function initGitWatch(handler: (projectId: string) => void): void {
+export function initGitWatch(handler: (projectId: number) => void): void {
   onGitChange = handler
 }
 
 /* 通知渲染层：同一项目的密集事件合并为一次 */
-function notifyGitChange(projectId: string): void {
+function notifyGitChange(projectId: number): void {
   const existing = gitTimers.get(projectId)
   if (existing) {
     clearTimeout(existing)
@@ -184,7 +184,7 @@ function notifyGitChange(projectId: string): void {
 }
 
 /* 增加目录监听（幂等） */
-function addGitWatcher(projectId: string, path: string): void {
+function addGitWatcher(projectId: number, path: string): void {
   const state = gitWatchers.get(projectId)
   if (!state || state.paths.has(path)) {
     return
@@ -200,7 +200,7 @@ function addGitWatcher(projectId: string, path: string): void {
 }
 
 /* 仓库出现后补充监听 .git：覆盖暂存 / 提交 / 分支切换等索引变更 */
-function ensureGitDirWatcher(projectId: string, root: string): void {
+function ensureGitDirWatcher(projectId: number, root: string): void {
   const gitDir = join(root, '.git')
   if (existsSync(gitDir)) {
     addGitWatcher(projectId, gitDir)
@@ -208,7 +208,7 @@ function ensureGitDirWatcher(projectId: string, root: string): void {
 }
 
 /* 开始监听项目：根目录用于发现 git init，.git 用于发现暂存 / 提交等操作 */
-export function watchGitProject(projectId: string): void {
+export function watchGitProject(projectId: number): void {
   unwatchGitProject(projectId)
   const state: GitWatchState = { watchers: [], paths: new Set() }
   gitWatchers.set(projectId, state)
@@ -221,7 +221,7 @@ export function watchGitProject(projectId: string): void {
 }
 
 /* 停止监听项目 */
-export function unwatchGitProject(projectId: string): void {
+export function unwatchGitProject(projectId: number): void {
   const state = gitWatchers.get(projectId)
   if (state) {
     state.watchers.forEach((watcher) => watcher.close())
@@ -242,7 +242,7 @@ export function disposeAllGitWatch(): void {
 }
 
 /* 读取项目 Git 状态 */
-export async function getGitStatus(projectId: string): Promise<GitStatus> {
+export async function getGitStatus(projectId: number): Promise<GitStatus> {
   const projectDir = projectPath(projectId)
   const root = await repoRootOf(projectId)
   if (!root) {
@@ -380,7 +380,7 @@ export async function getGitDiff(input: GitDiffInput): Promise<GitDiffResult> {
 
 /* 暂存单个文件 / 重命名：重命名需同时处理旧路径删除 */
 export async function stageGit(
-  projectId: string,
+  projectId: number,
   path: string,
   oldPath?: string
 ): Promise<GitOperationResult> {
@@ -392,7 +392,7 @@ export async function stageGit(
 
 /* 取消暂存单个文件 / 重命名：兼容尚无 HEAD 的首个提交 */
 export async function unstageGit(
-  projectId: string,
+  projectId: number,
   path: string,
   oldPath?: string
 ): Promise<GitOperationResult> {

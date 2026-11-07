@@ -39,13 +39,13 @@ const mcpStore = useMcpStore()
 
 /* 表单状态 */
 const form = ref({
-  id: '',
+  id: 0,
   name: '',
   description: '',
   avatar: DEFAULT_AGENT_AVATAR,
   systemPrompt: '',
   skillIds: [] as string[],
-  mcpIds: [] as string[],
+  mcpIds: [] as number[],
   tools: { ...DEFAULT_AGENT_TOOLS } as AgentToolSwitches
 })
 const saving = ref(false)
@@ -62,7 +62,7 @@ function resetForm(): void {
   selectedPresetId.value = ''
   const avatarPreset = resolveAgentAvatar(avatar).preset
   form.value = {
-    id: draft?.id ?? '',
+    id: draft?.id ?? 0,
     name: draft?.name ?? '',
     description: draft?.description ?? '',
     avatar,

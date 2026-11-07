@@ -4,7 +4,6 @@
  *   - 对外输出：McpDTO（管理界面）与 McpRuntimeConfig（运行时装配）。
  */
 
-import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
@@ -131,13 +130,19 @@ export function listMcps(): McpDTO[] {
 }
 
 /* 按主键读取 MCP */
-export function getMcp(id: string): McpDTO | null {
+export function getMcp(id: number): McpDTO | null {
+  if (!id) {
+    return null
+  }
   const row = getDb().select().from(mcpTable).where(eq(mcpTable.id, id)).get()
   return row ? toDTO(row) : null
 }
 
 /* 校验并归一化保存入参（缺省字段回落已存记录） */
-function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<McpRow, 'addTime' | 'updateTime'> {
+function normalizeInput(
+  input: Partial<McpDTO>,
+  existing: McpDTO | null
+): Omit<McpRow, 'id' | 'addTime' | 'updateTime'> {
   const name = (input.name ?? existing?.name ?? '').trim()
   if (!name) {
     throw new Error(t('runtime.error.mcpNameRequired'))
@@ -188,7 +193,6 @@ function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<M
   const unchangedConfig = existing ? existing.config === config : false
 
   return {
-    id: input.id || existing?.id || randomUUID(),
     name,
     type,
     transport,
@@ -208,7 +212,10 @@ function normalizeInput(input: Partial<McpDTO>, existing: McpDTO | null): Omit<M
 /* 新增或更新 MCP（保存即生效：调用方负责清空运行时缓存） */
 export function saveMcp(input: Partial<McpDTO>): McpDTO {
   const db = getDb()
-  const existing = input.id ? getMcp(input.id) : null
+  const existingRow = input.id
+    ? db.select().from(mcpTable).where(eq(mcpTable.id, input.id)).get()
+    : undefined
+  const existing = existingRow ? toDTO(existingRow) : null
   const record = normalizeInput(input, existing)
 
   /* 名称唯一（工具名前缀与会话内识别均依赖名称） */
@@ -216,7 +223,7 @@ export function saveMcp(input: Partial<McpDTO>): McpDTO {
     .select()
     .from(mcpTable)
     .all()
-    .find((row) => row.name === record.name && row.id !== record.id)
+    .find((row) => row.name === record.name && row.id !== existingRow?.id)
   if (duplicated) {
     throw new Error(t('runtime.error.mcpNameDuplicate', [record.name]))
   }
@@ -224,19 +231,26 @@ export function saveMcp(input: Partial<McpDTO>): McpDTO {
   const now = new Date().toISOString()
   const values = {
     ...record,
-    addTime: existing?.addTime ?? now,
+    addTime: existingRow?.addTime ?? now,
     updateTime: now
   }
-  db.insert(mcpTable)
+  if (existingRow) {
+    db.update(mcpTable).set(values).where(eq(mcpTable.id, existingRow.id)).run()
+    return toDTO({ ...existingRow, ...values })
+  }
+  const inserted = db
+    .insert(mcpTable)
     .values(values)
-    .onConflictDoUpdate({ target: mcpTable.id, set: values })
-    .run()
-
-  return toDTO({ ...values } as McpRow)
+    .returning({ id: mcpTable.id })
+    .get()
+  return toDTO({ id: inserted.id, ...values })
 }
 
 /* 删除 MCP */
-export function deleteMcp(id: string): void {
+export function deleteMcp(id: number): void {
+  if (!id) {
+    return
+  }
   getDb().delete(mcpTable).where(eq(mcpTable.id, id)).run()
 }
 
@@ -268,7 +282,7 @@ export function listMcpRuntimeConfigs(): McpRuntimeConfig[] {
 }
 
 /* 将运行时检测结果回写配置表（health 属配置元数据，由配置模块维护） */
-export function saveMcpHealth(id: string, health: McpHealth): void {
+export function saveMcpHealth(id: number, health: McpHealth): void {
   if (!id || !getMcp(id)) {
     return
   }
@@ -287,7 +301,7 @@ export function buildRuntimeConfig(input: Partial<McpDTO>): McpRuntimeConfig {
   const existing = input.id ? getMcp(input.id) : null
   const draft: McpDTO = {
     ...(existing ?? {
-      id: '',
+      id: 0,
       name: '',
       type: 'remote',
       transport: 'streamable-http',
