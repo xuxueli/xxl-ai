@@ -16,6 +16,7 @@
     "empty": "No data",
     "saved": "Saved",
     "deleted": "Deleted",
+    "deleteFailed": "Delete failed: {0}",
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Copy failed, please retry",
@@ -148,6 +149,7 @@
       "selectSkillZip": "Select skill Zip file"
     },
     "abortNote": "[Error] The user stopped the task.",
+    "interruptedNote": "[Error] The app was closed, so this response was interrupted.",
     "thinkingOnlyNote": "[Error] This turn produced only reasoning, without text or tool calls.",
     "truncated": "The output exceeded the limit and was truncated",
     "modelError": "The model returned an error",

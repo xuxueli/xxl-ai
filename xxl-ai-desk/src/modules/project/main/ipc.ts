@@ -31,7 +31,7 @@ export function registerProjectIpc(ipc: IpcContext): void {
   ipc.handle(PROJECT_IPC.rename, (_event, id: number, name: string) => renameProject(id, name))
   ipc.handle(PROJECT_IPC.remove, async (_event, id: number) => {
     const sessionIds = listSessionIdsByProject(id)
-    deleteProject(id)
+    /* 先清会话与运行时，最后删项目：中途失败不会留下不可见的孤儿会话 */
     for (const sessionId of sessionIds) {
       discardSessionRuns(sessionId)
       await abortChat(sessionId)
@@ -41,6 +41,7 @@ export function registerProjectIpc(ipc: IpcContext): void {
       deleteSession(sessionId)
     }
     removeAgentMemory(id)
+    deleteProject(id)
   })
   ipc.handle(PROJECT_IPC.reveal, (_event, id: number) => {
     const project = getProject(id)

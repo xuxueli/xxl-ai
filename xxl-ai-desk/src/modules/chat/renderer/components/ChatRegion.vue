@@ -3,6 +3,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import MessageItem from '@modules/chat/renderer/components/MessageItem.vue'
 import ConversationRail from '@modules/chat/renderer/components/ConversationRail.vue'
 import ChatSearchBox from '@modules/chat/renderer/components/ChatSearchBox.vue'
@@ -37,6 +38,8 @@ const composerRef = ref()
 /* 是否有消息、是否具备对话条件（存在启用的供应商） */
 const hasMessages = computed(() => chat.messages.length > 0)
 const canChat = computed(() => provider.enabledProviders.length > 0)
+/* 会话载入中：避免消息尚未返回时闪出「新建对话」空态 */
+const loadingMessages = computed(() => chat.loading && !hasMessages)
 
 let scrollFrame = 0
 /* 是否贴近底部：用户上翻阅读时不再强制吸底（避免打断查看思考内容/回翻） */
@@ -204,23 +207,36 @@ function onEditMessage(content: string): void {
 
 /* 删除当前消息：同步删除存储与前端渲染，保持一致 */
 async function onRemoveMessage(message: { id: number }): Promise<void> {
+  /* 生成中删除消息会失去本轮上下文：先停止生成，避免误删答案 */
+  if (chat.streaming) {
+    ElMessage.warning(t('chat.deleteMessageRunning'))
+    return
+  }
   try {
     await ElMessageBox.confirm(t('chat.deleteMessageConfirm'), t('chat.deleteMessage'), {
       type: 'warning',
       confirmButtonText: t('common.delete'),
       cancelButtonText: t('common.cancel')
     })
-    await chat.removeMessages([message.id])
-    ElMessage.success(t('common.deleted'))
   } catch {
     /* 取消 */
+    return
+  }
+  try {
+    await chat.removeMessages([message.id])
+    ElMessage.success(t('common.deleted'))
+  } catch (error) {
+    ElMessage.error(t('common.deleteFailed', [(error as Error).message]))
   }
 }
 </script>
 
 <template>
-  <div class="chat-content" :class="{ empty: !hasMessages }">
-    <div v-if="!hasMessages" class="chat-body empty">
+  <div class="chat-content" :class="{ empty: !hasMessages && !loadingMessages }">
+    <div v-if="loadingMessages" class="chat-body loading">
+      <el-icon class="spin"><Loading /></el-icon>
+    </div>
+    <div v-else-if="!hasMessages" class="chat-body empty">
       <EmptyState />
     </div>
     <div v-else class="chat-body-wrap">
@@ -262,7 +278,7 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
     </div>
 
     <!-- 空态：项目选择与示例入口 -->
-    <ChatEmptyExtras v-if="!hasMessages" @example="onSend" />
+    <ChatEmptyExtras v-if="!hasMessages && !loadingMessages" @example="onSend" />
 
     <!-- 会话内搜索：⌘/Ctrl+F 唤起，右上角浮动 -->
     <ChatSearchBox :messages="chat.messages" :container="scrollRef" />
@@ -311,6 +327,26 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
   flex: 0 0 auto;
   display: flex;
   padding: 0;
+}
+
+/* 会话载入中：居中转圈，避免闪出空态 */
+.chat-body.loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--desk-text-tertiary);
+  font-size: var(--desk-icon-md);
+}
+
+.chat-body.loading .spin {
+  animation: chat-loading-spin 1s linear infinite;
+}
+
+@keyframes chat-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 输入框区：作为按钮的定位容器，按钮始终悬浮在输入框上方 */

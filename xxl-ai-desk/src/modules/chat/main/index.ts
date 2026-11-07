@@ -4,4 +4,4 @@
  */
 
 export { abortChat, discardSessionRuns } from './chatService'
-export { appendMessages, countSessionsByAgents, deleteSession, getSession, listMessages, listNewProjectMessages, listSessionIdsByAgent, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'
+export { appendMessages, countSessionsByAgents, deleteSession, getSession, isSessionRemoved, listMessages, listNewProjectMessages, listSessionIdsByAgent, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'

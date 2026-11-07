@@ -16,6 +16,7 @@
     "empty": "暂无数据",
     "saved": "保存成功",
     "deleted": "删除成功",
+    "deleteFailed": "删除失败：{0}",
     "copy": "复制",
     "copied": "已复制",
     "copyFailed": "复制失败，请重试",
@@ -148,6 +149,7 @@
       "selectSkillZip": "选择技能 Zip 文件"
     },
     "abortNote": "[异常] 用户主动终止任务。",
+    "interruptedNote": "[异常]应用已退出，本轮生成被中断。",
     "thinkingOnlyNote": "[异常] 本轮只有思考内容，未生成正文或工具调用。",
     "truncated": "输出内容超过限制，内容已被截断",
     "modelError": "模型返回错误",

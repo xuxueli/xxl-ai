@@ -69,7 +69,7 @@ async function onRenameProject(): Promise<void> {
   }
 }
 
-/* 删除项目：级联删除其下会话与消息 */
+/* 删除项目：级联删除其下会话与消息，失败时给出明确反馈 */
 async function onDeleteProject(): Promise<void> {
   try {
     await ElMessageBox.confirm(
@@ -81,11 +81,16 @@ async function onDeleteProject(): Promise<void> {
         cancelButtonText: t('common.cancel')
       }
     )
+  } catch {
+    /* 取消 */
+    return
+  }
+  try {
     await projectStore.removeProject(props.project.id)
     await chat.reloadSessions()
     ElMessage.success(t('project.deleted'))
-  } catch {
-    /* 取消 */
+  } catch (error) {
+    ElMessage.error(t('common.deleteFailed', [(error as Error).message]))
   }
 }
 
@@ -103,18 +108,27 @@ async function onRenameSession(session: SessionDTO): Promise<void> {
   }
 }
 
-/* 删除会话：二次确认后移除 */
+/* 删除会话：二次确认后移除，失败时给出明确反馈 */
 async function onDeleteSession(id: number): Promise<void> {
   try {
-    await ElMessageBox.confirm(t('chat.deleteConfirm'), t('chat.deleteSession'), {
-      type: 'warning',
-      confirmButtonText: t('common.delete'),
-      cancelButtonText: t('common.cancel')
-    })
-    await chat.removeSession(id)
-    ElMessage.success(t('common.deleted'))
+    await ElMessageBox.confirm(
+      chat.isStreaming(id) ? t('chat.deleteConfirmRunning') : t('chat.deleteConfirm'),
+      t('chat.deleteSession'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel')
+      }
+    )
   } catch {
     /* 取消 */
+    return
+  }
+  try {
+    await chat.removeSession(id)
+    ElMessage.success(t('common.deleted'))
+  } catch (error) {
+    ElMessage.error(t('common.deleteFailed', [(error as Error).message]))
   }
 }
 </script>

@@ -5,12 +5,14 @@
 
 import type { IpcContext } from '@common/main/ipc'
 import { CHAT_IPC, SESSION_IPC } from '../shared/ipc'
-import { createSession, deleteMessages, deleteSession, listMessages, listSessions, updateSession } from './sessionService'
+import { createSession, deleteMessages, deleteSession, isSessionRemoved, listMessages, listSessions, updateSession } from './sessionService'
 import { abortChat, discardSessionRuns, respondInteraction, sendChat } from './chatService'
-import { evictAgent, clearSessionPermissions } from '@modules/agent/main'
+import { evictAgent, clearSessionPermissions, setSessionActiveResolver } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
 
 export function registerChatIpc(ipc: IpcContext): void {
+  /* 会话删除后，运行时迟到的流式事件 / 交互 / 浏览器 / 轨迹统一丢弃 */
+  setSessionActiveResolver((sessionId) => !isSessionRemoved(sessionId))
   ipc.handle(SESSION_IPC.list, () => listSessions())
   ipc.handle(SESSION_IPC.create, (_event, input) => createSession(input))
   ipc.handle(SESSION_IPC.update, async (_event, id: number, patch) => {

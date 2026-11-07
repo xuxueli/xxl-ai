@@ -127,6 +127,11 @@ export function createChatStream(context: ChatStreamContext) {
 
   /* 丢弃会话的全部流式缓存（删除会话时调用） */
   function discard(sessionId: number): void {
+    /* 先停掉节流定时器，避免删除后仍有回调写回 */
+    const buffer = streamBuffers.get(sessionId)
+    if (buffer && buffer.timer !== null) {
+      clearTimeout(buffer.timer)
+    }
     liveMessages.delete(sessionId)
     streamTargets.delete(sessionId)
     streamBuffers.delete(sessionId)

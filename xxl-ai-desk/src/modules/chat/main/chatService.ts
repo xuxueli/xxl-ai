@@ -17,12 +17,12 @@ import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendMessages, getSession, listMessages, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
+import { appendMessages, getSession, isSessionRemoved, listMessages, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
 import { getSkillsDir } from '@common/main/config/paths'
-import { abortAgent, evictAgent, isAgentRunning, runAgent } from '@modules/agent/main'
+import { abortAgent, evictAgent, isAgentRunning, prepareAgentRuntime, runAgent } from '@modules/agent/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
 
 /* 下发到渲染层的对话事件负载（携带会话上下文） */
@@ -147,6 +147,44 @@ function persistFailureRound(
   ])
 }
 
+/* 应用退出导致本轮中断：落库用户提问与终止备注，不标记为异常失败 */
+function persistInterruptedRound(
+  sessionId: number,
+  text: string,
+  startedAt: number,
+  language: AppSettings['language']
+): void {
+  if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
+    return
+  }
+  const endedAt = Date.now()
+  const note = translate(language, 'runtime.interruptedNote')
+  appendMessages(sessionId, [
+    {
+      role: 'user',
+      content: text,
+      data: JSON.stringify({
+        role: 'user',
+        content: [{ type: 'text', text }],
+        timestamp: startedAt
+      }),
+      timestamp: startedAt,
+      turnStart: true
+    },
+    {
+      role: 'assistant',
+      content: note,
+      data: JSON.stringify({
+        role: 'assistant',
+        content: [{ type: 'text', text: note }],
+        stopReason: 'aborted',
+        timestamp: endedAt
+      }),
+      timestamp: endedAt
+    }
+  ])
+}
+
 /*
  * 消息展示时间：助手消息的 timestamp 是请求开始时刻，需叠加时长得到回复完成时刻；
  * 其余消息（用户 / 工具结果）timestamp 即自身产生时刻。
@@ -247,6 +285,10 @@ export async function sendChat(
   const settings = getSettings()
   const language = settings.language
   const emitEvent = (event: HostEvent): void => {
+    /* 会话已删除：迟到的流式/错误事件一律丢弃，避免渲染层重建已删会话状态 */
+    if (isSessionRemoved(sessionId)) {
+      return
+    }
     /* 用户已终止：错误事件转成正常结束，避免弹出「调用失败」 */
     if (event.type === 'error' && abortRequested.has(sessionId)) {
       emit({ sessionId, type: 'done' })
@@ -363,8 +405,27 @@ export async function sendChat(
       /* 开发者模式：开启后采集模型通讯 trace，主进程落库供「会话日志」展示 */
       traceEnabled: settings.developerMode
     }
+    /*
+     * 运行时冷启动期间会话可能已被删除：先等进程就绪，再复核一次，
+     * 避免删除后仍发起模型请求或执行工具（删除先于本轮登记时 abort 会被 worker 清掉）。
+     */
+    try {
+      await prepareAgentRuntime()
+    } catch {
+      /* 启动失败交给 runAgent 统一回报失败 */
+    }
+    if (discardedSessions.has(sessionId) || isSessionRemoved(sessionId) || !getSession(sessionId)) {
+      emitEvent({ type: 'done' })
+      return
+    }
     const result = await runAgent(runInput, emitEvent)
     if (!result.ok) {
+      /* 应用退出导致的中断：保留提问与终止备注，不写异常失败 */
+      if (result.interrupted) {
+        persistInterruptedRound(sessionId, text, startedAt, settings.language)
+        committed = true
+        return
+      }
       /* 运行时构建/执行异常（如模型未找到）：先落日志，再以错误消息回给用户 */
       log.error(
         `[chat] 运行时执行失败 session=${sessionId} provider=${providerName} model=${modelId}`,
@@ -412,7 +473,9 @@ export async function sendChat(
       session,
       loadPendingMessages: (since) => listNewProjectMessages(session.projectId, since),
       evictProjectSessions: () =>
-        listSessionIdsByProject(session.projectId).forEach((id) => evictAgent(id))
+        listSessionIdsByProject(session.projectId).forEach((id) => evictAgent(id)),
+      /* 记忆写入前复核来源会话：删除会话后不再把其内容并入项目记忆 */
+      isSessionActive: (id) => !isSessionRemoved(id) && Boolean(getSession(id))
     }).catch((error) => {
       log.warn(`[chat] 记忆生成异常 session=${sessionId}`, error)
     })

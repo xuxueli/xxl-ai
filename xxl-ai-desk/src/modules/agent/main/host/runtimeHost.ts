@@ -20,8 +20,14 @@ import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/
 /* 一次运行的回调与结算：以会话为代表，同一会话同时只允许一轮运行 */
 interface PendingRun {
   onEvent: (event: HostEvent) => void
-  resolve: (result: { ok: true; messages: unknown[] } | { ok: false; message: string }) => void
+  resolve: (result:
+    | { ok: true; messages: unknown[] }
+    | { ok: false; message: string; interrupted?: boolean }
+  ) => void
 }
+
+/* 是否正在退出应用：退出导致的运行中断不算异常 */
+let disposing = false
 
 /* 运行时进程句柄与其就绪 Promise（首个 spawn 后初始化） */
 let worker: UtilityProcess | null = null
@@ -48,6 +54,17 @@ const pendingMemory = new Map<
 
 /* 右侧「浏览器」面板打开回调（由 ipc.ts 注册，把 URL 转发到对应会话的渲染层标签页） */
 let browserOpener: ((sessionId: number, url: string, newTab: boolean) => void) | null = null
+
+/*
+ * 会话有效性判定：由会话域在启动时注入。
+ * 已删除会话的迟到事件 / 交互 / 轨迹在转发前直接丢弃，避免重建已删会话的界面资源。
+ */
+let sessionActiveResolver: (sessionId: number) => boolean = () => true
+
+/* 注册会话有效性判定（会话域启动时调用） */
+export function setSessionActiveResolver(resolver: (sessionId: number) => boolean): void {
+  sessionActiveResolver = resolver
+}
 
 /* 注册浏览器打开回调（主进程窗口就绪后由 IPC 网关注入） */
 export function setBrowserOpener(
@@ -86,7 +103,11 @@ function ensureWorker(): Promise<UtilityProcess> {
     }
     /* 进程异常退出：未结算的运行统一回传失败，避免调用方永久挂起 */
     for (const [sessionId, pending] of pendingRuns) {
-      pending.resolve({ ok: false, message: 'Agent 运行时进程异常退出，请重试' })
+      pending.resolve(
+        disposing
+          ? { ok: false, message: t('runtime.error.runtimeProcessExited'), interrupted: true }
+          : { ok: false, message: 'Agent 运行时进程异常退出，请重试' }
+      )
       pendingRuns.delete(sessionId)
     }
     /* 交互请求随 worker 失效：清理挂起项，避免后续误回传 */
@@ -111,9 +132,16 @@ function ensureWorker(): Promise<UtilityProcess> {
 async function handleMessage(message: WorkerMessage): Promise<void> {
   switch (message.type) {
     case 'event':
+      if (!sessionActiveResolver(message.sessionId)) {
+        break
+      }
       pendingRuns.get(message.sessionId)?.onEvent(message.event)
       break
     case 'open-browser':
+      /* 会话已删除：不再为已删会话打开浏览器标签页 */
+      if (!sessionActiveResolver(message.sessionId)) {
+        break
+      }
       /* Agent 工具请求：转交渲染层，在该会话的浏览器面板打开（newTab 控制是否新建标签页） */
       browserOpener?.(message.sessionId, message.url, message.newTab === true)
       break
@@ -140,6 +168,15 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
       break
     }
     case 'interaction-request': {
+      /* 会话已删除：直接按拒绝结算，避免已删会话弹窗与工具悬挂 */
+      if (!sessionActiveResolver(message.sessionId)) {
+        worker?.postMessage({
+          type: 'interaction-response',
+          requestId: message.requestId,
+          result: { status: 'denied' }
+        } satisfies WorkerRequest)
+        break
+      }
       openInteraction(
         { requestId: message.requestId, sessionId: message.sessionId, request: message.request },
         (requestId, result) => {
@@ -184,6 +221,10 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
       break
     }
     case 'llm-trace':
+      /* 会话已删除：丢弃迟到轨迹，避免留下不可见的孤儿记录 */
+      if (!sessionActiveResolver(message.sessionId)) {
+        break
+      }
       /* 模型通讯：开发者模式关闭时 service 内部直接丢弃 */
       recordTrace(message.sessionId, message.trace)
       break
@@ -202,11 +243,19 @@ export function isAgentRunning(sessionId: number): boolean {
   return pendingRuns.has(sessionId)
 }
 
+/* 预启动运行时进程：调用方在登记本轮前先等待就绪，缩小与「删除会话」的竞态窗口 */
+export async function prepareAgentRuntime(): Promise<void> {
+  await ensureWorker()
+}
+
 /* 执行一轮对话，流式回调事件；返回成功时本轮新增消息或失败信息 */
 export async function runAgent(
   input: RunAgentInput,
   onEvent: (event: HostEvent) => void
-): Promise<{ ok: true; messages: unknown[] } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; messages: unknown[] }
+  | { ok: false; message: string; interrupted?: boolean }
+> {
   /* 同一会话同时只允许一轮：避免覆盖 pendingRuns 导致前一轮 Promise 永久悬挂 */
   if (pendingRuns.has(input.sessionId)) {
     return { ok: false, message: '当前会话正在生成，请等待本轮结束或先停止生成' }
@@ -317,6 +366,7 @@ export async function generateMemory(
 
 /* 退出时终止运行时进程：先请求优雅关闭（释放 MCP 子进程），超时强杀，并兜底清理残留后代进程 */
 export function disposeAgentRuntime(timeout = 6000): Promise<void> {
+  disposing = true
   const proc = worker
   worker = null
   workerReady = null

@@ -49,6 +49,8 @@ export interface StoredMessage {
 
 /* 项目内按会话分组的增量消息（供 Agent 记忆生成） */
 export interface ProjectMessageGroup {
+  /* 会话 ID（记忆写入前校验来源会话是否仍存在） */
+  sessionId: number
   /* 会话标题 */
   title: string
   /* 晚于游标的消息 */

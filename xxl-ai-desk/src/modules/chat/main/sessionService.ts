@@ -123,14 +123,30 @@ export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDT
   return toSessionDTO(record)
 }
 
+/*
+ * 已删除会话 ID：运行时的迟到事件 / 交互 / 轨迹据此直接丢弃。
+ * 会话 ID 自增不复用，集合只增不减，进程内体量可忽略。
+ */
+const removedSessionIds = new Set<number>()
+
+/* 会话是否已被删除（供运行时事件入口丢弃迟到数据） */
+export function isSessionRemoved(id: number): boolean {
+  return removedSessionIds.has(id)
+}
+
 /* 删除会话及其消息 */
 export function deleteSession(id: number): void {
   if (!id) {
     return
   }
   const db = getDb()
-  db.delete(messageTable).where(eq(messageTable.sessionId, id)).run()
-  db.delete(sessionTable).where(eq(sessionTable.id, id)).run()
+  /* 消息与会话同事务删除：失败时整体回滚，不留下“已删标记 + 残留数据” */
+  db.transaction((tx) => {
+    tx.delete(messageTable).where(eq(messageTable.sessionId, id)).run()
+    tx.delete(sessionTable).where(eq(sessionTable.id, id)).run()
+  })
+  /* 删库成功后再标记：迟到事件立即失效，且失败时不会误伤仍存在的会话 */
+  removedSessionIds.add(id)
   /* 级联回收该会话的终端进程（服务层统一闭环） */
   disposeTerminalsBySession(String(id))
 }
@@ -222,7 +238,7 @@ export function listNewProjectMessages(
     if (lastRow.addTime > cursor) {
       cursor = lastRow.addTime
     }
-    groups.push({ title: item.title, messages: rows })
+    groups.push({ sessionId: item.id, title: item.title, messages: rows })
   }
   groups.sort((a, b) => (a.messages[0]?.addTime ?? '').localeCompare(b.messages[0]?.addTime ?? ''))
   return { sessions: groups, total, lastMessageTime: cursor }

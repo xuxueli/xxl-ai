@@ -26,8 +26,8 @@ export const useChatStore = defineStore('chat', () => {
   const currentId = ref(0)
   /* 当前会话的消息列表（UI 渲染用） */
   const messages = ref<UiMessage[]>([])
-  /* 当前会话消息加载中标记 */
-  const loading = ref(false)
+  /* 当前会话消息加载中标记（启动时先视为加载中，避免闪出新建对话空态） */
+  const loading = ref(true)
   /* 对话事件监听解绑函数（避免重复绑定） */
   let unbind: (() => void) | null = null
 
@@ -171,6 +171,7 @@ export const useChatStore = defineStore('chat', () => {
     /* 允许在其它会话生成时进入新对话草稿：各会话生成状态相互独立 */
     currentId.value = 0
     messages.value = []
+    loading.value = false
     /* 新建对话默认选中排序第一个项目与默认 Agent */
     useProjectStore().selectFirstProject()
     useAgentStore().selectDefaultAgent()
@@ -327,11 +328,17 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /* 指定会话是否正在生成（用于删除前提示） */
+  function isStreaming(sessionId: number): boolean {
+    return Boolean(streamingIds.value[sessionId])
+  }
+
   return {
     sessions,
     currentId,
     messages,
     streaming,
+    isStreaming,
     loading,
     currentSession,
     contextUsage,

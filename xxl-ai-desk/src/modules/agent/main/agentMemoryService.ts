@@ -29,6 +29,8 @@ export interface AgentMemoryGenerationContext {
   loadPendingMessages: (since: string) => ProjectMessages
   /* 记忆变更后清理项目下会话运行时，使新记忆下一轮生效 */
   evictProjectSessions: () => void
+  /* 来源会话是否仍存在：写入前复核，避免已删会话内容进入项目记忆 */
+  isSessionActive: (sessionId: number) => boolean
 }
 
 /* 生成中的项目：同一项目同时只跑一个记忆任务，避免多会话并发覆盖 */
@@ -273,8 +275,9 @@ export async function maybeGenerateAgentMemory(
     if (!saved) {
       throw new Error(t('runtime.error.memoryEmpty'))
     }
-    /* 生成期间项目可能已被删除：不再写入，避免孤儿记忆 */
-    if (!getProject(project.id)) {
+    /* 生成期间项目或任一来源会话被删除：不再写入，避免孤儿记忆与已删内容残留 */
+    const sourcesActive = pending.sessions.every((group) => context.isSessionActive(group.sessionId))
+    if (!getProject(project.id) || !sourcesActive) {
       return
     }
     upsertMemory(project.id, saved, lastMessageTime)
