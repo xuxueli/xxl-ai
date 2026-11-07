@@ -582,9 +582,7 @@ export function useBrowserPanel(sessionId: string) {
 
   /* 更多操作分发 */
   function onMore(command: string): void {
-    if (command === 'external') {
-      openExternal()
-    } else if (command === 'copy') {
+    if (command === 'copy') {
       void copyAddress()
     } else if (command === 'devtools') {
       const tab = activeTabOf(state.value)

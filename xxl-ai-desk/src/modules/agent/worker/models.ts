@@ -5,6 +5,7 @@
 
 import type { Model, MutableModels } from '@earendil-works/pi-ai'
 import { normalizeBaseUrl, USER_AGENT } from '@common/shared/providerUrl'
+import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 import type { ProviderModelConfig } from '@modules/agent/shared/agentProtocol'
 
 /* 构建 Pi Models 所需的供应商配置：统一取自运行时协议定义 */
@@ -88,16 +89,16 @@ export async function buildModels(configs: ProviderModelConfig[]): Promise<Mutab
     /* 本地/内网服务免 Key：Pi 对空 Key 会直接报错，补占位值（本地服务通常忽略 Authorization） */
     const apiKey = config.apiKey || (isLocalBaseUrl(baseUrl) ? 'not-required' : '')
 
-    const list: Model<'openai-completions'>[] = config.models.map((modelId) => ({
-      id: modelId,
-      name: modelId,
+    const list: Model<'openai-completions'>[] = config.models.map((model) => ({
+      id: model.id,
+      name: model.id,
       api: 'openai-completions',
       provider: config.id,
       baseUrl,
       reasoning: false,
       input: ['text'],
       cost: { ...DEFAULT_COST },
-      contextWindow: 128000,
+      contextWindow: model.contextWindow || CONTEXT_WINDOW_DEFAULT,
       /* Pi 类型必填；0 表示不发送 max_tokens，由供应商使用默认值 */
       maxTokens: 0,
       ...(hasHeaders ? { headers: requestHeaders } : {})

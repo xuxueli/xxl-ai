@@ -4,4 +4,4 @@
  */
 
 export type { ProviderApi } from './api'
-export type { ProviderDTO, ProviderModelQuery } from './contracts'
+export type { ProviderDTO, ProviderModelDTO, ProviderModelQuery } from './contracts'

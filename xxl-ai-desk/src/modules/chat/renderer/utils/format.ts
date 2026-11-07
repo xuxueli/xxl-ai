@@ -31,3 +31,16 @@ export function formatDuration(ms: number): string {
   }
   return `${(ms / 1000).toFixed(1)}s`
 }
+
+/* 上下文用量紧凑展示：小于 1000 显示原数字，其余统一用 K（保留 1 位小数） */
+export function formatCompactTokens(value: number): string {
+  const tokens = Math.max(0, Math.round(value))
+  return tokens < 1000 ? String(tokens) : `${(tokens / 1000).toFixed(1)}K`
+}
+
+/* 完整 token 数字：千分位展示（tooltip 用） */
+export function formatTokenCount(value: number, language: string): string {
+  return new Intl.NumberFormat(language === 'en' ? 'en-US' : 'zh-CN').format(
+    Math.max(0, value)
+  )
+}

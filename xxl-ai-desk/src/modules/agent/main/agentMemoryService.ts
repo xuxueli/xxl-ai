@@ -148,11 +148,11 @@ function resolveTarget(
     return null
   }
   const modelId =
-    session.modelId && provider.models.includes(session.modelId)
+    session.modelId && provider.models.some((item) => item.id === session.modelId)
       ? session.modelId
-      : settings.modelId && provider.models.includes(settings.modelId)
+      : settings.modelId && provider.models.some((item) => item.id === settings.modelId)
         ? settings.modelId
-        : (provider.models[0] ?? '')
+        : (provider.models[0]?.id ?? '')
   return modelId ? { provider, modelId } : null
 }
 

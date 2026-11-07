@@ -72,12 +72,14 @@ async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
           <el-tooltip v-if="row.models.length > 0" placement="top" :show-after="150" effect="dark">
             <template #content>
               <div class="model-tooltip">
-                <div v-for="model in row.models" :key="model">{{ model }}</div>
+                <div v-for="model in row.models" :key="model.id">
+                  {{ model.id }} · {{ model.contextWindow.toLocaleString('en-US') }}
+                </div>
               </div>
             </template>
             <div class="model-tags">
-              <el-tag v-for="model in row.models" :key="model" size="small" class="model-tag">
-                {{ model }}
+              <el-tag v-for="model in row.models" :key="model.id" size="small" class="model-tag">
+                {{ model.id }}
               </el-tag>
             </div>
           </el-tooltip>

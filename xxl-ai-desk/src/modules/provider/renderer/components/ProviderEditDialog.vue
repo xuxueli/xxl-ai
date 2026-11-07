@@ -7,6 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
+import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 import type { ProviderDTO } from '@modules/provider/shared'
 
 const props = defineProps<{
@@ -24,8 +25,31 @@ const form = ref({
   apiKey: '',
   enabled: true
 })
-/* 模型行（动态多行管理，支持手输与远程下拉选择） */
-const modelRows = ref<string[]>([''])
+/* 模型行（动态多行管理，支持手输与远程下拉选择；窗口留空时保存为默认值） */
+interface ModelFormRow {
+  /* 模型 ID */
+  id: string
+  /* 上下文窗口（空表示使用默认值） */
+  contextWindow?: number | null
+}
+
+const modelRows = ref<ModelFormRow[]>([])
+
+/* 新建一行模型：上下文窗口留空，保存时回退默认值 */
+function createModelRow(id = ''): ModelFormRow {
+  return { id }
+}
+
+/* 上下文窗口输入展示：千分位分隔 */
+function formatContextWindow(value: string): string {
+  const number = Number(value)
+  return Number.isFinite(number) && number > 0 ? number.toLocaleString('en-US') : value
+}
+
+/* 上下文窗口解析：去掉千分位分隔符 */
+function parseContextWindow(value: string): string {
+  return value.replace(/,/g, '')
+}
 /* 远程查询得到的可选模型 */
 const remoteModels = ref<string[]>([])
 /* 远程模型查询加载态、请求 Header 文本（JSON） */
@@ -53,9 +77,12 @@ function resetForm(): void {
         name: '',
         baseUrl: '',
         apiKey: '',
-              enabled: true
+        enabled: true
       }
-  modelRows.value = row && row.models.length > 0 ? [...row.models] : ['']
+  modelRows.value =
+    row && row.models.length > 0
+      ? row.models.map((model) => ({ id: model.id, contextWindow: model.contextWindow }))
+      : [createModelRow()]
   remoteModels.value = []
   headersText.value = JSON.stringify(row?.headers ?? {}, null, 2)
 }
@@ -67,15 +94,15 @@ watch(visible, (open) => {
 })
 
 /* 新增一行模型 */
-function addModelRow(value = ''): void {
-  modelRows.value.push(value)
+function addModelRow(): void {
+  modelRows.value.push(createModelRow())
 }
 
 /* 移除一行模型（保留至少一行） */
 function removeModelRow(index: number): void {
   modelRows.value.splice(index, 1)
   if (modelRows.value.length === 0) {
-    modelRows.value.push('')
+    modelRows.value.push(createModelRow())
   }
 }
 
@@ -135,9 +162,21 @@ async function queryRemoteModels(): Promise<void> {
 
 /* 提交供应商表单：模型去重、校验请求 Header 后保存 */
 async function submit(): Promise<void> {
-  const models = Array.from(
-    new Set(modelRows.value.map((item) => (item ?? '').trim()).filter(Boolean))
-  )
+  /* 按模型 ID 去重；空 ID 丢弃，非法窗口回退默认值 */
+  const models = [
+    ...new Map(
+      modelRows.value
+        .map((item) => ({
+          id: (item.id ?? '').trim(),
+          contextWindow:
+            Number(item.contextWindow) > 0
+              ? Math.round(Number(item.contextWindow))
+              : CONTEXT_WINDOW_DEFAULT
+        }))
+        .filter((item) => item.id)
+        .map((item) => [item.id, item])
+    ).values()
+  ]
   if (!form.value.name || !form.value.baseUrl || models.length === 0) {
     ElMessage.warning(t('settings.providerTip'))
     return
@@ -199,7 +238,7 @@ async function submit(): Promise<void> {
         <div class="model-editor">
           <div v-for="(_, index) in modelRows" :key="index" class="model-row">
             <el-select
-              v-model="modelRows[index]"
+              v-model="modelRows[index].id"
               class="model-input"
               filterable
               allow-create
@@ -209,6 +248,16 @@ async function submit(): Promise<void> {
             >
               <el-option v-for="model in remoteModels" :key="model" :label="model" :value="model" />
             </el-select>
+            <el-input-number
+              v-model="modelRows[index].contextWindow"
+              class="model-window"
+              :min="1"
+              :step="1000"
+              :controls="false"
+              :formatter="formatContextWindow"
+              :parser="parseContextWindow"
+              :placeholder="t('settings.contextWindowPlaceholder')"
+            />
             <el-button text class="model-remove" @click="removeModelRow(index)">
               <el-icon><Delete /></el-icon>
             </el-button>
@@ -222,6 +271,9 @@ async function submit(): Promise<void> {
               <el-icon><Refresh /></el-icon>
               {{ t('settings.queryRemote') }}
             </el-button>
+          </div>
+          <div class="field-hint">
+            {{ t('settings.contextWindowHint', [CONTEXT_WINDOW_DEFAULT.toLocaleString('en-US')]) }}
           </div>
         </div>
       </el-form-item>
@@ -260,6 +312,11 @@ async function submit(): Promise<void> {
 
 .model-editor .model-input {
   flex: 1;
+}
+
+.model-editor .model-window {
+  flex-shrink: 0;
+  width: 130px;
 }
 
 .model-editor .model-remove {

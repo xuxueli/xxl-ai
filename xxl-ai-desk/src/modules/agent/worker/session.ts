@@ -11,6 +11,8 @@ import type { ChatMode } from '@modules/chat/shared'
 import type { HostEvent } from '@modules/agent/shared/agentProtocol'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { contentBlocks } from '@modules/chat/shared'
+import { contextTokensOfUsage } from '@common/shared/model'
+import type { UsageLike } from '@common/shared/model'
 import { translate, type AppLanguage } from '@common/shared/i18n'
 import type { McpRuntimeConfig } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -94,9 +96,16 @@ const NON_RETRYABLE_STATUS = new Set([401, 402, 403, 404])
 interface RuntimeMessage {
   role?: string
   content?: unknown
+  usage?: UsageLike
   stopReason?: string
   errorMessage?: string
   timestamp?: number
+}
+
+/* 助手消息的上下文用量：非助手消息返回 0 */
+function contextTokensOf(message: unknown): number {
+  const item = message as RuntimeMessage
+  return item?.role === 'assistant' ? contextTokensOfUsage(item.usage) : 0
 }
 
 /* 原始用户提问是否已进入上下文（请求失败后判断是否需要重发） */
@@ -356,9 +365,15 @@ export async function runPrompt(
           durationMs: event.durationMs
         })
         break
-      case 'message_end':
+      case 'message_end': {
         handleTraceMessageEnd(traceTarget, event.message)
+        /* 每次模型响应结束回传上下文用量，供顶栏实时展示占用占比 */
+        const used = contextTokensOf(event.message)
+        if (used > 0) {
+          sink({ type: 'usage', used, window: agent.state.model.contextWindow })
+        }
         break
+      }
       default:
         break
     }

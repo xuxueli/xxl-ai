@@ -231,10 +231,10 @@ export function listSessionMessagePage(
   return { items, total }
 }
 
-/* 追加本轮新增消息（完整历史由数据库持有） */
+/* 追加本轮新增消息（完整历史由数据库持有；消息自带时间戳时按各自时间落库） */
 export function appendMessages(
   sessionId: string,
-  messages: Array<{ role: string; content: string; data: string }>
+  messages: Array<{ role: string; content: string; data: string; timestamp?: number }>
 ): void {
   if (messages.length === 0) {
     return
@@ -249,6 +249,11 @@ export function appendMessages(
     .get()
   const start = last?.seq ?? 0
   const now = new Date().toISOString()
+  /* 模型跑一轮可能跨越较长时间：用户提问取发送时刻，助手回复取结束时刻，均来自运行时时间戳 */
+  const addTimeOf = (timestamp: number | undefined): string =>
+    typeof timestamp === 'number' && Number.isFinite(timestamp)
+      ? new Date(timestamp).toISOString()
+      : now
   db.transaction((tx) => {
     for (let index = 0; index < messages.length; index += 1) {
       const message = messages[index]
@@ -260,7 +265,7 @@ export function appendMessages(
           role: message.role,
           content: message.content,
           data: message.data,
-          addTime: now
+          addTime: addTimeOf(message.timestamp)
         })
         .run()
     }

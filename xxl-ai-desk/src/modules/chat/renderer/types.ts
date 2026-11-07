@@ -49,4 +49,8 @@ export interface UiMessage {
   startedAt?: number
   /* 助手消息本轮结束时间戳 */
   endedAt?: number
+  /* 最近一次模型响应的已用上下文 token（顶栏占用展示） */
+  contextTokens?: number
+  /* 最近一次模型响应的上下文窗口（实时事件携带，历史消息回退默认值） */
+  contextWindow?: number
 }

@@ -45,7 +45,7 @@ export const useProviderStore = defineStore('provider', () => {
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: string): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
-    await settings.selectProvider(providerId, provider?.models[0] ?? '')
+    await settings.selectProvider(providerId, provider?.models[0]?.id ?? '')
   }
 
   /* 远程查询可用模型（不落库） */

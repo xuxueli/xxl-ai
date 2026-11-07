@@ -93,16 +93,16 @@ function resolveRuntimeTarget(
   }
   /* 模型：会话已指定则必须仍在供应商模型列表内，否则提示更换 */
   if (session.modelId) {
-    if (!provider.models.includes(session.modelId)) {
+    if (!provider.models.some((item) => item.id === session.modelId)) {
       return { error: translate(language, 'runtime.modelMissing', [session.modelId]) }
     }
     return { provider, model: session.modelId }
   }
   /* 未指定模型：回退设置默认模型，其次供应商首个模型 */
   const fallback =
-    settings.modelId && provider.models.includes(settings.modelId)
+    settings.modelId && provider.models.some((item) => item.id === settings.modelId)
       ? settings.modelId
-      : (provider.models[0] ?? '')
+      : (provider.models[0]?.id ?? '')
   if (!fallback) {
     return { error: translate(language, 'runtime.providerNoModel') }
   }
@@ -115,6 +115,7 @@ function persistFailureRound(sessionId: string, text: string, tip: string): void
   if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
     return
   }
+  const now = Date.now()
   appendMessages(sessionId, [
     {
       role: 'user',
@@ -123,8 +124,9 @@ function persistFailureRound(sessionId: string, text: string, tip: string): void
       data: JSON.stringify({
         role: 'user',
         content: [{ type: 'text', text }],
-        timestamp: Date.now()
-      })
+        timestamp: now
+      }),
+      timestamp: now
     },
     {
       role: 'assistant',
@@ -134,10 +136,23 @@ function persistFailureRound(sessionId: string, text: string, tip: string): void
         content: [{ type: 'text', text: tip }],
         stopReason: 'error',
         errorMessage: tip,
-        timestamp: Date.now()
-      })
+        timestamp: now
+      }),
+      timestamp: now
     }
   ])
+}
+
+/*
+ * 消息展示时间：助手消息的 timestamp 是请求开始时刻，需叠加时长得到回复完成时刻；
+ * 其余消息（用户 / 工具结果）timestamp 即自身产生时刻。
+ */
+function messageDisplayTime(message: unknown): number | undefined {
+  const item = message as { timestamp?: number; durationMs?: number }
+  if (typeof item.timestamp !== 'number') {
+    return undefined
+  }
+  return item.timestamp + (typeof item.durationMs === 'number' ? item.durationMs : 0)
 }
 
 /* 归一化历史消息：剔除 system 与非数组 content（thinking 由 history 窗口统一处理） */
@@ -360,7 +375,8 @@ export async function sendChat(
       .map((message) => ({
         role: (message as { role?: string }).role ?? '',
         content: contentToText(message),
-        data: JSON.stringify(message)
+        data: JSON.stringify(message),
+        timestamp: messageDisplayTime(message)
       }))
     appendMessages(sessionId, serialized)
     committed = true

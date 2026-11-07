@@ -13,7 +13,8 @@ import { decryptSecret, encryptSecret } from './securityService'
 import { normalizeBaseUrl, USER_AGENT } from '@common/shared/providerUrl'
 import { isTimeoutError, requestWithTimeout } from '@common/main/utils/http'
 import { getSettings, saveSettings } from '@modules/settings/main'
-import type { ProviderDTO, ProviderModelQuery } from '@modules/provider/shared'
+import type { ProviderDTO, ProviderModelDTO, ProviderModelQuery } from '@modules/provider/shared'
+import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 
 type ProviderRow = typeof providerTable.$inferSelect
 
@@ -34,24 +35,61 @@ function parseHeaders(raw: string): Record<string, string> {
   return {}
 }
 
+/* 归一化单个模型项：兼容旧数据 string[] 与新数据对象 */
+function normalizeModel(item: unknown): ProviderModelDTO | null {
+  if (typeof item === 'string') {
+    const id = item.trim()
+    return id ? { id, contextWindow: CONTEXT_WINDOW_DEFAULT } : null
+  }
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+  const record = item as { id?: unknown; contextWindow?: unknown }
+  const id = typeof record.id === 'string' ? record.id.trim() : ''
+  if (!id) {
+    return null
+  }
+  const window = Number(record.contextWindow)
+  const valid = Number.isFinite(window) && window > 0
+  return {
+    id,
+    contextWindow: valid ? Math.round(window) : CONTEXT_WINDOW_DEFAULT
+  }
+}
+
+/* 归一化模型列表：按 ID 去重，非法项丢弃 */
+function normalizeModels(items: unknown): ProviderModelDTO[] {
+  if (!Array.isArray(items)) {
+    return []
+  }
+  const models = new Map<string, ProviderModelDTO>()
+  for (const item of items) {
+    const model = normalizeModel(item)
+    if (model && !models.has(model.id)) {
+      models.set(model.id, model)
+    }
+  }
+  return [...models.values()]
+}
+
+/* 解析模型列表：兼容旧数据 string[] 与新数据对象 */
+function parseModels(raw: string): ProviderModelDTO[] {
+  try {
+    return normalizeModels(JSON.parse(raw))
+  } catch {
+    return []
+  }
+}
+
 /* 行记录 → DTO（解码密钥、解析模型列表与请求Header） */
 function toDTO(row: ProviderRow): ProviderDTO {
-  let models: string[] = []
-  try {
-    const parsed = JSON.parse(row.models)
-    if (Array.isArray(parsed)) {
-      models = parsed.filter((item) => typeof item === 'string')
-    }
-  } catch {
-    models = []
-  }
   return {
     id: row.id,
     name: row.name,
     baseUrl: row.baseUrl,
     apiKey: decryptSecret(row.apiKey),
     headers: parseHeaders(row.headers),
-    models,
+    models: parseModels(row.models),
     enabled: row.enabled === 1,
     sort: row.sort,
     addTime: row.addTime,
@@ -80,13 +118,17 @@ export function saveProvider(input: Partial<ProviderDTO>): ProviderDTO {
 
   /* 未传 apiKey 表示保持原值；显式空串表示清空 */
   const apiKey = input.apiKey !== undefined ? encryptSecret(input.apiKey) : (existing?.apiKey ?? '')
+  /* 写库前统一归一化模型：兼容旧 string[]、去重并保证窗口合法 */
+  const models = normalizeModels(
+    input.models ?? (existing ? parseModels(existing.models) : [])
+  )
   const record = {
     id,
     name: input.name ?? existing?.name ?? '未命名供应商',
     baseUrl: input.baseUrl ?? existing?.baseUrl ?? '',
     apiKey,
     headers: JSON.stringify(input.headers ?? (existing ? parseHeaders(existing.headers) : {})),
-    models: JSON.stringify(input.models ?? (existing ? JSON.parse(existing.models) : [])),
+    models: JSON.stringify(models),
     enabled: (input.enabled ?? (existing ? existing.enabled === 1 : true)) ? 1 : 0,
     sort: input.sort ?? existing?.sort ?? 0,
     addTime: existing?.addTime ?? now,
@@ -162,6 +204,11 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
   }
 }
 
+/* 预设模型：统一使用默认上下文窗口 */
+function seedModels(ids: string[]): ProviderModelDTO[] {
+  return ids.map((id) => ({ id, contextWindow: CONTEXT_WINDOW_DEFAULT }))
+}
+
 /* 首次运行播种预设供应商（与平台种子保持一致；OpenCodeGo 使用 {session} 会话头） */
 export function ensureSeedProviders(): void {
   const db = getDb()
@@ -176,7 +223,7 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://opencode.ai/zen/go/v1',
       apiKey: '',
       headers: { 'x-opencode-session': '{session}' },
-      models: ['deepseek-v4.1-flash', 'glm-5.3'],
+      models: seedModels(['deepseek-v4.1-flash', 'glm-5.3']),
       enabled: true,
       sort: 1
     },
@@ -185,7 +232,7 @@ export function ensureSeedProviders(): void {
       baseUrl: 'http://127.0.0.1:11434',
       apiKey: '',
       headers: {},
-      models: ['qwen3.5:0.8b', 'qwen3.5:4b'],
+      models: seedModels(['qwen3.5:0.8b', 'qwen3.5:4b']),
       enabled: true,
       sort: 2
     },
@@ -194,7 +241,7 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://api.deepseek.com',
       apiKey: '',
       headers: {},
-      models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+      models: seedModels(['deepseek-v4-flash', 'deepseek-v4-pro']),
       enabled: true,
       sort: 3
     },
@@ -203,7 +250,7 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
       apiKey: '',
       headers: {},
-      models: ['glm-5.3-flash', 'glm-5.3'],
+      models: seedModels(['glm-5.3-flash', 'glm-5.3']),
       enabled: true,
       sort: 4
     }
@@ -215,6 +262,6 @@ export function ensureSeedProviders(): void {
   const settings = getSettings()
   const first = listProviders()[0]
   if (first && !settings.providerId) {
-    saveSettings({ providerId: first.id, modelId: first.models[0] ?? '' })
+    saveSettings({ providerId: first.id, modelId: first.models[0]?.id ?? '' })
   }
 }

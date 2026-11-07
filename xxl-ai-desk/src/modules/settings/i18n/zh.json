@@ -46,6 +46,8 @@
     "models": "模型列表",
     "modelsPlaceholder": "每行一个模型 ID，如 deepseek-chat",
     "modelPlaceholder": "选择或输入模型 ID",
+    "contextWindowPlaceholder": "上下文窗口（token）",
+    "contextWindowHint": "上下文窗口默认 {0} tokens，可按模型修改",
     "addModel": "添加模型",
     "queryRemote": "查询远程模型",
     "remoteEmpty": "未查询到远程模型",

@@ -2,6 +2,11 @@
  * 供应商域跨进程契约：OpenAI 兼容端点配置与远程模型查询。
  */
 
+import type { ModelDescriptor } from '@common/shared/model'
+
+/* 供应商模型：模型 ID + 上下文窗口 */
+export type ProviderModelDTO = ModelDescriptor
+
 /* 供应商（OpenAI 兼容端点） */
 export interface ProviderDTO {
   /* 主键 */
@@ -14,8 +19,8 @@ export interface ProviderDTO {
   apiKey: string
   /* 附加请求头（支持 {session} 等占位） */
   headers: Record<string, string>
-  /* 可选模型 ID 列表 */
-  models: string[]
+  /* 可选模型列表 */
+  models: ProviderModelDTO[]
   /* 是否启用 */
   enabled: boolean
   /* 排序值（升序，越小越靠前） */

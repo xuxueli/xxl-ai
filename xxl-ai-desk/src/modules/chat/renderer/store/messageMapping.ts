@@ -8,6 +8,8 @@
 import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/renderer/types'
 import { isAutoContinuePrompt } from '@common/shared/i18n'
 import { t } from '@renderer/shell/i18n'
+import { contextTokensOfUsage } from '@common/shared/model'
+import type { UsageLike } from '@common/shared/model'
 import type { StoredMessage } from '@modules/chat/shared'
 
 /* 持久化的 Pi 原始消息结构（仅取渲染所需字段） */
@@ -30,6 +32,8 @@ export interface RawMessage {
   errorMessage?: string
   toolCallId?: string
   isError?: boolean
+  /* 模型用量：持久化的 Pi 原始消息已带，用于恢复上下文占用展示 */
+  usage?: UsageLike
   /* 工具结果的结构化细节与耗时（Pi 持久化在 toolResult 消息上） */
   details?: unknown
   durationMs?: number
@@ -160,6 +164,15 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
         addTime: record.addTime
       }
       result.push(last)
+    } else {
+      /* 合并后的展示时间取本轮最后一次响应完成时刻，避免长时间执行仍显示开始时间 */
+      last.addTime = record.addTime
+    }
+
+    /* 记录本次模型响应的上下文用量，供顶栏展示占用占比 */
+    const tokens = contextTokensOfUsage(raw?.usage)
+    if (tokens > 0) {
+      last.contextTokens = tokens
     }
 
     /* 本片段起始下标：用于失败时标记对应的正文段 */

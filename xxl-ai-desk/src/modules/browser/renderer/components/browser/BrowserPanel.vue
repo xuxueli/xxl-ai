@@ -27,6 +27,7 @@ const {
   forward,
   reloadOrStop,
   go,
+  openExternal,
   onMore,
   onAddressFocus,
   onAddressBlur
@@ -151,6 +152,16 @@ onBeforeUnmount(() => {
         />
       </div>
 
+      <!-- 在系统浏览器中打开当前页 -->
+      <button
+        class="nav-btn"
+        :disabled="!activeTab?.hasPage"
+        :title="t('panel.openExternal')"
+        @click="openExternal"
+      >
+        <el-icon><TopRight /></el-icon>
+      </button>
+
       <!-- 更多操作：页面操作与开发者工具 -->
       <el-dropdown trigger="click" @command="onMore">
         <button class="nav-btn" :title="t('common.actions')">
@@ -158,9 +169,6 @@ onBeforeUnmount(() => {
         </button>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="external" :disabled="!activeTab?.hasPage">
-              <el-icon><TopRight /></el-icon>{{ t('panel.openExternal') }}
-            </el-dropdown-item>
             <el-dropdown-item command="copy" :disabled="!activeTab?.hasPage">
               <el-icon><CopyDocument /></el-icon>{{ t('panel.copyUrl') }}
             </el-dropdown-item>

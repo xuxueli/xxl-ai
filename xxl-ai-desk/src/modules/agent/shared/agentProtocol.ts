@@ -5,6 +5,7 @@
  */
 
 import type { ChatMode } from '@modules/chat/shared'
+import type { ModelDescriptor } from '@common/shared/model'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { AgentToolSwitches } from './contracts'
@@ -24,8 +25,8 @@ export interface ProviderModelConfig {
   apiKey: string
   /* 附加请求头 */
   headers: Record<string, string>
-  /* 可选模型 ID 列表 */
-  models: string[]
+  /* 可选模型列表 */
+  models: ModelDescriptor[]
   /* 关联会话 ID（供 {session} 占位替换） */
   sessionId?: string
 }
@@ -36,6 +37,7 @@ export type HostEvent =
   | { type: 'thinking'; text: string } /* 思考文本 */
   | { type: 'tool_start'; toolCallId: string; toolName: string; args: unknown } /* 工具开始 */
   | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; result?: string; details?: unknown; durationMs?: number } /* 工具结束 */
+  | { type: 'usage'; used: number; window: number } /* 上下文用量（每次模型响应结束后回传） */
   | { type: 'notice'; message: string } /* 非致命异常提示（继续执行） */
   | { type: 'done' } /* 本轮完成 */
   | { type: 'error'; message: string } /* 出错（结束） */

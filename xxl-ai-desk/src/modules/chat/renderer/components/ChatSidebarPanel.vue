@@ -108,7 +108,7 @@ async function onSelect(id: string): Promise<void> {
 
   <!-- 新建对话：与扩展中心/设置子菜单项使用同一列表行 -->
   <div class="new-chat">
-    <SidebarRow @click="onNew">
+    <SidebarRow :active="!chat.currentId" @click="onNew">
       <template #icon>
         <el-icon class="new-icon"><Edit /></el-icon>
       </template>

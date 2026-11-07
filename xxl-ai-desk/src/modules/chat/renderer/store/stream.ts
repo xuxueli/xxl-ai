@@ -198,6 +198,16 @@ export function createChatStream(context: ChatStreamContext) {
         }
         break
       }
+      case 'usage': {
+        /* 最近一次模型响应结束：更新当前会话的上下文占用 */
+        const used = Number(event.used) || 0
+        const assistant = streamAssistant(sessionId)
+        if (assistant && used > 0) {
+          assistant.contextTokens = used
+          assistant.contextWindow = Number(event.window) || undefined
+        }
+        break
+      }
       case 'notice': {
         /* 非致命异常：写入异常备注并标记该段为 error，本轮继续执行 */
         flushBuffers(sessionId)

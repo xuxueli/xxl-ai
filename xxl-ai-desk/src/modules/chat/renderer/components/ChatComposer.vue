@@ -286,11 +286,11 @@ function onKeydown(event: KeyboardEvent): void {
                   </el-dropdown-item>
                   <el-dropdown-item
                     v-for="model in provider.models"
-                    :key="`${provider.id}::${model}`"
+                    :key="`${provider.id}::${model.id}`"
                     class="model-choice"
-                    :command="`${provider.id}::${model}`"
+                    :command="`${provider.id}::${model.id}`"
                   >
-                    {{ model }}
+                    {{ model.id }}
                   </el-dropdown-item>
                 </template>
               </el-dropdown-menu>

@@ -8,6 +8,8 @@ import { api } from '@common/renderer/api'
 import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
+import { useProviderStore } from '@modules/provider/renderer'
+import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
 import { mapStoredMessages, uid } from '@modules/chat/renderer/store/messageMapping'
@@ -41,6 +43,27 @@ export const useChatStore = defineStore('chat', () => {
   const currentSession = computed(
     () => sessions.value.find((item) => item.id === currentId.value) ?? null
   )
+
+  /* 当前会话的上下文占用：取最近一次带用量的助手消息；无用量时不展示 */
+  const contextUsage = computed<{ used: number; window: number } | null>(() => {
+    for (let index = messages.value.length - 1; index >= 0; index -= 1) {
+      const message = messages.value[index]
+      if (message.role === 'assistant' && message.contextTokens) {
+        /* 窗口优先取当前会话模型配置，历史消息/旧配置回退事件值与默认值 */
+        const session = currentSession.value
+        const provider = session
+          ? useProviderStore().providers.find((item) => item.id === session.providerId)
+          : undefined
+        const modelWindow = provider?.models.find((item) => item.id === session?.modelId)
+          ?.contextWindow
+        return {
+          used: message.contextTokens,
+          window: modelWindow || message.contextWindow || CONTEXT_WINDOW_DEFAULT
+        }
+      }
+    }
+    return null
+  })
 
   /* 加载会话列表 */
   async function loadSessions(): Promise<void> {
@@ -311,6 +334,7 @@ export const useChatStore = defineStore('chat', () => {
     streaming,
     loading,
     currentSession,
+    contextUsage,
     loadSessions,
     reloadSessions,
     restoreLastSession,
