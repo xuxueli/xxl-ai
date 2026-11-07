@@ -149,7 +149,7 @@
       "selectSkillZip": "选择技能 Zip 文件"
     },
     "abortNote": "[异常] 用户主动终止任务。",
-    "interruptedNote": "[异常]应用已退出，本轮生成被中断。",
+    "interruptedNote": "[异常] 应用已退出，本轮生成被中断。",
     "thinkingOnlyNote": "[异常] 本轮只有思考内容，未生成正文或工具调用。",
     "truncated": "输出内容超过限制，内容已被截断",
     "modelError": "模型返回错误",

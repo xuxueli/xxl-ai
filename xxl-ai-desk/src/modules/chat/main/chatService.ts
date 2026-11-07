@@ -176,7 +176,7 @@ function persistInterruptedRound(
       content: note,
       data: JSON.stringify({
         role: 'assistant',
-        content: [{ type: 'text', text: note }],
+        content: [{ type: 'text', text: note, error: true }],
         stopReason: 'aborted',
         timestamp: endedAt
       }),

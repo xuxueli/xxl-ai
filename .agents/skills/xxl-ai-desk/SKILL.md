@@ -46,7 +46,7 @@ src/
 │   ├── browser/                    # shared · main · preload · worker · renderer
 │   ├── diagnostics/                # shared · main · preload · renderer
 │   ├── toolPanel/                  # renderer（仅壳：Tab / 宽度 / 宿主） · i18n
-│   └── plugin/                     # renderer（仅壳：插件中心 / builtin） · i18n
+│   └── plugin/                     # renderer（仅壳：扩展中心 / builtin） · i18n
 ├── main/                           # 主进程入口壳：index.ts · ipc.ts(聚合) · db.ts(聚合) · i18n.ts(聚合)
 ├── preload/                        # 预加载入口壳：index.ts(聚合) · deskApi.ts(类型聚合) · index.d.ts
 └── renderer/src/
@@ -177,6 +177,7 @@ modules/{domain}/
 | 跨域纯函数 / 常量（分页、快捷动作、文件类型、URL 归一） | `common/shared/*.ts` |
 | 跨进程布局常量（窗口最小宽度、顶栏高度） | `common/shared/*.ts`，主进程与渲染层共用 |
 | 主进程业务与编排 | `modules/{domain}/main/*.ts` |
+| Agent 配置 / 项目记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent` / `desk_agent_memory`） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
 | IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
@@ -208,6 +209,9 @@ modules/{domain}/
 - 结构变更两处同步：`modules/{domain}/main/schema.ts` 与 `modules/{domain}/main/ddl.ts`（仅面向全新安装，不做旧库迁移）。
 - 敏感值不落明文、不进日志；列表脱敏，编辑态才解密。
 - **SQLite 无外键级联**：删除父记录（项目 / 会话 / 消息 / 终端）必须由所属 service 手动级联并清理运行时，禁止依赖数据库约束。
+- **会话双绑定**：`desk_session.project_id / agent_id` 均为数字且创建后不可修改；新建会话必须同时选择项目与 Agent，运行时按会话 `agent_id` 读取系统指令、SKILL、MCP 与内置工具开关，禁止把能力配置再冗余存进会话。
+- **Agent 是能力编排实体**：`desk_agent` 保存指令、`skill_ids / mcp_ids` 与工具分类开关；会话装配只能取 Agent 已选资源，Agent 保存后由 `agent/main/ipc.ts` 清理绑定会话运行时，下一轮重新装配。
+- **项目记忆按项目维度**：`desk_project.memory_enabled` 控制注入，`desk_agent_memory` 一项目一条；记忆内容变更后清理项目下会话运行时，禁止在会话表另存一份记忆。
 - **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
@@ -433,11 +437,13 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 | 需求 | 落位 | 要点 |
 |---|---|---|
+| Agent 配置 | `modules/agent/main/{agentService,seed}.ts` | `desk_agent` 保存名称 / 指令 / SKILL / MCP / 工具分类；默认内置 Agent 禁删，被会话占用禁删 |
+| 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/agent/worker/memory.ts` | 一项目一条（`desk_agent_memory`），按项目 `memory_enabled` 注入；生成与消费解耦 |
 | 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写/命令类仅 build；是否进入「内置工具」页见 §6.1 |
 | 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, readAllowedRoots, trustedRoots })`，越界返回拦截错误 |
 | 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层弹窗，回传 `allow`（可 `remember`）/ `deny` |
-| MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal` |
-| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并 |
+| MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
+| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 项目记忆 + SKILL 索引 + 模式/工具约束 |
 | 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按模式 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_MODES` / `BUILD_ONLY` / `describe` / `toolError` / `createGuard` |
 | 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
 | 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
@@ -446,7 +452,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ### 6.1 内置工具目录的产品边界（硬约束）
 
-「插件 → 内置工具」是**产品能力目录**，不是 `modules/agent/worker/tools` 注册表的镜像。收录项须同时满足：
+「扩展中心 → 内置工具」是**产品能力目录**，不是 `modules/agent/worker/tools` 注册表的镜像。收录项须同时满足：
 
 1. 由客户端自身提供，不是外部 MCP / 插件动态接入；
 2. 是独立能力，不是其它功能的内部实现（如 `read_skill` 仅服务 SKILL）；
@@ -471,6 +477,16 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **`run_command` 的路径识别只防误操作，不是安全边界**：动态展开（`$VAR`、命令替换）、解释器（`python -c`、`sh -c`）无法覆盖；不要为它叠加脆弱的「只读命令白名单」或其它启发式解析。
 - **会话信任粒度**：当前 `sessionTrusted` 为会话级全量放行；后续扩展必须收敛为「目录 + 动作」粒度，避免一次授权放大到全部读写命令。
 
+### 6.3 Agent 配置与会话绑定 [硬]
+
+- **Agent 是能力编排实体**：`desk_agent` 持有 `system_prompt`、`skill_ids`、`mcp_ids` 与五类内置工具开关；MCP / SKILL / 内置工具本身仍是独立域，Agent 只保存引用与开关。
+- **会话创建即绑定**：新建会话必须选择项目与 Agent；`desk_session.agent_id` 创建后不可修改，运行时的指令、SKILL、MCP、内置工具全部按该 Agent 读取。
+- **权限来源唯一**：`chat/main/chatService.ts` 只从会话绑定的 Agent 取能力，禁止再读全局工具开关或把配置复制到会话；Agent 缺失直接报 `runtime.agentMissing`。
+- **实时生效**：Agent 保存后清理绑定会话的运行时缓存（`evictAgent`），项目记忆 / 记忆开关变更清理项目下会话运行时；下一轮重新装配，已发生消息不受影响。
+- **删除约束**：默认内置 Agent（`builtin=1`）禁删；仍被会话引用的 Agent 禁删，并提示关联会话数。
+- **项目记忆归属**：记忆按项目维度（`desk_agent_memory` 一项目一条），由 `desk_project.memory_enabled` 控制是否注入；手动管理入口在「系统设置 → 项目」，不在 Agent 页另建一份。
+- **新增 Agent 能力时**：契约加在 `modules/agent/shared/contracts.ts`，持久化加在 `agent/main/{schema,ddl,agentService}.ts`，装配只在 `chatService` / `worker/session` 消费，禁止在渲染层拼装系统提示。
+
 ## 7. 校验清单
 
 - [ ] 需求目录 `xxl-ai-spec/{yyyyMMdd}-{module}/` 存在，`方案.md` 与 SQL 同步。
@@ -484,6 +500,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - [ ] 外壳、`src/main/ipc.ts`、调用方未承载域内校验 / 归一 / 默认值 / 级联清理。
 - [ ] 新增/变更依赖为精确版本（无 `^` / `~` / 区间）；lock 当前被 `.gitignore` 忽略，如放开需同步提交。
 - [ ] 通道 `desk:{module}:{action}`；时间 ISO；布尔归一。
+- [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后已清理关联会话运行时；默认与占用中的 Agent 未被删除。
 - [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
 - [ ] UI 复用 tokens/外壳/列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
@@ -495,7 +512,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ## 8. 参考实现
 
-- 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/host/runtimeHost.ts`
+- 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/{agentService,agentMemoryService}.ts`、`modules/agent/main/host/runtimeHost.ts`
 - 渲染：`modules/mcp/renderer/{pages,components}`（管理 + 发现）、`modules/chat/renderer/store/{index,stream}.ts`
 - 运行时：`modules/agent/worker/session.ts`、`modules/agent/worker/tools/index.ts`、`modules/agent/worker/toolkit.ts`
 - 构建：`package.json`（`type-check` / `build` / `dev`）、`electron.vite.config.ts`
