@@ -1257,10 +1257,9 @@ xxl-ai-desk/
 
 打包产物由 electron-builder 生成（mac：`dmg` + `zip`；win：`nsis`；linux：`AppImage` + `deb`），输出目录 `xxl-ai-desk/release/{version}/`。
 
-**macOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
+**MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
 
 ```
-# 将安装软件拖入 /Applications 后，终端执行如下命令即可
 sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 ```
 
@@ -1689,8 +1688,11 @@ docker compose down
 - 15、【体验】外观主题：支持深色模式、浅色模式，以及自定义多主题设置，提升用户体验；
 - 16、【体验】会话区域体验优化：会话区域布局、交互调整，体验性升级； 
 
-> 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
-> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+> **MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
+
+```
+sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+```
 
 **【云版（Web 服务端）】**
 
@@ -1735,8 +1737,11 @@ docker compose down
 - 19、【新增】应用中心：内置「笔记」工具，子菜单进入支持针对笔记进行设置。包括笔记 存储目录（默认在 软件安装目录下的 /note 子目录）、是否启用（启用后新增左侧菜单）等设置；提供「我的应用 / 应用市场」，安装与启用分离。
 - 20、【新增】笔记应用：新建「笔记」内置应用，支持 笔记文件目录（左侧，顶部打开所在文件夹 / 新建目录 / 新建笔记，右键菜单支持新建、重命名、删除、定位）、笔记Markdown编辑器（中间，参考文件工具里的markdown编辑器）、浮动文章目录、预览（编辑/分屏/预览）、搜索/替换、主题切换、图片插入（图片存在在笔记目录的 /resource/image 目录下）、外部文件变更实时刷新等；
 
-> 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
-> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：`sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app`
+> **MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
+
+```
+sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+```
 
 ### v1.5.1 Release Notes[ING]
 - 1、【ING】应用中心：

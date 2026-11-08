@@ -11,12 +11,17 @@ import { describe, text, toolError, tr, type ToolContext } from '@modules/agent/
 import { pageHeader } from '@modules/browser/worker/browserFormat'
 import { runBrowserAction } from '@modules/browser/worker/browserBridgeClient'
 
-/* Pi 的 Type 构建器（从动态导入模块取类型，避免静态依赖） */
-export type BrowserTypeBuilder = (typeof import('@earendil-works/pi-ai'))['Type']
+import type * as SchemaModule from '@earendil-works/pi-schema'
+
+/* pi-schema 构建器子集（由调用方注入，避免静态依赖） */
+export type BrowserSchemaBuilder = Pick<
+  typeof SchemaModule,
+  'obj' | 'str' | 'opt' | 'num' | 'bool' | 'oneOf' | 'arr'
+>
 
 /* 悬停元素：触发 hover 菜单与提示 */
 export function createHoverBrowserTool(
-  Type: BrowserTypeBuilder,
+  Schema: BrowserSchemaBuilder,
   context: ToolContext
 ): AgentTool {
   return {
@@ -26,9 +31,9 @@ export function createHoverBrowserTool(
       '将鼠标悬停到页面元素上，用于展开悬停菜单或提示。优先使用 snapshot_browser 返回的 ref，也可传 CSS selector',
       'Hover over an element to reveal hover menus or tooltips. Prefer the ref from snapshot_browser; a CSS selector also works.'
     ),
-    parameters: Type.Object({
-      ref: Type.Optional(Type.String({ description: 'snapshot_browser 返回的元素 ref' })),
-      selector: Type.Optional(Type.String({ description: 'CSS 选择器（ref 缺失时使用）' }))
+    parameters: Schema.obj({
+      ref: Schema.opt(Schema.str({ description: 'snapshot_browser 返回的元素 ref' })),
+      selector: Schema.opt(Schema.str({ description: 'CSS 选择器（ref 缺失时使用）' }))
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {
@@ -54,7 +59,7 @@ export function createHoverBrowserTool(
 
 /* 按键：向当前焦点元素或指定元素发送按键 */
 export function createPressBrowserTool(
-  Type: BrowserTypeBuilder,
+  Schema: BrowserSchemaBuilder,
   context: ToolContext
 ): AgentTool {
   return {
@@ -64,10 +69,10 @@ export function createPressBrowserTool(
       '发送按键到当前焦点元素或指定元素，如 Enter、Tab、Escape、ArrowDown；可先用 click_browser 聚焦输入框',
       'Send a key to the focused element or a specified element, such as Enter, Tab, Escape, or ArrowDown. Focus an input with click_browser first when needed.'
     ),
-    parameters: Type.Object({
-      key: Type.String({ description: '按键名，如 Enter / Tab / Escape / ArrowDown' }),
-      ref: Type.Optional(Type.String({ description: '目标元素 ref，缺省为当前焦点元素' })),
-      selector: Type.Optional(Type.String({ description: '目标元素 CSS 选择器' }))
+    parameters: Schema.obj({
+      key: Schema.str({ description: '按键名，如 Enter / Tab / Escape / ArrowDown' }),
+      ref: Schema.opt(Schema.str({ description: '目标元素 ref，缺省为当前焦点元素' })),
+      selector: Schema.opt(Schema.str({ description: '目标元素 CSS 选择器' }))
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {
@@ -94,7 +99,7 @@ export function createPressBrowserTool(
 
 /* 下拉选择：按 option value 或可见文本选择 */
 export function createSelectBrowserTool(
-  Type: BrowserTypeBuilder,
+  Schema: BrowserSchemaBuilder,
   context: ToolContext
 ): AgentTool {
   return {
@@ -104,10 +109,10 @@ export function createSelectBrowserTool(
       '选择 <select> 下拉框选项，value 匹配 option 的 value 或可见文本；元素用 ref 或 CSS selector 定位',
       'Select an option in a <select> dropdown. value matches the option value or visible text; locate the element with a ref or CSS selector.'
     ),
-    parameters: Type.Object({
-      ref: Type.Optional(Type.String({ description: 'snapshot_browser 返回的元素 ref' })),
-      selector: Type.Optional(Type.String({ description: 'CSS 选择器（ref 缺失时使用）' })),
-      value: Type.String({ description: '选项的 value 或可见文本' })
+    parameters: Schema.obj({
+      ref: Schema.opt(Schema.str({ description: 'snapshot_browser 返回的元素 ref' })),
+      selector: Schema.opt(Schema.str({ description: 'CSS 选择器（ref 缺失时使用）' })),
+      value: Schema.str({ description: '选项的 value 或可见文本' })
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {
@@ -137,7 +142,7 @@ export function createSelectBrowserTool(
 
 /* 滚动：滚轮方向或直达顶部 / 底部 */
 export function createScrollBrowserTool(
-  Type: BrowserTypeBuilder,
+  Schema: BrowserSchemaBuilder,
   context: ToolContext
 ): AgentTool {
   return {
@@ -147,17 +152,9 @@ export function createScrollBrowserTool(
       '滚动当前页面：direction 为 up / down / top / bottom，amount 为滚动像素（默认一屏）',
       'Scroll the current page: direction is up / down / top / bottom; amount is the pixel distance (defaults to one screen).'
     ),
-    parameters: Type.Object({
-      direction: Type.Union(
-        [
-          Type.Literal('up'),
-          Type.Literal('down'),
-          Type.Literal('top'),
-          Type.Literal('bottom')
-        ],
-        { description: '滚动方向' }
-      ),
-      amount: Type.Optional(Type.Number({ description: '滚动像素，默认一屏' }))
+    parameters: Schema.obj({
+      direction: Schema.oneOf(['up', 'down', 'top', 'bottom'], { description: '滚动方向' }),
+      amount: Schema.opt(Schema.num({ description: '滚动像素，默认一屏' }))
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {

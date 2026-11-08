@@ -1,6 +1,6 @@
 /*
  * MCP 工具装配（运行时进程侧）：按 Pi 官方推荐方式把 MCP Tool 包装为 AgentTool。
- *   - 参数：MCP inputSchema 经 Type.Unsafe 直接作为工具参数（补齐 type/properties）；
+ *   - 参数：MCP inputSchema 直接作为工具参数（补齐 type/properties）；
  *   - 结果：toLlmContent 将 MCP 结果转为模型可读的文本/图片内容；
  *   - 失败：MCP 用 result.isError 表达工具失败，协议/网络错误包装为工具错误；
  *   - 权限：仅可查看只注册 readOnlyHint 工具，其余权限全量注册；
@@ -65,7 +65,7 @@ export async function createMcpTools(options: {
   if (servers.length === 0) {
     return []
   }
-  const [{ Type }, mcp] = await Promise.all([import('@earendil-works/pi-ai'), loadPiMcp()])
+  const mcp = await loadPiMcp()
 
   /*
    * 并行连接各服务：单个服务慢或超时不再串行叠加等待，
@@ -112,11 +112,11 @@ export async function createMcpTools(options: {
         label: tool.title || tool.name,
         description: tool.description || `来自 MCP 服务「${server.name}」的工具`,
         /* 模型供应商要求对象 schema；部分服务未提供 properties，补齐避免被拒 */
-        parameters: Type.Unsafe({
+        parameters: {
           ...tool.inputSchema,
           type: 'object',
           properties: (tool.inputSchema?.properties as Record<string, unknown>) ?? {}
-        }) as never,
+        } as never,
         /* MCP 工具可能有副作用，统一串行执行 */
         executionMode: 'sequential',
         execute: async (_toolCallId, params, signal) => {

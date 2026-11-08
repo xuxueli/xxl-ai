@@ -42,7 +42,7 @@ export async function createSkillTools(context: ToolContext): Promise<ToolEntry[
   if (skills.length === 0) {
     return []
   }
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { obj, opt, str } = await import('@earendil-works/pi-schema')
 
   /* 按名称或目录名查找技能（忽略大小写） */
   function findSkill(name: string): SkillRuntimeConfig | undefined {
@@ -60,10 +60,10 @@ export async function createSkillTools(context: ToolContext): Promise<ToolEntry[
       '读取当前 Agent 已配置技能的 SKILL.md 完整说明或技能目录内的附属文件；任务与技能描述匹配时，先调用本工具再执行。',
       'Read the full SKILL.md or a supporting file of a skill assigned to the current agent before following it.'
     ),
-    parameters: Type.Object({
-      name: Type.String({ description: '技能名称或目录名' }),
-      path: Type.Optional(
-        Type.String({ description: '技能目录内的相对路径，默认 SKILL.md' })
+    parameters: obj({
+      name: str({ description: '技能名称或目录名' }),
+      path: opt(
+        str({ description: '技能目录内的相对路径，默认 SKILL.md' })
       )
     }),
     execute: async (_toolCallId, params) => {

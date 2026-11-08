@@ -23,7 +23,7 @@ import {
 
 /* 构建文件写入类工具 */
 export async function createFsWriteTools(context: ToolContext): Promise<ToolEntry[]> {
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { bool, obj, opt, str } = await import('@earendil-works/pi-schema')
   const { rootDir } = context
   const guard = createGuard(context)
 
@@ -35,9 +35,9 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
       '创建或覆盖当前权限允许范围内的文件（自动创建父目录）',
       'Create or overwrite a file within the current permission scope (parent directories are created automatically).'
     ),
-    parameters: Type.Object({
-      path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
-      content: Type.String({ description: '写入的完整内容' })
+    parameters: obj({
+      path: str({ description: '文件路径，相对项目目录或绝对路径' }),
+      content: str({ description: '写入的完整内容' })
     }),
     /* 写类工具串行执行：避免同文件并发读改写互相覆盖 */
     executionMode: 'sequential',
@@ -71,11 +71,11 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
       '将当前权限允许范围内文件中的 old_string 替换为 new_string，replace_all 为 true 时替换全部',
       'Replace old_string with new_string in a file within the current permission scope; set replace_all to replace every occurrence.'
     ),
-    parameters: Type.Object({
-      path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
-      old_string: Type.String({ description: '待替换的原文（需精确匹配）' }),
-      new_string: Type.String({ description: '替换后的新文本' }),
-      replace_all: Type.Optional(Type.Boolean({ description: '是否替换全部匹配项，默认仅替换首个' }))
+    parameters: obj({
+      path: str({ description: '文件路径，相对项目目录或绝对路径' }),
+      old_string: str({ description: '待替换的原文（需精确匹配）' }),
+      new_string: str({ description: '替换后的新文本' }),
+      replace_all: opt(bool({ description: '是否替换全部匹配项，默认仅替换首个' }))
     }),
     /* 写类工具串行执行：避免同文件并发读改写互相覆盖 */
     executionMode: 'sequential',
@@ -124,9 +124,9 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
       '永久删除当前权限允许范围内的文件；删除目录必须显式传 recursive=true，操作不可恢复',
       'Permanently delete a file within the current permission scope. Deleting a directory requires recursive=true; this cannot be undone.'
     ),
-    parameters: Type.Object({
-      path: Type.String({ description: '要删除的文件或目录路径' }),
-      recursive: Type.Optional(Type.Boolean({ description: '删除目录时必须为 true' }))
+    parameters: obj({
+      path: str({ description: '要删除的文件或目录路径' }),
+      recursive: opt(bool({ description: '删除目录时必须为 true' }))
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {
@@ -162,10 +162,10 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
       '移动或重命名当前权限允许范围内的文件 / 目录，目标父目录自动创建；默认不覆盖已存在目标',
       'Move or rename a file or directory within the current permission scope. Parent directories are created automatically; existing targets are not overwritten by default.'
     ),
-    parameters: Type.Object({
-      from: Type.String({ description: '源路径' }),
-      to: Type.String({ description: '目标路径' }),
-      overwrite: Type.Optional(Type.Boolean({ description: '目标存在时是否覆盖，默认 false' }))
+    parameters: obj({
+      from: str({ description: '源路径' }),
+      to: str({ description: '目标路径' }),
+      overwrite: opt(bool({ description: '目标存在时是否覆盖，默认 false' }))
     }),
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {

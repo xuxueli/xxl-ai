@@ -30,7 +30,7 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 /* 构建文件读取类工具 */
 export async function createFsReadTools(context: ToolContext): Promise<ToolEntry[]> {
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { num, obj, opt, str } = await import('@earendil-works/pi-schema')
   const { rootDir } = context
   const guard = createGuard(context)
 
@@ -42,10 +42,10 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
       '读取文件（全局可读），可选 offset/limit 按行范围读取；图片文件直接返回图像内容',
       'Read a text file (global read access), optionally by line range (offset/limit). Image files are returned as image content.'
     ),
-    parameters: Type.Object({
-      path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
-      offset: Type.Optional(Type.Number({ description: '起始行号（从 1 开始）' })),
-      limit: Type.Optional(Type.Number({ description: '读取行数' }))
+    parameters: obj({
+      path: str({ description: '文件路径，相对项目目录或绝对路径' }),
+      offset: opt(num({ description: '起始行号（从 1 开始）' })),
+      limit: opt(num({ description: '读取行数' }))
     }),
     execute: async (_toolCallId, params) => {
       const { path, offset, limit } = params as { path: string; offset?: number; limit?: number }
@@ -113,8 +113,8 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
       '列出某个目录的文件与子目录（全局可读）',
       'List files and subdirectories of a directory (global read access).'
     ),
-    parameters: Type.Object({
-      path: Type.Optional(Type.String({ description: '目录路径，缺省为项目根目录' }))
+    parameters: obj({
+      path: opt(str({ description: '目录路径，缺省为项目根目录' }))
     }),
     execute: async (_toolCallId, params) => {
       const { path } = params as { path?: string }
@@ -145,9 +145,9 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
       '按 glob 模式（支持 * ? 与 **）查找文件，返回匹配路径（全局可读）',
       'Find files by glob pattern (supports * ? and **), returning matched paths (global read access).'
     ),
-    parameters: Type.Object({
-      pattern: Type.String({ description: 'glob 模式，如 src/**/*.ts' }),
-      path: Type.Optional(Type.String({ description: '起始目录，缺省为项目根目录' }))
+    parameters: obj({
+      pattern: str({ description: 'glob 模式，如 src/**/*.ts' }),
+      path: opt(str({ description: '起始目录，缺省为项目根目录' }))
     }),
     execute: async (_toolCallId, params) => {
       const { pattern, path } = params as { pattern: string; path?: string }
@@ -174,11 +174,11 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
       '按正则搜索文件内容，返回 文件:行号:内容（全局可读）',
       'Search file contents by regular expression, returning file:line:content (global read access).'
     ),
-    parameters: Type.Object({
-      pattern: Type.String({ description: '正则表达式' }),
-      path: Type.Optional(Type.String({ description: '起始目录，缺省为项目根目录' })),
-      include: Type.Optional(Type.String({ description: '文件名 glob 过滤，如 *.ts' })),
-      max_results: Type.Optional(Type.Number({ description: '最大匹配数，默认 100' }))
+    parameters: obj({
+      pattern: str({ description: '正则表达式' }),
+      path: opt(str({ description: '起始目录，缺省为项目根目录' })),
+      include: opt(str({ description: '文件名 glob 过滤，如 *.ts' })),
+      max_results: opt(num({ description: '最大匹配数，默认 100' }))
     }),
     execute: async (_toolCallId, params) => {
       const { pattern, path, include, max_results } = params as {

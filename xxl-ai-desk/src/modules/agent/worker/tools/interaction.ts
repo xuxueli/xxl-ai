@@ -175,24 +175,24 @@ function formatResult(
 
 /* 构建 ask_user 工具：入参校验、发起交互并回填结果 */
 async function buildAskUserTool(context: ToolContext): Promise<AgentTool> {
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { arr, bool, obj, opt, str } = await import('@earendil-works/pi-schema')
   /* 单个问题的字段定义 */
   const questionFields = () => ({
-    title: Type.Optional(Type.String({ description: '问题标题，简洁明确' })),
-    message: Type.Optional(Type.String({ description: '补充说明或背景信息' })),
-    options: Type.Optional(
-      Type.Array(
-        Type.Object({
-          value: Type.String({ description: '回传给模型的值，缺省同 label' }),
-          label: Type.String({ description: '展示给用户的选项名' }),
-          description: Type.Optional(Type.String({ description: '选项补充说明' }))
+    title: opt(str({ description: '问题标题，简洁明确' })),
+    message: opt(str({ description: '补充说明或背景信息' })),
+    options: opt(
+      arr(
+        obj({
+          value: str({ description: '回传给模型的值，缺省同 label' }),
+          label: str({ description: '展示给用户的选项名' }),
+          description: opt(str({ description: '选项补充说明' }))
         }),
         { description: '候选选项（2~20 个）' }
       )
     ),
-    multiple: Type.Optional(Type.Boolean({ description: '是否多选，默认单选' })),
-    allowOther: Type.Optional(
-      Type.Boolean({ description: '是否允许用户填写「其他」选项，默认允许' })
+    multiple: opt(bool({ description: '是否多选，默认单选' })),
+    allowOther: opt(
+      bool({ description: '是否允许用户填写「其他」选项，默认允许' })
     )
   })
 
@@ -203,8 +203,8 @@ async function buildAskUserTool(context: ToolContext): Promise<AgentTool> {
       '在多个候选方案中让用户拍板：用 questions 按顺序列出 1~10 个问题，每个问题提供 2~20 个选项，支持单选/多选，并默认允许用户填写「其他」。界面会显示 1/N 并在作答后进入下一题。仅在需要用户从多个方案中选择时使用；需要确认操作或补充自由文本时，直接在回复里提问，不要调用本工具。',
       'Let the user decide among several candidate options: list 1-10 questions in order via questions, each with 2-20 choices, optional multi-select, and an "Other" free-form entry (enabled by default). The UI shows 1/N and advances after each answer. Use only when the user must pick among options; ask for confirmation or free-form input directly in your reply instead.'
     ),
-    parameters: Type.Object({
-      questions: Type.Array(Type.Object(questionFields()), {
+    parameters: obj({
+      questions: arr(obj(questionFields()), {
         description: '要依次询问的问题列表（1~10 个）'
       })
     }),

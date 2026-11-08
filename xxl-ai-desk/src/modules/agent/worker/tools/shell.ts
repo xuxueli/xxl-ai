@@ -33,7 +33,7 @@ export function setRuntimePath(value?: string): void {
 
 /* 构建终端类工具 */
 export async function createShellTools(context: ToolContext): Promise<ToolEntry[]> {
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { num, obj, opt, str } = await import('@earendil-works/pi-schema')
   const { rootDir } = context
   /* 技能库为完全信任目录：命令访问技能库不触发越界审批 */
   const trustedRoots = skillTrustedRoots(context)
@@ -46,9 +46,9 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
       '在项目目录内执行 shell 命令并返回输出（仅工作区内修改及以上权限可用）。危险命令（删除根目录、提权、管道执行远端脚本等）会被拦截；显式访问项目目录之外的路径会按当前权限处理',
       'Run a shell command inside the project directory and return its output (workspace-write or full-access only). Destructive commands (root deletion, privilege escalation, piping remote scripts to a shell) are blocked; explicit access outside the project directory follows the current permission mode.'
     ),
-    parameters: Type.Object({
-      command: Type.String({ description: '要执行的命令' }),
-      timeout: Type.Optional(Type.Number({ description: '超时毫秒数，默认 60000' }))
+    parameters: obj({
+      command: str({ description: '要执行的命令' }),
+      timeout: opt(num({ description: '超时毫秒数，默认 60000' }))
     }),
     /* 与其他工具串行，避免命令与文件写入交错造成不确定结果 */
     executionMode: 'sequential',

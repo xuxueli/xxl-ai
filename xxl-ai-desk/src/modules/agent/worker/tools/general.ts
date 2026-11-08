@@ -7,7 +7,7 @@ import { ALL_PERMISSIONS, describe, text, type ToolContext, type ToolEntry } fro
 
 /* 构建通用类工具 */
 export async function createGeneralTools(_context: ToolContext): Promise<ToolEntry[]> {
-  const { Type } = await import('@earendil-works/pi-ai')
+  const { obj, opt, str } = await import('@earendil-works/pi-schema')
 
   /* 获取当前时间：本地日期时间，可选 IANA 时区 */
   const getCurrentTime: AgentTool = {
@@ -17,8 +17,8 @@ export async function createGeneralTools(_context: ToolContext): Promise<ToolEnt
       '获取本地当前日期与时间，可选传入 IANA 时区名称',
       'Get the current local date and time; an IANA timezone name is optional.'
     ),
-    parameters: Type.Object({
-      timezone: Type.Optional(Type.String({ description: 'IANA 时区，如 Asia/Shanghai' }))
+    parameters: obj({
+      timezone: opt(str({ description: 'IANA 时区，如 Asia/Shanghai' }))
     }),
     execute: async (_toolCallId, params) => {
       const timezone = (params as { timezone?: string }).timezone
