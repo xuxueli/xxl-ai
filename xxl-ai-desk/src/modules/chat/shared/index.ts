@@ -12,5 +12,9 @@ export type { MessageSource } from './messageSource'
 export { hasVisiblePart, messageStatusOf, normalizeMessageStatus } from './messageStatus'
 export type { MessageStatus, MessageStatusSource } from './messageStatus'
 export { CHAT_IPC } from './ipc'
-export { SESSION_SUMMARY_MAX_CHARS } from './session'
-export type { ChatMode, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from './session'
+export {
+  DEFAULT_PERMISSION_MODE,
+  SESSION_SUMMARY_MAX_CHARS,
+  normalizePermissionMode
+} from './session'
+export type { PermissionMode, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from './session'

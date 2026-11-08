@@ -17,7 +17,7 @@ import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modu
 import { mapStoredMessages, nextLocalMessageId, appendPart, refreshContent } from '@modules/chat/renderer/store/messageMapping'
 import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
-import type { ChatMode, SessionDTO } from '@modules/chat/shared'
+import { DEFAULT_PERMISSION_MODE, type PermissionMode, type SessionDTO } from '@modules/chat/shared'
 import type { UiMessage } from '@modules/chat/renderer/types'
 
 /* 会话与对话状态 */
@@ -151,10 +151,10 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 新建会话（归属当前选中项目与 Agent，默认 Build 模式） */
+  /* 新建会话（归属当前选中项目与 Agent，默认工作区内修改权限） */
   async function createSession(
     projectId?: number,
-    mode: ChatMode = 'build',
+    permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE,
     agentId?: number
   ): Promise<SessionDTO> {
     const settings = useSettingsStore()
@@ -168,7 +168,7 @@ export const useChatStore = defineStore('chat', () => {
       agentId: targetAgentId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
-      mode
+      permissionMode
     })
     sessions.value = [session, ...sessions.value]
     currentId.value = session.id
@@ -237,15 +237,15 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 切换当前会话的对话模式（plan 只读 / build 读写） */
-  async function updateSessionMode(mode: ChatMode): Promise<void> {
+  /* 切换当前会话的权限模式 */
+  async function updateSessionPermissionMode(permissionMode: PermissionMode): Promise<void> {
     if (!currentId.value) {
       return
     }
-    const updated = await api.session.update(currentId.value, { mode })
+    const updated = await api.session.update(currentId.value, { permissionMode })
     const target = sessions.value.find((item) => item.id === updated.id)
     if (target) {
-      target.mode = updated.mode
+      target.permissionMode = updated.permissionMode
     }
   }
 
@@ -281,8 +281,8 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 发送消息（新建会话时按传入模式创建，默认 Build） */
-  async function send(text: string, mode: ChatMode = 'build'): Promise<void> {
+  /* 发送消息（新建会话时按传入权限创建，默认工作区内修改） */
+  async function send(text: string, permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE): Promise<void> {
     const content = text.trim()
     if (!content || streaming.value) {
       return
@@ -292,7 +292,7 @@ export const useChatStore = defineStore('chat', () => {
       if (!useProjectStore().currentId || !useAgentStore().currentId) {
         return
       }
-      await createSession(undefined, mode)
+      await createSession(undefined, permissionMode)
     }
     const sessionId = currentId.value
 
@@ -397,7 +397,7 @@ export const useChatStore = defineStore('chat', () => {
     removeSession,
     renameSession,
     selectModel,
-    updateSessionMode,
+    updateSessionPermissionMode,
     removeMessages,
     send,
     abort,

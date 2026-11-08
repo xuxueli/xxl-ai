@@ -133,24 +133,25 @@ function absoluteToken(rootDir: string, token: string): string {
  *   - cd / pushd 目标；
  *   - 重定向目标（> >> 2> &>）；
  *   - 除命令名外的绝对路径 / ~ / 相对路径参数。
- * 未命中或动态展开返回 null，交由调用方按目录内处理。
+ * 返回去重后的全部命中；动态展开不参与判定。
  */
-export function findOutsideTarget(command: string, rootDir: string): string | null {
+export function findOutsideTargets(command: string, rootDir: string): string[] {
   const tokens = tokenize(command)
-  const check = (token: string | undefined): string | null => {
+  const hits = new Set<string>()
+  const check = (token: string | undefined): void => {
     if (!token) {
-      return null
+      return
     }
     const abs = absoluteToken(rootDir, token)
-    return abs ? outsidePath(rootDir, abs) : null
+    const outside = abs ? outsidePath(rootDir, abs) : null
+    if (outside) {
+      hits.add(outside)
+    }
   }
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]
     if (/^\d?&?>>?$/.test(token) || token === 'cd' || token === 'pushd') {
-      const hit = check(tokens[index + 1])
-      if (hit) {
-        return hit
-      }
+      check(tokens[index + 1])
     }
   }
   /* 跳过首个 token（命令名可能本身是绝对路径的可执行文件） */
@@ -158,10 +159,7 @@ export function findOutsideTarget(command: string, rootDir: string): string | nu
     if (tokens[index].startsWith('-')) {
       continue
     }
-    const hit = check(tokens[index])
-    if (hit) {
-      return hit
-    }
+    check(tokens[index])
   }
-  return null
+  return [...hits]
 }

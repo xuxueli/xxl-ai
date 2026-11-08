@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
   agent_id      INTEGER NOT NULL DEFAULT 0,
   provider_id   INTEGER NOT NULL DEFAULT 0,
   model_id      TEXT NOT NULL DEFAULT '',
-  mode          TEXT NOT NULL DEFAULT 'build',
+  mode          TEXT NOT NULL DEFAULT 'workspace-write',
   summary       TEXT NOT NULL DEFAULT '',
   summary_last_message_id INTEGER NOT NULL DEFAULT 0,
   summary_update_time     TEXT NOT NULL DEFAULT '',

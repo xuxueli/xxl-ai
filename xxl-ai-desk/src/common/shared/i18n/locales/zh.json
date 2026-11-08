@@ -172,6 +172,8 @@
     "tool": {
       "pathBlocked": "已拦截：超出项目目录",
       "pathDenied": "已拦截：路径「{0}」超出项目目录「{1}」，用户拒绝本次{2}操作。",
+      "permissionReadOnly": "已拦截：当前权限为「仅可查看」，不允许对「{0}」执行{2}操作。",
+      "protectedPath": "已拦截：路径「{0}」属于系统或用户敏感目录，即使完全权限也不允许写入。",
       "actionRead": "读取",
       "actionWrite": "写入",
       "actionCommand": "访问",

@@ -24,7 +24,7 @@ XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种�
 | 形态 | B/S Web 应用，浏览器访问 | C/S 桌面应用，一键安装（mac / win / linux） |
 | 面向 | 团队——多用户、多业务空间（Tenant） | 个人——单用户本地工作台 |
 | 定位 | Agent 编排、一键发布、权限治理 | 本地优先，直接操作本机项目与系统能力 |
-| 扩展 | MCP + SKILL + RAG，多供应商，流式对话 | 本地文件 / 终端 / 浏览器面板，Plan / Build 模式 |
+| 扩展 | MCP + SKILL + RAG，多供应商，流式对话 | 本地文件 / 终端 / 浏览器面板，三档权限模式 |
 | 模块 | `xxl-ai-api` + `xxl-ai-ui`（+ `xxl-ai-sample`） | `xxl-ai-desk` |
 | 依赖 | MySQL + Redis + Milvus | 零依赖（仅本地 SQLite） |
 
@@ -69,9 +69,9 @@ XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种�
 - 2、项目即工作区：项目 1:1 强绑定本地磁盘目录，会话归属项目，Agent 直接在本机工程上干活；项目可独立开启长期记忆；
 - 3、本地数据自治：单文件 SQLite（better-sqlite3 + Drizzle），数据不出本机，运行时数据目录可自定义；
 
-- **Plan / Build + 本地系统能力，让 Agent 真能干活（亮点）**
+- **三档权限模式 + 本地系统能力，让 Agent 真能干活（亮点）**
 
-- 4、Plan / Build 双模式：Plan 只读安全探索、Build 全量读写落地改造，随会话持久化，默认 Build；
+- 4、三档权限模式：仅可查看（全局读）、工作区内修改（全局读 + 项目与系统临时目录写）、完全权限（全局读写），随会话持久化，默认工作区内修改；敏感操作仍由统一拦截机制兜底；
 - 5、项目目录沙箱：文件操作限定当前项目目录，越界弹应用内对话框「允许本次 / 本会话允许 / 拒绝」，支持会话级信任；
 - 6、直达工作现场：统一右侧工具面板（文件 / Git / 终端 / 浏览器），文件目录树与编辑、终端命令、多标签浏览器随会话隔离；
 
@@ -498,12 +498,13 @@ npm run build:win
 - 会话必须归属某项目并绑定 Agent；新建对话需同时选择项目与 Agent，创建后归属不可修改；
 - 侧栏按项目分组会话，支持搜索、重命名、删除与排序；首条消息即时生成会话标题；生成中切换会话再切回不丢内容。
 
-#### 3.2.5 对话与模式
+#### 3.2.5 对话与权限模式
 
-- 输入框左侧提供 **Plan / Build 模式选择器**（随会话持久化，默认 Build）：
-  - **Plan（只读）**：仅装配只读工具（文件读取 / 目录 / 检索、浏览器读取与交互、`get_current_time`、`ask_user` 等）；
-  - **Build（读写）**：在只读基础上追加 `write_file` / `edit_file` / `delete_file` / `move_file` / `run_command` 及浏览器写操作；
-- 文件工具统一限定当前项目目录，越界操作弹应用内对话框，可选「允许本次 / 本会话允许 / 拒绝」；
+- 输入框左侧提供 **三档权限选择器**（随会话持久化，默认工作区内修改）：
+  - **仅可查看（read-only）**：全局可读；不装配写入 / 命令工具，MCP 只放行显式只读的工具；
+  - **工作区内修改（workspace-write）**：全局可读；仅项目目录与系统临时目录可直接写入，其它写入弹应用内对话框，可选「允许本次 / 本会话允许 / 拒绝」；
+  - **完全权限（full-access）**：全局读写；系统目录与用户敏感目录（如 `~/.ssh`）仍由统一拦截机制阻止；
+- 危险命令规则库始终生效，不随权限档位放开；
 - 输入框「+」可关联项目文件 / 文件夹，仅随下一条消息下发；顶栏展示当前会话上下文占用率；
 - 助手消息按**片段发生顺序**渲染时间线（思考 → 工具 → 正文交错），思考运行中实时展开、完成后收起；工具调用独立成行，展示动作、参数、状态与耗时，点击可展开入参 / 结果；轮次结束展示耗时摘要；
 - 代码块为 GitHub 风格（语言标签 + 复制），接入语法高亮。
@@ -570,7 +571,7 @@ XXL-AI 提供「**云本结合**」两种交付形态，二者同源同品牌、
 | SKILL 技能 | 在线管理 `SKILL.md` + 文件树，自动物化为可执行技能目录 | 扩展中心统一管理 + skills.sh / GitHub 市场安装，按 Agent 勾选后装配 |
 | RAG 知识库 | 知识库 + 文档管理，分片向量化入 Milvus，对话自动检索注入 | / |
 | 本地系统能力 | 不直接操作本机文件 / 终端 / 浏览器 | **核心差异**：本地文件读写与检索、终端命令（node-pty + xterm）、Git 变更审核、统一工具面板（文件 / Git / 终端 / 浏览器） |
-| 读 / 写安全控制 | 空间归属 + RBAC + 审计日志 | **Plan / Build 模式**：Plan 只读（read/list/glob/grep/时间），Build 全量读写；文件操作限定当前项目目录，越界弹应用内对话框「允许本次 / 本会话允许 / 拒绝」 |
+| 读 / 写安全控制 | 空间归属 + RBAC + 审计日志 | **三档权限模式**：仅可查看全局读、工作区内修改限定项目与系统临时目录、完全权限全局读写；敏感操作统一拦截，越界弹应用内对话框「允许本次 / 本会话允许 / 拒绝」 |
 | 会话与上下文 | 会话 / 消息落 MySQL，按空间隔离；公开端以 `uuid` + `visitorId` 隔离 | 会话 / 消息落本地 SQLite，1:1 归属项目并绑定 Agent；生成中会话内存缓存，切换不丢流式增量；项目维度长期记忆 |
 | 数据存储 | MySQL（业务 + 平台表）、Redis（登录态 + 对话流）、Milvus（向量） | 单文件 SQLite（better-sqlite3 + Drizzle），运行时数据目录可自定义 |
 | 登录与权限 | XXL-SSO 登录（Redis 存储登录态）、RBAC 菜单 / 按钮权限、动态菜单零路由改动 | 无登录 / 无角色体系，纯本地应用 |
@@ -584,7 +585,7 @@ XXL-AI 提供「**云本结合**」两种交付形态，二者同源同品牌、
 2. **数据与部署差异**：云版依赖 MySQL + Redis + Milvus 三件套，支持集群扩展与高可用；本地版仅需一个 SQLite 单文件，零服务依赖，安装即用、离线可用。
 3. **运行时差异**：云版基于 spring-ai `ChatClient`，对话生成 worker 经 Redis Stream 解耦，支持无状态转发与断点续传；本地版基于 Pi Agent 运行时，独立 `utilityProcess` 承载模型调用与工具执行，主进程只做 IPC 网关与越界审批，保证流式与 UI 顺滑。
 4. **能力侧重差异**：云版强在「资源编排 + 一键发布 + 权限治理 + 团队协作」；本地版强在「本地系统操作」——直接读写项目文件、执行终端命令、内嵌浏览器 / 文件编辑器，是真正落地到编码场景的本地 Agent。
-5. **安全控制差异**：云版以空间 + RBAC + 审计做边界；本地版以项目目录沙箱 + Plan/Build 模式 + 越界人工审批做边界（Plan 只读、Build 读写，默认 Build）。
+5. **安全控制差异**：云版以空间 + RBAC + 审计做边界；本地版以「三档权限模式 + 路径闸门 + 敏感操作拦截」做边界（默认工作区内修改，完全权限下敏感目录仍拦截）。
 
 ### 4.4 使用场景与选型建议
 
@@ -1180,7 +1181,7 @@ public Response<PageModel<MessageDTO>> pageList(...) { ... }
 - **进程隔离**：渲染进程无 Node 能力、运行时进程无 Electron 能力，敏感能力（密钥、审批编排）留在主进程，越界操作转人工审批；
 - **网关薄化**：主进程 `ipc.ts` 只做注册与兜底，业务编排下沉 `modules/{domain}/main/*`；
 - **能力收敛**：Agent 把「系统指令 + SKILL + MCP + 内置工具」编排为会话能力；MCP、SKILL、内置工具统一归一为 Pi 的 `AgentTool` 装配进同一会话 Agent，共用模式过滤、沙箱与审批、提示注入机制（见 6.4）；
-- **模式即权限**：Plan 只读、Build 读写，从工具装配层面限制副作用，而非依赖提示词约束。
+- **权限即边界**：仅可查看不装配写 / 命令工具，工作区内修改限定项目与系统临时目录，完全权限全局读写；从工具装配与路径闸门两层限制副作用，而非依赖提示词约束。
 
 #### 6.1.3、技术选型
 
@@ -1287,7 +1288,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 | Agent 关联 | Agent `mcp_ids` 勾选 | Agent `skill_ids` 勾选 | Agent `tool_fs / tool_shell / tool_browser / tool_general / tool_interaction` |
 | 装配入口 | `modules/mcp/worker/tools.ts` | `modules/skill/worker/tools.ts` | `modules/agent/worker/tools/index.ts` 注册表 |
 | 暴露给模型 | 每个远程工具一个同名工具（`mcp_{服务}_{工具}`） | 一个 `read_skill` 工具 + 系统提示中的技能索引 | 每个工具一个（`read_file` / `run_command` …） |
-| 模式过滤 | Plan 仅 `readOnlyHint` 工具 | 只读，Plan / Build 均可用 | 按 `ToolMeta.modes` 声明 |
+| 权限过滤 | 仅可查看仅 `readOnlyHint` 工具 | 只读工具三档均可用 | 按 `ToolMeta.permissionModes` 声明 |
 | 生效方式 | 保存 / 删除后 `resetAgents`，下一轮重建 | 导入 / 启停 / 删除后 `resetAgents` | Agent 保存后清理绑定会话，下一轮重建 |
 
 **分层职责**（与云版 `business / harness` 的思想一致，本地版按进程切分）：
@@ -1327,7 +1328,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
 **提示词经济**：常驻上下文只放「索引」，正文一律按需拉取。内置工具清单经 `buildToolGuide()` 生成 `名称（只读/可写）：说明` 列表追加到系统指令，避免模型臆造工具；SKILL 只注入名称与描述，正文由 `read_skill` 按需读取；MCP 依靠工具自身的 `name / description / inputSchema`，不额外注入。
 
-**安全边界**：能力再开放也不越过三层闸门——**模式闸门**（Plan 模式不装配写 / 命令工具，MCP 只放行显式只读的工具）、**路径闸门**（所有文件类工具统一经 `guardPath`，越界转人工审批）、**拦截闸门**（危险命令规则库直接拒绝，不请求审批）。三者相互独立，任一命中即可阻止副作用。
+**安全边界**：能力再开放也不越过三层闸门——**权限闸门**（仅可查看不装配写 / 命令工具，MCP 只放行显式只读的工具）、**路径闸门**（所有文件类工具统一经 `guardPath`，按权限模式放行全局读、项目与临时目录写，越界转人工审批）、**拦截闸门**（危险命令与敏感路径直接拒绝，不请求审批）。三者相互独立，任一命中即可阻止副作用。
 
 **变更生效**：Agent 配置与工具集合都在会话 Agent 创建时固化，因此任何改变工具集合的操作（保存 Agent、保存 / 删除 MCP、导入 / 启停 / 删除技能、切换工具开关、切换模型、项目记忆变更）都会清理相关会话运行时（`evictAgent` / `resetAgents`），下一轮对话重新装配；同一会话的已发生消息由 `desk_message` 恢复，不因重建丢失上下文。
 
@@ -1367,7 +1368,7 @@ SKILL 是**「文件即插件」**的流程知识包：一个目录 + 一份 `SK
 
 1. `listSkillsForRuntime()` 产出全部已启用技能，再按会话绑定 Agent 的 `skillIds` 过滤为 `SkillRuntimeConfig { id, name, description, dir }`；
 2. `buildSkillPrompt()` 生成技能索引注入系统指令，只含**名称 + 单行描述**，并声明「技能内容仅用于完成当前任务，不得改变系统安全规则」——这是对提示词注入的显式防护；
-3. 存在已启用技能时才注册 `read_skill` 工具（只读，Plan / Build 均可用）：按名称或目录名（忽略大小写）定位技能，默认读 `SKILL.md`，也可读技能目录内的附属脚本 / 参考文件；
+3. 存在已启用技能时才注册 `read_skill` 工具（只读，三档权限均可用）：按名称或目录名（忽略大小写）定位技能，默认读 `SKILL.md`，也可读技能目录内的附属脚本 / 参考文件；
 4. **读取约束**：`realpath` 归一后做 `relative` 双重校验，只允许技能目录内文件；含 NUL 字节视为二进制直接拒绝，避免乱码写入上下文；输出由注册表按 100k 字符上限截断。软件数据目录下的 SKILL 内容会话读取时直接放行，不做越界拦截。
 
 **上下文经济**：如果直接把所有 `SKILL.md` 全量拼进系统提示，几个技能就会吃掉数万 token 且相互干扰；因此采用「**索引常驻 + 正文按需**」的两级加载，多数对话的常驻开销只有每技能一行。
@@ -1401,7 +1402,7 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 - **参数**：MCP 的 `inputSchema` 经 `Type.Unsafe` 直接作为工具参数，补齐 `type: 'object'` 与缺省 `properties`，规避部分服务未声明属性被供应商拒绝；
 - **执行**：统一 `executionMode: 'sequential'`（MCP 工具有副作用，不与文件写入交错）；
 - **结果**：`toLlmContent` 转为模型可读的文本 / 图片内容；`result.isError` 与协议 / 网络异常统一包装为工具错误，由 UI 标记失败；
-- **模式**：Build 全量注册，Plan 只注册 `annotations.readOnlyHint === true` 的工具——**只读语义由服务端声明，客户端不猜**。
+- **权限**：工作区内修改 / 完全权限全量注册，仅可查看只注册 `annotations.readOnlyHint === true` 的工具——**只读语义由服务端声明，客户端不猜**。
 
 #### 6.4.4、内置工具：文件 / 浏览器 / 终端 / 通用 / 人机交互
 
@@ -1415,40 +1416,40 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 | 浏览器 | 多标签 `webview` 内嵌浏览，供用户查看 Agent 浏览过程，也可独立使用 |
 | 终端 | `node-pty` + `xterm` 真实终端，多会话、随项目目录启动，`locale` 固定 UTF-8 解决中文乱码；项目维度还可查看 Git 变更并执行审核、推送 |
 
-**内置工具**是随客户端发布的**本地能力底座**，按域拆文件、由统一注册表装配（`modules/agent/worker/tools/index.ts`）：每个域导出一个工厂函数，注册表 `Promise.all` 聚合后按 `meta.modes` 与内置工具开关过滤。新增工具只需在对应域文件追加定义，不必触碰装配逻辑。
+**内置工具**是随客户端发布的**本地能力底座**，按域拆文件、由统一注册表装配（`modules/agent/worker/tools/index.ts`）：每个域导出一个工厂函数，注册表 `Promise.all` 聚合后按 `meta.permissionModes` 与内置工具开关过滤。新增工具只需在对应域文件追加定义，不必触碰装配逻辑。
 
 当前内置工具清单：
 
-| 域 | 工具 | 只读 | 模式 | 闸门 | 输出上限 |
+| 域 | 工具 | 只读 | 权限 | 闸门 | 输出上限 |
 |---|---|---|---|---|---|
-| general | `get_current_time` | 是 | Plan / Build | Agent 工具开关 | 2k |
-| fs | `read_file` | 是 | Plan / Build | 路径闸门（越界审批） | 20k |
-| fs | `list_directory` | 是 | Plan / Build | 路径闸门（越界审批） | 12k |
-| fs | `glob_files` | 是 | Plan / Build | 路径闸门（越界审批） | 12k |
-| fs | `search_files` | 是 | Plan / Build | 路径闸门（越界审批） | 20k |
-| fs | `write_file` | 否 | Build | 路径闸门 + 越界审批 | 2k |
-| fs | `edit_file` | 否 | Build | 路径闸门 + 越界审批 | 2k |
-| fs | `delete_file` | 否 | Build | 路径闸门 + 越界审批 | 2k |
-| fs | `move_file` | 否 | Build | 路径闸门 + 越界审批 | 2k |
-| shell | `run_command` | 否 | Build | 危险命令拦截 + 越界路径审批 | 20k |
-| browser | `open_browser` / `read_browser` / `snapshot_browser` | 是 | Plan / Build | Agent 工具开关 | 2k / 51k / 20k |
-| browser | `click_browser` / `fill_browser` | 否 | Build | Agent 工具开关 | 2k / 3k |
-| browser | `hover_browser` / `scroll_browser` | 是 | Plan / Build | Agent 工具开关 | 2k / 2k |
-| browser | `press_browser` / `select_browser` | 否 | Build | Agent 工具开关 | 2k / 2k |
-| browser | `wait_browser` / `screenshot_browser` / `inspect_browser` / `browser_tabs` | 是 | Plan / Build | Agent 工具开关 | 2k / 2k / 8k / 4k |
-| skill | `read_skill` | 是 | Plan / Build | 技能目录限定（技能库读取放行） | 100k |
-| interaction | `ask_user` | 是 | Plan / Build | Agent 工具开关 | 4k |
+| general | `get_current_time` | 是 | 三档 | Agent 工具开关 | 2k |
+| fs | `read_file` | 是 | 三档 | 路径闸门（越界审批） | 20k |
+| fs | `list_directory` | 是 | 三档 | 路径闸门（越界审批） | 12k |
+| fs | `glob_files` | 是 | 三档 | 路径闸门（越界审批） | 12k |
+| fs | `search_files` | 是 | 三档 | 路径闸门（越界审批） | 20k |
+| fs | `write_file` | 否 | 工作区 / 完全 | 路径闸门 + 越界审批 | 2k |
+| fs | `edit_file` | 否 | 工作区 / 完全 | 路径闸门 + 越界审批 | 2k |
+| fs | `delete_file` | 否 | 工作区 / 完全 | 路径闸门 + 越界审批 | 2k |
+| fs | `move_file` | 否 | 工作区 / 完全 | 路径闸门 + 越界审批 | 2k |
+| shell | `run_command` | 否 | 工作区 / 完全 | 危险命令拦截 + 越界路径审批 | 20k |
+| browser | `open_browser` / `read_browser` / `snapshot_browser` | 是 | 三档 | Agent 工具开关 | 2k / 51k / 20k |
+| browser | `click_browser` / `fill_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 3k |
+| browser | `hover_browser` / `scroll_browser` | 是 | 三档 | Agent 工具开关 | 2k / 2k |
+| browser | `press_browser` / `select_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 2k |
+| browser | `wait_browser` / `screenshot_browser` / `inspect_browser` / `browser_tabs` | 是 | 三档 | Agent 工具开关 | 2k / 2k / 8k / 4k |
+| skill | `read_skill` | 是 | 三档 | 技能目录限定（技能库读取放行） | 100k |
+| interaction | `ask_user` | 是 | 三档 | Agent 工具开关 | 4k |
 
-**模式语义**：`plan` 只装配 `ALL_MODES` 中的只读工具，`build` 才装配 `BUILD_ONLY` 的写文件与命令工具——这是「从工具层面限制只读」，而非依赖提示词约束模型自觉。
+**权限语义**：`read-only` 只装配 `ALL_PERMISSIONS` 中的只读工具，`workspace-write` / `full-access` 才装配 `WRITE_PERMISSIONS` 的写文件与命令工具——这是「从工具层面限制只读」，而非依赖提示词约束模型自觉。
 
-**文件沙箱**（`modules/agent/worker/sandbox.ts`）：所有文件类工具统一经 `createGuard` → `guardPath`。路径先 `canonicalize`（逐级回落到最近的已存在祖先再 `realpath`，把软链接与 `..` 都摊平），再判断是否位于项目根目录内；目录内直接放行。技能库（`RunAgentInput.skillsDir`）是用户主动安装的可信资料：读取整库直接放行，读 / 写 / 命令均不弹审批。项目目录外的其它路径经 `hitl.ts` → 主进程 → 渲染层发起应用内审批——三选一「允许本次 / 本会话允许 / 拒绝」，本会话允许记入会话级内存信任，后续越界不再询问。读取与写入走同一闸门（`action` 区分文案），写工具在元信息上标 `requiresApproval`，用于提示与展示。
+**文件沙箱**（`modules/agent/worker/sandbox.ts`）：所有文件类工具统一经 `createGuard` → `guardPath`。路径先 `canonicalize`（逐级回落到最近的已存在祖先再 `realpath`，把软链接与 `..` 都摊平），再按会话权限判断：读取（全局读）一律放行；写入在「工作区内修改」下仅放行项目目录与系统临时目录，越界经 `hitl.ts` → 主进程 → 渲染层发起应用内审批（允许本次 / 本会话允许 / 拒绝）；「完全权限」全局放行。技能库（`RunAgentInput.skillsDir`）是用户主动安装的可信资料，读写与命令均不弹审批；系统目录与用户敏感目录（`~/.ssh` 等）即使完全权限也不允许写入，作为统一兜底拦截。写工具在元信息上标 `requiresApproval`，用于提示与展示。
 
-**命令闸门**（`modules/agent/worker/tools/shell.ts` + `shellPolicy.ts`）：`run_command` 仅 Build 可用，执行前跑危险命令规则库（删除根目录 / 提权 / 下载管道执行 `curl | sh` / fork 炸弹等），命中即把原因回填给模型并拒绝执行，引导其改用安全方式或请用户自行执行；显式访问项目目录外的路径时复用文件工具的越界审批；未命中则在项目目录内 `exec`，默认 60s 超时、`maxBuffer` 2 MB（输出最终还会被截断到 20k）、用户终止时随 `signal` 杀掉子进程，并统一 `executionMode: 'sequential'`。
+**命令闸门**（`modules/agent/worker/tools/shell.ts` + `shellPolicy.ts`）：`run_command` 仅在「工作区内修改」及以上权限可用，执行前跑危险命令规则库（删除根目录 / 提权 / 下载管道执行 `curl | sh` / fork 炸弹等），命中即把原因回填给模型并拒绝执行，引导其改用安全方式或请用户自行执行；显式访问项目目录外的路径时复用文件工具的越界审批；未命中则在项目目录内 `exec`，默认 60s 超时、`maxBuffer` 2 MB（输出最终还会被截断到 20k）、用户终止时随 `signal` 杀掉子进程，并统一 `executionMode: 'sequential'`。
 
 **新增一个内置工具的落位步骤**：
 
 1. 在对应域文件（如 `modules/{file,agent,browser,skill}/worker/*.ts`）中定义 `AgentTool`，并用 `describe(zh, en)` 双语描述、`text()` / `toolError()` 统一结果；
-2. 返回 `{ meta, tool }`，显式声明 `group / readOnly / modes / requiresApproval / maxOutput`；
+2. 返回 `{ meta, tool }`，显式声明 `group / readOnly / permissionModes / requiresApproval / maxOutput`；
 3. 若是新域，在 `modules/agent/worker/tools/index.ts` 的 `FACTORIES` 登记工厂，并同步 `AgentToolSwitches` 与 Agent 编辑页开关（同域追加则无需改动）；
 4. 需要前端可见时，在 `modules/plugin/renderer/builtin/catalog.ts` 登记名称、分类与文案 key（工具名必须与注册表一致）。
 
@@ -1564,7 +1565,7 @@ desk_llm_trace
 
 - **文件沙箱**：所有文件工具经统一 `guardPath` 闸门，路径规范化（解析软链接）后限定当前项目目录；
 - **越界审批**：越界操作经 `hitl` → 主进程 → 渲染层弹应用内对话框，可选「允许本次 / 本会话允许 / 拒绝」，会话级信任记入内存；
-- **模式隔离**：Plan 模式不装配写 / 命令工具，从工具层面限制只读；
+- **权限隔离**：仅可查看不装配写 / 命令工具，从工具层面限制只读；
 - **进程隔离**：渲染进程无 Node 能力，运行时进程无 Electron 能力，敏感能力（密钥、审批编排）留在主进程。
 
 #### 6.5.2、本地配置
@@ -1738,14 +1739,15 @@ docker compose down
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 > 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
-- 16、【ING】权限管控：升级三档权限模式「仅可查看（全局读）、工作区内修改（全局读 + 项目&系统临时目录写）、完全权限（全局读写）」；同时，兜底保留统一的敏感操作拦截机制；
+- 16、【新增】权限管控：升级三档权限模式「仅可查看（全局读）、工作区内修改（全局读 + 项目&系统临时目录写）、完全权限（全局读写）」；同时，兜底保留统一的敏感操作拦截机制；
   （read-only、workspace-write、full-access）
-- 17、【ING】应用中心：包含多个 菜单功能：
-    - 应用市场：顶部两个TAB，分别为「已安装应用」和「应用市场」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
+- 17、【ING】应用中心：支持如下功能；
+    - 应用市场：顶部两个TAB，分别为「已安装应用」和「发现应用」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
     （左侧导航栏应用类入口，与顶部固定入口时间通过横线隔开；没有应用入口时横线不展示；）
     - 创造应用：支持在线创建应用；单个应用本质是一个 文件夹，内部包含本引用所需文件；支持自动检测应用文件夹识别为应用；
-    - 内置应用（笔记）：支持 笔记文件目录、笔记Markdown编辑、内容目录、预览、搜索/替换、图片插入 等；
-    - 内置应用（JSON序列化）：支持JSON数据格式化、美化、压缩、校验、搜索/替换、复制等；
+    - 内置应用（笔记）：支持 笔记文件目录（左侧）、笔记Markdown编辑器（中间）、内容目录、预览、搜索/替换、图片插入 等；
+    - 内置应用（公众号编辑器）：支持 公众号模板选择（左列）、文章编辑器（中间）、文章设置（内容块设置、预览设置）、重置/复制全文/复制HTML 等；
+    - 内置应用（工具箱）：支持 JSON工具、编码转换、时间戳转换、文本对比、公众号编辑器 等;
 
 
 

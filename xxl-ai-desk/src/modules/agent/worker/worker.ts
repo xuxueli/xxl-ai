@@ -152,7 +152,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
       provider: input.provider,
       modelId: input.modelId,
       systemPrompt: input.systemPrompt,
-      mode: input.mode,
+      permissionMode: input.permissionMode,
       rootDir: input.rootDir,
       language: input.language,
       runtimePath: input.mcpRuntimePath,

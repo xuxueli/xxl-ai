@@ -10,7 +10,7 @@
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { exec } from 'child_process'
 import {
-  BUILD_ONLY,
+  WRITE_PERMISSIONS,
   MAX_OUTPUT,
   describe,
   skillTrustedRoots,
@@ -20,8 +20,8 @@ import {
   type ToolContext,
   type ToolEntry
 } from '@modules/agent/worker/toolkit'
-import { detectDangerousCommand, findOutsideTarget } from '@modules/agent/worker/tools/shellPolicy'
-import { guardPath } from '@modules/agent/worker/sandbox'
+import { detectDangerousCommand, findOutsideTargets } from '@modules/agent/worker/tools/shellPolicy'
+import { guardPath, protectedPathOf } from '@modules/agent/worker/sandbox'
 
 /* 运行时 PATH（主进程随每轮对话下发，供命令使用设置的 Node / Python 环境） */
 let runtimePath: string | undefined
@@ -38,13 +38,13 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
   /* 技能库为完全信任目录：命令访问技能库不触发越界审批 */
   const trustedRoots = skillTrustedRoots(context)
 
-  /* 执行命令：项目目录内执行 shell 并汇总 stdout/stderr，仅 Build 模式 */
+  /* 执行命令：项目目录内执行 shell 并汇总 stdout/stderr，仅写入权限可用 */
   const runCommand: AgentTool = {
     name: 'run_command',
     label: '执行命令',
     description: describe(
-      '在项目目录内执行 shell 命令并返回输出（仅 Build 模式可用）。危险命令（删除根目录、提权、管道执行远端脚本等）会被拦截；显式访问项目目录之外的路径会先请求确认',
-      'Run a shell command inside the project directory and return its output (Build mode only). Destructive commands (root deletion, privilege escalation, piping remote scripts to a shell) are blocked; explicit access outside the project directory requires confirmation.'
+      '在项目目录内执行 shell 命令并返回输出（仅工作区内修改及以上权限可用）。危险命令（删除根目录、提权、管道执行远端脚本等）会被拦截；显式访问项目目录之外的路径会按当前权限处理',
+      'Run a shell command inside the project directory and return its output (workspace-write or full-access only). Destructive commands (root deletion, privilege escalation, piping remote scripts to a shell) are blocked; explicit access outside the project directory follows the current permission mode.'
     ),
     parameters: Type.Object({
       command: Type.String({ description: '要执行的命令' }),
@@ -68,9 +68,13 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
           isError: true
         }
       }
-      /* 越界路径：与文件工具共用审批弹窗与会话级信任；技能库为完全信任目录 */
-      const outside = findOutsideTarget(command, rootDir)
-      if (outside) {
+      /* 越界路径：先全量检查敏感目录，再与文件工具共用权限闸门 */
+      const outsideTargets = findOutsideTargets(command, rootDir)
+      const sensitiveTarget = outsideTargets.find((target) => protectedPathOf(target))
+      if (sensitiveTarget) {
+        return toolError(tr(context, 'runtime.tool.protectedPath', [sensitiveTarget]))
+      }
+      for (const outside of outsideTargets) {
         const outcome = await guardPath({
           sessionId: context.sessionId,
           rootDir,
@@ -78,6 +82,7 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
           action: 'command',
           tool: 'run_command',
           language: context.language,
+          permissionMode: context.permissionMode,
           trustedRoots
         })
         if (!outcome.allowed) {
@@ -133,7 +138,7 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
       meta: {
         group: 'shell',
         readOnly: false,
-        modes: BUILD_ONLY,
+        permissionModes: WRITE_PERMISSIONS,
         requiresApproval: true,
         maxOutput: MAX_OUTPUT
       },

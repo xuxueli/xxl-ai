@@ -17,7 +17,7 @@ import { useAgentStore } from '@modules/agent/renderer'
 import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { useChatUiStore } from '@modules/chat/renderer/store/ui'
 import { t } from '@renderer/shell/i18n'
-import type { ChatMode } from '@modules/chat/shared'
+import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
 
 const router = useRouter()
 const chat = useChatStore()
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
 })
 
 /* 发送消息：校验模型与项目后交给会话 store 发起生成 */
-async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
+async function onSend(text: string, permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE): Promise<void> {
   if (!canChat.value) {
     ElMessage.warning(t('chat.noModel'))
     router.push('/settings')
@@ -199,7 +199,7 @@ async function onSend(text: string, mode: ChatMode = 'build'): Promise<void> {
     ElMessage.warning(t('agent.needAgent'))
     return
   }
-  await chat.send(text, mode)
+  await chat.send(text, permissionMode)
 }
 
 /* 编辑用户消息：回填输入框并聚焦 */

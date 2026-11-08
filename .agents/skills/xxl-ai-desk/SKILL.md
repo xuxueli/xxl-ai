@@ -440,16 +440,16 @@ shell/layout/index.vue（app-wrapper，纵向）
 | Agent 配置 | `modules/agent/main/{agentService,seed}.ts` | `desk_agent` 保存名称 / 指令 / SKILL / MCP / 工具分类；默认内置 Agent 禁删，被会话占用禁删 |
 | 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/agent/worker/memory.ts` | 记忆随 `desk_project` 行保存，按 `memory_enabled` 注入；生成与消费解耦 |
 | 会话压缩 | `modules/chat/main/sessionSummaryService.ts` + `modules/agent/worker/summary.ts` | 摘要存 `desk_session.summary*`；无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 时异步压缩 |
-| 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写/命令类仅 build；是否进入「内置工具」页见 §6.1 |
-| 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, readAllowedRoots, trustedRoots })`，越界返回拦截错误 |
+| 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写 / 命令类需「工作区内修改」及以上权限；是否进入「内置工具」页见 §6.1 |
+| 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, permissionMode, trustedRoots })`，越界返回拦截错误 |
 | 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层弹窗，回传 `allow`（可 `remember`）/ `deny` |
 | MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
-| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式/工具约束 |
-| 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按模式 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_MODES` / `BUILD_ONLY` / `describe` / `toolError` / `createGuard` |
+| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 权限/工具约束 |
+| 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按权限 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_PERMISSIONS` / `WRITE_PERMISSIONS` / `describe` / `toolError` / `createGuard` |
 | 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
 | 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
 
-工具结果 `content` 为文本块数组；失败用 `isError: true`。新增工具必须自测越界拦截与 Plan 模式不可见。
+工具结果 `content` 为文本块数组；失败用 `isError: true`。新增工具必须自测越界拦截与「仅可查看」权限下不可见。
 
 ### 6.1 内置工具目录的产品边界（硬约束）
 
@@ -457,7 +457,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 1. 由客户端自身提供，不是外部 MCP / 插件动态接入；
 2. 是独立能力，不是其它功能的内部实现（如 `read_skill` 仅服务 SKILL）；
-3. 用户可理解、可能需要管理（开关 / 权限 / 适用模式）；
+3. 用户可理解、可能需要管理（开关 / 权限档位）；
 4. 不与已有管理页重复（MCP → MCP 页，SKILL → SKILL 页）。
 
 判定顺序：**先问用户是否应在此页看到并管理，再看代码里有没有。**
@@ -468,7 +468,9 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ### 6.2 沙箱与信任边界 [硬]
 
-- **信任域只有两个**：会话项目目录（读 / 写 / 命令）与技能库 `{dataDir}/skills`（读 / 写 / 命令，完全信任）；其它目录一律走越界审批。
+- **权限档位优先**：`read-only` 全局可读、禁止写 / 命令；`workspace-write` 全局可读，仅项目目录与系统临时目录可直接写，其它写入走越界审批；`full-access` 全局读写。
+- **信任域**：会话项目目录（读 / 写 / 命令）与技能库 `{dataDir}/skills`（读 / 写 / 命令，完全信任）；`workspace-write` 下项目目录与系统临时目录属于直接放行范围，其它越界写入走审批。
+- **敏感路径兜底**：系统目录与用户凭据目录（`~/.ssh` 等）即使 `full-access` 也不允许写入，由 `protectedPathOf` 统一拦截。
 - **技能库读取权限 ≠ 技能启用状态**：
   - 技能库整库永远可读（含未启用技能、技能根目录列举），不得弹审批；
   - 「启用」只决定提示词注入与 `read_skill` 是否可用（使用权限）；
@@ -476,7 +478,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **技能根目录由主进程每轮下发**（`RunAgentInput.skillsDir`）；工具侧禁止自行推断或拼接技能目录。
 - **越界审批只走统一闸门**：`guardPath` → `hitl` → 主进程 → 渲染层；新增文件 / 命令工具必须复用 `createGuard` / `guardPath`，禁止自写路径判断。
 - **`run_command` 的路径识别只防误操作，不是安全边界**：动态展开（`$VAR`、命令替换）、解释器（`python -c`、`sh -c`）无法覆盖；不要为它叠加脆弱的「只读命令白名单」或其它启发式解析。
-- **会话信任粒度**：当前 `sessionTrusted` 为会话级全量放行；后续扩展必须收敛为「目录 + 动作」粒度，避免一次授权放大到全部读写命令。
+- **会话信任粒度**：`sessionTrusted` 仅在 `workspace-write` 的越界审批中生效，为会话级全量放行；后续扩展必须收敛为「目录 + 动作」粒度，避免一次授权放大到全部读写命令。
 
 ### 6.3 Agent 配置与会话绑定 [硬]
 

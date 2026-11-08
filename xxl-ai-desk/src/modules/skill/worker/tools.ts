@@ -1,6 +1,6 @@
 /*
  * 技能类内置工具：读取当前 Agent 已配置技能的 SKILL.md 与附属文件。
- *   - 只读，Plan / Build 均可用；
+ *   - 只读，三档权限均可用；
  *   - Agent 勾选决定能否主动使用技能（read_skill 入口）；
  *   - 技能库的文件读取权限是另一维度：整库只读放行，永不弹审批（见 shared.ts）。
  */
@@ -8,7 +8,7 @@
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { promises as fs } from 'fs'
 import { isAbsolute, relative, resolve } from 'path'
-import { ALL_MODES, describe, text, toolError, tr, type ToolContext, type ToolEntry } from '@modules/agent/worker'
+import { ALL_PERMISSIONS, describe, text, toolError, tr, type ToolContext, type ToolEntry } from '@modules/agent/worker'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import { translate } from '@common/shared/i18n'
 
@@ -97,7 +97,7 @@ export async function createSkillTools(context: ToolContext): Promise<ToolEntry[
       meta: {
         group: 'skill',
         readOnly: true,
-        modes: ALL_MODES,
+        permissionModes: ALL_PERMISSIONS,
         /* 技能说明可能较长，放宽到 10 万字符（仍受单次上下文预算约束） */
         maxOutput: 100000
       },

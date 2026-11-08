@@ -3,7 +3,7 @@
  *   - 参数：MCP inputSchema 经 Type.Unsafe 直接作为工具参数（补齐 type/properties）；
  *   - 结果：toLlmContent 将 MCP 结果转为模型可读的文本/图片内容；
  *   - 失败：MCP 用 result.isError 表达工具失败，协议/网络错误包装为工具错误；
- *   - 模式：Build 全量注册，Plan 仅注册 readOnlyHint 工具；
+ *   - 权限：仅可查看只注册 readOnlyHint 工具，其余权限全量注册；
  *   - 单服务连接失败仅跳过该服务，不影响本轮对话。
  *
  * @author xuxueli 2026-10-31
@@ -11,7 +11,7 @@
 
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import log from 'electron-log/main'
-import type { ChatMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 import type { McpRuntimeConfig } from '@modules/mcp/shared'
 import { translate } from '@common/shared/i18n'
 import {
@@ -54,14 +54,14 @@ function buildToolDetails(
  */
 export async function createMcpTools(options: {
   servers: McpRuntimeConfig[]
-  mode: ChatMode
+  permissionMode: PermissionMode
   /* 应用语言：工具错误文案使用对应语言 */
   language: 'zh' | 'en'
   runtimePath: string
   /* 会话是否已被终止：创建阶段提前跳出，避免终止后仍等待连接 */
   isAborted?: () => boolean
 }): Promise<AgentTool[]> {
-  const { servers, mode } = options
+  const { servers, permissionMode } = options
   if (servers.length === 0) {
     return []
   }
@@ -98,8 +98,8 @@ export async function createMcpTools(options: {
     const { server, tools: discovered } = discoveredItem
 
     for (const tool of discovered) {
-      /* Plan 模式只读：仅暴露显式声明只读的工具 */
-      if (mode === 'plan' && tool.annotations?.readOnlyHint !== true) {
+      /* 仅可查看：仅暴露显式声明只读的工具 */
+      if (permissionMode === 'read-only' && tool.annotations?.readOnlyHint !== true) {
         continue
       }
 

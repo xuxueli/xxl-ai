@@ -1,12 +1,31 @@
 /*
- * 会话域跨进程契约：对话模式、会话与已持久化消息。
+ * 会话域跨进程契约：权限模式、会话与已持久化消息。
  */
 
 import type { MessageSource } from './messageSource'
 import type { MessageStatus } from './messageStatus'
 
-/* 对话模式：plan 只读只规划；build 全量读写（默认） */
-export type ChatMode = 'plan' | 'build'
+/*
+ * 权限模式（随会话持久化，默认工作区内修改）：
+ *   - read-only       仅可查看：全局可读，不可写入、不可执行命令；
+ *   - workspace-write 工作区内修改：全局可读，仅项目目录与系统临时目录可写；
+ *   - full-access     完全权限：全局读写，敏感操作仍由统一拦截机制兜底。
+ */
+export type PermissionMode = 'read-only' | 'workspace-write' | 'full-access'
+
+/* 新建会话与历史脏数据的默认权限 */
+export const DEFAULT_PERMISSION_MODE: PermissionMode = 'workspace-write'
+
+/* 权限模式归一：兼容历史 plan / build 取值与非法值 */
+export function normalizePermissionMode(value: unknown): PermissionMode {
+  if (value === 'read-only' || value === 'plan') {
+    return 'read-only'
+  }
+  if (value === 'full-access') {
+    return 'full-access'
+  }
+  return 'workspace-write'
+}
 
 /* 会话摘要固定长度上限（字符） */
 export const SESSION_SUMMARY_MAX_CHARS = 2000
@@ -25,8 +44,8 @@ export interface SessionDTO {
   providerId: number
   /* 选用的模型 ID */
   modelId: string
-  /* 对话模式（plan 只读只规划 / build 全量读写） */
-  mode: ChatMode
+  /* 权限模式（仅可查看 / 工作区内修改 / 完全权限） */
+  permissionMode: PermissionMode
   /* 创建时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

@@ -8,7 +8,13 @@
 import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
-import type { ChatMode, HistoryEntry, InteractionResult, MessageSource, SessionDTO } from '@modules/chat/shared'
+import type {
+  HistoryEntry,
+  InteractionResult,
+  MessageSource,
+  PermissionMode,
+  SessionDTO
+} from '@modules/chat/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -210,12 +216,15 @@ function normalizeHistoryMessage(raw: unknown): { role?: string; content?: unkno
   return message
 }
 
-/* 模式说明：拼接到系统指令末尾，引导模型按当前模式行事（Plan 只读规划，Build 读写实施） */
-function modeSystemHint(mode: ChatMode): string {
-  if (mode === 'plan') {
-    return '\n\n当前为 Plan（规划）模式：你处于只读状态，只能读取项目文件进行阅读与分析，不能写入/编辑文件或执行命令。请先给出清晰的方案与计划，待用户切换到 Build 模式后再落地实施。'
+/* 权限说明：拼接到系统指令末尾，引导模型按当前权限行事（路径闸门另有强制拦截） */
+function permissionSystemHint(permissionMode: PermissionMode): string {
+  if (permissionMode === 'read-only') {
+    return '\n\n当前权限为「仅可查看」：你可以读取全局任意路径的文件，但不可写入 / 编辑 / 删除文件，也不可执行命令。需要落地修改时，请说明方案并提示用户切换权限。'
   }
-  return '\n\n当前为 Build（构建）模式：你可以读取、写入、编辑项目文件并执行命令；文件操作限制在当前项目目录内，越界需用户确认。'
+  if (permissionMode === 'full-access') {
+    return '\n\n当前权限为「完全权限」：你可以读取和写入全局任意路径的文件并执行命令。系统目录、用户敏感目录等高风险操作仍会被统一拦截机制阻止。'
+  }
+  return '\n\n当前权限为「工作区内修改」：你可以读取全局任意路径的文件；仅可写入当前项目目录与系统临时目录，其它位置写入或命令访问项目外路径需用户确认。'
 }
 
 /* 工具调用约束：禁止调用已从 Agent 配置中移除的工具，禁止用文本伪造工具调用 */
@@ -339,8 +348,8 @@ export async function sendChat(
     modelId = model
     contextReady = true
 
-    /* 对话模式与文件沙箱边界：默认 Build；会话必须绑定有效项目，禁止回退主目录造成沙箱扩大 */
-    const mode = session.mode === 'plan' ? 'plan' : 'build'
+    /* 权限模式与文件沙箱边界：会话必须绑定有效项目，禁止回退主目录造成沙箱扩大 */
+    const permissionMode = session.permissionMode
     const project = session.projectId ? getProject(session.projectId) : null
     if (!project) {
       fail(translate(language, 'runtime.projectMissing'))
@@ -372,7 +381,7 @@ export async function sendChat(
       memoryPrompt,
       summaryPrompt,
       buildSkillPrompt(skills),
-      modeSystemHint(mode),
+      permissionSystemHint(permissionMode),
       toolUsageSystemHint(),
       hitlSystemHint(agent.tools.interaction)
     ].join('')
@@ -406,7 +415,7 @@ export async function sendChat(
       systemPrompt,
       messages: history,
       language: settings.language,
-      mode,
+      permissionMode,
       rootDir,
       runtimePath: buildRuntimePath(),
       mcpRuntimePath: buildMcpRuntimePath(),

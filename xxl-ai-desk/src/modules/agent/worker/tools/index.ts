@@ -1,5 +1,5 @@
 /*
- * 内置工具注册表：按域聚合工具工厂，并按对话模式统一装配。
+ * 内置工具注册表：按域聚合工具工厂，并按权限模式统一装配。
  *   - 每个工具自带 ToolMeta（分组 / 只读 / 适用模式 / 审批 / 输出上限）；
  *   - 新增工具只需在对应域文件中追加定义，无需修改装配逻辑；
  *   - 同时生成「当前可用工具」提示，随系统指令下发给模型。
@@ -49,14 +49,14 @@ function withOutputLimit(entry: ToolEntry): ToolEntry {
   }
 }
 
-/* 构建当前模式下的工具条目（含元信息，供提示生成使用） */
+/* 构建当前权限模式下的工具条目（含元信息，供提示生成使用） */
 export async function createBuiltinToolEntries(context: ToolContext): Promise<ToolEntry[]> {
   /* 关闭的分类不调用工厂：既不装配工具，也避免无谓的动态导入 */
   const enabled = FACTORIES.filter((item) => isGroupEnabled(item.group, context.tools))
   const groups = await Promise.all(enabled.map((item) => item.create(context)))
   return groups
     .flat()
-    .filter((entry) => entry.meta.modes.includes(context.mode))
+    .filter((entry) => entry.meta.permissionModes.includes(context.permissionMode))
     .map(withOutputLimit)
 }
 

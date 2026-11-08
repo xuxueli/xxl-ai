@@ -7,7 +7,7 @@ import type { Agent } from '@earendil-works/pi-agent-core'
 import { buildModels, type ProviderModelConfig } from '@modules/agent/worker/models'
 import { buildToolGuide, createBuiltinToolEntries } from '@modules/agent/worker/tools'
 import { createMcpTools } from '@modules/mcp/worker'
-import type { ChatMode, MessageSource } from '@modules/chat/shared'
+import type { MessageSource, PermissionMode } from '@modules/chat/shared'
 import type { HostEvent } from '@modules/agent/shared/agentProtocol'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { contentBlocks } from '@modules/chat/shared'
@@ -30,8 +30,8 @@ export interface AgentRuntimeOptions {
   provider: ProviderModelConfig
   modelId: string
   systemPrompt: string
-  /* 对话模式（plan 只读 / build 读写）与项目根目录（文件沙箱边界） */
-  mode: ChatMode
+  /* 权限模式（决定工具装配与全局读写范围）与项目根目录（工作区边界） */
+  permissionMode: PermissionMode
   rootDir: string
   /* 应用语言：工具错误与摘要文案使用对应语言 */
   language: AppLanguage
@@ -202,7 +202,7 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
     )
   }
   const entries = await createBuiltinToolEntries({
-    mode: options.mode,
+    permissionMode: options.permissionMode,
     rootDir: options.rootDir,
     sessionId: options.sessionId,
     language: options.language,
@@ -214,7 +214,7 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   /* MCP 工具：先等一个短预算（已连接/缓存命中即刻就绪），未就绪也不阻塞首字 */
   const mcpTask = createMcpTools({
     servers: options.mcpServers,
-    mode: options.mode,
+    permissionMode: options.permissionMode,
     language: options.language,
     runtimePath: options.runtimePath,
     isAborted: options.isAborted

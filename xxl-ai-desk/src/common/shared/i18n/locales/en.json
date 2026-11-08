@@ -172,6 +172,8 @@
     "tool": {
       "pathBlocked": "Blocked: outside the project directory",
       "pathDenied": "Blocked: \"{0}\" is outside the project directory \"{1}\", and the user denied this {2} operation.",
+      "permissionReadOnly": "Blocked: the current permission is Read only, which does not allow this {2} operation on \"{0}\".",
+      "protectedPath": "Blocked: \"{0}\" is a system or user-sensitive directory; writing is not allowed even with Full access.",
       "actionRead": "read",
       "actionWrite": "write",
       "actionCommand": "access",

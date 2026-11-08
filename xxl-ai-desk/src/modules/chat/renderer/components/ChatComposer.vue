@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* 输入框：Enter 发送，Shift+Enter 换行；底部选择对话模式与模型，并支持关联项目文件 */
+/* 输入框：Enter 发送，Shift+Enter 换行；底部选择权限模式与模型，并支持关联项目文件 */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -11,11 +11,11 @@ import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
 import ChatFilePicker from '@modules/chat/renderer/components/ChatFilePicker.vue'
 import { relativeToRoot } from '@modules/chat/renderer/utils/path'
-import type { ChatMode } from '@modules/chat/shared'
+import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
 import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
-const emit = defineEmits<{ submit: [text: string, mode: ChatMode]; stop: [] }>()
+const emit = defineEmits<{ submit: [text: string, permissionMode: PermissionMode]; stop: [] }>()
 
 /* 输入草稿：由父组件按会话注入，实现会话间草稿隔离 */
 const draft = defineModel<string>('draft', { default: '' })
@@ -28,8 +28,8 @@ const settings = useSettingsStore()
 const provider = useProviderStore()
 const inputRef = ref()
 const boxRef = ref<HTMLElement | null>(null)
-/* 新建对话草稿模式：会话创建时随会话落库，默认 Build */
-const draftMode = ref<ChatMode>('build')
+/* 新建对话草稿权限：会话创建时随会话落库，默认工作区内修改 */
+const draftPermissionMode = ref<PermissionMode>(DEFAULT_PERMISSION_MODE)
 /* 本轮关联文件：仅下一条消息生效，发送后清空 */
 const attachments = ref<FsEntry[]>([])
 /* 文件选择弹框显隐 */
@@ -91,20 +91,31 @@ const currentModelId = computed(() =>
 )
 const currentModelLabel = computed(() => currentModelId.value || t('settings.selectModel'))
 
-/* 当前对话模式：已生成对话取会话配置，新建对话取草稿（默认 Build） */
-const currentMode = computed<ChatMode>(() =>
-  locked.value ? chat.currentSession?.mode ?? 'build' : draftMode.value
+/* 当前权限模式：已生成对话取会话配置，新建对话取草稿（默认工作区内修改） */
+const currentPermissionMode = computed<PermissionMode>(() =>
+  locked.value
+    ? chat.currentSession?.permissionMode ?? DEFAULT_PERMISSION_MODE
+    : draftPermissionMode.value
 )
-const currentModeLabel = computed(() =>
-  currentMode.value === 'plan' ? t('chat.modePlan') : t('chat.modeBuild')
-)
+const currentPermissionLabel = computed(() => permissionLabel(currentPermissionMode.value))
 
-/* 切换模式：已生成对话落库到会话，新建对话仅改草稿 */
-async function onModeChange(mode: ChatMode): Promise<void> {
+/* 权限模式文案 */
+function permissionLabel(permissionMode: PermissionMode): string {
+  if (permissionMode === 'read-only') {
+    return t('chat.permissionReadOnly')
+  }
+  if (permissionMode === 'full-access') {
+    return t('chat.permissionFullAccess')
+  }
+  return t('chat.permissionWorkspaceWrite')
+}
+
+/* 切换权限：已生成对话落库到会话，新建对话仅改草稿 */
+async function onPermissionChange(permissionMode: PermissionMode): Promise<void> {
   if (locked.value) {
-    await chat.updateSessionMode(mode)
+    await chat.updateSessionPermissionMode(permissionMode)
   } else {
-    draftMode.value = mode
+    draftPermissionMode.value = permissionMode
   }
 }
 
@@ -172,7 +183,7 @@ function onSend(): void {
         ])
       : ''
   const content = fileBlock ? (value ? `${value}\n\n${fileBlock}` : fileBlock) : value
-  emit('submit', content, currentMode.value)
+  emit('submit', content, currentPermissionMode.value)
   draft.value = ''
   attachments.value = []
 }
@@ -235,29 +246,36 @@ function onKeydown(event: KeyboardEvent): void {
             <el-icon><Plus /></el-icon>
           </button>
 
-          <!-- 模式选择器：Plan（只读）/ Build（读写），默认 Build -->
-          <el-dropdown trigger="click" @command="onModeChange">
-            <span class="picker-trigger" :title="t('chat.modeTip')">
+          <!-- 权限选择器：仅可查看 / 工作区内修改 / 完全权限，默认工作区内修改 -->
+          <el-dropdown trigger="click" @command="onPermissionChange">
+            <span class="picker-trigger" :title="t('chat.permissionTip')">
               <el-icon class="picker-icon">
-                <Reading v-if="currentMode === 'plan'" />
-                <Tools v-else />
+                <Reading v-if="currentPermissionMode === 'read-only'" />
+                <EditPen v-else-if="currentPermissionMode === 'workspace-write'" />
+                <Unlock v-else />
               </el-icon>
-              <span class="picker-name">{{ currentModeLabel }}</span>
+              <span class="picker-name">{{ currentPermissionLabel }}</span>
               <el-icon class="picker-arrow"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item
-                  command="plan"
-                  :class="{ 'mode-active': currentMode === 'plan' }"
+                  command="read-only"
+                  :class="{ 'mode-active': currentPermissionMode === 'read-only' }"
                 >
-                  <el-icon><Reading /></el-icon>{{ t('chat.modePlan') }}
+                  <el-icon><Reading /></el-icon>{{ t('chat.permissionReadOnly') }}
                 </el-dropdown-item>
                 <el-dropdown-item
-                  command="build"
-                  :class="{ 'mode-active': currentMode === 'build' }"
+                  command="workspace-write"
+                  :class="{ 'mode-active': currentPermissionMode === 'workspace-write' }"
                 >
-                  <el-icon><Tools /></el-icon>{{ t('chat.modeBuild') }}
+                  <el-icon><EditPen /></el-icon>{{ t('chat.permissionWorkspaceWrite') }}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  command="full-access"
+                  :class="{ 'mode-active': currentPermissionMode === 'full-access' }"
+                >
+                  <el-icon><Unlock /></el-icon>{{ t('chat.permissionFullAccess') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>

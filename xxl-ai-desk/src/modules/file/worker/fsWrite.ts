@@ -10,7 +10,7 @@ import type { AgentTool } from '@earendil-works/pi-agent-core'
 import { promises as fs } from 'fs'
 import { dirname, relative } from 'path'
 import {
-  BUILD_ONLY,
+  WRITE_PERMISSIONS,
   createGuard,
   describe,
   displayPath,
@@ -32,8 +32,8 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
     name: 'write_file',
     label: '写入文件',
     description: describe(
-      '创建或覆盖项目目录内的文件（自动创建父目录）',
-      'Create or overwrite a file inside the project directory (parent directories are created automatically).'
+      '创建或覆盖当前权限允许范围内的文件（自动创建父目录）',
+      'Create or overwrite a file within the current permission scope (parent directories are created automatically).'
     ),
     parameters: Type.Object({
       path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
@@ -68,8 +68,8 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
     name: 'edit_file',
     label: '编辑文件',
     description: describe(
-      '将项目目录内文件中的 old_string 替换为 new_string，replace_all 为 true 时替换全部',
-      'Replace old_string with new_string in a project file; set replace_all to replace every occurrence.'
+      '将当前权限允许范围内文件中的 old_string 替换为 new_string，replace_all 为 true 时替换全部',
+      'Replace old_string with new_string in a file within the current permission scope; set replace_all to replace every occurrence.'
     ),
     parameters: Type.Object({
       path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
@@ -121,8 +121,8 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
     name: 'delete_file',
     label: '删除文件',
     description: describe(
-      '永久删除项目目录内的文件；删除目录必须显式传 recursive=true，操作不可恢复',
-      'Permanently delete a file inside the project. Deleting a directory requires recursive=true; this cannot be undone.'
+      '永久删除当前权限允许范围内的文件；删除目录必须显式传 recursive=true，操作不可恢复',
+      'Permanently delete a file within the current permission scope. Deleting a directory requires recursive=true; this cannot be undone.'
     ),
     parameters: Type.Object({
       path: Type.String({ description: '要删除的文件或目录路径' }),
@@ -159,8 +159,8 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
     name: 'move_file',
     label: '移动文件',
     description: describe(
-      '移动或重命名项目目录内的文件 / 目录，目标父目录自动创建；默认不覆盖已存在目标',
-      'Move or rename a file or directory inside the project. Parent directories are created automatically; existing targets are not overwritten by default.'
+      '移动或重命名当前权限允许范围内的文件 / 目录，目标父目录自动创建；默认不覆盖已存在目标',
+      'Move or rename a file or directory within the current permission scope. Parent directories are created automatically; existing targets are not overwritten by default.'
     ),
     parameters: Type.Object({
       from: Type.String({ description: '源路径' }),
@@ -216,19 +216,19 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
 
   return [
     {
-      meta: { group: 'fs', readOnly: false, modes: BUILD_ONLY, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
       tool: writeFile
     },
     {
-      meta: { group: 'fs', readOnly: false, modes: BUILD_ONLY, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
       tool: editFile
     },
     {
-      meta: { group: 'fs', readOnly: false, modes: BUILD_ONLY, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
       tool: deleteFile
     },
     {
-      meta: { group: 'fs', readOnly: false, modes: BUILD_ONLY, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
       tool: moveFile
     }
   ]

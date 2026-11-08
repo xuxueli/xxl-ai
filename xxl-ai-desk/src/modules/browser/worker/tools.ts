@@ -10,8 +10,8 @@
 
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import {
-  ALL_MODES,
-  BUILD_ONLY,
+  ALL_PERMISSIONS,
+  WRITE_PERMISSIONS,
   MAX_OUTPUT,
   describe,
   text,
@@ -442,55 +442,55 @@ const BROWSER_TOOL_DEFINITIONS: Array<{
   create: (Type: TypeBuilder, context: ToolContext) => AgentTool
 }> = [
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
     create: createOpenBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 51000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 51000 },
     create: createReadBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: MAX_OUTPUT },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: MAX_OUTPUT },
     create: createSnapshotBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, modes: BUILD_ONLY, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
     create: createClickBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, modes: BUILD_ONLY, maxOutput: 3000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 3000 },
     create: createFillBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
     create: createHoverBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, modes: BUILD_ONLY, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
     create: createPressBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, modes: BUILD_ONLY, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
     create: createSelectBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
     create: createScrollBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
     create: createWaitBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
     create: createScreenshotBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 8000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 8000 },
     create: createInspectBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, modes: ALL_MODES, maxOutput: 4000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
     create: createTabsBrowserTool
   }
 ]

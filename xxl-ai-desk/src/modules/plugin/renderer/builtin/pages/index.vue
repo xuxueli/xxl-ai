@@ -13,7 +13,7 @@ import {
 } from '@modules/plugin/renderer/builtin/catalog'
 import PluginCenterShell from '@modules/plugin/renderer/components/PluginCenterShell.vue'
 import { t } from '@renderer/shell/i18n'
-import type { ChatMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 
 /* 分类 + 其下工具（顺序取自共享目录） */
 const groups = computed(() =>
@@ -38,9 +38,9 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
     : [...expandedKeys.value, key]
 }
 
-/* 适用模式文案 */
-function modeLabel(modes: ChatMode[]): string {
-  return modes.length > 1 ? t('plugin.builtinTool.modeAll') : t('plugin.builtinTool.modeBuild')
+/* 可用权限文案：只读工具三档均可，写操作需工作区及以上权限 */
+function permissionLabel(permissionModes: PermissionMode[]): string {
+  return permissionModes.length > 1 ? t('plugin.builtinTool.permissionAll') : t('plugin.builtinTool.permissionWrite')
 }
 </script>
 
@@ -85,8 +85,8 @@ function modeLabel(modes: ChatMode[]): string {
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('plugin.builtinTool.modes')" min-width="110">
-              <template #default="{ row }">{{ modeLabel(row.modes) }}</template>
+            <el-table-column :label="t('plugin.builtinTool.availablePermissions')" min-width="110">
+              <template #default="{ row }">{{ permissionLabel(row.permissionModes) }}</template>
             </el-table-column>
           </el-table>
         </div>

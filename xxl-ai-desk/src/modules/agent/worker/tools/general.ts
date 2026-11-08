@@ -3,7 +3,7 @@
  */
 
 import type { AgentTool } from '@earendil-works/pi-agent-core'
-import { ALL_MODES, describe, text, type ToolContext, type ToolEntry } from '@modules/agent/worker/toolkit'
+import { ALL_PERMISSIONS, describe, text, type ToolContext, type ToolEntry } from '@modules/agent/worker/toolkit'
 
 /* 构建通用类工具 */
 export async function createGeneralTools(_context: ToolContext): Promise<ToolEntry[]> {
@@ -41,7 +41,7 @@ export async function createGeneralTools(_context: ToolContext): Promise<ToolEnt
       meta: {
         group: 'general',
         readOnly: true,
-        modes: ALL_MODES,
+        permissionModes: ALL_PERMISSIONS,
         maxOutput: 2000
       },
       tool: getCurrentTime

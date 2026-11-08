@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export { ALL_MODES, BUILD_ONLY, MAX_OUTPUT, createGuard, describe, displayPath, globToRegExp, text, toolError, tr, walkFiles } from './toolkit'
+export { ALL_PERMISSIONS, WRITE_PERMISSIONS, MAX_OUTPUT, createGuard, describe, displayPath, globToRegExp, text, toolError, tr, walkFiles } from './toolkit'
 export type { ToolContext, ToolEntry } from './toolkit'

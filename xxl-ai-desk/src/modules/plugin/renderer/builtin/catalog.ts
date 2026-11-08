@@ -6,7 +6,7 @@
  * @author xuxueli 2026-10-25
  */
 
-import type { ChatMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 
 /* 内置工具分类：fs 文件 / shell 终端 / browser 浏览器（可开关）/ general 通用（可开关）/ interaction 人机交互（可开关） */
 export type BuiltinToolCategoryKey = 'fs' | 'shell' | 'browser' | 'general' | 'interaction'
@@ -23,8 +23,8 @@ export interface BuiltinToolCatalogItem {
   descriptionKey: string
   /* 是否只读工具 */
   readOnly: boolean
-  /* 允许出现的对话模式 */
-  modes: ChatMode[]
+  /* 允许出现的权限模式 */
+  permissionModes: PermissionMode[]
 }
 
 /* 分类定义 */
@@ -66,8 +66,8 @@ export const BUILTIN_TOOL_CATEGORIES: BuiltinToolCategory[] = [
   }
 ]
 
-const ALL_MODES: ChatMode[] = ['plan', 'build']
-const BUILD_ONLY: ChatMode[] = ['build']
+const ALL_PERMISSIONS: PermissionMode[] = ['read-only', 'workspace-write', 'full-access']
+const WRITE_PERMISSIONS: PermissionMode[] = ['workspace-write', 'full-access']
 
 /* 内置工具目录（顺序即页面展示顺序） */
 export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
@@ -77,7 +77,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.readFile',
     descriptionKey: 'plugin.builtinTool.desc.readFile',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'list_directory',
@@ -85,7 +85,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.listDir',
     descriptionKey: 'plugin.builtinTool.desc.listDir',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'glob_files',
@@ -93,7 +93,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.glob',
     descriptionKey: 'plugin.builtinTool.desc.glob',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'search_files',
@@ -101,7 +101,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.search',
     descriptionKey: 'plugin.builtinTool.desc.search',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'write_file',
@@ -109,7 +109,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.writeFile',
     descriptionKey: 'plugin.builtinTool.desc.writeFile',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'edit_file',
@@ -117,7 +117,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.editFile',
     descriptionKey: 'plugin.builtinTool.desc.editFile',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'delete_file',
@@ -125,7 +125,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.deleteFile',
     descriptionKey: 'plugin.builtinTool.desc.deleteFile',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'move_file',
@@ -133,7 +133,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.moveFile',
     descriptionKey: 'plugin.builtinTool.desc.moveFile',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'run_command',
@@ -141,7 +141,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.command',
     descriptionKey: 'plugin.builtinTool.desc.command',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'open_browser',
@@ -149,7 +149,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.openBrowser',
     descriptionKey: 'plugin.builtinTool.desc.openBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'read_browser',
@@ -157,7 +157,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.readBrowser',
     descriptionKey: 'plugin.builtinTool.desc.readBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'snapshot_browser',
@@ -165,7 +165,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.snapshotBrowser',
     descriptionKey: 'plugin.builtinTool.desc.snapshotBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'click_browser',
@@ -173,7 +173,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.clickBrowser',
     descriptionKey: 'plugin.builtinTool.desc.clickBrowser',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'fill_browser',
@@ -181,7 +181,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.fillBrowser',
     descriptionKey: 'plugin.builtinTool.desc.fillBrowser',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'hover_browser',
@@ -189,7 +189,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.hoverBrowser',
     descriptionKey: 'plugin.builtinTool.desc.hoverBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'press_browser',
@@ -197,7 +197,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.pressBrowser',
     descriptionKey: 'plugin.builtinTool.desc.pressBrowser',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'select_browser',
@@ -205,7 +205,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.selectBrowser',
     descriptionKey: 'plugin.builtinTool.desc.selectBrowser',
     readOnly: false,
-    modes: BUILD_ONLY
+    permissionModes: WRITE_PERMISSIONS
   },
   {
     name: 'scroll_browser',
@@ -213,7 +213,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.scrollBrowser',
     descriptionKey: 'plugin.builtinTool.desc.scrollBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'wait_browser',
@@ -221,7 +221,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.waitBrowser',
     descriptionKey: 'plugin.builtinTool.desc.waitBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'screenshot_browser',
@@ -229,7 +229,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.screenshotBrowser',
     descriptionKey: 'plugin.builtinTool.desc.screenshotBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'inspect_browser',
@@ -237,7 +237,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.inspectBrowser',
     descriptionKey: 'plugin.builtinTool.desc.inspectBrowser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'browser_tabs',
@@ -245,7 +245,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.browserTabs',
     descriptionKey: 'plugin.builtinTool.desc.browserTabs',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'get_current_time',
@@ -253,7 +253,7 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.time',
     descriptionKey: 'plugin.builtinTool.desc.time',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   },
   {
     name: 'ask_user',
@@ -261,6 +261,6 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     titleKey: 'chat.tool.askUser',
     descriptionKey: 'plugin.builtinTool.desc.askUser',
     readOnly: true,
-    modes: ALL_MODES
+    permissionModes: ALL_PERMISSIONS
   }
 ]

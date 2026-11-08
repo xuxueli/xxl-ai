@@ -1,6 +1,6 @@
 /*
  * 内置工具公共能力：工具元信息类型、统一结果构造、路径闸门与目录遍历。
- *   - 所有文件类工具统一经 createGuard 走沙箱闸门（目录内放行、越界审批）；
+ *   - 所有文件类工具统一经 createGuard 走沙箱闸门（按权限放行全局读、工作区写与越界审批）；
  *   - 结果文本统一由注册表按工具声明的 maxOutput 截断，工具实现不再各自裁剪。
  */
 
@@ -8,7 +8,7 @@ import type { AgentTool, AgentToolResult } from '@earendil-works/pi-agent-core'
 import { promises as fs } from 'fs'
 import type { Dirent } from 'fs'
 import { basename, relative, resolve, sep } from 'path'
-import type { ChatMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { translate, type AppLanguage } from '@common/shared/i18n'
@@ -16,7 +16,8 @@ import { guardPath, type PathAction } from '@modules/agent/worker/sandbox'
 
 /* 工具装配上下文 */
 export interface ToolContext {
-  mode: ChatMode
+  /* 权限模式：决定工具装配与路径闸门放行范围 */
+  permissionMode: PermissionMode
   rootDir: string
   sessionId: number
   /* 应用语言：工具错误与摘要文案使用对应语言 */
@@ -35,10 +36,10 @@ export type ToolGroup = 'fs' | 'shell' | 'browser' | 'general' | 'skill' | 'inte
 /* 工具元信息：能力声明与装配策略（模式过滤由 registry 统一执行） */
 export interface ToolMeta {
   group: ToolGroup
-  /* 是否只读：用于生成可用工具说明，以及 Plan 模式下的语义约束 */
+  /* 是否只读：用于生成可用工具说明，以及只读权限下的语义约束 */
   readOnly: boolean
-  /* 允许出现的对话模式（显式声明，避免靠数组位置隐含） */
-  modes: ChatMode[]
+  /* 允许出现的权限模式（显式声明，避免靠数组位置隐含） */
+  permissionModes: PermissionMode[]
   /* 是否包含审批/拦截闸门（越界路径或危险命令） */
   requiresApproval?: boolean
   /* 单次结果最大字符数（缺省 MAX_OUTPUT） */
@@ -54,11 +55,11 @@ export interface ToolEntry {
 /* 单次工具结果返回的文本内容上限（字符数，缺省值） */
 export const MAX_OUTPUT = 20000
 
-/* 两种模式均可用 */
-export const ALL_MODES: ChatMode[] = ['plan', 'build']
+/* 三档权限均可用（只读工具） */
+export const ALL_PERMISSIONS: PermissionMode[] = ['read-only', 'workspace-write', 'full-access']
 
-/* 仅 Build（写操作）可用 */
-export const BUILD_ONLY: ChatMode[] = ['build']
+/* 仅允许写入的权限可用（工作区内修改 / 完全权限） */
+export const WRITE_PERMISSIONS: PermissionMode[] = ['workspace-write', 'full-access']
 
 /* 中英文工具描述：模型对两种语言均友好，保留中文可读性同时兼顾英文模型 */
 export function describe(zh: string, en: string): string {
@@ -108,29 +109,17 @@ export function clipToolResult<T>(
   return { ...result, content }
 }
 
-/*
- * 技能只读放行根目录：技能库整库可读（含未启用技能与目录列举），**永不弹审批**。
- * 这是「文件读取权限」；「是否启用」只决定 Agent 能否通过 read_skill 主动使用技能，
- * 两者是不同维度，不要用启用状态去限制文件读取。
- */
-export function readAllowedRootsOf(context: ToolContext): string[] {
-  return [
-    ...new Set([context.skillsDir, ...(context.skills ?? []).map((skill) => skill.dir)])
-  ].filter((dir): dir is string => Boolean(dir))
-}
-
 /* 技能库完全信任根目录：读 / 写 / 命令均直接放行（文件工具与终端共用） */
 export function skillTrustedRoots(context: ToolContext): string[] {
   return context.skillsDir ? [context.skillsDir] : []
 }
 
 /*
- * 统一路径闸门：目录内直接放行，越界转主进程审批；拒绝则返回可直接回填模型的错误。
- * 具体工具只需声明动作类型（read / write）与工具名。
- * 技能库（技能根目录）读取时放行，且作为完全信任目录，写入不弹审批。
+ * 统一路径闸门：按权限模式判断全局读写范围，越界写入转主进程审批；
+ * 拒绝则返回可直接回填模型的错误。具体工具只需声明动作类型（read / write）与工具名。
+ * 技能库（技能根目录）作为完全信任目录，读写不弹审批。
  */
 export function createGuard(context: ToolContext) {
-  const readAllowedRoots = readAllowedRootsOf(context)
   /* 技能库为完全信任目录：Agent 可读写技能内容，不触发越界审批 */
   const trustedRoots = skillTrustedRoots(context)
   return async function guard(
@@ -147,7 +136,7 @@ export function createGuard(context: ToolContext) {
       action,
       tool,
       language: context.language,
-      readAllowedRoots,
+      permissionMode: context.permissionMode,
       trustedRoots
     })
     if (!outcome.allowed) {

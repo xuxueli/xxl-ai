@@ -11,7 +11,7 @@ import { promises as fs } from 'fs'
 import { basename } from 'path'
 import { imageMimeOf } from '@common/shared/fileTypes'
 import {
-  ALL_MODES,
+  ALL_PERMISSIONS,
   MAX_OUTPUT,
   createGuard,
   describe,
@@ -39,8 +39,8 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
     name: 'read_file',
     label: '读取文件',
     description: describe(
-      '读取项目目录内的文本文件，可选 offset/limit 按行范围读取；图片文件直接返回图像内容',
-      'Read a text file inside the project directory, optionally by line range (offset/limit). Image files are returned as image content.'
+      '读取文件（全局可读），可选 offset/limit 按行范围读取；图片文件直接返回图像内容',
+      'Read a text file (global read access), optionally by line range (offset/limit). Image files are returned as image content.'
     ),
     parameters: Type.Object({
       path: Type.String({ description: '文件路径，相对项目目录或绝对路径' }),
@@ -110,8 +110,8 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
     name: 'list_directory',
     label: '列出目录',
     description: describe(
-      '列出项目目录内某个目录的文件与子目录',
-      'List files and subdirectories of a directory inside the project.'
+      '列出某个目录的文件与子目录（全局可读）',
+      'List files and subdirectories of a directory (global read access).'
     ),
     parameters: Type.Object({
       path: Type.Optional(Type.String({ description: '目录路径，缺省为项目根目录' }))
@@ -142,8 +142,8 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
     name: 'glob_files',
     label: '查找文件',
     description: describe(
-      '按 glob 模式（支持 * ? 与 **）在项目目录内查找文件，返回匹配的相对路径',
-      'Find files inside the project by glob pattern (supports * ? and **), returning relative paths.'
+      '按 glob 模式（支持 * ? 与 **）查找文件，返回匹配路径（全局可读）',
+      'Find files by glob pattern (supports * ? and **), returning matched paths (global read access).'
     ),
     parameters: Type.Object({
       pattern: Type.String({ description: 'glob 模式，如 src/**/*.ts' }),
@@ -171,8 +171,8 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
     name: 'search_files',
     label: '搜索内容',
     description: describe(
-      '在项目目录内按正则搜索文件内容，返回 文件:行号:内容',
-      'Search file contents inside the project by regular expression, returning file:line:content.'
+      '按正则搜索文件内容，返回 文件:行号:内容（全局可读）',
+      'Search file contents by regular expression, returning file:line:content (global read access).'
     ),
     parameters: Type.Object({
       pattern: Type.String({ description: '正则表达式' }),
@@ -231,19 +231,19 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
 
   return [
     {
-      meta: { group: 'fs', readOnly: true, modes: ALL_MODES, maxOutput: MAX_OUTPUT },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: MAX_OUTPUT },
       tool: readFile
     },
     {
-      meta: { group: 'fs', readOnly: true, modes: ALL_MODES, maxOutput: 12000 },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 12000 },
       tool: listDirectory
     },
     {
-      meta: { group: 'fs', readOnly: true, modes: ALL_MODES, maxOutput: 12000 },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 12000 },
       tool: globFiles
     },
     {
-      meta: { group: 'fs', readOnly: true, modes: ALL_MODES, maxOutput: MAX_OUTPUT },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: MAX_OUTPUT },
       tool: searchFiles
     }
   ]

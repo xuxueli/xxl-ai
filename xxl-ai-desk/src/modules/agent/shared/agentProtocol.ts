@@ -4,7 +4,7 @@
  * 避免 LLM 流式与工具重活占用主进程事件循环。
  */
 
-import type { ChatMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 import type { ModelDescriptor } from '@common/shared/model'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -62,8 +62,8 @@ export interface RunAgentInput {
   messages: unknown[]
   /* 应用语言：运行期异常备注使用对应语言 */
   language: 'zh' | 'en'
-  /* 对话模式 */
-  mode: ChatMode
+  /* 权限模式（仅可查看 / 工作区内修改 / 完全权限） */
+  permissionMode: PermissionMode
   /* 项目根目录（文件沙箱根） */
   rootDir: string
   /* 运行时 PATH（含设置的 Node / Python 环境，供 run_command 使用） */

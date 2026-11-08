@@ -1,5 +1,5 @@
 /*
- * 会话与消息服务：管理会话（绑定项目/供应商/模型/对话模式）及其消息的持久化。
+ * 会话与消息服务：管理会话（绑定项目/供应商/模型/权限模式）及其消息的持久化。
  *   - 消息按轮次追加落库，历史完整保存在数据库。
  */
 
@@ -11,13 +11,18 @@ import { disposeTerminalsBySession } from '@modules/terminal/main'
 import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
-import { messageStatusOf, normalizeMessageStatus } from '@modules/chat/shared'
+import {
+  DEFAULT_PERMISSION_MODE,
+  messageStatusOf,
+  normalizeMessageStatus,
+  normalizePermissionMode
+} from '@modules/chat/shared'
 import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
 
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
 
-/* 行记录 → DTO（mode 缺省归一到 build） */
+/* 行记录 → DTO（权限模式缺省归一到工作区内修改） */
 function toSessionDTO(row: SessionRow): SessionDTO {
   return {
     id: row.id,
@@ -26,7 +31,7 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     agentId: row.agentId,
     providerId: row.providerId,
     modelId: row.modelId,
-    mode: row.mode === 'plan' ? 'plan' : 'build',
+    permissionMode: normalizePermissionMode(row.permissionMode),
     addTime: row.addTime,
     updateTime: row.updateTime
   }
@@ -94,7 +99,7 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     agentId,
     providerId: input.providerId ?? 0,
     modelId: input.modelId || '',
-    mode: input.mode === 'plan' ? 'plan' : 'build',
+    permissionMode: normalizePermissionMode(input.permissionMode ?? DEFAULT_PERMISSION_MODE),
     summary: '',
     summaryLastMessageId: 0,
     summaryUpdateTime: '',
@@ -109,7 +114,7 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
   return toSessionDTO({ id: inserted.id, ...record })
 }
 
-/* 更新会话（标题/模型/模式等；项目与 Agent 绑定创建后不可修改） */
+/* 更新会话（标题/模型/权限模式等；项目与 Agent 绑定创建后不可修改） */
 export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDTO {
   const db = getDb()
   const existing = id ? db.select().from(sessionTable).where(eq(sessionTable.id, id)).get() : undefined
@@ -121,7 +126,7 @@ export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDT
     title: patch.title ?? existing.title,
     providerId: patch.providerId ?? existing.providerId,
     modelId: patch.modelId ?? existing.modelId,
-    mode: patch.mode ?? existing.mode,
+    permissionMode: normalizePermissionMode(patch.permissionMode ?? existing.permissionMode),
     updateTime: new Date().toISOString()
   }
   db.update(sessionTable).set(record).where(eq(sessionTable.id, existing.id)).run()

@@ -9,7 +9,7 @@
 
 import type { AgentTool } from '@earendil-works/pi-agent-core'
 import {
-  ALL_MODES,
+  ALL_PERMISSIONS,
   describe,
   text,
   toolError,
@@ -188,7 +188,7 @@ export async function createInteractionTools(context: ToolContext): Promise<Tool
       meta: {
         group: 'interaction',
         readOnly: true,
-        modes: ALL_MODES,
+        permissionModes: ALL_PERMISSIONS,
         maxOutput: 4000
       },
       tool: await buildAskUserTool(context)
