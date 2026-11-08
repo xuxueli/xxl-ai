@@ -221,9 +221,9 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
   }
 }
 
-/* 预设模型：统一使用默认上下文窗口与对话模型类型 */
-function seedModels(ids: string[]): ProviderModelDTO[] {
-  return ids.map((id) => ({ id, contextWindow: CONTEXT_WINDOW_DEFAULT, type: 'chat' }))
+/* 预设模型：统一使用默认上下文窗口，并按给定类型标注 */
+function seedModels(models: Array<{ id: string; type: ModelType }>): ProviderModelDTO[] {
+  return models.map((model) => ({ ...model, contextWindow: CONTEXT_WINDOW_DEFAULT }))
 }
 
 /* 首次运行播种预设供应商（与平台种子保持一致；OpenCodeGo 使用 {session} 会话头） */
@@ -240,7 +240,10 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://opencode.ai/zen/go/v1',
       apiKey: '',
       headers: { 'x-opencode-session': '{session}' },
-      models: seedModels(['deepseek-v4.1-flash', 'glm-5.3']),
+      models: seedModels([
+        { id: 'deepseek-v4.1-flash', type: 'chat' },
+        { id: 'glm-5.3', type: 'general' }
+      ]),
       enabled: true,
       sort: 1
     },
@@ -249,7 +252,11 @@ export function ensureSeedProviders(): void {
       baseUrl: 'http://127.0.0.1:11434',
       apiKey: '',
       headers: {},
-      models: seedModels(['qwen3.5:0.8b', 'qwen3.5:4b']),
+      models: seedModels([
+        { id: 'qwen3.5:0.8b', type: 'general' },
+        { id: 'qwen3.5:4b', type: 'general' },
+        { id: 'qwen3-embedding:0.6b', type: 'embedding' }
+      ]),
       enabled: true,
       sort: 2
     },
@@ -258,7 +265,10 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://api.deepseek.com',
       apiKey: '',
       headers: {},
-      models: seedModels(['deepseek-v4-flash', 'deepseek-v4-pro']),
+      models: seedModels([
+        { id: 'deepseek-v4-flash', type: 'general' },
+        { id: 'deepseek-v4-pro', type: 'general' }
+      ]),
       enabled: true,
       sort: 3
     },
@@ -267,7 +277,10 @@ export function ensureSeedProviders(): void {
       baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
       apiKey: '',
       headers: {},
-      models: seedModels(['glm-5.3-flash', 'glm-5.3']),
+      models: seedModels([
+        { id: 'glm-5.3-flash', type: 'general' },
+        { id: 'glm-5.3', type: 'general' }
+      ]),
       enabled: true,
       sort: 4
     }
