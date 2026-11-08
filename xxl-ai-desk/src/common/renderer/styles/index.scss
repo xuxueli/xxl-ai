@@ -96,6 +96,151 @@ body.resizing-vertical {
   display: none;
 }
 
+/*
+ * 会话状态信息条弹层（会话统计 / Token 用量 / 上下文消耗）：
+ * 点击输入框下方指标胶囊打开；弹层挂载 body，无法使用组件 scoped 样式，
+ * 影响面仅限 .desk-metric-popper。
+ */
+.desk-metric-popper.el-popper {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border-color: var(--desk-border);
+  background: var(--desk-surface-elevated);
+  color: var(--desk-text);
+  box-shadow:
+    0 2px 6px color-mix(in srgb, var(--theme-shadow) 12%, transparent),
+    0 10px 28px color-mix(in srgb, var(--theme-shadow) 24%, transparent);
+}
+
+.desk-metric-popper .el-popper__arrow {
+  display: none;
+}
+
+.desk-metric-popper .metric-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--desk-font-sm);
+}
+
+.desk-metric-popper .metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.desk-metric-popper .metric-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--desk-text);
+  font-size: var(--desk-font-sm);
+  font-weight: 600;
+}
+
+.desk-metric-popper .metric-title-icon {
+  color: var(--desk-text-secondary);
+  font-size: var(--desk-icon-md);
+}
+
+.desk-metric-popper .metric-total {
+  color: var(--desk-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.desk-metric-popper .metric-divider {
+  height: 1px;
+  margin: 2px 0;
+  background: var(--desk-border-soft);
+}
+
+.desk-metric-popper .metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--desk-text-tertiary);
+}
+
+.desk-metric-popper .metric-value {
+  color: var(--desk-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.desk-metric-popper .metric-name {
+  white-space: nowrap;
+}
+
+/* 上下文占用：轨道 + 填充 + 内部分段（分项只决定填充内部比例） */
+.desk-metric-popper .context-bar {
+  display: block;
+  height: 6px;
+  margin: 2px 0 4px;
+  border-radius: 3px;
+  background: var(--desk-border-soft);
+  overflow: hidden;
+}
+
+.desk-metric-popper .context-bar-fill {
+  display: flex;
+  gap: 1px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--desk-context-messages);
+  overflow: hidden;
+}
+
+.desk-metric-popper .context-bar-segment {
+  min-width: 0;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.desk-metric-popper .context-bar-segment.system {
+  background: var(--desk-context-system);
+}
+
+.desk-metric-popper .context-bar-segment.tools {
+  background: var(--desk-context-tools);
+}
+
+.desk-metric-popper .context-bar-segment.messages {
+  background: var(--desk-context-messages);
+}
+
+.desk-metric-popper .context-legend {
+  margin-top: 2px;
+}
+
+.desk-metric-popper .legend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desk-metric-popper .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.desk-metric-popper .legend-dot.system {
+  background: var(--desk-context-system);
+}
+
+.desk-metric-popper .legend-dot.tools {
+  background: var(--desk-context-tools);
+}
+
+.desk-metric-popper .legend-dot.messages {
+  background: var(--desk-context-messages);
+}
+
+
 /* 不可用（如无可后退/前进历史）：弱化且不可点 */
 .icon-button:disabled {
   opacity: 0.35;
@@ -811,6 +956,21 @@ html.dark .el-button--primary {
   padding-left: 12px;
   font-size: var(--desk-font-sm);
   color: var(--desk-primary);
+}
+
+/* --- 权限选择下拉：完全权限项用危险色，提示越权风险 --- */
+.permission-dropdown .el-dropdown-menu__item.permission-danger,
+.permission-dropdown .el-dropdown-menu__item.permission-danger.picker-active {
+  color: var(--desk-danger);
+}
+
+.permission-dropdown .el-dropdown-menu__item.permission-danger.picker-active .el-icon {
+  color: var(--desk-danger);
+}
+
+.permission-dropdown .el-dropdown-menu__item.permission-danger:hover {
+  background: color-mix(in srgb, var(--desk-danger) 8%, transparent);
+  color: var(--desk-danger);
 }
 
 /* --- 下拉菜单选项：统一紧凑菜单字号，首图标与文字留白 --- */

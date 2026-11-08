@@ -28,6 +28,15 @@ export const DEFAULT_AGENT_TOOLS: AgentToolSwitches = {
   interaction: false
 }
 
+/* 内置工具全未选中：新建 Agent 与切换预设时重置为该状态 */
+export const EMPTY_AGENT_TOOLS: AgentToolSwitches = {
+  fs: false,
+  shell: false,
+  browser: false,
+  general: false,
+  interaction: false
+}
+
 /* Agent 内置工具分类开关 */
 export interface AgentToolSwitches {
   /* 文件类工具 */

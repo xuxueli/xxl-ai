@@ -12,6 +12,7 @@ import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import { DEFAULT_REASONING_LEVEL, normalizeReasoningLevel } from '@common/shared/model'
+import type { ContextBreakdown } from '@common/shared/model'
 import {
   DEFAULT_PERMISSION_MODE,
   messageStatusOf,
@@ -34,8 +35,32 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     modelId: row.modelId,
     reasoningLevel: normalizeReasoningLevel(row.reasoningLevel),
     permissionMode: normalizePermissionMode(row.permissionMode),
+    contextBreakdown: parseContextBreakdown(row.contextBreakdown),
     addTime: row.addTime,
     updateTime: row.updateTime
+  }
+}
+
+/* 上下文分项解析：空值或非法 JSON 一律视为未采集 */
+function parseContextBreakdown(value: string): ContextBreakdown | null {
+  if (!value) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(value) as Partial<ContextBreakdown>
+    const systemTokens = Number(parsed.systemTokens)
+    const toolTokens = Number(parsed.toolTokens)
+    const messageTokens = Number(parsed.messageTokens)
+    if (![systemTokens, toolTokens, messageTokens].every(Number.isFinite)) {
+      return null
+    }
+    return {
+      systemTokens: Math.max(0, systemTokens),
+      toolTokens: Math.max(0, toolTokens),
+      messageTokens: Math.max(0, messageTokens)
+    }
+  } catch {
+    return null
   }
 }
 
@@ -106,6 +131,7 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     summary: '',
     summaryLastMessageId: 0,
     summaryUpdateTime: '',
+    contextBreakdown: '',
     addTime: now,
     updateTime: now
   }
@@ -135,6 +161,21 @@ export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDT
   }
   db.update(sessionTable).set(record).where(eq(sessionTable.id, existing.id)).run()
   return toSessionDTO(record)
+}
+
+/* 写入会话最近一次上下文分项：每轮结束调用一次；空值保留旧数据 */
+export function saveSessionContextBreakdown(
+  sessionId: number,
+  breakdown: ContextBreakdown | null
+): void {
+  if (!sessionId || !breakdown) {
+    return
+  }
+  getDb()
+    .update(sessionTable)
+    .set({ contextBreakdown: JSON.stringify(breakdown) })
+    .where(eq(sessionTable.id, sessionId))
+    .run()
 }
 
 /*
@@ -446,5 +487,11 @@ export function deleteMessages(sessionId: number, ids: number[]): void {
   getDb()
     .delete(messageTable)
     .where(and(eq(messageTable.sessionId, sessionId), inArray(messageTable.id, ids)))
+    .run()
+  /* 删除消息会改变上下文构成：分项立即失效，等待下一轮重新采集 */
+  getDb()
+    .update(sessionTable)
+    .set({ contextBreakdown: '' })
+    .where(eq(sessionTable.id, sessionId))
     .run()
 }

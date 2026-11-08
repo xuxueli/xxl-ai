@@ -1,22 +1,21 @@
 <script setup lang="ts">
 /*
- * 对话空态扩展：项目选择与示例入口（位于输入框下方）。
+ * 对话空态扩展：项目 / Agent 选择与示例入口（位于输入框下方）。
  * @author xuxueli 2026-10-25
  */
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { useProjectStore } from '@modules/project/renderer'
-import { AgentAvatar, AgentEditDrawer, useAgentStore } from '@modules/agent/renderer'
+import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 
 const emit = defineEmits<{ example: [text: string] }>()
 
+const router = useRouter()
 const project = useProjectStore()
 const agent = useAgentStore()
-
-/* 新建 Agent 抽屉 */
-const agentDrawerVisible = ref(false)
 
 /* 空态项目选择：当前项目名（未选择时展示占位文案） */
 const currentProjectName = computed(
@@ -39,10 +38,10 @@ async function onProjectChange(value: string): Promise<void> {
 /* 当前 Agent 名称（未选择时展示占位文案） */
 const currentAgentName = computed(() => agent.currentAgent?.name || t('agent.selectAgent'))
 
-/* 选择 Agent；选到「新建 Agent」时打开编辑抽屉 */
+/* 选择 Agent；选到「新建 Agent」时跳转 Agent 子菜单 */
 function onAgentChange(value: string): void {
   if (value === '__new__') {
-    agentDrawerVisible.value = true
+    void router.push('/plugin/agent')
     return
   }
   agent.selectAgent(Number(value))
@@ -94,8 +93,6 @@ const examples = [
       </el-dropdown>
     </div>
   </div>
-
-  <AgentEditDrawer v-model:visible="agentDrawerVisible" />
 
   <!-- 空态示例：输入框下方以文字入口平铺，点击以完整指令发起对话 -->
   <div class="empty-examples">

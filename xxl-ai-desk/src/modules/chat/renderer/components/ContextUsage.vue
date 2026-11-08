@@ -1,68 +1,105 @@
 <script setup lang="ts">
 /*
- * 输入框底部上下文占用：环形进度 + 占用百分比，悬浮展示完整用量。
+ * 上下文消耗状态项：环形进度 + 占用百分比，点击展开总量与分项。
+ *   - 分项为运行时估算值（系统提示词 / 工具定义 / 对话与输出）；
+ *   - 窗口未知时不展示百分比；分项缺失时只展示总量。
  * @author xuxueli 2026-11-07
  */
 import { computed } from 'vue'
-import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
-import { formatTokenCount } from '@modules/chat/renderer/utils/format'
+import StatusPopover from '@modules/chat/renderer/components/StatusPopover.vue'
+import { formatLargeTokens } from '@modules/chat/renderer/utils/format'
+import type { ContextBreakdown } from '@common/shared/model'
 
 const props = defineProps<{
   /* 已用上下文 token */
   used: number
-  /* 模型上下文窗口 */
-  window: number
+  /* 模型上下文窗口；null 表示未知，不展示百分比 */
+  window: number | null
+  /* 上下文分项估算（缺失时只展示总量） */
+  breakdown: ContextBreakdown | null
 }>()
 
-const settings = useSettingsStore()
-
-/* 占用百分比：窗口异常或超出时收敛到 0–100 */
-const percent = computed(() => {
+/* 占用百分比：窗口未知返回 null，窗口异常或超出时收敛到 0–100 */
+const percent = computed<number | null>(() => {
   if (!props.window) {
-    return 0
+    return null
   }
   return Math.min(100, Math.max(0, (props.used / props.window) * 100))
 })
 
 /* 颜色分级：90% 以上危险，70% 以上警告，其余常规 */
 const tone = computed(() => {
-  if (percent.value >= 90) {
+  const value = percent.value
+  if (value === null) {
+    return 'normal'
+  }
+  if (value >= 90) {
     return 'danger'
   }
-  return percent.value >= 70 ? 'warning' : 'normal'
+  return value >= 70 ? 'warning' : 'normal'
 })
 
 /* 环形绘制参数 */
 const RADIUS = 7
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-const dashOffset = computed(() => CIRCUMFERENCE * (1 - percent.value / 100))
-
-/* 环形右侧文案：占用百分比 */
-const label = computed(() => t('chat.contextUsage.label', [percent.value.toFixed(0)]))
-
-/* 悬浮提示：已用 / 窗口 / 百分比 */
-const detail = computed(() =>
-  t('chat.contextUsage.detail', [
-    formatTokenCount(props.used, settings.settings.language),
-    formatTokenCount(props.window, settings.settings.language),
-    percent.value.toFixed(0)
-  ])
+const dashOffset = computed(() =>
+  percent.value === null
+    ? CIRCUMFERENCE
+    : CIRCUMFERENCE * (1 - percent.value / 100)
 )
+
+/* 胶囊文案：窗口已知显示占比，未知只显示已用 token */
+const label = computed(() =>
+  percent.value === null
+    ? formatLargeTokens(props.used)
+    : t('chat.contextUsage.label', [percent.value.toFixed(0)])
+)
+
+/* 面板标题：窗口未知时不带百分比 */
+const titleText = computed(() =>
+  percent.value === null
+    ? t('chat.contextUsage.title')
+    : `${t('chat.contextUsage.title')} ${label.value}`
+)
+
+/* 面板标题右侧：窗口已知显示已用 / 窗口，未知只显示已用 */
+const usageText = computed(() =>
+  props.window === null
+    ? t('chat.contextUsage.usageUnknown', [formatLargeTokens(props.used)])
+    : t('chat.contextUsage.usage', [
+        formatLargeTokens(props.used),
+        formatLargeTokens(props.window)
+      ])
+)
+
+/* 分项占比：只表达构成比例，填充长度由已用 / 窗口单独控制，避免各段之和超过 100% */
+const segments = computed<Array<{ key: string; width: number }> | null>(() => {
+  const breakdown = props.breakdown
+  if (!breakdown) {
+    return null
+  }
+  const values = [
+    { key: 'system', tokens: Math.max(0, breakdown.systemTokens) },
+    { key: 'tools', tokens: Math.max(0, breakdown.toolTokens) },
+    { key: 'messages', tokens: Math.max(0, breakdown.messageTokens) }
+  ]
+  const total = values.reduce((sum, item) => sum + item.tokens, 0)
+  if (total <= 0) {
+    return null
+  }
+  return values.map((item) => ({ key: item.key, width: (item.tokens / total) * 100 }))
+})
+
+/* 分项数值：统一带近似前缀 */
+function approxText(value: number): string {
+  return `~${formatLargeTokens(value)}`
+}
 </script>
 
 <template>
-  <el-tooltip
-    :content="detail"
-    placement="top"
-    effect="light"
-    popper-class="desk-tooltip"
-    :show-after="0"
-    :hide-after="0"
-    :offset="8"
-    transition=""
-  >
-    <div class="context-usage" :aria-label="detail">
+  <StatusPopover :label="t('chat.contextUsage.title')">
+    <template #trigger>
       <svg class="context-ring" viewBox="0 0 20 20" aria-hidden="true">
         <circle class="ring-track" cx="10" cy="10" :r="RADIUS" />
         <circle
@@ -76,27 +113,52 @@ const detail = computed(() =>
         />
       </svg>
       <span class="context-label">{{ label }}</span>
+    </template>
+
+    <div class="metric-panel">
+      <div class="metric-head">
+        <span class="metric-title">{{ titleText }}</span>
+        <span class="metric-total">{{ usageText }}</span>
+      </div>
+      <div v-if="percent !== null" class="context-bar">
+        <div class="context-bar-fill" :style="{ width: `${percent}%` }">
+          <span
+            v-for="segment in segments ?? []"
+            :key="segment.key"
+            class="context-bar-segment"
+            :class="segment.key"
+            :style="{ width: `${segment.width}%` }"
+          />
+        </div>
+      </div>
+      <template v-if="breakdown">
+        <div class="metric-row context-legend">
+          <span class="legend-label">
+            <i class="legend-dot system" />
+            {{ t('chat.contextUsage.systemPrompt') }}
+          </span>
+          <span class="metric-value">{{ approxText(breakdown.systemTokens) }}</span>
+        </div>
+        <div class="metric-row context-legend">
+          <span class="legend-label">
+            <i class="legend-dot tools" />
+            {{ t('chat.contextUsage.toolDefinitions') }}
+          </span>
+          <span class="metric-value">{{ approxText(breakdown.toolTokens) }}</span>
+        </div>
+        <div class="metric-row context-legend">
+          <span class="legend-label">
+            <i class="legend-dot messages" />
+            {{ t('chat.contextUsage.messages') }}
+          </span>
+          <span class="metric-value">{{ approxText(breakdown.messageTokens) }}</span>
+        </div>
+      </template>
     </div>
-  </el-tooltip>
+  </StatusPopover>
 </template>
 
 <style scoped lang="scss">
-.context-usage {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  height: 20px;
-  padding: 0 4px;
-  border-radius: 6px;
-  cursor: default;
-  color: var(--desk-text-secondary);
-}
-
-.context-usage:hover {
-  background: var(--desk-segment-bg);
-}
-
 .context-ring {
   width: 16px;
   height: 16px;
@@ -120,7 +182,7 @@ const detail = computed(() =>
 }
 
 .ring-progress.normal {
-  stroke: var(--desk-text-secondary);
+  stroke: var(--desk-text-tertiary);
 }
 
 .ring-progress.warning {
@@ -132,10 +194,7 @@ const detail = computed(() =>
 }
 
 .context-label {
-  font-size: var(--desk-font-sm);
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
   white-space: nowrap;
 }
 </style>

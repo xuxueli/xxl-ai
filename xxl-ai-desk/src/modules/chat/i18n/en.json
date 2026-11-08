@@ -31,7 +31,35 @@
     "thinkingDone": "Thought",
     "contextUsage": {
       "label": "{0}%",
-      "detail": "Context usage: {0} / {1} tokens ({2}%)"
+      "title": "Context used",
+      "usage": "~{0} / {1}",
+      "usageUnknown": "~{0}",
+      "systemPrompt": "System prompt",
+      "toolDefinitions": "Tool definitions",
+      "messages": "Conversation & output"
+    },
+    "duration": {
+      "hour": "{0}h {1}m",
+      "minute": "{0}m {1}s",
+      "second": "{0}s"
+    },
+    "sessionStats": {
+      "title": "Session stats",
+      "summary": "{0} turns · {1} steps",
+      "modelTime": "Model time",
+      "toolTime": "Tool time",
+      "tps": "Output speed (TPS)",
+      "tpsValue": "{0} tok/s"
+    },
+    "tokenUsage": {
+      "title": "Token usage",
+      "unit": " tok",
+      "summary": "{0} tok",
+      "summaryWithCache": "{0} tok · {1}% cached",
+      "cacheHit": "Cache hit",
+      "uncachedInput": "Uncached input",
+      "cacheRead": "Cache read",
+      "output": "Output"
     },
     "tool": {
       "readFile": "Read file",

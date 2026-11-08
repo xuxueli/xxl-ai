@@ -12,7 +12,7 @@ import type { HostEvent } from '@modules/agent/shared/agentProtocol'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { contentBlocks } from '@modules/chat/shared'
 import { contextTokensOfUsage } from '@common/shared/model'
-import type { ReasoningLevel, UsageLike } from '@common/shared/model'
+import type { ContextBreakdown, ReasoningLevel, UsageLike } from '@common/shared/model'
 import { translate, type AppLanguage } from '@common/shared/i18n'
 import type { McpRuntimeConfig } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -103,6 +103,23 @@ interface RuntimeMessage {
   errorMessage?: string
   timestamp?: number
   source?: MessageSource
+}
+
+/* 中英文混合估算 token：CJK 约 1 token/字，其余约 4 字符/token */
+function estimateTokens(text: string): number {
+  const cjkCount = text.match(/[\u3400-\u9fff\uf900-\ufaff]/g)?.length ?? 0
+  return Math.ceil(cjkCount + (text.length - cjkCount) / 4)
+}
+
+/* 上下文分项估算：系统提示词与工具定义按字符估算，剩余归入对话消息 */
+function contextBreakdownOf(agent: Agent, used: number): ContextBreakdown {
+  const systemTokens = estimateTokens(agent.state.systemPrompt ?? '')
+  const toolTokens = estimateTokens(JSON.stringify(agent.state.tools ?? []))
+  return {
+    systemTokens,
+    toolTokens,
+    messageTokens: Math.max(0, used - systemTokens - toolTokens)
+  }
 }
 
 /* 助手消息的上下文用量：非助手消息返回 0 */
@@ -395,7 +412,13 @@ export async function runPrompt(
         /* 每次模型响应结束回传上下文用量，供顶栏实时展示占用占比 */
         const used = contextTokensOf(event.message)
         if (used > 0) {
-          sink({ type: 'usage', used, window: agent.state.model.contextWindow })
+          const breakdown = contextBreakdownOf(agent, used)
+          sink({
+            type: 'usage',
+            used,
+            window: agent.state.model.contextWindow,
+            ...breakdown
+          })
         }
         break
       }

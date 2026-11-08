@@ -1,5 +1,6 @@
 /* 渲染进程 UI 类型 */
 
+import type { UsageLike } from '@common/shared/model'
 import type { MessageStatus } from '@modules/chat/shared'
 
 /* 工具调用状态（含入参、结果与耗时，供执行过程时间线渲染） */
@@ -57,4 +58,10 @@ export interface UiMessage {
   contextTokens?: number
   /* 最近一次模型响应的上下文窗口（实时事件携带，历史消息回退默认值） */
   contextWindow?: number
+  /* 本轮全部模型响应的用量累加（会话 Token 用量统计） */
+  usage?: UsageLike
+  /* 本轮全部模型响应的请求耗时累加（毫秒，会话模型用时统计） */
+  modelMs?: number
+  /* 本轮模型响应次数（会话步数统计） */
+  steps?: number
 }

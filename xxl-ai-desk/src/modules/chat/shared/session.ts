@@ -2,7 +2,7 @@
  * 会话域跨进程契约：权限模式、推理等级、会话与已持久化消息。
  */
 
-import type { ReasoningLevel } from '@common/shared/model'
+import type { ContextBreakdown, ReasoningLevel } from '@common/shared/model'
 import type { MessageSource } from './messageSource'
 import type { MessageStatus } from './messageStatus'
 
@@ -46,6 +46,8 @@ export interface SessionDTO {
   reasoningLevel: ReasoningLevel
   /* 权限模式（仅可查看 / 工作区内修改 / 完全权限） */
   permissionMode: PermissionMode
+  /* 最近一次模型响应的上下文分项估算（旧会话为 null） */
+  contextBreakdown: ContextBreakdown | null
   /* 创建时间（ISO） */
   addTime: string
   /* 更新时间（ISO） */

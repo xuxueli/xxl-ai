@@ -18,8 +18,7 @@ import {
   AGENT_NAME_MAX_CHARS,
   DEFAULT_AGENT_AVATAR,
   DEFAULT_AGENT_TOOLS,
-  resolveAgentAvatar,
-  resolvePresetTools,
+  EMPTY_AGENT_TOOLS,
   type AgentDTO,
   type AgentAvatarPreset,
   type AgentToolSwitches
@@ -46,7 +45,7 @@ const form = ref({
   systemPrompt: '',
   skillIds: [] as string[],
   mcpIds: [] as number[],
-  tools: { ...DEFAULT_AGENT_TOOLS } as AgentToolSwitches
+  tools: { ...EMPTY_AGENT_TOOLS } as AgentToolSwitches
 })
 const saving = ref(false)
 /* 当前点击过的预设：表单打开时默认不选中任何预设 */
@@ -55,39 +54,39 @@ const selectedPresetId = ref('')
 /* 抽屉标题 */
 const title = computed(() => (form.value.id ? t('agent.editTitle') : t('agent.newTitle')))
 
-/* 按草稿重置表单；新建时带出默认标识对应的默认指令 */
+/* 按草稿重置表单；新建时输入框全部为空，SKILL / MCP / 内置工具均未选中 */
 function resetForm(): void {
   const draft = props.draft
   const avatar = draft?.avatar ?? DEFAULT_AGENT_AVATAR
   selectedPresetId.value = ''
-  const avatarPreset = resolveAgentAvatar(avatar).preset
   form.value = {
     id: draft?.id ?? 0,
     name: draft?.name ?? '',
     description: draft?.description ?? '',
     avatar,
-    systemPrompt: draft ? draft.systemPrompt : avatarPreset ? t(avatarPreset.promptKey) : '',
+    systemPrompt: draft?.systemPrompt ?? '',
     skillIds: [...(draft?.skillIds ?? [])],
     mcpIds: [...(draft?.mcpIds ?? [])],
-    tools: { ...(draft?.tools ?? DEFAULT_AGENT_TOOLS) }
+    tools: { ...(draft?.tools ?? EMPTY_AGENT_TOOLS) }
   }
 }
 
-/* 选择预设 Agent：一键完善名称 / 描述 / 指令 / 内置工具；自定义则清空预设配置 */
+/* 预设 Agent：按预设填充名称 / 描述 / 指令；SKILL / MCP 清空，内置工具重置为文件 / 终端 / 浏览器 */
 function applyAgentPreset(preset: AgentAvatarPreset): void {
   selectedPresetId.value = preset.id
   form.value.avatar = preset.id
+  form.value.skillIds = []
+  form.value.mcpIds = []
+  form.value.tools = { ...DEFAULT_AGENT_TOOLS }
   if (!preset.preset) {
     form.value.name = ''
     form.value.description = ''
     form.value.systemPrompt = ''
-    form.value.tools = { ...DEFAULT_AGENT_TOOLS }
     return
   }
   form.value.name = t(preset.labelKey)
   form.value.description = t(preset.preset.descriptionKey)
   form.value.systemPrompt = t(preset.preset.promptKey)
-  form.value.tools = resolvePresetTools(preset.preset)
 }
 
 /* 工具开关：分类标识即 Agent 工具开关字段 */

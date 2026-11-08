@@ -5,10 +5,10 @@
  * @author xuxueli 2026-10-25
  */
 
-import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/renderer/types'
 import { t } from '@renderer/shell/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
+import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/renderer/types'
 import { hasVisiblePart, isRuntimeSource } from '@modules/chat/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 
@@ -49,6 +49,18 @@ let localMessageSeq = 0
 export function nextLocalMessageId(): number {
   localMessageSeq -= 1
   return localMessageSeq
+}
+
+/* 累加模型用量：同一轮多次响应的分项合并，供会话 Token 统计 */
+function addUsage(current: UsageLike | undefined, next: UsageLike): UsageLike {
+  const before = current ?? {}
+  return {
+    input: (Number(before.input) || 0) + (Number(next.input) || 0),
+    output: (Number(before.output) || 0) + (Number(next.output) || 0),
+    cacheRead: (Number(before.cacheRead) || 0) + (Number(next.cacheRead) || 0),
+    cacheWrite: (Number(before.cacheWrite) || 0) + (Number(next.cacheWrite) || 0),
+    totalTokens: (Number(before.totalTokens) || 0) + (Number(next.totalTokens) || 0)
+  }
 }
 
 /* ISO 时间 → 毫秒时间戳（无效值返回 undefined） */
@@ -202,6 +214,16 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
     const tokens = contextTokensOfUsage(raw?.usage)
     if (tokens > 0) {
       last.contextTokens = tokens
+    }
+
+    /* 累计本轮模型用量、请求耗时与步数：供会话统计 / Token 用量展示 */
+    if (raw?.usage) {
+      last.usage = addUsage(last.usage, raw.usage)
+    }
+    /* 仅真实模型响应计步：终止 / 异常备注等合成消息既无用量也无耗时 */
+    if (raw?.usage || typeof raw?.durationMs === 'number') {
+      last.modelMs = (last.modelMs ?? 0) + (Number(raw?.durationMs) || 0)
+      last.steps = (last.steps ?? 0) + 1
     }
 
     /* 本片段起始下标：用于失败时标记对应的正文段 */

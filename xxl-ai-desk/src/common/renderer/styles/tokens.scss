@@ -148,6 +148,10 @@
   --desk-overlay: color-mix(in srgb, var(--theme-text) 38%, transparent);
   /* 终端选区：中性半透明，避免主题色在代码背景上过重 */
   --desk-terminal-selection: rgba(24, 24, 27, 0.18);
+  /* 上下文占用分项：系统提示词 / 工具定义 / 对话消息（复用随主题适配的代码高亮色） */
+  --desk-context-system: var(--theme-text-tertiary);
+  --desk-context-tools: var(--code-purple);
+  --desk-context-messages: var(--code-blue);
 
   /* 尺寸与字体 */
   --desk-header-height: 38px;

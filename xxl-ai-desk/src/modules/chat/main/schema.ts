@@ -19,6 +19,7 @@ export const sessionTable = sqliteTable('desk_session', {
   summary: text('summary').notNull().default(''), /* 历史会话压缩摘要（定长） */
   summaryLastMessageId: integer('summary_last_message_id').notNull().default(0), /* 摘要覆盖到的最后一条消息 ID */
   summaryUpdateTime: text('summary_update_time').notNull().default(''), /* 摘要生成时间（ISO） */
+  contextBreakdown: text('context_breakdown').notNull().default(''), /* 最近一次上下文分项估算（JSON） */
   addTime: text('add_time').notNull().default(''),
   updateTime: text('update_time').notNull().default('')
 })

@@ -5,7 +5,7 @@
 
 export type { HostEvent, ProviderModelConfig, RunAgentInput } from './agentProtocol'
 export type { AgentApi } from './api'
-export { AGENT_AVATAR_PRESETS, resolveAgentAvatar, resolvePresetTools } from './agentPresets'
+export { AGENT_AVATAR_PRESETS, resolveAgentAvatar } from './agentPresets'
 export type { AgentAvatarPreset } from './agentPresets'
 export {
   AGENT_DESCRIPTION_MAX_CHARS,
@@ -14,7 +14,8 @@ export {
   AGENT_MEMORY_REFRESH_MS,
   AGENT_NAME_MAX_CHARS,
   DEFAULT_AGENT_AVATAR,
-  DEFAULT_AGENT_TOOLS
+  DEFAULT_AGENT_TOOLS,
+  EMPTY_AGENT_TOOLS
 } from './contracts'
 export type {
   AgentDTO,

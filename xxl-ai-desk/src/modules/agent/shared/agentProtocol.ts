@@ -37,7 +37,7 @@ export type HostEvent =
   | { type: 'thinking'; text: string } /* 思考文本 */
   | { type: 'tool_start'; toolCallId: string; toolName: string; args: unknown } /* 工具开始 */
   | { type: 'tool_end'; toolCallId: string; toolName: string; isError: boolean; result?: string; details?: unknown; durationMs?: number } /* 工具结束 */
-  | { type: 'usage'; used: number; window: number } /* 上下文用量（每次模型响应结束后回传） */
+  | { type: 'usage'; used: number; window: number; systemTokens?: number; toolTokens?: number; messageTokens?: number } /* 上下文用量（每次模型响应结束后回传；分项为估算值） */
   | { type: 'notice'; message: string } /* 非致命异常提示（继续执行） */
   | { type: 'done' } /* 本轮完成 */
   | { type: 'error'; message: string } /* 出错（结束） */

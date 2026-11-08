@@ -37,6 +37,12 @@ export interface ChatEvent {
   used?: number
   /* 模型上下文窗口（usage） */
   window?: number
+  /* 系统提示词估算 token（usage） */
+  systemTokens?: number
+  /* 工具定义估算 token（usage） */
+  toolTokens?: number
+  /* 对话消息估算 token（usage） */
+  messageTokens?: number
   /* 错误 / 提示信息（notice / error） */
   message?: string
 }

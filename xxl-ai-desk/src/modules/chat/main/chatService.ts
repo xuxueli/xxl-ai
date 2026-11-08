@@ -18,13 +18,14 @@ import type {
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
 import { isSessionModel } from '@common/shared/model'
+import type { ContextBreakdown } from '@common/shared/model'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { HostEvent, ProviderModelConfig, RunAgentInput } from '@modules/agent/shared'
 import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, updateSession } from './sessionService'
+import { appendMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, saveSessionContextBreakdown, updateSession } from './sessionService'
 import { maybeCompressSession } from './sessionSummaryService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
@@ -301,6 +302,8 @@ export async function sendChat(
   let committed = false
   /* 本轮最后一次上下文用量：对话结束后用于判断是否触发会话压缩 */
   let roundUsage: { used: number; window: number } | null = null
+  /* 本轮最后一次上下文分项：结束时写入会话表 */
+  let roundBreakdown: ContextBreakdown | null = null
   const settings = getSettings()
   const language = settings.language
   const emitEvent = (event: HostEvent): void => {
@@ -308,9 +311,16 @@ export async function sendChat(
     if (isSessionRemoved(sessionId)) {
       return
     }
-    /* 记录上下文用量，供本轮结束后的压缩判定使用 */
+    /* 记录上下文用量，供本轮结束后的压缩判定与会话分项写入使用 */
     if (event.type === 'usage') {
+      const { systemTokens, toolTokens, messageTokens } = event
       roundUsage = { used: event.used, window: event.window }
+      roundBreakdown =
+        typeof systemTokens === 'number' &&
+        typeof toolTokens === 'number' &&
+        typeof messageTokens === 'number'
+          ? { systemTokens, toolTokens, messageTokens }
+          : null
     }
     /* 用户已终止：错误事件转成正常结束，避免弹出「调用失败」 */
     if (event.type === 'error' && abortRequested.has(sessionId)) {
@@ -326,6 +336,8 @@ export async function sendChat(
   /* 失败兜底：把「用户提问 + 可读错误提示」落库并下发，避免重载/切换会话后提示丢失 */
   const fail = (raw: string): void => {
     const tip = contextReady ? describeError(raw, providerName, modelId, language) : raw
+    /* 失败前已产生用量：仍保留最近一次分项，避免面板回退成无数据 */
+    saveSessionContextBreakdown(sessionId, roundBreakdown)
     if (!committed) {
       persistFailureRound(sessionId, text, tip, startedAt)
     }
@@ -498,6 +510,8 @@ export async function sendChat(
       })
     appendMessages(sessionId, serialized)
     committed = true
+    /* 会话只保留最近一次分项：不写入消息原始数据，切会话 / 重启后由会话表还原 */
+    saveSessionContextBreakdown(sessionId, roundBreakdown)
     /* 会话压缩异步执行：满足无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 才真正压缩，失败不阻断对话 */
     void maybeCompressSession({ sessionId, usage: roundUsage }).catch((error) => {
       log.warn(`[chat] 会话摘要生成异常 session=${sessionId}`, error)

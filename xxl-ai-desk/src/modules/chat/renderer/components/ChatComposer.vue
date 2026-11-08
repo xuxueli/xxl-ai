@@ -10,7 +10,7 @@ import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
 import ChatFilePicker from '@modules/chat/renderer/components/ChatFilePicker.vue'
-import ContextUsage from '@modules/chat/renderer/components/ContextUsage.vue'
+import SessionStatusBar from '@modules/chat/renderer/components/SessionStatusBar.vue'
 import { relativeToRoot } from '@modules/chat/renderer/utils/path'
 import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
 import {
@@ -150,6 +150,8 @@ const currentPermissionMode = computed<PermissionMode>(() =>
     : draftPermissionMode.value
 )
 const currentPermissionLabel = computed(() => permissionLabel(currentPermissionMode.value))
+/* 完全权限：入口文案与下拉项均用危险色提示 */
+const fullAccess = computed(() => currentPermissionMode.value === 'full-access')
 
 /* 权限模式文案 */
 function permissionLabel(permissionMode: PermissionMode): string {
@@ -304,8 +306,16 @@ function onKeydown(event: KeyboardEvent): void {
           </button>
 
           <!-- 权限选择器：仅可查看 / 工作区内修改 / 完全权限，默认工作区内修改 -->
-          <el-dropdown trigger="click" @command="onPermissionChange">
-            <span class="picker-trigger" :title="t('chat.permissionTip')">
+          <el-dropdown
+            trigger="click"
+            popper-class="permission-dropdown"
+            @command="onPermissionChange"
+          >
+            <span
+              class="picker-trigger"
+              :class="{ 'picker-trigger--danger': fullAccess }"
+              :title="t('chat.permissionTip')"
+            >
               <el-icon class="picker-icon">
                 <Reading v-if="currentPermissionMode === 'read-only'" />
                 <EditPen v-else-if="currentPermissionMode === 'workspace-write'" />
@@ -330,6 +340,7 @@ function onKeydown(event: KeyboardEvent): void {
                 </el-dropdown-item>
                 <el-dropdown-item
                   command="full-access"
+                  class="permission-danger"
                   :class="{ 'picker-active': currentPermissionMode === 'full-access' }"
                 >
                   <el-icon><Unlock /></el-icon>{{ t('chat.permissionFullAccess') }}
@@ -415,10 +426,8 @@ function onKeydown(event: KeyboardEvent): void {
       </div>
     </div>
 
-    <!-- 输入框外侧底部：上下文占用居中摆放，仅已有会话展示 -->
-    <div v-if="chat.currentId && chat.contextUsage" class="composer-meta">
-      <ContextUsage :used="chat.contextUsage.used" :window="chat.contextUsage.window" />
-    </div>
+    <!-- 输入框外侧底部：会话状态信息条（会话统计 / Token 用量 / 上下文消耗） -->
+    <SessionStatusBar v-if="chat.currentId" />
 
     <!-- 项目文件选择弹框：选择结果合并到本轮关联文件 -->
     <ChatFilePicker
@@ -434,19 +443,6 @@ function onKeydown(event: KeyboardEvent): void {
 /* 左右留白比正文多出滚动条宽度：与正文内容列等宽、同中心 */
 .composer {
   padding: 12px var(--desk-chat-content-gutter) 0;
-}
-
-/*
- * 输入框外侧底部信息条：沿用原有 22px 底部留白，不额外撑高输入区；
- * 高度取 22px 仅为承载 16px 环形图标与百分比文案，内容垂直居中。
- */
-.composer-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 22px;
-  max-width: var(--desk-chat-width);
-  margin: 0 auto;
 }
 
 .composer-box {
@@ -625,6 +621,12 @@ function onKeydown(event: KeyboardEvent): void {
 .picker-trigger:hover {
   color: var(--desk-text);
   background: var(--desk-primary-soft);
+}
+
+/* 完全权限：入口图标与文案转危险色，提示当前处于全局读写 */
+.picker-trigger.picker-trigger--danger,
+.picker-trigger.picker-trigger--danger:hover {
+  color: var(--desk-danger);
 }
 
 .picker-trigger .picker-icon,

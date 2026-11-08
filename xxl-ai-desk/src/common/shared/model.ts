@@ -66,6 +66,16 @@ export interface UsageLike {
   cacheWrite?: number
 }
 
+/* 上下文占用分项估算：系统提示词 / 工具定义 / 对话消息 */
+export interface ContextBreakdown {
+  /* 系统提示词估算 token */
+  systemTokens: number
+  /* 工具定义估算 token */
+  toolTokens: number
+  /* 对话消息估算 token */
+  messageTokens: number
+}
+
 /* 上下文用量：优先 totalTokens，缺失时按分项累加 */
 export function contextTokensOfUsage(usage?: UsageLike | null): number {
   if (!usage) {

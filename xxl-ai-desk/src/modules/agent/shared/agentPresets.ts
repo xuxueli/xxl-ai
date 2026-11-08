@@ -2,12 +2,9 @@
  * Agent 预设标识：图标 + 颜色 + 一套默认配置，供列表、编辑抽屉、会话选择器与顶栏统一使用。
  *   - avatar 只落库预设 id，图标与颜色由本表统一派生；
  *   - 图标必须使用渲染入口已全局注册的 Element Plus 图标；
- *   - 预设配置用于新建时一键完善名称 / 描述 / 指令 / 内置工具。
+ *   - 预设配置用于新建时一键完善名称 / 描述 / 指令。
  * @author xuxueli 2026-11-07
  */
-
-import { DEFAULT_AGENT_TOOLS } from './contracts'
-import type { AgentToolSwitches } from './contracts'
 
 /* 预设模板配置：点击预设后回填到编辑表单 */
 export interface AgentPresetConfig {
@@ -15,8 +12,6 @@ export interface AgentPresetConfig {
   descriptionKey: string
   /* 默认指令文案 key */
   promptKey: string
-  /* 内置工具覆盖项；缺省字段沿用默认工具组合 */
-  tools?: Partial<AgentToolSwitches>
 }
 
 /* 预设标识 */
@@ -52,8 +47,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.coder',
     preset: {
       descriptionKey: 'agent.preset.coder.description',
-      promptKey: 'agent.presets.coding.prompt',
-      tools: { browser: false }
+      promptKey: 'agent.presets.coding.prompt'
     }
   },
   {
@@ -63,8 +57,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.writer',
     preset: {
       descriptionKey: 'agent.preset.writer.description',
-      promptKey: 'agent.presets.writing.prompt',
-      tools: { shell: false, browser: false, general: true }
+      promptKey: 'agent.presets.writing.prompt'
     }
   },
   {
@@ -74,8 +67,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.researcher',
     preset: {
       descriptionKey: 'agent.preset.researcher.description',
-      promptKey: 'agent.presets.research.prompt',
-      tools: { shell: false, browser: true, general: true }
+      promptKey: 'agent.presets.research.prompt'
     }
   },
   {
@@ -85,8 +77,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.operator',
     preset: {
       descriptionKey: 'agent.preset.operator.description',
-      promptKey: 'agent.presets.operator.prompt',
-      tools: { general: true }
+      promptKey: 'agent.presets.operator.prompt'
     }
   },
   {
@@ -96,8 +87,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.planner',
     preset: {
       descriptionKey: 'agent.preset.planner.description',
-      promptKey: 'agent.presets.planner.prompt',
-      tools: { fs: false, shell: false, browser: false, general: true, interaction: true }
+      promptKey: 'agent.presets.planner.prompt'
     }
   },
   {
@@ -107,8 +97,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.curator',
     preset: {
       descriptionKey: 'agent.preset.curator.description',
-      promptKey: 'agent.presets.curator.prompt',
-      tools: { shell: false, browser: false, general: true }
+      promptKey: 'agent.presets.curator.prompt'
     }
   },
   {
@@ -118,8 +107,7 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
     labelKey: 'agent.avatar.companion',
     preset: {
       descriptionKey: 'agent.preset.companion.description',
-      promptKey: 'agent.presets.companion.prompt',
-      tools: { fs: false, shell: false, browser: false, general: true, interaction: true }
+      promptKey: 'agent.presets.companion.prompt'
     }
   },
   {
@@ -133,9 +121,4 @@ export const AGENT_AVATAR_PRESETS: AgentAvatarPreset[] = [
 /* 按 id 查找预设：非法值回退默认标识 */
 export function resolveAgentAvatar(id: string): AgentAvatarPreset {
   return AGENT_AVATAR_PRESETS.find((item) => item.id === id) ?? AGENT_AVATAR_PRESETS[0]
-}
-
-/* 预设内置工具：以默认工具组合为底，叠加预设覆盖项 */
-export function resolvePresetTools(preset?: AgentPresetConfig): AgentToolSwitches {
-  return { ...DEFAULT_AGENT_TOOLS, ...(preset?.tools ?? {}) }
 }

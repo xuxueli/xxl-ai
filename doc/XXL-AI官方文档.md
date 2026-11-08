@@ -84,7 +84,7 @@ XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种�
 
 - 9、时间线渲染：助手消息按**片段发生顺序**交错呈现思考 → 工具 → 正文，不再是「思考堆一起、结果一次性吐出」；
 - 10、工具调用可视化：独立成行展示动作 / 参数 / 状态 / 实时耗时，可展开入参与结果；轮次结束展示耗时摘要；
-- 11、流式对话与上下文：思考过程折叠、Markdown 实时渲染、GitHub 风格代码高亮（语言标签 + 复制），顶栏展示上下文占用率；
+- 11、流式对话与上下文：思考过程折叠、Markdown 实时渲染、GitHub 风格代码高亮（语言标签 + 复制），输入框底部会话状态信息条展示会话统计、Token 用量与上下文占用；
 
 - **多供应商接入与工程化底座**
 
@@ -462,7 +462,7 @@ npm run build:win
 #### 3.2.1 界面总览
 
 - 左侧**会话栏**（可折叠为窄图标栏）：项目分组 + 会话列表，底部为新建对话、设置、折叠 / 展开；
-- 右侧**内容区**：顶栏（标题 / 上下文占用 / 模型切换）、消息流、输入框（Composer）；
+- 右侧**内容区**：顶栏（标题 / 模型切换）、消息流、输入框（Composer，底部为会话状态信息条）；
 - 右侧**工具面板**：文件 / Git / 终端 / 浏览器统一为 Tab，可放大占满正文区、拖拽宽度，状态按会话隔离；
 - 新建对话时，输入框下方必须选择**项目**与 **Agent**，并提供示例任务快速上手。
 
@@ -505,7 +505,7 @@ npm run build:win
   - **工作区内修改（workspace-write）**：全局可读；仅项目目录与系统临时目录可直接写入，其它写入在输入框位置内联展示审批，可选「允许本次 / 本会话允许 / 拒绝」；
   - **完全权限（full-access）**：全局读写；系统目录与用户敏感目录（如 `~/.ssh`）仍由统一拦截机制阻止；
 - 危险命令规则库始终生效，不随权限档位放开；
-- 输入框「+」可关联项目文件 / 文件夹，仅随下一条消息下发；顶栏展示当前会话上下文占用率；
+- 输入框「+」可关联项目文件 / 文件夹，仅随下一条消息下发；输入框底部会话状态信息条展示会话统计、Token 用量与上下文占用；
 - 助手消息按**片段发生顺序**渲染时间线（思考 → 工具 → 正文交错），思考运行中实时展开、完成后收起；工具调用独立成行，展示动作、参数、状态与耗时，点击可展开入参 / 结果；轮次结束展示耗时摘要；
 - 代码块为 GitHub 风格（语言标签 + 复制），接入语法高亮。
 
@@ -566,7 +566,7 @@ XXL-AI 提供「**云本结合**」两种交付形态，二者同源同品牌、
 |---|---|---|
 | Agent 编排与发布 | 模型 + 系统指令 + 知识库 + MCP + SKILL 组合，一键发布生成免登录公开地址 `/#/chat/{uuid}`，管理端可查看访客对话与消息记录 | 多 Agent 管理：扩展中心按 Agent 配置指令 / SKILL / MCP / 内置工具，会话创建即绑定 Agent，运行时按 Agent 实时装配 |
 | 多模型供应商 | 供应商 + 模型两级管理，连通性测试、远程模型自动导入，区分对话 / 嵌入模型 | 供应商 + 模型本地配置，首次启动预置 OpenCodeGo / Ollama / Deepseek / 智谱GLM，支持 `{session}` 请求头占位与模型上下文窗口 |
-| 流式对话 | SSE + Redis Stream 无状态化，支持集群部署与断线 / 刷新续传，思考折叠 + Markdown 渲染 | 主进程 / 运行时进程 IPC 事件流，思考 / 工具 / 正文按发生顺序时间线渲染，轮次耗时摘要、上下文占用率、代码高亮 |
+| 流式对话 | SSE + Redis Stream 无状态化，支持集群部署与断线 / 刷新续传，思考折叠 + Markdown 渲染 | 主进程 / 运行时进程 IPC 事件流，思考 / 工具 / 正文按发生顺序时间线渲染，轮次耗时摘要、会话状态信息条、代码高亮 |
 | MCP 工具 | 远程（Streamable HTTP）与本地（stdio）在线管理、连通测试，运行时自动装配 | 扩展中心统一管理 + mcp.so 市场发现，按 Agent 勾选后装配 |
 | SKILL 技能 | 在线管理 `SKILL.md` + 文件树，自动物化为可执行技能目录 | 扩展中心统一管理 + skills.sh / GitHub 市场安装，按 Agent 勾选后装配 |
 | RAG 知识库 | 知识库 + 文档管理，分片向量化入 Milvus，对话自动检索注入 | / |
@@ -1460,9 +1460,9 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 **项目与会话**：
 
 - 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制长期记忆，记忆正文与游标随项目行保存；
-- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / permission_mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
+- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / permission_mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`、上下文分项 `context_breakdown`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
 - 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；落库增量 + 单事务，生成中切换会话不丢内容；
-- 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、上下文占用率、Markdown 实时渲染与代码高亮。
+- 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、会话状态信息条、Markdown 实时渲染与代码高亮。
 
 **生命周期**：任何改变 Agent 能力或模型的操作触发会话运行时清理（`evictAgent` / `resetAgents`），下一轮重新装配；应用退出时回收运行时与终端进程，避免残留。
 
@@ -1577,7 +1577,7 @@ desk_llm_trace
 |---|---|
 | `desk_project` | 本地项目（`id / name / path / memory_enabled / memory / memory_last_time / memory_update_time / add_time / update_time`，路径 1:1 唯一；长期记忆随项目行保存） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
-| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / permission_mode / summary / summary_last_message_id / summary_update_time / add_time / update_time`） |
+| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / permission_mode / summary / summary_last_message_id / summary_update_time / context_breakdown / add_time / update_time`） |
 | `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
@@ -1739,11 +1739,12 @@ docker compose down
 - 15、【体验】MCP/SKILL市场：远程数据加载缓慢时，前端交互优化，避免页面黑屏等；
 - 16、【体验】主题色丰富：新增多主题色，支持自定义主题色设置；
 - 17、【优化】新增会话示例任务调整，辅助用户快速上手；
+- 18、【新增】会话状态信息条：支持会话统计（轮次/步数、模型用时、输出速度）、Token 用量（总量、缓存命中、输入/输出分项）、上下文消耗（使用率、窗口、分项估算）等信息展示，点击胶囊展开明细，便于用户了解会话状态；
+- 19、【ING】应用中心：内置「笔记」工具，子菜单进入支持针对笔记进行设置。包括笔记 存储目录（默认在 软件安装目录下的 /note 子目录）、是否启用（启用后新增左侧菜单）等设置。
+  - 笔记应用：支持 笔记文件目录（左侧）、笔记Markdown编辑器（中间，参考文件工具里的markdown编辑器）、内容目录（中间区域左侧/可折叠）、预览（编辑/分屏/预览）、搜索/替换、图片插入（图片存在在笔记目录的 /resource/image 目录下）等；
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
 > 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：`sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app`
-
-
 
 ### v1.5.1 Release Notes[ING]
 - 1、【ING】应用中心：支持如下功能；

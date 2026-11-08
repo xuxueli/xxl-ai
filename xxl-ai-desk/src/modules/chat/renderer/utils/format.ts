@@ -1,7 +1,9 @@
 /*
- * 对话消息展示格式化：时间与耗时（纯函数）。
+ * 对话消息展示格式化：时间、耗时与 token 文案。
  * @author xuxueli 2026-10-25
  */
+
+import { t } from '@renderer/shell/i18n'
 
 /* 格式化发送时间：ISO 字符串 → 展示文案，非法值返回空串（当天仅时分，跨天补充月日） */
 export function formatTime(iso: string): string {
@@ -43,4 +45,30 @@ export function formatTokenCount(value: number, language: string): string {
   return new Intl.NumberFormat(language === 'en' ? 'en-US' : 'zh-CN').format(
     Math.max(0, value)
   )
+}
+
+/* 大数字 token 紧凑展示：K / M（保留 1 位小数，整数去掉 .0），用于底部指标胶囊 */
+export function formatLargeTokens(value: number): string {
+  const tokens = Math.max(0, value)
+  if (tokens < 1000) {
+    return String(Math.round(tokens))
+  }
+  const compact =
+    tokens < 1_000_000 ? `${(tokens / 1000).toFixed(1)}K` : `${(tokens / 1_000_000).toFixed(1)}M`
+  return compact.replace(/\.0([KM])$/, '$1')
+}
+
+/* 长耗时展示：小时 / 分钟 / 秒，高位为 0 时省略（用户可见单位走 i18n） */
+export function formatLongDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return t('chat.duration.hour', [hours, minutes])
+  }
+  if (minutes > 0) {
+    return t('chat.duration.minute', [minutes, seconds])
+  }
+  return t('chat.duration.second', [seconds])
 }

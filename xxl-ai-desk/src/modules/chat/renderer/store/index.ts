@@ -11,11 +11,12 @@ import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
-import { CONTEXT_WINDOW_DEFAULT, type ReasoningLevel } from '@common/shared/model'
+import type { ContextBreakdown, ReasoningLevel } from '@common/shared/model'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
 import { mapStoredMessages, nextLocalMessageId, appendPart, refreshContent } from '@modules/chat/renderer/store/messageMapping'
 import { createChatStream } from '@modules/chat/renderer/store/stream'
+import { computeSessionMetrics, computeTokenUsage } from '@modules/chat/renderer/utils/sessionMetrics'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import {
   DEFAULT_PERMISSION_MODE,
@@ -72,25 +73,37 @@ export const useChatStore = defineStore('chat', () => {
   )
 
   /* 当前会话的上下文占用：取最近一次带用量的助手消息；无用量时不展示 */
-  const contextUsage = computed<{ used: number; window: number } | null>(() => {
+  const contextUsage = computed<{
+    used: number
+    window: number | null
+    breakdown: ContextBreakdown | null
+  } | null>(() => {
     for (let index = messages.value.length - 1; index >= 0; index -= 1) {
       const message = messages.value[index]
       if (message.role === 'assistant' && message.contextTokens) {
-        /* 窗口优先取当前会话模型配置，缺失时回退事件值与默认值 */
+        /* 窗口优先取当前会话模型配置，缺失时回退事件值；均缺失视为未知，不猜测默认值 */
         const session = currentSession.value
         const provider = session
           ? useProviderStore().providers.find((item) => item.id === session.providerId)
           : undefined
         const modelWindow = provider?.models.find((item) => item.id === session?.modelId)
           ?.contextWindow
+        const window = Number(modelWindow) || Number(message.contextWindow) || 0
         return {
           used: message.contextTokens,
-          window: modelWindow || message.contextWindow || CONTEXT_WINDOW_DEFAULT
+          window: window > 0 ? window : null,
+          breakdown: currentSession.value?.contextBreakdown ?? null
         }
       }
     }
     return null
   })
+
+  /* 当前会话统计：轮次 / 步数 / 模型与工具耗时 / 输出速度（由已加载消息聚合） */
+  const sessionMetrics = computed(() => computeSessionMetrics(messages.value))
+
+  /* 当前会话 Token 用量：分项与缓存命中率（由已加载消息聚合） */
+  const tokenUsage = computed(() => computeTokenUsage(messages.value))
 
   /* 加载会话列表 */
   async function loadSessions(): Promise<void> {
@@ -361,7 +374,22 @@ export const useChatStore = defineStore('chat', () => {
     if (unbind) {
       return
     }
-    unbind = api.chat.onEvent(stream.handleEvent)
+    unbind = api.chat.onEvent((event) => {
+      /* usage 事件实时同步会话分项：落库在主进程按轮完成，这里只更新当前列表视图 */
+      if (event.type === 'usage') {
+        const session = sessions.value.find((item) => item.id === event.sessionId)
+        const { systemTokens, toolTokens, messageTokens } = event
+        if (
+          session &&
+          typeof systemTokens === 'number' &&
+          typeof toolTokens === 'number' &&
+          typeof messageTokens === 'number'
+        ) {
+          session.contextBreakdown = { systemTokens, toolTokens, messageTokens }
+        }
+      }
+      stream.handleEvent(event)
+    })
     api.chat.onInteraction(onInteraction)
     api.chat.onInteractionCancel(onInteractionCancel)
   }
@@ -472,6 +500,10 @@ export const useChatStore = defineStore('chat', () => {
     await api.session.removeMessages(currentId.value, ids)
     const removed = new Set(ids)
     messages.value = messages.value.filter((item) => !removed.has(item.id))
+    /* 主进程已清空会话分项：本地同步失效，避免删除后仍展示旧分项 */
+    if (currentSession.value) {
+      currentSession.value.contextBreakdown = null
+    }
   }
 
   /* 中断生成 */
@@ -496,6 +528,8 @@ export const useChatStore = defineStore('chat', () => {
     bootstrapping,
     currentSession,
     contextUsage,
+    sessionMetrics,
+    tokenUsage,
     currentInteraction,
     currentInteractionCount,
     respondInteraction,

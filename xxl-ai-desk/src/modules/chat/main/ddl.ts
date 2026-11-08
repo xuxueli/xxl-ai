@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
   summary       TEXT NOT NULL DEFAULT '',
   summary_last_message_id INTEGER NOT NULL DEFAULT 0,
   summary_update_time     TEXT NOT NULL DEFAULT '',
+  context_breakdown       TEXT NOT NULL DEFAULT '',
   add_time      TEXT NOT NULL DEFAULT '',
   update_time   TEXT NOT NULL DEFAULT ''
 );
