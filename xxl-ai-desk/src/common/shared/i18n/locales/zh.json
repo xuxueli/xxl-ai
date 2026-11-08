@@ -272,6 +272,8 @@
     "hitl": {
       "invalidParams": "参数不合法：{0}",
       "invalidTitle": "title 不能为空",
+      "invalidQuestions": "questions 需要 1~{0} 个问题",
+      "invalidQuestion": "问题项必须是对象",
       "invalidOptions": "choice 需要 2~20 个候选选项",
       "invalidOption": "选项缺少 label 或 value",
       "duplicateOption": "选项值重复：{0}",

@@ -136,8 +136,13 @@ function cancel(): void {
     <p v-if="error" class="error">{{ error }}</p>
 
     <div class="footer">
-      <el-button @click="cancel">{{ t('chat.interaction.cancel') }}</el-button>
-      <el-button type="primary" @click="submit">{{ t('chat.interaction.submit') }}</el-button>
+      <span v-if="(request.total ?? 0) > 1" class="round">
+        {{ request.round }}/{{ request.total }}
+      </span>
+      <div class="footer-actions">
+        <el-button @click="cancel">{{ t('chat.interaction.cancel') }}</el-button>
+        <el-button type="primary" @click="submit">{{ t('chat.interaction.submit') }}</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -156,19 +161,25 @@ function cancel(): void {
 }
 
 /* 选项改为可点击卡片：左侧选择控件，右侧标题与说明同一行排布，避免每项占两行 */
-.options {
+.choice-panel .options {
   display: flex;
   flex-direction: column;
+  /* Element Plus 默认 flex-wrap: wrap，竖向排列 + 限高会把超出的选项折成新列并产生横向滚动 */
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: 8px;
-  /* 选项可能多达 20 个：限高滚动，保证底部操作区始终可见 */
+  min-width: 0;
+  /* 选项可能多达 20 个：限高后只做纵向滚动，保证底部操作区始终可见 */
   max-height: min(320px, 42vh);
   padding-right: 2px;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
 .option {
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   height: auto;
   margin: 0;
   padding: 10px 12px;
@@ -212,6 +223,7 @@ function cancel(): void {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 2px 10px;
+  min-width: 0;
 }
 
 .option-label {
@@ -241,10 +253,24 @@ function cancel(): void {
 
 .footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 2px;
   padding-top: 14px;
   border-top: 1px solid var(--desk-border-soft);
+}
+
+/* 多问题进度：左侧固定展示当前轮次 */
+.round {
+  color: var(--desk-text-tertiary);
+  font-size: var(--desk-font-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 </style>

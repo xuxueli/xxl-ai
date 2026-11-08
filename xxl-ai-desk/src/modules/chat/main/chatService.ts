@@ -237,7 +237,7 @@ function hitlSystemHint(enabled: boolean): string {
   if (!enabled) {
     return ''
   }
-  return '\n\n## 人机交互\n只有在需要用户在多个候选方案中拍板时，才调用 ask_user，并提供 2~20 个选项（可多选，默认允许「其他」）。需要确认操作、补充信息或自由文本时，直接在回复里提问，不要调用工具。一次只问一个关键问题；选项是候选值而非强制枚举；用户拒绝或取消后不要重复追问。'
+  return '\n\n## 人机交互\n只有在需要用户在多个候选方案中拍板时，才调用 ask_user，并提供 2~20 个选项（可多选，默认允许「其他」）。需要连续确认多个问题时，用 questions 一次列出（1~10 个），界面会按 1/N 逐题展示；只有一个问题时可直接使用顶层字段。需要确认操作、补充信息或自由文本时，直接在回复里提问，不要调用工具。选项是候选值而非强制枚举；用户拒绝或取消后不要重复追问。'
 }
 
 /*
@@ -520,7 +520,7 @@ export async function sendChat(
 /* 中止指定会话的当前生成 */
 export async function abortChat(sessionId: number): Promise<void> {
   abortRequested.add(sessionId)
-  /* 先关闭该会话仍打开的交互弹窗，再通知运行时代为结算 */
+  /* 先移除该会话仍展示的交互面板，再通知运行时代为结算 */
   cancelInteractionsOf(sessionId)
   await abortAgent(sessionId)
 }

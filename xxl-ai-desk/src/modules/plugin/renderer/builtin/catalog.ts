@@ -1,12 +1,10 @@
 /*
  * 内置工具目录（扩展中心内静态目录）：
- *   - 描述内置工具的名称、分类、权限与适用模式，供「扩展中心 → 内置工具」页面只读展示；
+ *   - 描述内置工具的名称、分类与读写属性，供「扩展中心 → 内置工具」页面只读展示；
  *   - 工具名必须与 agent/worker/tools 下的内置工具保持一致；
  *   - 是否启用由 Agent 配置决定，本目录只描述能力。
  * @author xuxueli 2026-10-25
  */
-
-import type { PermissionMode } from '@modules/chat/shared'
 
 /* 内置工具分类：fs 文件 / shell 终端 / browser 浏览器（可开关）/ general 通用（可开关）/ interaction 人机交互（可开关） */
 export type BuiltinToolCategoryKey = 'fs' | 'shell' | 'browser' | 'general' | 'interaction'
@@ -21,10 +19,8 @@ export interface BuiltinToolCatalogItem {
   titleKey: string
   /* 工具说明文案 key */
   descriptionKey: string
-  /* 是否只读工具 */
+  /* 是否只读工具（写操作需工作区及以上权限，只读档位不装配） */
   readOnly: boolean
-  /* 允许出现的权限模式 */
-  permissionModes: PermissionMode[]
 }
 
 /* 分类定义 */
@@ -66,9 +62,6 @@ export const BUILTIN_TOOL_CATEGORIES: BuiltinToolCategory[] = [
   }
 ]
 
-const ALL_PERMISSIONS: PermissionMode[] = ['read-only', 'workspace-write', 'full-access']
-const WRITE_PERMISSIONS: PermissionMode[] = ['workspace-write', 'full-access']
-
 /* 内置工具目录（顺序即页面展示顺序） */
 export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
   {
@@ -76,191 +69,167 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     category: 'fs',
     titleKey: 'chat.tool.readFile',
     descriptionKey: 'plugin.builtinTool.desc.readFile',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'list_directory',
     category: 'fs',
     titleKey: 'chat.tool.listDir',
     descriptionKey: 'plugin.builtinTool.desc.listDir',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'glob_files',
     category: 'fs',
     titleKey: 'chat.tool.glob',
     descriptionKey: 'plugin.builtinTool.desc.glob',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'search_files',
     category: 'fs',
     titleKey: 'chat.tool.search',
     descriptionKey: 'plugin.builtinTool.desc.search',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'write_file',
     category: 'fs',
     titleKey: 'chat.tool.writeFile',
     descriptionKey: 'plugin.builtinTool.desc.writeFile',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'edit_file',
     category: 'fs',
     titleKey: 'chat.tool.editFile',
     descriptionKey: 'plugin.builtinTool.desc.editFile',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'delete_file',
     category: 'fs',
     titleKey: 'chat.tool.deleteFile',
     descriptionKey: 'plugin.builtinTool.desc.deleteFile',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'move_file',
     category: 'fs',
     titleKey: 'chat.tool.moveFile',
     descriptionKey: 'plugin.builtinTool.desc.moveFile',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'run_command',
     category: 'shell',
     titleKey: 'chat.tool.command',
     descriptionKey: 'plugin.builtinTool.desc.command',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'open_browser',
     category: 'browser',
     titleKey: 'chat.tool.openBrowser',
     descriptionKey: 'plugin.builtinTool.desc.openBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'read_browser',
     category: 'browser',
     titleKey: 'chat.tool.readBrowser',
     descriptionKey: 'plugin.builtinTool.desc.readBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'snapshot_browser',
     category: 'browser',
     titleKey: 'chat.tool.snapshotBrowser',
     descriptionKey: 'plugin.builtinTool.desc.snapshotBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'click_browser',
     category: 'browser',
     titleKey: 'chat.tool.clickBrowser',
     descriptionKey: 'plugin.builtinTool.desc.clickBrowser',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'fill_browser',
     category: 'browser',
     titleKey: 'chat.tool.fillBrowser',
     descriptionKey: 'plugin.builtinTool.desc.fillBrowser',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'hover_browser',
     category: 'browser',
     titleKey: 'chat.tool.hoverBrowser',
     descriptionKey: 'plugin.builtinTool.desc.hoverBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'press_browser',
     category: 'browser',
     titleKey: 'chat.tool.pressBrowser',
     descriptionKey: 'plugin.builtinTool.desc.pressBrowser',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'select_browser',
     category: 'browser',
     titleKey: 'chat.tool.selectBrowser',
     descriptionKey: 'plugin.builtinTool.desc.selectBrowser',
-    readOnly: false,
-    permissionModes: WRITE_PERMISSIONS
+    readOnly: false
   },
   {
     name: 'scroll_browser',
     category: 'browser',
     titleKey: 'chat.tool.scrollBrowser',
     descriptionKey: 'plugin.builtinTool.desc.scrollBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'wait_browser',
     category: 'browser',
     titleKey: 'chat.tool.waitBrowser',
     descriptionKey: 'plugin.builtinTool.desc.waitBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'screenshot_browser',
     category: 'browser',
     titleKey: 'chat.tool.screenshotBrowser',
     descriptionKey: 'plugin.builtinTool.desc.screenshotBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'inspect_browser',
     category: 'browser',
     titleKey: 'chat.tool.inspectBrowser',
     descriptionKey: 'plugin.builtinTool.desc.inspectBrowser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'browser_tabs',
     category: 'browser',
     titleKey: 'chat.tool.browserTabs',
     descriptionKey: 'plugin.builtinTool.desc.browserTabs',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'get_current_time',
     category: 'general',
     titleKey: 'chat.tool.time',
     descriptionKey: 'plugin.builtinTool.desc.time',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   },
   {
     name: 'ask_user',
     category: 'interaction',
     titleKey: 'chat.tool.askUser',
     descriptionKey: 'plugin.builtinTool.desc.askUser',
-    readOnly: true,
-    permissionModes: ALL_PERMISSIONS
+    readOnly: true
   }
 ]

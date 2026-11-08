@@ -17,7 +17,14 @@ import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modu
 import { mapStoredMessages, nextLocalMessageId, appendPart, refreshContent } from '@modules/chat/renderer/store/messageMapping'
 import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
-import { DEFAULT_PERMISSION_MODE, type PermissionMode, type SessionDTO } from '@modules/chat/shared'
+import {
+  DEFAULT_PERMISSION_MODE,
+  type ChatInteractionCancel,
+  type ChatInteractionPrompt,
+  type InteractionResult,
+  type PermissionMode,
+  type SessionDTO
+} from '@modules/chat/shared'
 import type { UiMessage } from '@modules/chat/renderer/types'
 
 /* 会话与对话状态 */
@@ -40,12 +47,28 @@ export const useChatStore = defineStore('chat', () => {
   /* 流式状态机：缓冲、目标消息与多会话内存缓存 */
   const stream = createChatStream({ currentId, messages, streamingIds })
 
+  /*
+   * 人机交互按会话隔离：其它会话的待响应请求不占用当前输入区，
+   * 切回对应会话时再展示，避免跨会话相互影响。
+   */
+  const interactions = ref<Record<number, ChatInteractionPrompt[]>>({})
+
   /* 当前会话是否正在生成（组件据此展示停止/禁用发送；其它会话不受影响） */
   const streaming = computed(() => Boolean(currentId.value && streamingIds.value[currentId.value]))
 
   /* 当前会话对象（未选中为 null） */
   const currentSession = computed(
     () => sessions.value.find((item) => item.id === currentId.value) ?? null
+  )
+
+  /* 当前会话待响应的交互（取队首） */
+  const currentInteraction = computed<ChatInteractionPrompt | null>(
+    () => interactions.value[currentId.value]?.[0] ?? null
+  )
+
+  /* 当前会话排队等待的交互数量 */
+  const currentInteractionCount = computed(
+    () => interactions.value[currentId.value]?.length ?? 0
   )
 
   /* 当前会话的上下文占用：取最近一次带用量的助手消息；无用量时不展示 */
@@ -103,6 +126,7 @@ export const useChatStore = defineStore('chat', () => {
   /* 重新加载会话并校正当前会话（项目级联删除后调用） */
   async function reloadSessions(): Promise<void> {
     await loadSessions()
+    pruneInteractions(sessions.value.map((item) => item.id))
     if (currentId.value && !sessions.value.some((item) => item.id === currentId.value)) {
       currentId.value = 0
       messages.value = []
@@ -195,9 +219,10 @@ export const useChatStore = defineStore('chat', () => {
   /* 删除会话 */
   async function removeSession(id: number): Promise<void> {
     await api.session.remove(id)
-    /* 清理该会话的生成缓存与流式状态 */
+    /* 清理该会话的生成缓存、流式状态与人机交互队列 */
     stream.discard(id)
     delete streamingIds.value[id]
+    clearSessionInteractions(id)
     sessions.value = sessions.value.filter((item) => item.id !== id)
     /* 该会话的工具面板 / 浏览器 / 对话 UI 资源由 useSessionLifecycle 统一回收 */
     /* 清除「最后会话」记录：避免下次启动定位到已删除的会话 */
@@ -249,12 +274,82 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /* 从任意会话队列移除指定请求 */
+  function dropInteraction(requestId: string): void {
+    const next = { ...interactions.value }
+    let changed = false
+    for (const [key, queue] of Object.entries(next)) {
+      const filtered = queue.filter((item) => item.requestId !== requestId)
+      if (filtered.length === queue.length) {
+        continue
+      }
+      changed = true
+      if (filtered.length > 0) {
+        next[Number(key)] = filtered
+      } else {
+        delete next[Number(key)]
+      }
+    }
+    if (changed) {
+      interactions.value = next
+    }
+  }
+
+  /* 收到交互请求：只进入所属会话队列，不打断其它会话 */
+  function onInteraction(prompt: ChatInteractionPrompt): void {
+    const queue = interactions.value[prompt.sessionId] ?? []
+    if (queue.some((item) => item.requestId === prompt.requestId)) {
+      return
+    }
+    interactions.value = {
+      ...interactions.value,
+      [prompt.sessionId]: [...queue, prompt]
+    }
+  }
+
+  /* 运行时主动取消：移除对应请求 */
+  function onInteractionCancel(payload: ChatInteractionCancel): void {
+    dropInteraction(payload.requestId)
+  }
+
+  /* 回传用户应答：先移出队列，再交主进程唤醒工具调用 */
+  function respondInteraction(requestId: string, result: InteractionResult): void {
+    dropInteraction(requestId)
+    void api.chat.respondInteraction(requestId, result)
+  }
+
+  /* 清理会话的交互队列（删除会话时调用） */
+  function clearSessionInteractions(sessionId: number): void {
+    if (!interactions.value[sessionId]) {
+      return
+    }
+    const next = { ...interactions.value }
+    delete next[sessionId]
+    interactions.value = next
+  }
+
+  /* 清理已不存在会话的交互（项目级联删除等不经过 removeSession 的场景） */
+  function pruneInteractions(validSessionIds: number[]): void {
+    const valid = new Set(validSessionIds)
+    const stale = Object.keys(interactions.value).filter((id) => !valid.has(Number(id)))
+    if (stale.length === 0) {
+      return
+    }
+    const next = { ...interactions.value }
+    for (const id of stale) {
+      delete next[Number(id)]
+    }
+    interactions.value = next
+  }
+
   /* 绑定事件监听（幂等） */
   function bind(): void {
     if (unbind) {
       return
     }
     unbind = api.chat.onEvent(stream.handleEvent)
+    api.chat.onInteraction(onInteraction)
+    api.chat.onInteractionCancel(onInteractionCancel)
   }
 
   /* 发送失败：提示并在当前流式助手气泡内追加可读错误 */
@@ -387,6 +482,9 @@ export const useChatStore = defineStore('chat', () => {
     bootstrapping,
     currentSession,
     contextUsage,
+    currentInteraction,
+    currentInteractionCount,
+    respondInteraction,
     loadSessions,
     reloadSessions,
     restoreLastSession,

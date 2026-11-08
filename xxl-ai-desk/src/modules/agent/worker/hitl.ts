@@ -1,5 +1,5 @@
 /*
- * 运行时侧人机交互桥：把工具/沙箱的等待请求转交主进程弹窗，并在用户应答、
+ * 运行时侧人机交互桥：把工具/沙箱的等待请求转交主进程，在渲染层输入框位置内联展示，并在用户应答、
  * 生成终止或运行时清理时结算 Promise，保证工具不会永久悬挂。
  *
  * 本模块只做请求配对与生命周期管理，不感知界面与业务；跨进程发送由运行时入口注入。
@@ -48,7 +48,7 @@ function settle(requestId: string, result: InteractionResult, notify: boolean): 
   if (item.signal && item.onAbort) {
     item.signal.removeEventListener('abort', item.onAbort)
   }
-  /* 由运行时主动取消：通知渲染层关闭仍打开的弹窗 */
+  /* 由运行时主动取消：通知渲染层移除仍展示的交互面板 */
   if (notify) {
     sender?.({ type: 'interaction-cancel', requestId })
   }
@@ -67,7 +67,7 @@ export function requestInteraction(
   }
   const requestId = nextRequestId()
   return new Promise<InteractionResult>((resolve) => {
-    /* 工具调用已终止：不再弹窗 */
+    /* 工具调用已终止：不再发起交互 */
     if (signal?.aborted) {
       resolve({ status: 'cancelled' })
       return

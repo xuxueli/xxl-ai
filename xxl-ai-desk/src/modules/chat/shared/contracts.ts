@@ -58,7 +58,7 @@ export interface InteractionPermission {
 
 /* 交互公共信息 */
 interface InteractionBase {
-  /* 弹窗标题 */
+  /* 交互面板标题 */
   title: string
   /* 补充说明 */
   message?: string
@@ -73,6 +73,10 @@ export interface ChoiceInteractionRequest extends InteractionBase {
   multiple: boolean
   /* 是否允许「其他」自由输入 */
   allowOther: boolean
+  /* 当前问题轮次（多问题时从 1 开始，单问题时缺省） */
+  round?: number
+  /* 本轮交互的问题总数（1 表示单问题） */
+  total?: number
 }
 
 /* 越界权限校验：仅由系统沙箱发起，工具不可构造 */
@@ -101,7 +105,7 @@ export interface ChatInteractionPrompt {
   request: InteractionRequest
 }
 
-/* 交互取消载荷（主 → 渲染）：会话终止/删除后关闭对应弹窗 */
+/* 交互取消载荷（主 → 渲染）：会话终止/删除后移除对应交互面板 */
 export interface ChatInteractionCancel {
   /* 交互请求 ID */
   requestId: string

@@ -272,6 +272,8 @@
     "hitl": {
       "invalidParams": "Invalid parameters: {0}",
       "invalidTitle": "title cannot be empty",
+      "invalidQuestions": "questions must contain 1-{0} questions",
+      "invalidQuestion": "Each question must be an object",
       "invalidOptions": "choice requires 2-20 options",
       "invalidOption": "Option is missing label or value",
       "duplicateOption": "Duplicate option value: {0}",

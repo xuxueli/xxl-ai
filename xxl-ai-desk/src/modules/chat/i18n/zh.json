@@ -108,6 +108,7 @@
     "searchNext": "下一处",
     "searchClose": "关闭搜索",
     "interaction": {
+      "userConfirm": "用户确认",
       "submit": "提交",
       "cancel": "取消",
       "required": "请选择一项",
@@ -116,16 +117,17 @@
       "otherPlaceholder": "输入你的选项",
       "queue": "还有 {0} 个待处理请求",
       "permission": {
+        "header": "权限审批申请",
         "title": "越界访问确认",
         "read": "读取",
         "write": "写入",
-        "command": "执行",
-        "message": "工具「{0}」请求{1}项目目录之外的文件",
-        "messageCommand": "工具「{0}」请求访问项目目录之外的路径",
-        "path": "目标路径",
+        "message": "Agent 想要{0}项目目录之外的文件",
+        "messageCommand": "Agent 想要在项目目录之外执行命令",
+        "pathOutside": "目标路径（项目外）",
         "root": "项目目录",
-        "question": "是否允许本次操作？",
-        "once": "允许本次",
+        "hint": "允许后，本次工具调用会继续执行；拒绝则 Agent 会停止该操作并调整方案。",
+        "sessionTip": "本会话内所有项目外访问都不再询问",
+        "once": "允许一次",
         "session": "本会话全部允许",
         "deny": "拒绝"
       }

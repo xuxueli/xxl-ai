@@ -154,9 +154,6 @@
       "permission": "权限",
       "readOnly": "只读",
       "writable": "可写",
-      "availablePermissions": "可用权限",
-      "permissionAll": "三档权限",
-      "permissionWrite": "工作区 / 完全",
       "count": "{0} 个工具",
       "category": {
         "fs": "文件操作",

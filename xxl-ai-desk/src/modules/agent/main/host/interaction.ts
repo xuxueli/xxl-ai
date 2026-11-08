@@ -1,8 +1,8 @@
 /*
  * 主进程侧人机交互桥：运行时进程把交互请求转交此处，
- * 由主进程转发渲染进程弹应用内对话框，并回传用户结果（提交 / 拒绝 / 取消）。
+ * 由主进程转发渲染进程，在输入框位置内联展示审批 / 选择面板，并回传用户结果（提交 / 拒绝 / 取消）。
  *
- * 同一窗口内维护单一请求表：渲染层按到达顺序排队展示，主进程只做配对与转发。
+ * 同一窗口内维护按 requestId 索引的请求表：渲染层按会话隔离并排队展示，主进程只做配对与转发。
  *
  * @author xuxueli 2026-10-31
  */
@@ -23,7 +23,7 @@ function activeWindow(): BrowserWindow | null {
   return window && !window.isDestroyed() ? window : null
 }
 
-/* 推送关闭弹窗（运行时已主动取消） */
+/* 通知渲染层移除交互面板（运行时已主动取消） */
 function closePrompt(requestId: string): void {
   activeWindow()?.webContents.send(CHAT_IPC.interactionCancel, { requestId })
 }
@@ -50,7 +50,7 @@ export function resolveInteraction(requestId: string, result: InteractionResult)
   return true
 }
 
-/* 运行时主动取消：移除请求并关闭仍打开的弹窗 */
+/* 运行时主动取消：移除请求并通知渲染层收起面板 */
 export function cancelInteraction(requestId: string): void {
   if (pending.delete(requestId)) {
     closePrompt(requestId)
@@ -67,7 +67,7 @@ export function cancelInteractionsOf(sessionId: number): void {
   }
 }
 
-/* 清空全部交互（运行时进程退出）：逐条关闭弹窗，避免界面残留 */
+/* 清空全部交互（运行时进程退出）：逐条通知渲染层移除，避免界面残留 */
 export function clearInteractions(): void {
   for (const requestId of pending.keys()) {
     closePrompt(requestId)

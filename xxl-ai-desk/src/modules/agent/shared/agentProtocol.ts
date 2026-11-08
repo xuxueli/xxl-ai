@@ -1,6 +1,6 @@
 /*
  * Agent 运行时协议：主进程 ⇄ 运行时进程（Electron utilityProcess）之间的消息约定。
- * 运行时进程承载模型调用、工具执行与文件沙箱，主进程仅做 IPC 网关与审批弹窗，
+ * 运行时进程承载模型调用、工具执行与文件沙箱，主进程仅做 IPC 网关与交互转发，
  * 避免 LLM 流式与工具重活占用主进程事件循环。
  */
 
@@ -147,7 +147,7 @@ export type WorkerMessage =
   | { type: 'run-done'; sessionId: number; messages: unknown[] } /* 运行完成（只返回本轮新增消息） */
   | { type: 'run-error'; sessionId: number; message: string } /* 运行失败 */
   | { type: 'interaction-request'; requestId: string; sessionId: number; request: InteractionRequest } /* 人机交互请求 */
-  | { type: 'interaction-cancel'; requestId: string } /* 交互取消（关闭渲染层弹窗） */
+  | { type: 'interaction-cancel'; requestId: string } /* 交互取消（移除渲染层交互面板） */
   | { type: 'mcp-test-result'; requestId: string; result: McpTestResult } /* 连通测试结果 */
   | { type: 'mcp-tools-result'; requestId: string; tools: McpToolMeta[] } /* 工具列表结果 */
   | { type: 'memory-result'; requestId: string; ok: boolean; content?: string; message?: string } /* 记忆生成结果 */

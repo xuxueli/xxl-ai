@@ -154,9 +154,6 @@
       "permission": "Access",
       "readOnly": "Read-only",
       "writable": "Writable",
-      "availablePermissions": "Available permissions",
-      "permissionAll": "All permissions",
-      "permissionWrite": "Workspace / Full",
       "count": "{0} tools",
       "category": {
         "fs": "File Operations",

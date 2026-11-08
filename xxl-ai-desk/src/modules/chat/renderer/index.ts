@@ -10,5 +10,4 @@ export { default as ChatSearchAction } from '@modules/chat/renderer/components/C
 export { default as ChatSidebarPanel } from '@modules/chat/renderer/components/ChatSidebarPanel.vue'
 export { default as ChatCommandPalette } from '@modules/chat/renderer/components/CommandPalette.vue'
 export { default as ContextUsage } from '@modules/chat/renderer/components/ContextUsage.vue'
-export { default as ChatInteractionDialog } from '@modules/chat/renderer/components/interaction/InteractionDialog.vue'
 export { useCommandPalette } from '@modules/chat/renderer/composables/useCommandPalette'

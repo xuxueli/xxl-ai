@@ -34,6 +34,11 @@ let worker: UtilityProcess | null = null
 let workerReady: Promise<UtilityProcess> | null = null
 /* 进行中的运行：sessionId → 事件回调与结算（同一会话同时只允许一轮） */
 const pendingRuns = new Map<number, PendingRun>()
+/*
+ * 运行期间到达的 evict 请求：摘要 / 长期记忆等后台任务完成时会清理会话运行时，
+ * 若此时正好有新一轮在等待用户审批，直接 evict 会取消交互；改为本轮结束后再清理。
+ */
+const pendingEvictions = new Set<number>()
 /* 进行中的 MCP 请求：requestId → 结算（连通测试 / 工具列表） */
 const pendingMcp = new Map<
   string,
@@ -116,6 +121,8 @@ function ensureWorker(): Promise<UtilityProcess> {
       )
       pendingRuns.delete(sessionId)
     }
+    /* 新进程没有旧运行，延后的 evict 无需继续排队 */
+    pendingEvictions.clear()
     /* 交互请求随 worker 失效：清理挂起项，避免后续误回传 */
     clearInteractions()
     /* 未结算的 MCP 请求同样统一失败 */
@@ -170,17 +177,19 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
     case 'run-done': {
       const pending = pendingRuns.get(message.sessionId)
       pendingRuns.delete(message.sessionId)
+      flushPendingEviction(message.sessionId)
       pending?.resolve({ ok: true, messages: message.messages })
       break
     }
     case 'run-error': {
       const pending = pendingRuns.get(message.sessionId)
       pendingRuns.delete(message.sessionId)
+      flushPendingEviction(message.sessionId)
       pending?.resolve({ ok: false, message: message.message })
       break
     }
     case 'interaction-request': {
-      /* 会话已删除：直接按拒绝结算，避免已删会话弹窗与工具悬挂 */
+      /* 会话已删除：直接按拒绝结算，避免已删会话残留交互与工具悬挂 */
       if (!sessionActiveResolver(message.sessionId)) {
         worker?.postMessage({
           type: 'interaction-response',
@@ -302,8 +311,20 @@ export function abortAgent(sessionId: number): void {
   postRequest({ type: 'abort', sessionId })
 }
 
-/* 释放会话运行时（删除会话/切换模型时） */
+/* 运行结束后补发延后的 evict */
+function flushPendingEviction(sessionId: number): void {
+  if (pendingEvictions.delete(sessionId)) {
+    postRequest({ type: 'evict', sessionId })
+  }
+}
+
+/* 释放会话运行时（删除会话/切换模型/后台配置刷新） */
 export function evictAgent(sessionId: number): void {
+  /* 本轮仍在执行：暂存到结束后清理，避免取消正在等待的审批 / 选择交互 */
+  if (pendingRuns.has(sessionId)) {
+    pendingEvictions.add(sessionId)
+    return
+  }
   postRequest({ type: 'evict', sessionId })
 }
 

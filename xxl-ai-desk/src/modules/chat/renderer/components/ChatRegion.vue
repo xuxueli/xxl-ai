@@ -8,6 +8,7 @@ import MessageItem from '@modules/chat/renderer/components/MessageItem.vue'
 import ConversationRail from '@modules/chat/renderer/components/ConversationRail.vue'
 import ChatSearchBox from '@modules/chat/renderer/components/ChatSearchBox.vue'
 import ChatComposer from '@modules/chat/renderer/components/ChatComposer.vue'
+import InteractionPanel from '@modules/chat/renderer/components/interaction/InteractionPanel.vue'
 import ChatEmptyExtras from '@modules/chat/renderer/components/ChatEmptyExtras.vue'
 import EmptyState from '@modules/chat/renderer/components/EmptyState.vue'
 import { useChatStore } from '@modules/chat/renderer'
@@ -269,7 +270,15 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
         <el-icon><ArrowDown /></el-icon>
       </button>
 
+      <!-- 人机交互占用输入框位置：仅展示当前会话的待响应请求，切换到其它会话即恢复输入 -->
+      <InteractionPanel
+        v-if="chat.currentInteraction"
+        :prompt="chat.currentInteraction"
+        :queued="chat.currentInteractionCount"
+        @respond="chat.respondInteraction"
+      />
       <ChatComposer
+        v-else
         ref="composerRef"
         v-model:draft="chatUiState.draft"
         :streaming="chat.streaming"

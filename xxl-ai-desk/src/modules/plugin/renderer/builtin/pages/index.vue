@@ -13,7 +13,6 @@ import {
 } from '@modules/plugin/renderer/builtin/catalog'
 import PluginCenterShell from '@modules/plugin/renderer/components/PluginCenterShell.vue'
 import { t } from '@renderer/shell/i18n'
-import type { PermissionMode } from '@modules/chat/shared'
 
 /* 分类 + 其下工具（顺序取自共享目录） */
 const groups = computed(() =>
@@ -36,11 +35,6 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
   expandedKeys.value = isExpanded(key)
     ? expandedKeys.value.filter((item) => item !== key)
     : [...expandedKeys.value, key]
-}
-
-/* 可用权限文案：只读工具三档均可，写操作需工作区及以上权限 */
-function permissionLabel(permissionModes: PermissionMode[]): string {
-  return permissionModes.length > 1 ? t('plugin.builtinTool.permissionAll') : t('plugin.builtinTool.permissionWrite')
 }
 </script>
 
@@ -67,26 +61,24 @@ function permissionLabel(permissionModes: PermissionMode[]): string {
 
         <div v-if="isExpanded(group.key)" class="group-detail">
           <el-table :data="group.tools" style="width: 100%" row-key="name">
-            <el-table-column :label="t('plugin.builtinTool.tool')" min-width="260">
+            <!-- 列宽按 5:2.5:2.5 分配：el-table 会按 min-width 比例摊满剩余宽度 -->
+            <el-table-column :label="t('plugin.builtinTool.tool')" min-width="300">
               <template #default="{ row }">
                 <div class="tool-name">{{ t(row.titleKey) }}</div>
                 <div class="tool-desc">{{ t(row.descriptionKey) }}</div>
               </template>
             </el-table-column>
-            <el-table-column :label="t('plugin.builtinTool.identifier')" min-width="140">
+            <el-table-column :label="t('plugin.builtinTool.identifier')" min-width="150">
               <template #default="{ row }">
                 <span class="tool-id">{{ row.name }}</span>
               </template>
             </el-table-column>
-            <el-table-column :label="t('plugin.builtinTool.permission')" min-width="96">
+            <el-table-column :label="t('plugin.builtinTool.permission')" min-width="150" align="center">
               <template #default="{ row }">
                 <el-tag size="small" :type="row.readOnly ? 'info' : 'warning'">
                   {{ row.readOnly ? t('plugin.builtinTool.readOnly') : t('plugin.builtinTool.writable') }}
                 </el-tag>
               </template>
-            </el-table-column>
-            <el-table-column :label="t('plugin.builtinTool.availablePermissions')" min-width="110">
-              <template #default="{ row }">{{ permissionLabel(row.permissionModes) }}</template>
             </el-table-column>
           </el-table>
         </div>
