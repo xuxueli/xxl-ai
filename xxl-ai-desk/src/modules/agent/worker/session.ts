@@ -12,7 +12,7 @@ import type { HostEvent } from '@modules/agent/shared/agentProtocol'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { contentBlocks } from '@modules/chat/shared'
 import { contextTokensOfUsage } from '@common/shared/model'
-import type { UsageLike } from '@common/shared/model'
+import type { ReasoningLevel, UsageLike } from '@common/shared/model'
 import { translate, type AppLanguage } from '@common/shared/i18n'
 import type { McpRuntimeConfig } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
@@ -29,6 +29,8 @@ export interface AgentRuntimeOptions {
   sessionId: number
   provider: ProviderModelConfig
   modelId: string
+  /* 推理等级：仅对话模型生效 */
+  reasoningLevel: ReasoningLevel
   systemPrompt: string
   /* 权限模式（决定工具装配与全局读写范围）与项目根目录（工作区边界） */
   permissionMode: PermissionMode
@@ -229,6 +231,8 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
     initialState: {
       systemPrompt: `${options.systemPrompt}${buildToolGuide(entries)}`,
       model,
+      /* Default 交由供应商决定；Max 由 Pi 按模型能力自动降级 */
+      thinkingLevel: options.reasoningLevel === 'default' ? 'off' : options.reasoningLevel,
       tools: [...tools, ...(readyMcpTools ?? [])]
     },
     streamFn: (model, context, options) =>

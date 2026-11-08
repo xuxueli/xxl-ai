@@ -10,8 +10,16 @@ import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
 import ChatFilePicker from '@modules/chat/renderer/components/ChatFilePicker.vue'
+import ContextUsage from '@modules/chat/renderer/components/ContextUsage.vue'
 import { relativeToRoot } from '@modules/chat/renderer/utils/path'
 import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
+import {
+  DEFAULT_REASONING_LEVEL,
+  REASONING_LEVELS,
+  isReasoningModel,
+  isSessionModel,
+  type ReasoningLevel
+} from '@common/shared/model'
 import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
@@ -91,6 +99,50 @@ const currentModelId = computed(() =>
 )
 const currentModelLabel = computed(() => currentModelId.value || t('settings.selectModel'))
 
+/* 当前供应商：已生成对话取会话配置，新建对话取默认配置 */
+const currentProviderId = computed(() =>
+  locked.value
+    ? chat.currentSession?.providerId || settings.settings.providerId
+    : settings.settings.providerId
+)
+
+/* 当前模型：结合供应商与模型 ID 定位，避免不同供应商同名模型串位 */
+const currentModel = computed(() => {
+  const providerItem = provider.providers.find((item) => item.id === currentProviderId.value)
+  return providerItem?.models.find((item) => item.id === currentModelId.value) ?? null
+})
+
+/* 模型选择器只展示通用 / 对话模型，嵌入与文生图模型不进入会话 */
+const chatProviders = computed(() =>
+  provider.enabledProviders
+    .map((item) => ({
+      ...item,
+      models: item.models.filter((model) => isSessionModel(model))
+    }))
+    .filter((item) => item.models.length > 0)
+)
+
+/* 推理等级只对对话模型展示 */
+const showReasoning = computed(() =>
+  Boolean(currentModel.value && isReasoningModel(currentModel.value))
+)
+
+/* 当前推理等级：已生成对话取会话配置，新建对话取全局记忆 */
+const currentReasoningLevel = computed<ReasoningLevel>(() =>
+  locked.value
+    ? chat.currentSession?.reasoningLevel ?? DEFAULT_REASONING_LEVEL
+    : settings.settings.reasoningLevel
+)
+
+/* 推理等级文案：中英文均展示 Default / Low / High / Max */
+const REASONING_LABEL_KEYS: Record<ReasoningLevel, string> = {
+  default: 'chat.reasoningDefault',
+  low: 'chat.reasoningLow',
+  high: 'chat.reasoningHigh',
+  max: 'chat.reasoningMax'
+}
+const currentReasoningLabel = computed(() => t(REASONING_LABEL_KEYS[currentReasoningLevel.value]))
+
 /* 当前权限模式：已生成对话取会话配置，新建对话取草稿（默认工作区内修改） */
 const currentPermissionMode = computed<PermissionMode>(() =>
   locked.value
@@ -130,6 +182,11 @@ async function onModelChange(command: string): Promise<void> {
     return
   }
   await chat.selectModel(Number(command.slice(0, index)), command.slice(index + 2))
+}
+
+/* 选择推理等级：落当前会话并记住全局默认 */
+async function onReasoningChange(reasoningLevel: ReasoningLevel): Promise<void> {
+  await chat.updateSessionReasoningLevel(reasoningLevel)
 }
 
 /* 发送按钮可用条件：有文本或有待关联文件 */
@@ -204,7 +261,7 @@ function onKeydown(event: KeyboardEvent): void {
         ref="inputRef"
         v-model="draft"
         type="textarea"
-        :autosize="{ minRows: 1, maxRows: 8 }"
+        :autosize="{ minRows: 2, maxRows: 8 }"
         resize="none"
         :placeholder="t('chat.inputPlaceholder')"
         :disabled="disabled"
@@ -261,19 +318,19 @@ function onKeydown(event: KeyboardEvent): void {
               <el-dropdown-menu>
                 <el-dropdown-item
                   command="read-only"
-                  :class="{ 'mode-active': currentPermissionMode === 'read-only' }"
+                  :class="{ 'picker-active': currentPermissionMode === 'read-only' }"
                 >
                   <el-icon><Reading /></el-icon>{{ t('chat.permissionReadOnly') }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   command="workspace-write"
-                  :class="{ 'mode-active': currentPermissionMode === 'workspace-write' }"
+                  :class="{ 'picker-active': currentPermissionMode === 'workspace-write' }"
                 >
                   <el-icon><EditPen /></el-icon>{{ t('chat.permissionWorkspaceWrite') }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   command="full-access"
-                  :class="{ 'mode-active': currentPermissionMode === 'full-access' }"
+                  :class="{ 'picker-active': currentPermissionMode === 'full-access' }"
                 >
                   <el-icon><Unlock /></el-icon>{{ t('chat.permissionFullAccess') }}
                 </el-dropdown-item>
@@ -298,7 +355,7 @@ function onKeydown(event: KeyboardEvent): void {
                 <el-dropdown-item command="__new_provider__">
                   + {{ t('settings.addProvider') }}
                 </el-dropdown-item>
-                <template v-for="provider in provider.enabledProviders" :key="provider.id">
+                <template v-for="provider in chatProviders" :key="provider.id">
                   <el-dropdown-item class="provider-group" disabled>
                     {{ provider.name }}
                   </el-dropdown-item>
@@ -311,6 +368,31 @@ function onKeydown(event: KeyboardEvent): void {
                     {{ model.id }}
                   </el-dropdown-item>
                 </template>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
+          <!-- 推理等级：仅对话模型展示，文案固定为 Default / Low / High / Max -->
+          <el-dropdown
+            v-if="showReasoning"
+            trigger="click"
+            popper-class="reasoning-dropdown"
+            @command="onReasoningChange"
+          >
+            <span class="picker-trigger" :title="t('chat.reasoningTip')">
+              <span class="picker-name">{{ currentReasoningLabel }}</span>
+              <el-icon class="picker-arrow"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-for="level in REASONING_LEVELS"
+                  :key="level"
+                  :command="level"
+                  :class="{ 'picker-active': currentReasoningLevel === level }"
+                >
+                  {{ t(REASONING_LABEL_KEYS[level]) }}
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -333,6 +415,11 @@ function onKeydown(event: KeyboardEvent): void {
       </div>
     </div>
 
+    <!-- 输入框外侧底部：上下文占用居中摆放，仅已有会话展示 -->
+    <div v-if="chat.currentId && chat.contextUsage" class="composer-meta">
+      <ContextUsage :used="chat.contextUsage.used" :window="chat.contextUsage.window" />
+    </div>
+
     <!-- 项目文件选择弹框：选择结果合并到本轮关联文件 -->
     <ChatFilePicker
       v-model:visible="pickerVisible"
@@ -346,16 +433,30 @@ function onKeydown(event: KeyboardEvent): void {
 <style scoped lang="scss">
 /* 左右留白比正文多出滚动条宽度：与正文内容列等宽、同中心 */
 .composer {
-  padding: 12px var(--desk-chat-content-gutter) 22px;
+  padding: 12px var(--desk-chat-content-gutter) 0;
+}
+
+/*
+ * 输入框外侧底部信息条：沿用原有 22px 底部留白，不额外撑高输入区；
+ * 高度取 22px 仅为承载 16px 环形图标与百分比文案，内容垂直居中。
+ */
+.composer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  max-width: var(--desk-chat-width);
+  margin: 0 auto;
 }
 
 .composer-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   max-width: var(--desk-chat-width);
   margin: 0 auto;
-  padding: 10px 10px 10px 16px;
+  /* 上、左留白收紧，底部保留操作行呼吸空间 */
+  padding: 8px 8px 10px 14px;
   background: var(--desk-surface-elevated);
   border: 1px solid var(--desk-border);
   border-radius: var(--desk-radius);
@@ -383,7 +484,7 @@ function onKeydown(event: KeyboardEvent): void {
 .composer-box :deep(.el-textarea__inner) {
   background: transparent;
   box-shadow: none;
-  padding: 8px 0;
+  padding: 4px 0;
   font-size: var(--desk-font-base);
   /* 用整数行高：小数行高会让 autosize 算出的高度比内容少不足 1px，空白输入框也会常驻滚动条 */
   line-height: 22px;
@@ -403,6 +504,7 @@ function onKeydown(event: KeyboardEvent): void {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 28px;
 }
 
 .composer-left {
@@ -506,11 +608,14 @@ function onKeydown(event: KeyboardEvent): void {
   align-items: center;
   gap: 6px;
   max-width: 220px;
+  min-height: 28px;
+  box-sizing: border-box;
   padding: 4px 8px;
   border-radius: 8px;
   cursor: pointer;
   color: var(--desk-text-secondary);
   font-size: var(--desk-font-sm);
+  line-height: 20px;
   outline: none;
   transition:
     color 0.15s ease,
@@ -539,13 +644,13 @@ function onKeydown(event: KeyboardEvent): void {
   outline: none;
 }
 
-/* 模式下拉：当前项高亮；下拉项图标与文案留白 */
-:deep(.el-dropdown-menu__item.mode-active) {
+/* 选择器下拉：当前项高亮；下拉项图标与文案留白 */
+:deep(.el-dropdown-menu__item.picker-active) {
   color: var(--desk-primary);
   font-weight: 600;
 }
 
-:deep(.el-dropdown-menu__item.mode-active .el-icon) {
+:deep(.el-dropdown-menu__item.picker-active .el-icon) {
   color: var(--desk-primary);
 }
 

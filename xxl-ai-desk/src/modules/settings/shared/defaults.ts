@@ -6,6 +6,7 @@
  */
 
 import { DEFAULT_SHORTCUTS } from '@common/shared/contracts/quickAction'
+import { DEFAULT_REASONING_LEVEL } from '@common/shared/model'
 import { THEME_PRESETS, type AppSettings } from '@modules/settings/shared/contracts'
 
 /* 新建会话的占位标题：空串表示「尚未由首条提问命名」 */
@@ -19,6 +20,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   language: 'zh',
   providerId: 0,
   modelId: '',
+  reasoningLevel: DEFAULT_REASONING_LEVEL,
   appName: '',
   slogan: '',
   shortcuts: DEFAULT_SHORTCUTS,

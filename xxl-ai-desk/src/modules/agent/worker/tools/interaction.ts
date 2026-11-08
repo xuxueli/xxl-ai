@@ -20,9 +20,13 @@ import {
 import { requestInteraction } from '@modules/agent/worker/hitl'
 import type { ChoiceInteractionRequest, InteractionOption, InteractionResult } from '@modules/chat/shared'
 
-/* 工具入参：兼容单问题字段与多问题列表 */
+/* 工具入参：一次提交 1~10 个问题 */
 interface AskUserParams {
   questions?: unknown
+}
+
+/* 单个问题的原始入参 */
+interface AskUserQuestion {
   title?: unknown
   message?: unknown
   options?: unknown
@@ -86,8 +90,12 @@ function normalizeOptions(raw: unknown): { options: InteractionOption[] } | Inva
 
 /* 归一化单个问题：不合法时返回错误键，合法时返回交互请求 */
 function normalizeQuestion(
-  params: AskUserParams
+  raw: unknown
 ): { request: ChoiceInteractionRequest } | InvalidParams {
+  if (!raw || typeof raw !== 'object') {
+    return invalid('runtime.hitl.invalidQuestion')
+  }
+  const params = raw as AskUserQuestion
   const title = readString(params.title, MAX_TITLE)
   if (!title) {
     return invalid('runtime.hitl.invalidTitle')
@@ -109,28 +117,19 @@ function normalizeQuestion(
   }
 }
 
-/* 归一化工具入参：优先使用 questions 列表，缺省时兼容顶层单问题字段 */
+/* 归一化工具入参：questions 必须是 1~10 个合法问题 */
 function normalizeParams(
   params: AskUserParams
 ): { requests: ChoiceInteractionRequest[] } | InvalidParams {
-  let items: AskUserParams[]
-  if (params.questions !== undefined) {
-    if (
-      !Array.isArray(params.questions) ||
-      params.questions.length === 0 ||
-      params.questions.length > MAX_QUESTIONS
-    ) {
-      return invalid('runtime.hitl.invalidQuestions', [MAX_QUESTIONS])
-    }
-    items = params.questions as AskUserParams[]
-  } else {
-    items = [params]
+  if (
+    !Array.isArray(params.questions) ||
+    params.questions.length === 0 ||
+    params.questions.length > MAX_QUESTIONS
+  ) {
+    return invalid('runtime.hitl.invalidQuestions', [MAX_QUESTIONS])
   }
   const requests: ChoiceInteractionRequest[] = []
-  for (const item of items) {
-    if (!item || typeof item !== 'object') {
-      return invalid('runtime.hitl.invalidQuestion')
-    }
+  for (const item of params.questions) {
     const normalized = normalizeQuestion(item)
     if ('errorKey' in normalized) {
       return normalized
@@ -177,7 +176,7 @@ function formatResult(
 /* 构建 ask_user 工具：入参校验、发起交互并回填结果 */
 async function buildAskUserTool(context: ToolContext): Promise<AgentTool> {
   const { Type } = await import('@earendil-works/pi-ai')
-  /* 单问题字段：顶层与 questions 数组各自生成新 schema，避免复用同一对象实例 */
+  /* 单个问题的字段定义 */
   const questionFields = () => ({
     title: Type.Optional(Type.String({ description: '问题标题，简洁明确' })),
     message: Type.Optional(Type.String({ description: '补充说明或背景信息' })),
@@ -201,16 +200,13 @@ async function buildAskUserTool(context: ToolContext): Promise<AgentTool> {
     name: 'ask_user',
     label: '询问用户',
     description: describe(
-      '在多个候选方案中让用户拍板：每个问题提供 2~20 个选项，支持单选/多选，并默认允许用户填写「其他」。一次需要连续确认多个问题时，用 questions 按顺序列出（1~10 个），界面会显示 1/N 并在作答后进入下一题；只有一个问题时也可直接用顶层字段。仅在需要用户从多个方案中选择时使用；需要确认操作或补充自由文本时，直接在回复里提问，不要调用本工具。',
-      'Let the user decide among several candidate options: each question provides 2-20 choices with optional multi-select and an "Other" free-form entry (enabled by default). When several questions must be answered in sequence, put them in questions (1-10); the UI shows 1/N and advances after each answer. A single question can use the top-level fields. Use only when the user must pick among options; ask for confirmation or free-form input directly in your reply instead.'
+      '在多个候选方案中让用户拍板：用 questions 按顺序列出 1~10 个问题，每个问题提供 2~20 个选项，支持单选/多选，并默认允许用户填写「其他」。界面会显示 1/N 并在作答后进入下一题。仅在需要用户从多个方案中选择时使用；需要确认操作或补充自由文本时，直接在回复里提问，不要调用本工具。',
+      'Let the user decide among several candidate options: list 1-10 questions in order via questions, each with 2-20 choices, optional multi-select, and an "Other" free-form entry (enabled by default). The UI shows 1/N and advances after each answer. Use only when the user must pick among options; ask for confirmation or free-form input directly in your reply instead.'
     ),
     parameters: Type.Object({
-      questions: Type.Optional(
-        Type.Array(Type.Object(questionFields()), {
-          description: '要依次询问的问题列表（1~10 个）；提供后忽略顶层单问题字段'
-        })
-      ),
-      ...questionFields()
+      questions: Type.Array(Type.Object(questionFields()), {
+        description: '要依次询问的问题列表（1~10 个）'
+      })
     }),
     execute: async (_toolCallId, params, signal) => {
       const normalized = normalizeParams(params as AskUserParams)

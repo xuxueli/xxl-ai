@@ -5,12 +5,7 @@
  */
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  ChatCommandPalette,
-  ChatSearchAction,
-  ContextUsage,
-  useCommandPalette
-} from '@modules/chat/renderer'
+import { ChatCommandPalette, ChatSearchAction, useCommandPalette } from '@modules/chat/renderer'
 import { ToolPanelToggle } from '@modules/toolPanel/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
@@ -84,13 +79,8 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
       </div>
     </div>
 
-    <!-- 对话页操作：上下文占用 + 搜索（chat）+ 终端 / 工具面板（toolPanel） -->
+    <!-- 对话页操作：搜索（chat）+ 终端 / 工具面板（toolPanel） -->
     <div v-if="isChat" class="desk-topbar-actions">
-      <ContextUsage
-        v-if="chat.currentId && chat.contextUsage"
-        :used="chat.contextUsage.used"
-        :window="chat.contextUsage.window"
-      />
       <ChatSearchAction />
       <ToolPanelToggle />
     </div>

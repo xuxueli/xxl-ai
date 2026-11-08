@@ -1,7 +1,8 @@
 /*
- * 会话域跨进程契约：权限模式、会话与已持久化消息。
+ * 会话域跨进程契约：权限模式、推理等级、会话与已持久化消息。
  */
 
+import type { ReasoningLevel } from '@common/shared/model'
 import type { MessageSource } from './messageSource'
 import type { MessageStatus } from './messageStatus'
 
@@ -13,18 +14,15 @@ import type { MessageStatus } from './messageStatus'
  */
 export type PermissionMode = 'read-only' | 'workspace-write' | 'full-access'
 
-/* 新建会话与历史脏数据的默认权限 */
+/* 新建会话的默认权限 */
 export const DEFAULT_PERMISSION_MODE: PermissionMode = 'workspace-write'
 
-/* 权限模式归一：兼容历史 plan / build 取值与非法值 */
+/* 权限模式归一：非法值回退默认权限 */
 export function normalizePermissionMode(value: unknown): PermissionMode {
-  if (value === 'read-only' || value === 'plan') {
-    return 'read-only'
+  if (value === 'read-only' || value === 'full-access') {
+    return value
   }
-  if (value === 'full-access') {
-    return 'full-access'
-  }
-  return 'workspace-write'
+  return DEFAULT_PERMISSION_MODE
 }
 
 /* 会话摘要固定长度上限（字符） */
@@ -44,6 +42,8 @@ export interface SessionDTO {
   providerId: number
   /* 选用的模型 ID */
   modelId: string
+  /* 推理等级：Default / Low / High / Max */
+  reasoningLevel: ReasoningLevel
   /* 权限模式（仅可查看 / 工作区内修改 / 完全权限） */
   permissionMode: PermissionMode
   /* 创建时间（ISO） */

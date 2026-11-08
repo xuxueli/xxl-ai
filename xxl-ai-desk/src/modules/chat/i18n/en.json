@@ -21,10 +21,16 @@
     "permissionWorkspaceWrite": "Workspace write",
     "permissionFullAccess": "Full access",
     "permissionTip": "Read only: global read, no writes or commands; Workspace write: global read, writes only in the project and system temp directories; Full access: global read/write with sensitive operations still blocked",
+    "reasoningDefault": "Default",
+    "reasoningLow": "Low",
+    "reasoningHigh": "High",
+    "reasoningMax": "Max",
+    "reasoningTip": "Reasoning is available for chat models only; Default follows the provider, and Max uses the highest level the model supports",
     "thinking": "Thinking",
     "thinkingActive": "Thinking",
     "thinkingDone": "Thought",
     "contextUsage": {
+      "label": "{0}%",
       "detail": "Context usage: {0} / {1} tokens ({2}%)"
     },
     "tool": {
@@ -118,7 +124,6 @@
       "queue": "{0} more pending request(s)",
       "permission": {
         "header": "Permission request",
-        "title": "Outside access",
         "read": "read",
         "write": "write",
         "message": "The agent wants to {0} a file outside the project directory",

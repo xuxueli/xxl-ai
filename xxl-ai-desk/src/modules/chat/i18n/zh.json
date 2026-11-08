@@ -21,10 +21,16 @@
     "permissionWorkspaceWrite": "工作区内修改",
     "permissionFullAccess": "完全权限",
     "permissionTip": "仅可查看：全局可读，不可写入或执行命令；工作区内修改：全局可读，仅项目与系统临时目录可写；完全权限：全局读写，敏感操作仍会拦截",
+    "reasoningDefault": "Default",
+    "reasoningLow": "Low",
+    "reasoningHigh": "High",
+    "reasoningMax": "Max",
+    "reasoningTip": "仅对话模型支持推理等级；Default 由供应商决定，Max 会使用模型支持的最高档",
     "thinking": "思考过程",
     "thinkingActive": "正在思考",
     "thinkingDone": "已完成思考",
     "contextUsage": {
+      "label": "{0}%",
       "detail": "上下文占用：{0} / {1} tokens（{2}%）"
     },
     "tool": {
@@ -118,7 +124,6 @@
       "queue": "还有 {0} 个待处理请求",
       "permission": {
         "header": "权限审批申请",
-        "title": "越界访问确认",
         "read": "读取",
         "write": "写入",
         "message": "Agent 想要{0}项目目录之外的文件",

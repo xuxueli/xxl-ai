@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@common/renderer/api'
 import { useSettingsStore } from '@modules/settings/renderer'
+import { isSessionModel } from '@common/shared/model'
 import type { ProviderDTO, ProviderModelQuery } from '@modules/provider/shared'
 
 export const useProviderStore = defineStore('provider', () => {
@@ -45,7 +46,11 @@ export const useProviderStore = defineStore('provider', () => {
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: number): Promise<void> {
     const provider = providers.value.find((item) => item.id === providerId)
-    await settings.selectProvider(providerId, provider?.models[0]?.id ?? '')
+    /* 默认模型必须是可对话模型，嵌入 / 文生图模型不进入会话 */
+    await settings.selectProvider(
+      providerId,
+      provider?.models.find((model) => isSessionModel(model))?.id ?? ''
+    )
   }
 
   /* 远程查询可用模型（不落库） */

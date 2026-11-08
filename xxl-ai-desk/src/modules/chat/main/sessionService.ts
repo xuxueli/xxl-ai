@@ -11,6 +11,7 @@ import { disposeTerminalsBySession } from '@modules/terminal/main'
 import { getProject } from '@modules/project/main'
 import { getAgentById } from '@modules/agent/main'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
+import { DEFAULT_REASONING_LEVEL, normalizeReasoningLevel } from '@common/shared/model'
 import {
   DEFAULT_PERMISSION_MODE,
   messageStatusOf,
@@ -22,7 +23,7 @@ import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageG
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
 
-/* 行记录 → DTO（权限模式缺省归一到工作区内修改） */
+/* 行记录 → DTO（推理等级与权限模式在读取边界归一） */
 function toSessionDTO(row: SessionRow): SessionDTO {
   return {
     id: row.id,
@@ -31,6 +32,7 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     agentId: row.agentId,
     providerId: row.providerId,
     modelId: row.modelId,
+    reasoningLevel: normalizeReasoningLevel(row.reasoningLevel),
     permissionMode: normalizePermissionMode(row.permissionMode),
     addTime: row.addTime,
     updateTime: row.updateTime
@@ -99,6 +101,7 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     agentId,
     providerId: input.providerId ?? 0,
     modelId: input.modelId || '',
+    reasoningLevel: normalizeReasoningLevel(input.reasoningLevel ?? DEFAULT_REASONING_LEVEL),
     permissionMode: normalizePermissionMode(input.permissionMode ?? DEFAULT_PERMISSION_MODE),
     summary: '',
     summaryLastMessageId: 0,
@@ -126,6 +129,7 @@ export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDT
     title: patch.title ?? existing.title,
     providerId: patch.providerId ?? existing.providerId,
     modelId: patch.modelId ?? existing.modelId,
+    reasoningLevel: normalizeReasoningLevel(patch.reasoningLevel ?? existing.reasoningLevel),
     permissionMode: normalizePermissionMode(patch.permissionMode ?? existing.permissionMode),
     updateTime: new Date().toISOString()
   }

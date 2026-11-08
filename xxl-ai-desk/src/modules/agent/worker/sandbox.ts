@@ -150,7 +150,7 @@ export async function guardPath(options: {
   }
   const choice = await requestInteraction(options.sessionId, {
     kind: 'permission',
-    title: translate(language, 'chat.interaction.permission.title'),
+    title: translate(language, 'chat.interaction.permission.header'),
     permission: {
       tool: options.tool,
       action: options.action,

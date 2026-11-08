@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /*
- * 顶栏上下文占用：环形进度 + 紧凑 token 数，悬浮展示完整用量。
+ * 输入框底部上下文占用：环形进度 + 占用百分比，悬浮展示完整用量。
  * @author xuxueli 2026-11-07
  */
 import { computed } from 'vue'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
-import { formatCompactTokens, formatTokenCount } from '@modules/chat/renderer/utils/format'
+import { formatTokenCount } from '@modules/chat/renderer/utils/format'
 
 const props = defineProps<{
   /* 已用上下文 token */
@@ -38,8 +38,8 @@ const RADIUS = 7
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const dashOffset = computed(() => CIRCUMFERENCE * (1 - percent.value / 100))
 
-/* 已消耗 token：小于 1000 显示原数字，其余用 K（1 位小数） */
-const label = computed(() => formatCompactTokens(props.used))
+/* 环形右侧文案：占用百分比 */
+const label = computed(() => t('chat.contextUsage.label', [percent.value.toFixed(0)]))
 
 /* 悬浮提示：已用 / 窗口 / 百分比 */
 const detail = computed(() =>
@@ -54,7 +54,7 @@ const detail = computed(() =>
 <template>
   <el-tooltip
     :content="detail"
-    placement="bottom"
+    placement="top"
     effect="light"
     popper-class="desk-tooltip"
     :show-after="0"
@@ -86,8 +86,8 @@ const detail = computed(() =>
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  height: 28px;
-  padding: 0 6px;
+  height: 20px;
+  padding: 0 4px;
   border-radius: 6px;
   cursor: default;
   color: var(--desk-text-secondary);

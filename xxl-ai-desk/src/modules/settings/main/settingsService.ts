@@ -12,6 +12,7 @@ import {
 } from '@modules/settings/shared/contracts'
 import { DEFAULT_APP_SETTINGS } from '@modules/settings/shared/defaults'
 import { DEFAULT_SHORTCUTS } from '@common/shared/contracts/quickAction'
+import { normalizeReasoningLevel } from '@common/shared/model'
 
 /* 外观取值集合（用于配置合法性校验） */
 const APPEARANCE_VALUES = new Set<string>(APPEARANCES)
@@ -102,6 +103,7 @@ export function getSettings(): AppSettings {
     language,
     providerId: Number(map.get('providerId')) || DEFAULT_APP_SETTINGS.providerId,
     modelId: map.get('modelId') || DEFAULT_APP_SETTINGS.modelId,
+    reasoningLevel: normalizeReasoningLevel(map.get('reasoningLevel')),
     appName: map.get('appName') ?? DEFAULT_APP_SETTINGS.appName,
     slogan: map.get('slogan') ?? DEFAULT_APP_SETTINGS.slogan,
     shortcuts: parseShortcuts(map.get('shortcuts')),

@@ -151,6 +151,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
       sessionId: input.sessionId,
       provider: input.provider,
       modelId: input.modelId,
+      reasoningLevel: input.reasoningLevel,
       systemPrompt: input.systemPrompt,
       permissionMode: input.permissionMode,
       rootDir: input.rootDir,

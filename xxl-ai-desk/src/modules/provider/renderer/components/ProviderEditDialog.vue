@@ -7,7 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
-import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
+import { CONTEXT_WINDOW_DEFAULT, DEFAULT_MODEL_TYPE, type ModelType } from '@common/shared/model'
 import type { ProviderDTO } from '@modules/provider/shared'
 
 const props = defineProps<{
@@ -31,13 +31,15 @@ interface ModelFormRow {
   id: string
   /* 上下文窗口（空表示使用默认值） */
   contextWindow?: number | null
+  /* 模型类型（通用 / 对话 / 嵌入 / 文生图） */
+  type: ModelType
 }
 
 const modelRows = ref<ModelFormRow[]>([])
 
-/* 新建一行模型：上下文窗口留空，保存时回退默认值 */
+/* 新建一行模型：上下文窗口留空，类型默认通用，保存时回退默认值 */
 function createModelRow(id = ''): ModelFormRow {
-  return { id }
+  return { id, type: DEFAULT_MODEL_TYPE }
 }
 
 /* 上下文窗口输入展示：千分位分隔 */
@@ -81,7 +83,11 @@ function resetForm(): void {
       }
   modelRows.value =
     row && row.models.length > 0
-      ? row.models.map((model) => ({ id: model.id, contextWindow: model.contextWindow }))
+      ? row.models.map((model) => ({
+          id: model.id,
+          contextWindow: model.contextWindow,
+          type: model.type ?? DEFAULT_MODEL_TYPE
+        }))
       : [createModelRow()]
   remoteModels.value = []
   headersText.value = JSON.stringify(row?.headers ?? {}, null, 2)
@@ -171,7 +177,8 @@ async function submit(): Promise<void> {
           contextWindow:
             Number(item.contextWindow) > 0
               ? Math.round(Number(item.contextWindow))
-              : CONTEXT_WINDOW_DEFAULT
+              : CONTEXT_WINDOW_DEFAULT,
+          type: item.type
         }))
         .filter((item) => item.id)
         .map((item) => [item.id, item])
@@ -206,7 +213,7 @@ async function submit(): Promise<void> {
     v-model="visible"
     class="settings-dialog"
     :title="title"
-    width="620px"
+    width="760px"
     align-center
     append-to-body
   >
@@ -258,6 +265,12 @@ async function submit(): Promise<void> {
               :parser="parseContextWindow"
               :placeholder="t('settings.contextWindowPlaceholder')"
             />
+            <el-select v-model="modelRows[index].type" class="model-type">
+              <el-option :label="t('settings.modelTypeGeneral')" value="general" />
+              <el-option :label="t('settings.modelTypeChat')" value="chat" />
+              <el-option :label="t('settings.modelTypeEmbedding')" value="embedding" />
+              <el-option :label="t('settings.modelTypeTextToImage')" value="text_to_image" />
+            </el-select>
             <el-button text class="model-remove" @click="removeModelRow(index)">
               <el-icon><Delete /></el-icon>
             </el-button>
@@ -317,6 +330,11 @@ async function submit(): Promise<void> {
 .model-editor .model-window {
   flex-shrink: 0;
   width: 130px;
+}
+
+.model-editor .model-type {
+  flex-shrink: 0;
+  width: 120px;
 }
 
 .model-editor .model-remove {

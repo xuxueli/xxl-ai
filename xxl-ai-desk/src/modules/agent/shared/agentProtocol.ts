@@ -5,7 +5,7 @@
  */
 
 import type { PermissionMode } from '@modules/chat/shared'
-import type { ModelDescriptor } from '@common/shared/model'
+import type { ModelDescriptor, ReasoningLevel } from '@common/shared/model'
 import type { McpRuntimeConfig, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { AgentToolSwitches } from './contracts'
@@ -56,6 +56,8 @@ export interface RunAgentInput {
   provider: ProviderModelConfig
   /* 模型 ID */
   modelId: string
+  /* 推理等级（Default / Low / High / Max） */
+  reasoningLevel: ReasoningLevel
   /* 系统提示词 */
   systemPrompt: string
   /* 模型上下文（最近窗口，不含 thinking） */

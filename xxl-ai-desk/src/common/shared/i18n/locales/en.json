@@ -165,6 +165,7 @@
     "providerMissing": "The model provider was deleted. Select another model in this session.",
     "providerDisabled": "Provider \"{0}\" is disabled. Select another model in this session.",
     "modelMissing": "Model \"{0}\" was deleted. Select another model in this session.",
+    "modelNotChat": "Model \"{0}\" is not a chat model. Select another model in this session.",
     "providerNoModel": "Configure at least one model for this provider.",
     "apiKeyMissing": "Provider \"{0}\" has no API key, so model \"{1}\" cannot be called. Configure it in Settings and retry.",
     "callFailed": "Model \"{0}\" (provider \"{1}\") call failed{2}",

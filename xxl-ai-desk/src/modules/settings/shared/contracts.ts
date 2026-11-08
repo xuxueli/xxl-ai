@@ -4,6 +4,7 @@
  */
 
 import type { QuickAction, ShortcutMap } from '@common/shared/contracts/quickAction'
+import type { ReasoningLevel } from '@common/shared/model'
 
 /* 外观：浅色 / 深色 / 跟随系统 */
 export const APPEARANCES = ['light', 'dark', 'system'] as const
@@ -41,6 +42,8 @@ export interface AppSettings {
   providerId: number
   /* 当前模型 ID */
   modelId: string
+  /* 上次选择的推理等级，新建对话沿用 */
+  reasoningLevel: ReasoningLevel
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string

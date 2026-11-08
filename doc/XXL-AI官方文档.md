@@ -1317,11 +1317,11 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
   ├─ listSkillsForRuntime()              # 仅保留 agent.skillIds 选中的技能
   ├─ listMcpRuntimeConfigs()             # 仅保留 agent.mcpIds 选中的 MCP
   ├─ project.memoryEnabled ? getAgentMemory() : ''
-  └─ runAgent({ systemPrompt, mode, rootDir, runtimePath, mcpServers, skills, skillsDir, tools })
+  └─ runAgent({ systemPrompt, permissionMode, rootDir, runtimePath, mcpServers, skills, skillsDir, tools })
         │
 运行时进程 session.createAgent
   ├─ createBuiltinToolEntries(ctx)     # 按模式 + Agent 工具分类开关过滤，产出 ToolEntry[]
-  ├─ createMcpTools({ servers, mode }) # 短预算内连接列举，未就绪不阻塞首字
+  ├─ createMcpTools({ servers, permissionMode }) # 短预算内连接列举，未就绪不阻塞首字
   ├─ systemPrompt + buildToolGuide()   # 追加「当前可用工具」清单
   └─ new Agent({ tools: [...builtin, ...mcp], messages })
 ```
@@ -1460,7 +1460,7 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 **项目与会话**：
 
 - 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制长期记忆，记忆正文与游标随项目行保存；
-- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
+- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / permission_mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
 - 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；落库增量 + 单事务，生成中切换会话不丢内容；
 - 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、上下文占用率、Markdown 实时渲染与代码高亮。
 
@@ -1577,7 +1577,7 @@ desk_llm_trace
 |---|---|
 | `desk_project` | 本地项目（`id / name / path / memory_enabled / memory / memory_last_time / memory_update_time / add_time / update_time`，路径 1:1 唯一；长期记忆随项目行保存） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
-| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / mode / summary / summary_last_message_id / summary_update_time / add_time / update_time`） |
+| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / permission_mode / summary / summary_last_message_id / summary_update_time / add_time / update_time`） |
 | `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
@@ -1712,53 +1712,52 @@ docker compose down
 
 **【本地版（Desk 桌面端）】**
 
-- 1、【权限】沙箱文件权限调整：SKILL目录文件读取默认放行；
-- 2、【体验】文件工具面板优化：文件工具面板中文件树支持折叠，定位目录名左侧添加折叠/展开icon；
-- 3、【UI】UI框架优化：侧边栏宽度调大；对话布局（子菜单/会话去/工具栏）宽度优化，提升操作体验；
-- 4、【体验】文件工具面板优化：选中文件操作复制快捷键，默认执行「复制路径」操作；
-- 5、【新增】会话导航轨：会话工作区支持会话导航轨，以刻度形式展示多轮会话，提升操作体验；
-- 6、【新增】会话区搜索：会话工作区支持关键词搜索；
-- 7、【优化】浏览器工具面板优化：浏览器搜索时面板不必展开，仅首次默认展开，降低对用户操作干扰；
-- 8、【优化】文件编辑器：支持多主题样式、文件搜索/替换等；
-- 9、【优化】MCP/SKILL市场：远程数据加载缓慢时，前端交互优化，避免页面黑屏等；
-- 10、【体验】主题色丰富：新增多主题色，支持自定义主题色设置；
-- 11、【新增】输入框支持关联文件：新增“+“按钮功能，支持选择文件并关联到当前会话，便于Agent调用文件内容；
-- 12、【新增】代码模块化重构：同一职责域代码收拢在单一模块内，对外仅暴露最小必要接口，避免跨模块散落同职责的实现细节；
-- 13、【重构】产品功能设计重构：
-  - 扩展中心：插件中心更名扩展中心，现有MCP、SKILL和内置工具之外，新增 “Agent”功能；支持创建管理多Agent，Agent支持设置 指令、SKILL、MCP和内置工具等；
-  - 会话新建：新建会话时，当前会话框底部限制必选 项目；新增必选 Agent，Agent下拉框中限制Agent列表与新建Agent入口，参考项目选项交互；
-  - 系统设置：新增 项目 设置，支持管理维护 项目列表；支持新增项目、重命名、在Finder中显示、删除等；支持长期记忆开关、长期记忆查看；
-  - 会话与Agent绑定，会话时使用的 系统指令、SKILL、MCP、内置工具等，从对应Agent上获取，Agent修改后需要实时感知最新的；
-- 14、【优化】新增会话示例任务调整，辅助用户快速上手；
-- 15、【新增】会话压缩与记忆：
+- 1、【能力】会话压缩与记忆：
   - 会话上下文结构化：system（系统指令 + 长期记忆 + skill技能 + 会话摘要）+ messages（短期记忆/会话）+ tools（内置工具 + MCP工具）
   - 会话上下文使用率：计算公式 = 上下文token消耗 / 模型ContextWindow；
   - 会话压缩：针对历史会话提炼背景/目标/进展等提炼，压缩为 max 定长（2000）摘要信息。会话上下文传递短期记忆时：需传递摘要信息与上次摘要后全部增量对话信息。每轮会话后都会触发异步压缩摘要，如果「上下文使用率超过80% 或 对话轮次超过20次 或 压缩摘要不存在」，需要主动压缩一次；
   - 长期记忆：项目维度跨会话的画像/偏好/事实/目标/进展等长期记忆沉淀。会话完成时异步触发记忆生成/保鲜，「检测记忆为空 或 距离上次记忆生成超5min」，需要主动生成一次记忆；项目设置里，支持手动查看管理记忆；
-  （项目 列表，启用记忆 列名改为 长期记忆；新增 记忆生成时间 列；）
+    （项目 列表，启用记忆 列名改为 长期记忆；新增 记忆生成时间 列；）
+- 2、【重构】产品设计重构：
+  - 扩展中心：插件中心更名扩展中心，现有MCP、SKILL和内置工具之外，新增 “Agent”功能；支持创建管理多Agent，Agent支持设置 指令、SKILL、MCP和内置工具等；
+  - 会话新建：新建会话时，当前会话框底部限制必选 项目；新增必选 Agent，Agent下拉框中限制Agent列表与新建Agent入口，参考项目选项交互；
+  - 系统设置：新增 项目 设置，支持管理维护 项目列表；支持新增项目、重命名、在Finder中显示、删除等；支持长期记忆开关、长期记忆查看；
+  - 会话与Agent绑定，会话时使用的 系统指令、SKILL、MCP、内置工具等，从对应Agent上获取，Agent修改后需要实时感知最新的；
+- 3、【安全】权限管控：升级三档权限模式「仅可查看（全局读）、工作区内修改（全局读 + 项目&系统临时目录写）、完全权限（全局读写）」；同时，兜底保留统一的敏感操作拦截机制；
+  （read-only、workspace-write、full-access）
+- 4、【推理】模型及推理等级：供应商模型精细化管理，支持模型分类（通用模型、对话模型、潜入模型、文生图模型）；并针对对话模型，支持推理登陆（Default、Low、High、Max）；
+- 5、【新增】输入框支持关联文件：新增“+“按钮功能，支持选择文件并关联到当前会话，便于Agent调用文件内容；
+- 6、【重构】代码模块化重构：同一职责域代码收拢在单一模块内，对外仅暴露最小必要接口，避免跨模块散落同职责的实现细节；
+- 7、【能力】文件编辑器：支持多主题样式、文件搜索/替换等；
+- 8、【体验】浏览器工具面板优化：浏览器搜索时面板不必展开，仅首次默认展开，降低对用户操作干扰；
+- 9、【安全】沙箱文件权限调整：SKILL目录文件读取默认放行；
+- 10、【体验】UI框架优化：侧边栏宽度调大；对话布局（子菜单/会话去/工具栏）宽度优化，提升操作体验；
+- 11、【体验】文件工具面板优化：选中文件操作复制快捷键，默认执行「复制路径」操作；
+- 12、【体验】会话导航轨：会话工作区支持会话导航轨，以刻度形式展示多轮会话，提升操作体验；
+- 13、【体验】会话区搜索：会话工作区支持关键词搜索；
+- 14、【体验】文件工具面板优化：文件工具面板中文件树支持折叠，定位目录名左侧添加折叠/展开icon；
+- 15、【体验】MCP/SKILL市场：远程数据加载缓慢时，前端交互优化，避免页面黑屏等；
+- 16、【体验】主题色丰富：新增多主题色，支持自定义主题色设置；
+- 17、【优化】新增会话示例任务调整，辅助用户快速上手；
 
 > 补充说明：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。
-> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+> 操作处理：将安装软件拖入 /Applications 后，终端执行如下命令即可：`sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app`
 
-- 16、【新增】权限管控：升级三档权限模式「仅可查看（全局读）、工作区内修改（全局读 + 项目&系统临时目录写）、完全权限（全局读写）」；同时，兜底保留统一的敏感操作拦截机制；
-  （read-only、workspace-write、full-access）
-- 18、【ING】模型及推理等级：供应商模型精细化管理，支持模型分类（通用模型、对话模型、潜入模型、文生图模型）；并针对对话模型，支持推理登陆（Default、Low、High、Max）；
-
-- 17、【ING】应用中心：支持如下功能；
-    - 应用市场：顶部两个TAB，分别为「已安装应用」和「发现应用」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
-    （左侧导航栏应用类入口，与顶部固定入口时间通过横线隔开；没有应用入口时横线不展示；）
-    - 创造应用：支持在线创建应用；单个应用本质是一个 文件夹，内部包含本引用所需文件；支持自动检测应用文件夹识别为应用；
-    - 内置应用（笔记）：支持 笔记文件目录（左侧）、笔记Markdown编辑器（中间）、内容目录、预览、搜索/替换、图片插入 等；
-    - 内置应用（公众号编辑器）：支持 公众号模板选择（左列）、文章编辑器（中间）、文章设置（内容块设置、预览设置）、重置/复制全文/复制HTML 等；
-    - 内置应用（工具箱）：支持 JSON工具、编码转换、时间戳转换、文本对比、公众号编辑器 等;
 
 
 ### v1.5.1 Release Notes[ING]
-- 1、【ING】自动化：
+- 1、【ING】应用中心：支持如下功能；
+  - 应用市场：顶部两个TAB，分别为「已安装应用」和「发现应用」；安装应用后，勾选启用，左侧导航栏会自动注册应用入口，点击可进入应用；
+    （左侧导航栏应用类入口，与顶部固定入口时间通过横线隔开；没有应用入口时横线不展示；）
+  - 创造应用：支持在线创建应用；单个应用本质是一个 文件夹，内部包含本引用所需文件；支持自动检测应用文件夹识别为应用；
+  - 内置应用（笔记）：支持 笔记文件目录（左侧）、笔记Markdown编辑器（中间）、内容目录、预览、搜索/替换、图片插入 等；
+  - 内置应用（公众号编辑器）：支持 公众号模板选择（左列）、文章编辑器（中间）、文章设置（内容块设置、预览设置）、重置/复制全文/复制HTML 等；
+  - 内置应用（工具箱）：支持 JSON工具、编码转换、时间戳转换、文本对比、公众号编辑器 等;
+- 2、【ING】自动化：
   - 任务管理：支持任务列表管理，任务状态、名称筛选等；新增任务支持设置 任务指令、模型、模式、项目、Agent 和 执行时间 等；
   - 任务会话：任务会话复用普通会话，通过类型区分触发来源；任务触发类会话，子菜单会话名称后缀添加 闹钟icon 标记；
-- 2、【ING】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
-- 3、【ING】Bot机器人：支持桌面机器人，可在桌面悬浮窗中与Agent进行对话，支持快捷键唤起、消息通知等功能；
+- 3、【ING】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
+- 4、【ING】Bot机器人：支持桌面机器人，可在桌面悬浮窗中与Agent进行对话，支持快捷键唤起、消息通知等功能；
 
 
 ### TODO LIST

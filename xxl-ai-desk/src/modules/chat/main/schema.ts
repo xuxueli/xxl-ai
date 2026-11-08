@@ -6,7 +6,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 import type { MessageSource } from '@modules/chat/shared'
 
-/* 会话表：一次会话绑定一个项目、Agent、供应商与模型，并保存权限模式与压缩摘要 */
+/* 会话表：一次会话绑定一个项目、Agent、供应商与模型，并保存推理等级、权限模式与压缩摘要 */
 export const sessionTable = sqliteTable('desk_session', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull().default(''),
@@ -14,7 +14,8 @@ export const sessionTable = sqliteTable('desk_session', {
   agentId: integer('agent_id').notNull().default(0), /* 绑定的 Agent ID（创建后不可修改） */
   providerId: integer('provider_id').notNull().default(0), /* 绑定供应商 ID */
   modelId: text('model_id').notNull().default(''), /* 绑定模型 ID */
-  permissionMode: text('mode').notNull().default('workspace-write'), /* 权限模式 read-only / workspace-write / full-access */
+  reasoningLevel: text('reasoning_level').notNull().default('default'), /* 推理等级 default / low / high / max */
+  permissionMode: text('permission_mode').notNull().default('workspace-write'), /* 权限模式 read-only / workspace-write / full-access */
   summary: text('summary').notNull().default(''), /* 历史会话压缩摘要（定长） */
   summaryLastMessageId: integer('summary_last_message_id').notNull().default(0), /* 摘要覆盖到的最后一条消息 ID */
   summaryUpdateTime: text('summary_update_time').notNull().default(''), /* 摘要生成时间（ISO） */

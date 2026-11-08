@@ -13,7 +13,13 @@ import { normalizeBaseUrl, USER_AGENT } from '@common/shared/providerUrl'
 import { isTimeoutError, requestWithTimeout } from '@common/main/utils/http'
 import { getSettings, saveSettings } from '@modules/settings/main'
 import type { ProviderDTO, ProviderModelDTO, ProviderModelQuery } from '@modules/provider/shared'
-import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
+import {
+  CONTEXT_WINDOW_DEFAULT,
+  DEFAULT_MODEL_TYPE,
+  MODEL_TYPES,
+  isSessionModel,
+  type ModelType
+} from '@common/shared/model'
 
 type ProviderRow = typeof providerTable.$inferSelect
 
@@ -39,16 +45,22 @@ function normalizeModel(item: unknown): ProviderModelDTO | null {
   if (!item || typeof item !== 'object') {
     return null
   }
-  const record = item as { id?: unknown; contextWindow?: unknown }
+  const record = item as { id?: unknown; contextWindow?: unknown; type?: unknown }
   const id = typeof record.id === 'string' ? record.id.trim() : ''
   if (!id) {
     return null
   }
   const window = Number(record.contextWindow)
   const valid = Number.isFinite(window) && window > 0
+  /* 类型缺失或非法统一回退通用模型 */
+  const type: ModelType =
+    typeof record.type === 'string' && (MODEL_TYPES as readonly string[]).includes(record.type)
+      ? (record.type as ModelType)
+      : DEFAULT_MODEL_TYPE
   return {
     id,
-    contextWindow: valid ? Math.round(window) : CONTEXT_WINDOW_DEFAULT
+    contextWindow: valid ? Math.round(window) : CONTEXT_WINDOW_DEFAULT,
+    type
   }
 }
 
@@ -209,9 +221,9 @@ export async function fetchRemoteModels(input: ProviderModelQuery): Promise<stri
   }
 }
 
-/* 预设模型：统一使用默认上下文窗口 */
+/* 预设模型：统一使用默认上下文窗口与对话模型类型 */
 function seedModels(ids: string[]): ProviderModelDTO[] {
-  return ids.map((id) => ({ id, contextWindow: CONTEXT_WINDOW_DEFAULT }))
+  return ids.map((id) => ({ id, contextWindow: CONTEXT_WINDOW_DEFAULT, type: 'chat' }))
 }
 
 /* 首次运行播种预设供应商（与平台种子保持一致；OpenCodeGo 使用 {session} 会话头） */
@@ -267,6 +279,9 @@ export function ensureSeedProviders(): void {
   const settings = getSettings()
   const first = listProviders()[0]
   if (first && !settings.providerId) {
-    saveSettings({ providerId: first.id, modelId: first.models[0]?.id ?? '' })
+    saveSettings({
+      providerId: first.id,
+      modelId: first.models.find((model) => isSessionModel(model))?.id ?? ''
+    })
   }
 }

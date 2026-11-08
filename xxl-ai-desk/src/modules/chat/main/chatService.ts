@@ -17,6 +17,7 @@ import type {
 } from '@modules/chat/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
+import { isSessionModel } from '@common/shared/model'
 import type { SkillRuntimeConfig } from '@modules/skill/shared'
 import type { HostEvent, ProviderModelConfig, RunAgentInput } from '@modules/agent/shared'
 import { getSettings } from '@modules/settings/main'
@@ -94,16 +95,22 @@ function resolveRuntimeTarget(
   }
   /* 模型：会话已指定则必须仍在供应商模型列表内，否则提示更换 */
   if (session.modelId) {
-    if (!provider.models.some((item) => item.id === session.modelId)) {
+    const bound = provider.models.find((item) => item.id === session.modelId)
+    if (!bound) {
       return { error: translate(language, 'runtime.modelMissing', [session.modelId]) }
+    }
+    /* 嵌入 / 文生图模型不能用于对话，提示重新选择 */
+    if (!isSessionModel(bound)) {
+      return { error: translate(language, 'runtime.modelNotChat', [session.modelId]) }
     }
     return { provider, model: session.modelId }
   }
-  /* 未指定模型：回退设置默认模型，其次供应商首个模型 */
+  /* 未指定模型：回退设置默认模型，其次供应商首个可对话模型 */
+  const sessionModels = provider.models.filter((item) => isSessionModel(item))
   const fallback =
-    settings.modelId && provider.models.some((item) => item.id === settings.modelId)
+    settings.modelId && sessionModels.some((item) => item.id === settings.modelId)
       ? settings.modelId
-      : (provider.models[0]?.id ?? '')
+      : (sessionModels[0]?.id ?? '')
   if (!fallback) {
     return { error: translate(language, 'runtime.providerNoModel') }
   }
@@ -237,7 +244,7 @@ function hitlSystemHint(enabled: boolean): string {
   if (!enabled) {
     return ''
   }
-  return '\n\n## 人机交互\n只有在需要用户在多个候选方案中拍板时，才调用 ask_user，并提供 2~20 个选项（可多选，默认允许「其他」）。需要连续确认多个问题时，用 questions 一次列出（1~10 个），界面会按 1/N 逐题展示；只有一个问题时可直接使用顶层字段。需要确认操作、补充信息或自由文本时，直接在回复里提问，不要调用工具。选项是候选值而非强制枚举；用户拒绝或取消后不要重复追问。'
+  return '\n\n## 人机交互\n只有在需要用户在多个候选方案中拍板时，才调用 ask_user：用 questions 按顺序列出 1~10 个问题，每个问题提供 2~20 个选项（可多选，默认允许「其他」），界面会按 1/N 逐题展示。需要确认操作、补充信息或自由文本时，直接在回复里提问，不要调用工具。选项是候选值而非强制枚举；用户拒绝或取消后不要重复追问。'
 }
 
 /*
@@ -412,6 +419,7 @@ export async function sendChat(
       sessionId,
       provider: { ...toRuntimeConfig(provider), sessionId },
       modelId,
+      reasoningLevel: session.reasoningLevel,
       systemPrompt,
       messages: history,
       language: settings.language,

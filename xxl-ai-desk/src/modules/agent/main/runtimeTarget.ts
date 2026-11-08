@@ -5,6 +5,7 @@
  */
 
 import { getProvider } from '@modules/provider/main'
+import { isSessionModel } from '@common/shared/model'
 import type { ProviderDTO } from '@modules/provider/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { SessionDTO } from '@modules/chat/shared'
@@ -20,12 +21,14 @@ export function resolveAgentTarget(
   if (!provider || !provider.enabled) {
     return null
   }
+  /* 只使用可对话模型（通用 / 对话），嵌入与文生图模型不参与会话 */
+  const sessionModels = provider.models.filter((item) => isSessionModel(item))
   const modelId =
-    session.modelId && provider.models.some((item) => item.id === session.modelId)
+    session.modelId && sessionModels.some((item) => item.id === session.modelId)
       ? session.modelId
-      : settings.modelId && provider.models.some((item) => item.id === settings.modelId)
+      : settings.modelId && sessionModels.some((item) => item.id === settings.modelId)
         ? settings.modelId
-        : (provider.models[0]?.id ?? '')
+        : (sessionModels[0]?.id ?? '')
   return modelId ? { provider, modelId } : null
 }
 

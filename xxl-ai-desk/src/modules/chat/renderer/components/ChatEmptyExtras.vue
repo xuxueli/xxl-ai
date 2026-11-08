@@ -111,8 +111,8 @@ const examples = [
 /* 空态项目选择：紧贴输入框下沿，宽度比输入框略窄、居中 */
 .empty-project {
   flex-shrink: 0;
-  /* 抵消输入框容器底部 22px 内边距，使背景框紧贴输入框 */
-  margin-top: -22px;
+  /* 输入框容器已无底部内边距，背景框直接从输入框下沿开始 */
+  margin-top: 0;
   /* 与输入框容器相同的左右留白，保证两者同宽居中 */
   padding: 0 var(--desk-chat-content-gutter) 10px;
 }

@@ -11,7 +11,7 @@ import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
-import { CONTEXT_WINDOW_DEFAULT } from '@common/shared/model'
+import { CONTEXT_WINDOW_DEFAULT, type ReasoningLevel } from '@common/shared/model'
 import { DRAFT_SESSION_KEY, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { clearLastSessionId, readLastSessionId, writeLastSessionId } from '@modules/chat/renderer/store/lastSession'
 import { mapStoredMessages, nextLocalMessageId, appendPart, refreshContent } from '@modules/chat/renderer/store/messageMapping'
@@ -192,6 +192,7 @@ export const useChatStore = defineStore('chat', () => {
       agentId: targetAgentId,
       providerId: settings.settings.providerId,
       modelId: settings.settings.modelId,
+      reasoningLevel: settings.settings.reasoningLevel,
       permissionMode
     })
     sessions.value = [session, ...sessions.value]
@@ -259,6 +260,19 @@ export const useChatStore = defineStore('chat', () => {
     if (target) {
       target.providerId = updated.providerId
       target.modelId = updated.modelId
+    }
+  }
+
+  /* 切换当前会话的推理等级：同时记住全局默认，新建对话沿用 */
+  async function updateSessionReasoningLevel(reasoningLevel: ReasoningLevel): Promise<void> {
+    await useSettingsStore().saveSettings({ reasoningLevel })
+    if (!currentId.value) {
+      return
+    }
+    const updated = await api.session.update(currentId.value, { reasoningLevel })
+    const target = sessions.value.find((item) => item.id === updated.id)
+    if (target) {
+      target.reasoningLevel = updated.reasoningLevel
     }
   }
 
@@ -495,6 +509,7 @@ export const useChatStore = defineStore('chat', () => {
     removeSession,
     renameSession,
     selectModel,
+    updateSessionReasoningLevel,
     updateSessionPermissionMode,
     removeMessages,
     send,
