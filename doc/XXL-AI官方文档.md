@@ -1755,6 +1755,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 4、【ING】Bot机器人：支持桌面机器人，可在桌面悬浮窗中与Agent进行对话，支持快捷键唤起、消息通知等功能；
 - 5、【ING】笔记内置工具：默认安装路径调整，默认在用户数据目录下新建 /xxl-ai-desk/note 目录，避免安装目录权限问题；
 - 6、【ING】会话区最小宽度调整，避免输入框小组件超过最小宽度导致布局错乱；
+- 7、【ING】升级兼容性问题解决，优化提示并备份旧数据、初始化新数据（sqlite），避免升级后白屏问题；
 
 ### TODO LIST
 - 1、AI 能力增强：
