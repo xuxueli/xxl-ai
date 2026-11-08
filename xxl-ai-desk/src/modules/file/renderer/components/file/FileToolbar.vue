@@ -5,7 +5,7 @@
  */
 import { t } from '@renderer/shell/i18n'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
-import type { OpenWithApp } from '@modules/app/shared'
+import type { OpenWithApp } from '@modules/platform/shared'
 
 defineProps<{
   /* 面包屑分段（项目名 + 相对路径） */

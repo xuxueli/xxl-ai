@@ -7,7 +7,7 @@
 
 import type { BrowserWindow } from 'electron'
 import { createIpcContext } from '@common/main/ipc'
-import { registerAppIpc } from '@modules/app/main/ipc'
+import { registerPlatformIpc } from '@modules/platform/main/ipc'
 import { registerAppCenterIpc } from '@modules/appCenter/main/ipc'
 import { registerSettingsIpc } from '@modules/settings/main/ipc'
 import { registerAgentIpc } from '@modules/agent/main/ipc'
@@ -27,7 +27,7 @@ import { countSessionsByAgents, listSessionIdsByAgent, listSessionIdsByProject }
 /* 注册全部 IPC 处理器 */
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   const ipc = createIpcContext(getWindow)
-  registerAppIpc(ipc)
+  registerPlatformIpc(ipc)
   registerAppCenterIpc(ipc)
   registerSettingsIpc(ipc)
   /* Agent 删除保护与会话占用统计由会话域提供，避免 agent 反向依赖 chat */

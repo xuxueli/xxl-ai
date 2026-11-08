@@ -5,3 +5,4 @@
 
 export { useAppCenterStore } from './store'
 export type { AppItem } from './store'
+export { appSettingsOf, registerAppSettings } from './appSettings'

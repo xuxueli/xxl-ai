@@ -3,7 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
-import type { AppApi, ShellApi, UpdateApi } from '@modules/app/shared'
+import type { AppApi, ShellApi, UpdateApi } from '@modules/platform/shared'
 import type { AgentApi } from '@modules/agent/shared'
 import type { NoteApi } from '@modules/apps/note/shared'
 import type { AppCenterApi } from '@modules/appCenter/shared'

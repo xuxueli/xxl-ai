@@ -7,7 +7,7 @@
 
 import { app, net, shell } from 'electron'
 import { t } from '@common/main/i18n'
-import type { UpdateInfo } from '@modules/app/shared'
+import type { UpdateInfo } from '@modules/platform/shared'
 
 /* 发布仓库与 Releases 接口（公开仓库匿名访问；失败由调用方兜底） */
 const REPO = 'xuxueli/xxl-ai'

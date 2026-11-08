@@ -3,18 +3,23 @@
  * 应用中心 - 我的应用：已安装应用列表，支持启用、设置与打开。
  * @author xuxueli 2026-11-08
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { t } from '@renderer/shell/i18n'
-import { NoteSettingsDrawer } from '@modules/apps/note/renderer'
 import AppCard from '@modules/appCenter/renderer/components/AppCard.vue'
-import { useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
+import { appSettingsOf, useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
 
 const router = useRouter()
 const store = useAppCenterStore()
 const settingsVisible = ref(false)
+const settingsAppId = ref('')
 const busyId = ref('')
+
+/* 当前应用设置面板组件：由应用设置注册表提供 */
+const settingsComponent = computed(() =>
+  settingsAppId.value ? appSettingsOf(settingsAppId.value) : undefined
+)
 
 /* 错误对象 → 可读文本 */
 function messageOf(error: unknown): string {
@@ -40,6 +45,15 @@ function openApp(app: AppItem): void {
   }
 }
 
+/* 打开应用设置：按注册表取对应组件 */
+function openSettings(app: AppItem): void {
+  if (!appSettingsOf(app.id)) {
+    return
+  }
+  settingsAppId.value = app.id
+  settingsVisible.value = true
+}
+
 onMounted(async () => {
   await store.ensureLoaded()
 })
@@ -60,7 +74,7 @@ onMounted(async () => {
           mode="installed"
           :busy="busyId === app.id"
           @toggle="(value) => onToggle(app, value)"
-          @settings="settingsVisible = true"
+          @settings="openSettings(app)"
           @open="openApp(app)"
         />
       </div>
@@ -75,7 +89,11 @@ onMounted(async () => {
       </div>
     </el-scrollbar>
 
-    <NoteSettingsDrawer v-model="settingsVisible" />
+    <component
+      :is="settingsComponent"
+      v-if="settingsComponent"
+      v-model="settingsVisible"
+    />
   </div>
 </template>
 

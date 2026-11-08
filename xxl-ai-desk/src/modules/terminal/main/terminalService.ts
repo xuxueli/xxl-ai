@@ -16,7 +16,7 @@ import {
   buildRuntimePath,
   getRuntimeShellDir,
   runtimePathPrefix
-} from '@modules/app/main'
+} from '@modules/platform/main'
 
 /* 受管终端会话：id → PTY 进程 */
 interface TerminalSession {

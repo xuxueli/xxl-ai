@@ -1,5 +1,5 @@
 /*
- * 系统域 IPC 注册：应用信息、数据目录、运行时检测、更新与系统外壳。
+ * platform 模块 IPC 注册：应用信息、数据目录、运行时检测、更新与系统外壳。
  * @author xuxueli 2026-11-07
  */
 
@@ -16,7 +16,7 @@ import { listOpenWithApps, openWith } from './openWithService'
 import { disposeAgentRuntime } from '@modules/agent/main'
 import { disposeAllTerminals } from '@modules/terminal/main'
 
-export function registerAppIpc(ipc: IpcContext): void {
+export function registerPlatformIpc(ipc: IpcContext): void {
   ipc.handle(
     APP_IPC.info,
     (): RuntimeInfo => ({

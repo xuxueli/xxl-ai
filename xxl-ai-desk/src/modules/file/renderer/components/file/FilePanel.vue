@@ -24,7 +24,7 @@ import FileViewer from '@modules/file/renderer/components/file/FileViewer.vue'
 import FileTreePanel from '@modules/file/renderer/components/file/FileTreePanel.vue'
 import FileContextMenu from '@modules/file/renderer/components/file/FileContextMenu.vue'
 import type { FileContent, FsEntry } from '@modules/file/shared'
-import type { OpenWithApp } from '@modules/app/shared'
+import type { OpenWithApp } from '@modules/platform/shared'
 
 const props = defineProps<{
   sessionId: string

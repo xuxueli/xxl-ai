@@ -7,7 +7,7 @@ import { api } from '@common/renderer/api'
 import { setLanguage, t } from '@renderer/shell/i18n'
 import { createDefaultSettings } from '@modules/settings/shared'
 import type { AppSettings } from '@modules/settings/shared'
-import type { RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from '@modules/app/shared'
+import type { RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from '@modules/platform/shared'
 
 export const useSettingsStore = defineStore('settings', () => {
   /* 应用设置（默认值与主进程共用 shared/defaults） */

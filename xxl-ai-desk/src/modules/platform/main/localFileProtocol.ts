@@ -12,9 +12,8 @@ import { stat } from 'fs/promises'
 import { Readable } from 'stream'
 import { normalize } from 'path'
 import { isWithinRoot } from '@common/main/utils/pathGuard'
+import { listLocalFileRoots } from '@common/main/utils/localFileRoots'
 import { pathToFileURL } from 'url'
-import { listProjects } from '@modules/project/main'
-import { getNoteStorageDir } from '@modules/apps/note/main'
 import { mimeOf } from '@common/shared/fileTypes'
 
 /* 协议名：与渲染层拼接 URL、CSP 白名单保持一致 */
@@ -28,17 +27,9 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
-/* 目标路径是否位于某个已登记项目目录或笔记根目录内（含软链接归一化，防路径穿越） */
+/* 目标路径是否位于某个已登记的允许根目录内（含软链接归一化，防路径穿越） */
 function isInsideAllowedRoot(target: string): boolean {
-  if (listProjects().some((item) => isWithinRoot(item.path, target))) {
-    return true
-  }
-  try {
-    return isWithinRoot(getNoteStorageDir(), target)
-  } catch {
-    /* 笔记目录不可用时不影响项目文件预览 */
-    return false
-  }
+  return listLocalFileRoots().some((root) => isWithinRoot(root, target))
 }
 
 /* 将 URL 中的路径还原为系统路径：解码失败返回空串，Windows 需去掉盘符前的斜杠 */

@@ -8,11 +8,14 @@ import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
 import { PROJECT_IPC } from '../shared/ipc'
 import { createProject, deleteProject, getProject, listProjects, renameProject, setProjectMemoryEnabled } from './projectService'
+import { registerLocalFileRoot } from '@common/main/utils/localFileRoots'
 import { abortChat, deleteSession, discardSessionRuns, listSessionIdsByProject } from '@modules/chat/main'
 import { evictAgent, clearSessionPermissions } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
 
 export function registerProjectIpc(ipc: IpcContext): void {
+  /* 项目目录加入本地文件协议允许根 */
+  registerLocalFileRoot('project', () => listProjects().map((item) => item.path))
   ipc.handle(PROJECT_IPC.list, () => listProjects())
   ipc.handle(PROJECT_IPC.create, async (_event, input) => {
     let path = input?.path?.trim() ?? ''

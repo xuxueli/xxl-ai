@@ -9,6 +9,7 @@ import { api } from '@common/renderer/api'
 import { t } from '@renderer/shell/i18n'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import NoteTreeNode from '@modules/apps/note/renderer/components/NoteTreeNode.vue'
+import NoteNameDialog from '@modules/apps/note/renderer/components/NoteNameDialog.vue'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
 import { parentDir } from '@modules/apps/note/renderer/utils/path'
 import type { NoteEntry } from '@modules/apps/note/shared'
@@ -97,60 +98,67 @@ function targetDirOf(entry: NoteEntry): string {
   return entry.isDir ? entry.path : parentDir(entry.path)
 }
 
-/* 新建笔记 */
-async function createNote(dir: string): Promise<void> {
-  try {
-    const result = await ElMessageBox.prompt(t('note.noteName'), t('note.newNote'), {
-      inputValue: t('note.untitled'),
-      inputPlaceholder: t('note.namePlaceholder'),
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel')
-    })
-    const name = String(result.value ?? '').trim()
-    if (!name) {
-      ElMessage.warning(t('note.nameRequired'))
-      return
-    }
-    await store.createNote(dir, name)
-  } catch {
-    /* 取消 */
+/* 名称弹框目标：新建笔记 / 新建目录 / 重命名 */
+type NoteNameTarget = 'newNote' | 'newFolder' | 'rename'
+
+/* 名称弹框状态 */
+const nameDialogVisible = ref(false)
+const nameDialogState = ref<{
+  target: NoteNameTarget
+  title: string
+  initialValue: string
+  dir: string
+  entry: NoteEntry | null
+} | null>(null)
+
+/* 打开名称弹框：按目标回填标题与初始名称 */
+function openNameDialog(target: NoteNameTarget, dir: string, entry: NoteEntry | null): void {
+  const titles: Record<NoteNameTarget, string> = {
+    newNote: t('note.newNote'),
+    newFolder: t('note.newFolder'),
+    rename: t('note.rename')
   }
+  const initialValue =
+    target === 'newNote' ? t('note.untitled') : target === 'rename' ? (entry?.name ?? '') : ''
+  nameDialogState.value = { target, title: titles[target], initialValue, dir, entry }
+  nameDialogVisible.value = true
+}
+
+/* 新建笔记 */
+function createNote(dir: string): void {
+  openNameDialog('newNote', dir, null)
 }
 
 /* 新建目录 */
-async function createFolder(dir: string): Promise<void> {
-  try {
-    const result = await ElMessageBox.prompt(t('note.folderName'), t('note.newFolder'), {
-      inputValue: '',
-      inputPlaceholder: t('note.namePlaceholder'),
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      inputValidator: (value: string) => Boolean(value.trim()) || t('note.nameRequired')
-    })
-    const name = String(result.value ?? '').trim()
-    if (name) {
-      await store.createFolder(dir, name)
-    }
-  } catch {
-    /* 取消 */
-  }
+function createFolder(dir: string): void {
+  openNameDialog('newFolder', dir, null)
 }
 
 /* 重命名 */
-async function rename(entry: NoteEntry): Promise<void> {
-  try {
-    const result = await ElMessageBox.prompt(t('note.rename'), entry.name, {
-      inputValue: entry.name,
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      inputValidator: (value: string) => Boolean(value.trim()) || t('note.nameRequired')
-    })
-    const name = String(result.value ?? '').trim()
-    if (name) {
-      await store.renameEntry(entry, name)
-    }
-  } catch {
-    /* 取消 */
+function rename(entry: NoteEntry): void {
+  openNameDialog('rename', '', entry)
+}
+
+/* 提交名称：按目标执行对应操作 */
+async function onNameSubmit(name: string): Promise<void> {
+  const state = nameDialogState.value
+  if (!state) {
+    return
+  }
+  switch (state.target) {
+    case 'newNote':
+      await store.createNote(state.dir, name)
+      break
+    case 'newFolder':
+      await store.createFolder(state.dir, name)
+      break
+    case 'rename':
+      if (state.entry) {
+        await store.renameEntry(state.entry, name)
+      }
+      break
+    default:
+      break
   }
 }
 
@@ -195,13 +203,13 @@ async function onMenuAction(action: NoteMenuAction): Promise<void> {
   }
   switch (action) {
     case 'newNote':
-      await createNote(targetDirOf(entry))
+      createNote(targetDirOf(entry))
       break
     case 'newFolder':
-      await createFolder(targetDirOf(entry))
+      createFolder(targetDirOf(entry))
       break
     case 'rename':
-      await rename(entry)
+      rename(entry)
       break
     case 'trash':
       await trash(entry)
@@ -260,7 +268,7 @@ onBeforeUnmount(() => {
     <div class="note-tree-head">
       <span class="note-tree-title">{{ t('note.title') }}</span>
       <button class="note-icon-btn" :title="t('note.newNote')" @click="createNote(store.rootPath)">
-        <el-icon><Plus /></el-icon>
+        <el-icon><DocumentAdd /></el-icon>
       </button>
       <button class="note-icon-btn" :title="t('note.newFolder')" @click="createFolder(store.rootPath)">
         <el-icon><FolderAdd /></el-icon>
@@ -323,6 +331,15 @@ onBeforeUnmount(() => {
         </template>
       </div>
     </Teleport>
+
+    <!-- 名称弹框：新建笔记 / 新建目录 / 重命名共用 -->
+    <NoteNameDialog
+      v-model="nameDialogVisible"
+      :title="nameDialogState?.title ?? ''"
+      :initial-value="nameDialogState?.initialValue ?? ''"
+      :placeholder="t('note.namePlaceholder')"
+      @submit="onNameSubmit"
+    />
   </div>
 </template>
 

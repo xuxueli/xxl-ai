@@ -4,7 +4,7 @@
  */
 
 import { contextBridge } from 'electron'
-import { appApi, shellApi, updateApi } from '@modules/app/preload'
+import { appApi, shellApi, updateApi } from '@modules/platform/preload'
 import { appCenterApi } from '@modules/appCenter/preload'
 import { agentApi } from '@modules/agent/preload'
 import { noteApi } from '@modules/apps/note/preload'

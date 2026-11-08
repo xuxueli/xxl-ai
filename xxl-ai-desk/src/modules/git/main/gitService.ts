@@ -12,7 +12,7 @@ import { readFile, stat } from 'fs/promises'
 import { join, resolve } from 'path'
 import { assertInside } from '@common/main/utils/pathGuard'
 import { t } from '@common/main/i18n'
-import { buildRuntimePath } from '@modules/app/main'
+import { buildRuntimePath } from '@modules/platform/main'
 import { getProject } from '@modules/project/main'
 import type { GitChange, GitChangeStatus, GitCommitInput, GitCommitResult, GitDiffInput, GitDiffResult, GitOperationResult, GitStatus } from '@modules/git/shared'
 

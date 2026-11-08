@@ -29,7 +29,7 @@ import { appendMessages, getSession, getSessionSummary, isSessionRemoved, listMe
 import { maybeCompressSession } from './sessionSummaryService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
-import { buildMcpRuntimePath, buildRuntimePath } from '@modules/app/main'
+import { buildMcpRuntimePath, buildRuntimePath } from '@modules/platform/main'
 import { getSkillsDir } from '@common/main/config/paths'
 import { abortAgent, evictAgent, isAgentRunning, prepareAgentRuntime, runAgent } from '@modules/agent/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'

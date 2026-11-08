@@ -12,7 +12,7 @@ import { delimiter, dirname, isAbsolute, join } from 'path'
 import { getDataDir } from '@common/main/config/paths'
 import { t } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
-import type { RuntimeDetectResult, RuntimeExecInput } from '@modules/app/shared'
+import type { RuntimeDetectResult, RuntimeExecInput } from '@modules/platform/shared'
 
 /* Electron 内置 Node shim 所在目录：随数据目录迁移，避免污染系统 */
 export function getRuntimeBinDir(): string {

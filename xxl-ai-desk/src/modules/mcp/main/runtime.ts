@@ -5,7 +5,7 @@
  */
 
 import { t } from '@common/main/i18n'
-import { buildMcpRuntimePath } from '@modules/app/main'
+import { buildMcpRuntimePath } from '@modules/platform/main'
 import { buildRuntimeConfig, getMcp, saveMcpHealth } from './service'
 import { listMcpToolsByRuntime, testMcpByRuntime } from '@modules/agent/main'
 import type { McpDTO, McpHealth, McpTestResult, McpToolMeta } from '@modules/mcp/shared'

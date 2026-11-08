@@ -29,10 +29,10 @@ Renderer ──preload 白名单（DeskApi）──▶ Main ──utilityProcess
 src/
 ├── common/                         # 一级公共：跨域、无业务规则
 │   ├── shared/                     # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、providerUrl、runtimeLog、appInfo、i18n
-│   ├── main/                       # 主进程基础设施：db(getDb) / config/paths / utils(http·logger·pathGuard·ttlCache·directoryWatcher) / ipc
+│   ├── main/                       # 主进程基础设施：db(getDb) / config/paths / utils(http·logger·pathGuard·ttlCache·directoryWatcher·localFileRoots) / ipc
 │   └── renderer/                   # 渲染公共：api(window.desk) / components(CodeEditor·MarkdownBlock) / composables / config / styles / types / utils
 ├── modules/                        # 单领域模块：一个域一个目录
-│   ├── app/                        # shared · main · preload · i18n
+│   ├── platform/                   # shared · main · preload · i18n（系统外壳 / 更新 / 运行时环境 / 本地文件协议）
 │   ├── appCenter/                  # shared · main · preload · renderer · i18n（内置应用注册 / 安装启用 / 市场）
 │   ├── apps/{appId}/               # 子应用：shared · main · preload · renderer · i18n（如 apps/note）
 │   ├── settings/                   # shared · main · preload · renderer · i18n
@@ -146,6 +146,8 @@ modules/{domain}/
 - **IPC 三段式**：`modules/{domain}/shared/ipc.ts` 通道 → `main/ipc.ts` 注册 → `preload/index.ts` 暴露；`src/main/ipc.ts`、`src/preload/index.ts` 只聚合。
 - **i18n**：公共词条在 `common/shared/i18n/locales`，领域词条在 `modules/{domain}/i18n/{zh,en}.json`；主进程由 `src/main/i18n.ts`、Worker 由 `modules/agent/worker/i18n.ts`、渲染层由 `shell/i18n/index.ts` 合并后注册。编辑器 / 主题等跨域共用词条放 `common/shared/i18n`。
 - **目录监听**：file / note 共用 `common/main/utils/directoryWatcher.ts#DirectoryWatcher`；各域只做 IPC 边界校验与回调注入，禁止再各写一份 `fs.watch` 逻辑。
+- **本地文件协议放行**：各域通过 `common/main/utils/localFileRoots.ts#registerLocalFileRoot` 登记允许根；`modules/platform` 只做协议 / Range / 路径校验，不感知 project、note 等具体域。
+- **应用设置面板**：appCenter renderer 提供 `appSettings` 注册表；渲染层装配处登记「appId → 设置组件」，appCenter 不反向 import 子应用。
 - **跨域数据**：禁止跨模块读取 `main/schema`；跨域统计 / 级联改为调用所属域 `main/index.ts` 导出的 service 函数。
 
 ### 1.4 模块边界与职责收拢（硬约束）
@@ -182,6 +184,8 @@ modules/{domain}/
 | 主进程业务与编排 | `modules/{domain}/main/*.ts` |
 | 内置应用注册 / 安装启用 / 配置 | `modules/appCenter/{shared,main,preload,renderer}`（`desk_app_setting`） |
 | 子应用（如笔记） | `modules/apps/{appId}/`，路由 `/apps/{appId}` |
+| 平台能力（外壳 / 更新 / 运行时 / 文件协议） | `modules/platform/{shared,main,preload}` |
+| 应用设置面板注册 | `modules/appCenter/renderer/appSettings.ts` + `shell/appSettings.ts` 装配 |
 | 目录监听（file / note 等） | `common/main/utils/directoryWatcher.ts#DirectoryWatcher`，域内只做 IPC 校验与回调 |
 | 跨模块编辑器 / Markdown 组件 | `common/renderer/components/{CodeEditor,MarkdownBlock}/` |
 | Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
@@ -445,6 +449,8 @@ shell/layout/index.vue（app-wrapper，纵向）
 - 子应用统一放 `modules/apps/{appId}/`，路由 `/apps/{appId}`；子应用之间、外壳与子应用之间只经各自 `index.ts` 公共入口交互。
 - 应用自身页面（如 `/apps/note`）**不渲染外壳子菜单**，图标栏右侧直接是应用功能；管理页（我的应用 / 应用市场）仍保留「应用中心」子菜单。
 - 图标栏应用入口按注册表顺序追加，与固定入口用分隔线隔开；无启用应用时整条分隔线不渲染。顶栏标题取当前应用名称。
+- 应用设置面板：appCenter renderer 维护 `appSettings` 注册表，渲染层装配处（`shell/appSettings.ts`）按 `appId` 登记设置组件；新增应用不修改 appCenter 页面，也不产生 appCenter → 子应用的反向依赖。
+- 平台能力模块为 `modules/platform`（原 `modules/app`）：系统外壳、更新、运行时环境与 `desk-file` 协议机制。
 - **内置「笔记」参考实现**：
   - 目录树只展示目录与 `.md`，根级 `resource` 与隐藏项不展示；
   - 目录树实时监听复用 `common/main/utils/directoryWatcher.ts`（按已展开目录非递归监听，50ms 去抖），渲染层只重载变更目录；

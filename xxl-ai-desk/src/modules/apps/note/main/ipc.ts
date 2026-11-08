@@ -6,6 +6,7 @@
 import { dialog } from 'electron'
 import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
+import { registerLocalFileRoot } from '@common/main/utils/localFileRoots'
 import { NOTE_IPC } from '../shared/ipc'
 import {
   IMAGE_EXTENSIONS,
@@ -13,6 +14,7 @@ import {
   createFolder,
   createNote,
   getNoteSettings,
+  getNoteStorageDir,
   listNotes,
   readNote,
   renameNote,
@@ -25,6 +27,8 @@ import {
 import { initNoteWatch, unwatchNoteDir, watchNoteDir } from './fsWatchService'
 
 export function registerNoteIpc(ipc: IpcContext): void {
+  /* 笔记根目录加入本地文件协议允许根 */
+  registerLocalFileRoot('note', () => getNoteStorageDir())
   ipc.handle(NOTE_IPC.getSettings, () => getNoteSettings())
   ipc.handle(NOTE_IPC.saveSettings, (_event, patch) => saveNoteSettings(patch))
   ipc.handle(NOTE_IPC.selectStorageDir, async () => {

@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
 import type { AppSettings } from '@modules/settings/shared'
-import type { RuntimeDetectResult } from '@modules/app/shared'
+import type { RuntimeDetectResult } from '@modules/platform/shared'
 
 const settings = useSettingsStore()
 

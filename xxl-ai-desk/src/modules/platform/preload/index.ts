@@ -1,5 +1,5 @@
 /*
- * 系统域 preload API 片段。
+ * platform 模块 preload API 片段。
  * @author xuxueli 2026-11-07
  */
 
