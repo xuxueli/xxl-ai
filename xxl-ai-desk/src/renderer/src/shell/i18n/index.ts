@@ -5,11 +5,13 @@ import enCommon from '@common/shared/i18n/locales/en.json'
 import zhAgent from '@modules/agent/i18n/zh.json'
 import enAgent from '@modules/agent/i18n/en.json'
 import zhApp from '@modules/app/i18n/zh.json'
+import zhAppCenter from '@modules/appCenter/i18n/zh.json'
+import zhNote from '@modules/apps/note/i18n/zh.json'
 import enApp from '@modules/app/i18n/en.json'
+import enAppCenter from '@modules/appCenter/i18n/en.json'
+import enNote from '@modules/apps/note/i18n/en.json'
 import zhChat from '@modules/chat/i18n/zh.json'
 import enChat from '@modules/chat/i18n/en.json'
-import zhFile from '@modules/file/i18n/zh.json'
-import enFile from '@modules/file/i18n/en.json'
 import zhGit from '@modules/git/i18n/zh.json'
 import enGit from '@modules/git/i18n/en.json'
 import zhPlugin from '@modules/plugin/i18n/zh.json'
@@ -27,8 +29,8 @@ export const i18n = createI18n({
   locale: 'zh',
   fallbackLocale: 'zh',
   messages: {
-    zh: { ...zhCommon, ...zhAgent, ...zhApp, ...zhChat, ...zhFile, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
-    en: { ...enCommon, ...enAgent, ...enApp, ...enChat, ...enFile, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
+    zh: { ...zhCommon, ...zhAgent, ...zhApp, ...zhAppCenter, ...zhNote, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
+    en: { ...enCommon, ...enAgent, ...enApp, ...enAppCenter, ...enNote, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
   }
 })
 

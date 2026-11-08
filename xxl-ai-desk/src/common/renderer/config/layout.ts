@@ -14,7 +14,12 @@ export const LAYOUT = {
   /* Git 工具：左侧变更树默认宽度 */
   git: { defaultSidebarWidth: 240 },
   /* 文件工具：目录树默认/最小宽度与正文最小宽度 */
-  fileTree: { defaultWidth: 240, minWidth: 150, contentMinWidth: 150 }
+  fileTree: { defaultWidth: 240, minWidth: 150, contentMinWidth: 150 },
+  /* 笔记应用：左侧笔记树默认/最小宽度 */
+  note: {
+    treeDefaultWidth: 240,
+    treeMinWidth: 150
+  }
 } as const
 
 /* 左侧子菜单栏最大宽度：为工具面板当前宽度与会话区最小宽度预留 */

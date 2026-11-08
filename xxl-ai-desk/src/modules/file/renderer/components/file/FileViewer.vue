@@ -9,10 +9,10 @@ import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { parentDir } from '@modules/file/renderer/utils/path'
 import { t } from '@renderer/shell/i18n'
 import type { FileContent } from '@modules/file/shared'
-import type { EditorThemeId } from '@modules/file/renderer/components/file/editorThemes'
+import type { EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 
 /* 代码编辑器按需加载：未进入编辑态时不加载 CodeMirror */
-const CodeEditor = defineAsyncComponent(() => import('@modules/file/renderer/components/file/CodeEditor.vue'))
+const CodeEditor = defineAsyncComponent(() => import('@common/renderer/components/CodeEditor/CodeEditor.vue'))
 
 const props = defineProps<{
   root?: string

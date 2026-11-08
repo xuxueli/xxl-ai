@@ -10,8 +10,6 @@ import zhApp from '@modules/app/i18n/zh.json'
 import enApp from '@modules/app/i18n/en.json'
 import zhChat from '@modules/chat/i18n/zh.json'
 import enChat from '@modules/chat/i18n/en.json'
-import zhFile from '@modules/file/i18n/zh.json'
-import enFile from '@modules/file/i18n/en.json'
 import zhGit from '@modules/git/i18n/zh.json'
 import enGit from '@modules/git/i18n/en.json'
 import zhPlugin from '@modules/plugin/i18n/zh.json'
@@ -24,6 +22,6 @@ import zhToolPanel from '@modules/toolPanel/i18n/zh.json'
 import enToolPanel from '@modules/toolPanel/i18n/en.json'
 
 configureMessages({
-  zh: { ...zhAgent, ...zhApp, ...zhChat, ...zhFile, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
-  en: { ...enAgent, ...enApp, ...enChat, ...enFile, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
+  zh: { ...zhAgent, ...zhApp, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
+  en: { ...enAgent, ...enApp, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
 })

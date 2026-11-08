@@ -4,7 +4,7 @@
 */
 
 /* 一级板块标识 */
-export type SectionKey = 'home' | 'plugin' | 'settings'
+export type SectionKey = 'home' | 'plugin' | 'apps' | 'settings'
 
 /* 子菜单项公共字段 */
 interface NavItemBase {
@@ -29,8 +29,17 @@ export interface NavSection {
   items: NavItem[]
 }
 
-/* 扩展中心 / 系统设置 两个板块的子菜单 */
+/* 应用中心 / 扩展中心 / 系统设置 三个板块的子菜单 */
 export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
+  apps: {
+    key: 'apps',
+    titleKey: 'appCenter.title',
+    entryPath: '/apps/installed',
+    items: [
+      { key: 'installed', labelKey: 'appCenter.myApps', icon: 'ShoppingCartFull', path: '/apps/installed' },
+      { key: 'market', labelKey: 'appCenter.market', icon: 'ShoppingTrolley', path: '/apps/market' }
+    ]
+  },
   plugin: {
     key: 'plugin',
     titleKey: 'plugin.title',
@@ -66,6 +75,7 @@ export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
 export const SECTION_ENTRY: Record<SectionKey, string> = {
   home: '/',
   plugin: NAV_SECTIONS.plugin.entryPath,
+  apps: NAV_SECTIONS.apps.entryPath,
   settings: NAV_SECTIONS.settings.entryPath
 }
 
@@ -73,6 +83,7 @@ export const SECTION_ENTRY: Record<SectionKey, string> = {
 export const SECTION_ICON: Record<SectionKey, string> = {
   home: 'ChatDotRound',
   plugin: 'SetUp',
+  apps: 'ShoppingTrolley',
   settings: 'Setting'
 }
 
@@ -80,6 +91,9 @@ export const SECTION_ICON: Record<SectionKey, string> = {
 export function sectionOfPath(path: string): SectionKey {
   if (path.startsWith('/plugin')) {
     return 'plugin'
+  }
+  if (path.startsWith('/apps')) {
+    return 'apps'
   }
   if (path.startsWith('/settings')) {
     return 'settings'
@@ -91,5 +105,9 @@ export function sectionOfPath(path: string): SectionKey {
 export function navItemKey(section: Exclude<SectionKey, 'home'>, path: string): string {
   const items = NAV_SECTIONS[section].items
   const item = items.find((one) => one.path === path)
+  /* 应用中心：子应用页面不归属任何子菜单项，避免「应用列表」误高亮 */
+  if (section === 'apps') {
+    return item?.key ?? ''
+  }
   return item?.key ?? items[0].key
 }

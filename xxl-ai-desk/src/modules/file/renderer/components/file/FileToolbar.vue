@@ -4,7 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { t } from '@renderer/shell/i18n'
-import { EDITOR_THEMES, type EditorThemeId } from '@modules/file/renderer/components/file/editorThemes'
+import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import type { OpenWithApp } from '@modules/app/shared'
 
 defineProps<{
@@ -64,7 +64,7 @@ const emit = defineEmits<{
         @command="(command: string) => emit('theme-command', command as EditorThemeId)"
       >
         <button class="panel-btn" :title="t('panel.editorTheme')">
-          <el-icon><PictureRounded /></el-icon>
+          <el-icon><Brush /></el-icon>
         </button>
         <template #dropdown>
           <el-dropdown-menu>

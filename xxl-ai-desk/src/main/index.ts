@@ -16,6 +16,7 @@ import { ensureSeedProviders } from '@modules/provider/main'
 import { registerLocalFileProtocol } from '@modules/app/main'
 import { disposeAllTerminals } from '@modules/terminal/main'
 import { disposeAllFsWatch } from '@modules/file/main'
+import { disposeAllNoteWatch } from '@modules/apps/note/main'
 import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
 import { disposeBrowserActions } from '@modules/browser/main'
@@ -191,6 +192,7 @@ if (!gotLock) {
     void disposeAgentRuntime().finally(() => {
       disposeAllTerminals()
       disposeAllFsWatch()
+      disposeAllNoteWatch()
       disposeAllGitWatch()
       app.quit()
     })

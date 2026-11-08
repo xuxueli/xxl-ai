@@ -14,7 +14,11 @@ import { t } from '@renderer/shell/i18n'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { normalizePath, parentDir } from '@modules/file/renderer/utils/path'
 import { imageMimeOf, mediaKindOf } from '@common/shared/fileTypes'
-import { isEditorThemeId, type EditorThemeId } from '@modules/file/renderer/components/file/editorThemes'
+import {
+  EDITOR_THEME_STORAGE_KEY,
+  isEditorThemeId,
+  type EditorThemeId
+} from '@common/renderer/components/CodeEditor/editorThemes'
 import FileToolbar from '@modules/file/renderer/components/file/FileToolbar.vue'
 import FileViewer from '@modules/file/renderer/components/file/FileViewer.vue'
 import FileTreePanel from '@modules/file/renderer/components/file/FileTreePanel.vue'
@@ -34,10 +38,9 @@ const toolPanel = useToolPanelStore()
 const fileState = computed(() => toolPanel.sliceOf(props.sessionId).fileExplorer)
 
 /* 编辑器主题：本地持久化，跨会话共用 */
-const EDITOR_THEME_KEY = 'desk-editor-theme'
 const editorTheme = ref<EditorThemeId>(
-  isEditorThemeId(localStorage.getItem(EDITOR_THEME_KEY))
-    ? (localStorage.getItem(EDITOR_THEME_KEY) as EditorThemeId)
+  isEditorThemeId(localStorage.getItem(EDITOR_THEME_STORAGE_KEY))
+    ? (localStorage.getItem(EDITOR_THEME_STORAGE_KEY) as EditorThemeId)
     : 'auto'
 )
 
@@ -45,7 +48,7 @@ const editorTheme = ref<EditorThemeId>(
 function onThemeCommand(theme: EditorThemeId): void {
   editorTheme.value = theme
   try {
-    localStorage.setItem(EDITOR_THEME_KEY, theme)
+    localStorage.setItem(EDITOR_THEME_STORAGE_KEY, theme)
   } catch {
     /* 本地存储不可用时忽略（仅影响恢复） */
   }

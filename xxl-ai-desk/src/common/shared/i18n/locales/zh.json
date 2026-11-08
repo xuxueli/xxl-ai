@@ -32,6 +32,28 @@
     "resetPanelWidth": "双击恢复默认宽度",
     "resetPanelHeight": "双击恢复默认高度"
   },
+  "editor": {
+    "find": "查找",
+    "replace": "替换",
+    "next": "下一个",
+    "previous": "上一个",
+    "replaceOne": "替换",
+    "replaceAll": "全部替换",
+    "close": "关闭",
+    "goToLine": "跳转到行",
+    "go": "跳转"
+  },
+  "editorTheme": {
+    "auto": "跟随外观",
+    "githubLight": "GitHub Light",
+    "oneLight": "One Light",
+    "solarizedLight": "Solarized Light",
+    "githubDarkDimmed": "GitHub Dark Dimmed",
+    "oneDark": "One Dark",
+    "solarizedDark": "Solarized Dark",
+    "nord": "Nord",
+    "dracula": "Dracula"
+  },
   "runtime": {
     "error": {
       "projectMissing": "项目不存在",
@@ -143,13 +165,30 @@
       "skillGithubArchiveRequestFailed": "GitHub 归档请求失败：{0}",
       "skillGithubExtractTooLarge": "仓库解压后体积过大，暂不支持在线安装",
       "skillGithubExtractTooManyFiles": "仓库文件数量过多，暂不支持在线安装",
-      "skillCommunityInvalidQuery": "skills.sh 检索参数不合法（请尝试更具体的关键字）"
+      "skillCommunityInvalidQuery": "skills.sh 检索参数不合法（请尝试更具体的关键字）",
+      "noteStorageInvalid": "笔记存储目录必须是绝对路径",
+      "noteStorageUnwritable": "笔记存储目录不可写，请选择其它目录",
+      "notePathOutside": "仅可访问笔记目录内的文件",
+      "noteTargetIsDir": "目标是目录，无法读取",
+      "noteTargetNotDir": "目标不是目录",
+      "noteOnlyMarkdown": "仅支持 Markdown 笔记文件",
+      "noteFileTooLarge": "笔记文件过大，暂不支持打开",
+      "noteNameEmpty": "名称不能为空",
+      "noteNameDuplicate": "同名笔记或目录已存在",
+      "noteRootDelete": "笔记根目录不允许删除",
+      "noteImageType": "不支持的图片格式",
+      "noteImageTooLarge": "图片体积超过 20MB",
+      "appNotFound": "应用不存在或不支持安装",
+      "appNotAvailable": "该应用建设中，暂不可安装"
     },
     "dialog": {
       "selectFolderTitle": "选择项目目录",
       "selectDataDir": "选择数据目录",
       "selectSkillDir": "选择技能目录",
-      "selectSkillZip": "选择技能 Zip 文件"
+      "selectSkillZip": "选择技能 Zip 文件",
+      "selectNoteStorageDir": "选择笔记存储目录",
+      "selectNoteImages": "选择要插入的图片",
+      "noteImageFilter": "图片"
     },
     "abortNote": "[异常] 用户主动终止任务。",
     "interruptedNote": "[异常] 应用已退出，本轮生成被中断。",
@@ -282,6 +321,9 @@
       "selected": "用户选择：{0}",
       "noSelection": "用户未选择任何选项。",
       "cancelled": "交互已取消，用户未提供信息。"
+    },
+    "note": {
+      "untitled": "未命名笔记"
     }
   }
 }

@@ -8,7 +8,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { ChatSidebarPanel } from '@modules/chat/renderer'
 import SidebarMenu from '@renderer/shell/layout/components/Sidebar/SidebarMenu.vue'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { NAV_SECTIONS, navItemKey, sectionOfPath, type NavItem } from '@renderer/shell/config/nav'
+import {
+  NAV_SECTIONS,
+  navItemKey,
+  sectionOfPath,
+  type NavItem
+} from '@renderer/shell/config/nav'
 
 const route = useRoute()
 const router = useRouter()

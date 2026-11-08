@@ -11,6 +11,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { NAV_SECTIONS, sectionOfPath } from '@renderer/shell/config/nav'
+import { appOfPath } from '@modules/appCenter/shared'
 import { t } from '@renderer/shell/i18n'
 
 const route = useRoute()
@@ -30,13 +31,19 @@ async function onPickSession(sessionId: number): Promise<void> {
 /* 当前所属板块 */
 const section = computed(() => sectionOfPath(route.path))
 
+/* 当前应用自身页面（如笔记）：顶栏标题取应用名称 */
+const currentApp = computed(() => appOfPath(route.path))
+
 /* 是否对话页（对话页展示会话标题与终端/侧栏开关） */
 const isChat = computed(() => section.value === 'home')
 
-/* 顶栏标题：对话页仅已有会话时展示会话标题（新建对话页不展示动态标题）；其余取板块标题 */
+/* 顶栏标题：对话页展示会话标题；应用页展示应用名称；其余取板块标题 */
 const pageTitle = computed(() => {
   if (section.value === 'home') {
     return chat.currentId ? chat.currentSession?.title || t('chat.newChat') : ''
+  }
+  if (currentApp.value) {
+    return t(currentApp.value.titleKey)
   }
   return t(NAV_SECTIONS[section.value].titleKey)
 })

@@ -5,7 +5,9 @@
 
 import { contextBridge } from 'electron'
 import { appApi, shellApi, updateApi } from '@modules/app/preload'
+import { appCenterApi } from '@modules/appCenter/preload'
 import { agentApi } from '@modules/agent/preload'
+import { noteApi } from '@modules/apps/note/preload'
 import { browserApi } from '@modules/browser/preload'
 import { chatApi, sessionApi } from '@modules/chat/preload'
 import { diagnosticsApi } from '@modules/diagnostics/preload'
@@ -35,7 +37,9 @@ const api: DeskApi = {
   browser: browserApi,
   mcp: mcpApi,
   skill: skillApi,
-  diagnostics: diagnosticsApi
+  diagnostics: diagnosticsApi,
+  note: noteApi,
+  appCenter: appCenterApi
 }
 
 contextBridge.exposeInMainWorld('desk', api)

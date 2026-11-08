@@ -28,6 +28,25 @@ const router = createRouter({
       component: () => import('@modules/settings/renderer/pages/index.vue')
     },
     {
+      path: '/apps',
+      redirect: '/apps/installed'
+    },
+    {
+      path: '/apps/installed',
+      name: 'apps-installed',
+      component: () => import('@modules/appCenter/renderer/pages/installed.vue')
+    },
+    {
+      path: '/apps/market',
+      name: 'apps-market',
+      component: () => import('@modules/appCenter/renderer/pages/market.vue')
+    },
+    {
+      path: '/apps/note',
+      name: 'apps-note',
+      component: () => import('@modules/apps/note/renderer/pages/index.vue')
+    },
+    {
       path: '/plugin',
       component: () => import('@modules/plugin/renderer/pages/index.vue'),
       redirect: NAV_SECTIONS.plugin.entryPath,

@@ -6,6 +6,9 @@
  * @author xuxueli 2026-11-07
  */
 
+/* 编辑器主题本地存储键：文件工具与笔记共用 */
+export const EDITOR_THEME_STORAGE_KEY = 'desk-editor-theme'
+
 /* 主题标识（设置项与下拉菜单共用） */
 export const EDITOR_THEME_IDS = [
   'auto',

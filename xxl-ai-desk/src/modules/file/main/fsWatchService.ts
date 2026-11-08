@@ -1,70 +1,29 @@
 /*
- * 目录监听服务：按已加载目录逐个非递归监听，本地增删/重命名后回调通知渲染层刷新。
- *   - 每个目录一个 fs.watch，回调按目录去抖（50ms）后触发一次，尽量接近实时。
- *   - 仅监听渲染层实际展开过的目录，避免对 node_modules 等大目录递归监听。
+ * 项目目录监听：只监听已展开的项目目录，本地增删后通知渲染层刷新。
+ * @author xuxueli 2026-11-07
  */
 
-import { watch, type FSWatcher } from 'fs'
-import { resolve } from 'path'
+import { DirectoryWatcher } from '@common/main/utils/directoryWatcher'
 
-const watchers = new Map<string, FSWatcher>()
-const timers = new Map<string, ReturnType<typeof setTimeout>>()
+/* 文件域监听器实例 */
+const watcher = new DirectoryWatcher()
 
-/* 变更回调（由 IPC 层注入：转发到渲染窗口） */
-let onChange: ((dir: string) => void) | null = null
-
-/* 注册变更回调（由 IPC 层注入，转发到渲染窗口） */
+/* 注册变更回调（由 IPC 层注入） */
 export function initFsWatch(handler: (dir: string) => void): void {
-  onChange = handler
+  watcher.onChange = handler
 }
 
-/* 监听目录（重复调用幂等） */
+/* 监听目录（幂等） */
 export function watchDir(dir: string): void {
-  const key = resolve(dir)
-  if (watchers.has(key)) {
-    return
-  }
-  try {
-    const watcher = watch(key, { persistent: false }, () => {
-      /* 同一目录的密集事件（如批量删除）合并为一次通知 */
-      const existed = timers.get(key)
-      if (existed) {
-        clearTimeout(existed)
-      }
-      timers.set(
-        key,
-        setTimeout(() => {
-          timers.delete(key)
-          onChange?.(key)
-        }, 50)
-      )
-    })
-    /* 目录被删除/权限变化导致监听失败：静默忽略，等待渲染层后续清理 */
-    watcher.on('error', () => undefined)
-    watchers.set(key, watcher)
-  } catch {
-    /* 目录不存在等：忽略 */
-  }
+  watcher.watch(dir)
 }
 
-/* 取消监听并清理去抖定时器 */
+/* 取消监听 */
 export function unwatchDir(dir: string): void {
-  const key = resolve(dir)
-  const watcher = watchers.get(key)
-  if (watcher) {
-    watcher.close()
-    watchers.delete(key)
-  }
-  const timer = timers.get(key)
-  if (timer) {
-    clearTimeout(timer)
-    timers.delete(key)
-  }
+  watcher.unwatch(dir)
 }
 
-/* 取消全部监听（退出前清理） */
+/* 退出前清理全部监听 */
 export function disposeAllFsWatch(): void {
-  for (const key of [...watchers.keys()]) {
-    unwatchDir(key)
-  }
+  watcher.dispose()
 }

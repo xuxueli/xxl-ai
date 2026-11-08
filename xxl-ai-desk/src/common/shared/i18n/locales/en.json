@@ -32,6 +32,28 @@
     "resetPanelWidth": "Double-click to reset width",
     "resetPanelHeight": "Double-click to reset height"
   },
+  "editor": {
+    "find": "Find",
+    "replace": "Replace",
+    "next": "next",
+    "previous": "previous",
+    "replaceOne": "replace",
+    "replaceAll": "replace all",
+    "close": "close",
+    "goToLine": "Go to line",
+    "go": "go"
+  },
+  "editorTheme": {
+    "auto": "Follow appearance",
+    "githubLight": "GitHub Light",
+    "oneLight": "One Light",
+    "solarizedLight": "Solarized Light",
+    "githubDarkDimmed": "GitHub Dark Dimmed",
+    "oneDark": "One Dark",
+    "solarizedDark": "Solarized Dark",
+    "nord": "Nord",
+    "dracula": "Dracula"
+  },
   "runtime": {
     "error": {
       "projectMissing": "Project not found",
@@ -143,13 +165,30 @@
       "skillGithubArchiveRequestFailed": "GitHub archive request failed: {0}",
       "skillGithubExtractTooLarge": "The extracted repository is too large for online install",
       "skillGithubExtractTooManyFiles": "The repository contains too many files for online install",
-      "skillCommunityInvalidQuery": "Invalid skills.sh query (try more specific keywords)"
+      "skillCommunityInvalidQuery": "Invalid skills.sh query (try more specific keywords)",
+      "noteStorageInvalid": "The note storage folder must be an absolute path",
+      "noteStorageUnwritable": "The note storage folder is not writable. Choose another folder",
+      "notePathOutside": "Only files inside the note folder can be accessed",
+      "noteTargetIsDir": "The target is a folder and cannot be read",
+      "noteTargetNotDir": "The target is not a folder",
+      "noteOnlyMarkdown": "Only Markdown note files are supported",
+      "noteFileTooLarge": "The note file is too large to open",
+      "noteNameEmpty": "The name cannot be empty",
+      "noteNameDuplicate": "A note or folder with the same name already exists",
+      "noteRootDelete": "The note root folder cannot be deleted",
+      "noteImageType": "Unsupported image format",
+      "noteImageTooLarge": "The image exceeds the 20 MB limit",
+      "appNotFound": "The app does not exist or cannot be installed",
+      "appNotAvailable": "This app is under construction and cannot be installed yet"
     },
     "dialog": {
       "selectFolderTitle": "Select project folder",
       "selectDataDir": "Select data folder",
       "selectSkillDir": "Select skill folder",
-      "selectSkillZip": "Select skill Zip file"
+      "selectSkillZip": "Select skill Zip file",
+      "selectNoteStorageDir": "Select note storage folder",
+      "selectNoteImages": "Select images to insert",
+      "noteImageFilter": "Images"
     },
     "abortNote": "[Error] The user stopped the task.",
     "interruptedNote": "[Error] The app was closed, so this response was interrupted.",
@@ -282,6 +321,9 @@
       "selected": "User selected: {0}",
       "noSelection": "User did not select any option.",
       "cancelled": "Interaction cancelled; the user provided no input."
+    },
+    "note": {
+      "untitled": "Untitled note"
     }
   }
 }

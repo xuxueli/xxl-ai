@@ -1,0 +1,51 @@
+{
+  "appCenter": {
+    "title": "应用中心",
+    "subtitle": "管理内置应用；启用后会出现在左侧图标栏。",
+    "myApps": "我的应用",
+    "myAppsHint": "已安装应用；启用后会出现在左侧图标栏。",
+    "market": "应用市场",
+    "marketHint": "浏览并安装内置应用，安装后可在「我的应用」中启用。",
+    "install": "安装",
+    "installed": "已安装",
+    "notInstalled": "未安装",
+    "installSuccess": "已安装「{0}」，请在我的应用中启用。",
+    "open": "打开",
+    "settings": "设置",
+    "enabled": "已启用",
+    "disabled": "已停用",
+    "emptyInstalled": "还没有安装应用",
+    "emptyInstalledTip": "去应用市场安装应用后，会在这里展示。",
+    "goMarket": "去应用市场",
+    "noteDesc": "Markdown 笔记：本地目录、内容目录、分屏预览与图片插入。",
+    "searchPlaceholder": "搜索应用名称或描述",
+    "searchEmpty": "没有找到匹配的应用",
+    "uninstall": "卸载",
+    "uninstallConfirm": "确定卸载「{0}」吗？卸载后会从「我的应用」移除，本地笔记文件不会被删除。",
+    "uninstallSuccess": "已卸载「{0}」",
+    "officialAccount": "公众号编辑器",
+    "officialAccountDesc": "文章排版、模板选择、复制全文 / HTML。",
+    "toolbox": "工具箱",
+    "toolboxDesc": "JSON、编码转换、时间戳、文本对比等常用工具。",
+    "buildingTip": "「{0}」功能建设中，敬请期待",
+    "category": {
+      "efficiency": "效率工具",
+      "content": "内容创作",
+      "file": "文件处理",
+      "ai": "AI 工具"
+    },
+    "availability": {
+      "available": "可使用",
+      "building": "建设中"
+    },
+    "filter": {
+      "all": "全部",
+      "installed": "已安装",
+      "notInstalled": "未安装",
+      "reset": "重置",
+      "count": "共 {0} 个",
+      "installStatus": "安装状态",
+      "appStatus": "应用状态"
+    }
+  }
+}

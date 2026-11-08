@@ -1,7 +1,7 @@
 /*
  * 本地文件协议（desk-file）：供渲染层以 URL 加载项目目录内的本地文件（Markdown 图片、音视频预览等）。
  *   - 协议需在 app ready 前注册，本模块被 import 时立即执行；
- *   - 仅放行已登记项目目录内的文件，越界请求返回 403；
+ *   - 仅放行已登记项目目录与笔记根目录内的文件，越界请求返回 403；
  *   - 支持 Range 请求，保证音视频可拖动进度条与按需加载元数据。
  * @author xuxueli 2026-10-25
  */
@@ -14,6 +14,7 @@ import { normalize } from 'path'
 import { isWithinRoot } from '@common/main/utils/pathGuard'
 import { pathToFileURL } from 'url'
 import { listProjects } from '@modules/project/main'
+import { getNoteStorageDir } from '@modules/apps/note/main'
 import { mimeOf } from '@common/shared/fileTypes'
 
 /* 协议名：与渲染层拼接 URL、CSP 白名单保持一致 */
@@ -27,9 +28,17 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
-/* 目标路径是否位于某个已登记项目目录内（含软链接归一化，防路径穿越） */
-function isInsideProject(target: string): boolean {
-  return listProjects().some((item) => isWithinRoot(item.path, target))
+/* 目标路径是否位于某个已登记项目目录或笔记根目录内（含软链接归一化，防路径穿越） */
+function isInsideAllowedRoot(target: string): boolean {
+  if (listProjects().some((item) => isWithinRoot(item.path, target))) {
+    return true
+  }
+  try {
+    return isWithinRoot(getNoteStorageDir(), target)
+  } catch {
+    /* 笔记目录不可用时不影响项目文件预览 */
+    return false
+  }
 }
 
 /* 将 URL 中的路径还原为系统路径：解码失败返回空串，Windows 需去掉盘符前的斜杠 */
@@ -104,7 +113,7 @@ export function registerLocalFileProtocol(): void {
     if (!target) {
       return new Response('Bad Request', { status: 400 })
     }
-    if (!isInsideProject(target)) {
+    if (!isInsideAllowedRoot(target)) {
       return new Response('Forbidden', { status: 403 })
     }
     const range = request.headers.get('Range')

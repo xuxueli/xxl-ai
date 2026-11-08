@@ -1,0 +1,51 @@
+{
+  "appCenter": {
+    "title": "App Center",
+    "subtitle": "Manage built-in apps. Enabled apps appear in the left icon rail.",
+    "myApps": "My Apps",
+    "myAppsHint": "Installed apps. Enabled apps appear in the left icon rail.",
+    "market": "App Market",
+    "marketHint": "Browse and install built-in apps. Install first, then enable them in My Apps.",
+    "install": "Install",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "installSuccess": "\"{0}\" installed. Enable it in My Apps.",
+    "open": "Open",
+    "settings": "Settings",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "emptyInstalled": "No apps installed yet",
+    "emptyInstalledTip": "Install an app from the App Market and it will appear here.",
+    "goMarket": "Go to App Market",
+    "noteDesc": "Markdown notes with local folders, outline, split preview and image insertion.",
+    "searchPlaceholder": "Search app name or description",
+    "searchEmpty": "No matching apps",
+    "uninstall": "Uninstall",
+    "uninstallConfirm": "Uninstall \"{0}\"? It will be removed from My Apps. Local note files will not be deleted.",
+    "uninstallSuccess": "\"{0}\" uninstalled",
+    "officialAccount": "Official Account Editor",
+    "officialAccountDesc": "Article layout, templates, copy full text / HTML.",
+    "toolbox": "Toolbox",
+    "toolboxDesc": "JSON, encoding, timestamps, text diff and other utilities.",
+    "buildingTip": "\"{0}\" is under construction. Stay tuned.",
+    "category": {
+      "efficiency": "Productivity",
+      "content": "Content",
+      "file": "Files",
+      "ai": "AI"
+    },
+    "availability": {
+      "available": "Available",
+      "building": "Building"
+    },
+    "filter": {
+      "all": "All",
+      "installed": "Installed",
+      "notInstalled": "Not installed",
+      "reset": "Reset",
+      "count": "{0} apps",
+      "installStatus": "Install status",
+      "appStatus": "App status"
+    }
+  }
+}

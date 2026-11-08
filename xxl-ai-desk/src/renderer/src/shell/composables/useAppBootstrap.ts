@@ -8,6 +8,7 @@ import { useProviderStore } from '@modules/provider/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
+import { useAppCenterStore } from '@modules/appCenter/renderer'
 import { useQuickAction } from '@renderer/shell/composables/useQuickAction'
 import { useSessionLifecycle } from '@renderer/shell/composables/useSessionLifecycle'
 import { matchShortcut } from '@common/renderer/utils/shortcut'
@@ -22,6 +23,7 @@ export function useAppBootstrap(): void {
   const chat = useChatStore()
   const project = useProjectStore()
   const agent = useAgentStore()
+  const appCenter = useAppCenterStore()
   const runQuickAction = useQuickAction()
   const sessionLifecycle = useSessionLifecycle()
 
@@ -52,6 +54,7 @@ export function useAppBootstrap(): void {
     chat.bind()
     try {
       await settings.load()
+      await appCenter.ensureLoaded()
       await provider.load()
       await project.loadProjects()
       await agent.loadAgents()

@@ -5,6 +5,8 @@
 
 import type { AppApi, ShellApi, UpdateApi } from '@modules/app/shared'
 import type { AgentApi } from '@modules/agent/shared'
+import type { NoteApi } from '@modules/apps/note/shared'
+import type { AppCenterApi } from '@modules/appCenter/shared'
 import type { BrowserApi } from '@modules/browser/shared'
 import type { ChatApi, SessionApi } from '@modules/chat/shared'
 import type { DiagnosticsApi } from '@modules/diagnostics/shared'
@@ -34,4 +36,6 @@ export interface DeskApi {
   mcp: McpApi
   skill: SkillApi
   diagnostics: DiagnosticsApi
+  note: NoteApi
+  appCenter: AppCenterApi
 }

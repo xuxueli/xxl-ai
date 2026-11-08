@@ -34,15 +34,15 @@ import {
   indentOnInput,
   syntaxHighlighting
 } from '@codemirror/language'
-import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
+import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from '@codemirror/search'
 import { tags } from '@lezer/highlight'
 import { i18n, t } from '@renderer/shell/i18n'
-import EditorSearchPanel from '@modules/file/renderer/components/file/EditorSearchPanel.vue'
+import EditorSearchPanel from '@common/renderer/components/CodeEditor/EditorSearchPanel.vue'
 import {
   editorPalette,
   type EditorThemeId,
   type EditorThemePalette
-} from '@modules/file/renderer/components/file/editorThemes'
+} from '@common/renderer/components/CodeEditor/editorThemes'
 
 const props = withDefaults(
   defineProps<{
@@ -50,8 +50,10 @@ const props = withDefaults(
     fileName: string
     /* 编辑器主题：auto 跟随应用外观，其余为固定配色 */
     theme?: EditorThemeId
+    /* 是否自动换行（长文 Markdown 阅读更友好） */
+    wrap?: boolean
   }>(),
-  { theme: 'auto' }
+  { theme: 'auto', wrap: false }
 )
 const value = defineModel<string>({ required: true })
 const emit = defineEmits<{ save: [] }>()
@@ -59,9 +61,10 @@ const emit = defineEmits<{ save: [] }>()
 /* 编辑器挂载点与实例 */
 const hostRef = ref<HTMLElement | null>(null)
 let view: EditorView | null = null
-/* 语言与主题通过 Compartment 动态替换，避免重建编辑器 */
+/* 语言、主题与换行通过 Compartment 动态替换，避免重建编辑器 */
 const languageCompartment = new Compartment()
 const themeCompartment = new Compartment()
+const wrapCompartment = new Compartment()
 /* 语言异步加载序号：快速切换文件时丢弃过期结果 */
 let languageToken = 0
 
@@ -428,6 +431,7 @@ function baseExtensions(): Extension[] {
       autocomplete: 'off'
     }),
     themeCompartment.of(themeExtension(props.theme)),
+    wrapCompartment.of(props.wrap ? EditorView.lineWrapping : []),
     saveKeymap,
     keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
     EditorView.updateListener.of((update) => {
@@ -442,6 +446,42 @@ function baseExtensions(): Extension[] {
     languageCompartment.of([])
   ]
 }
+
+/* 编辑器公开能力：供笔记等宿主工具栏调用（查找、插入、定位与聚焦） */
+function openSearch(): void {
+  if (view) {
+    openSearchPanel(view)
+  }
+}
+
+/* 在光标 / 选区处插入文本（图片 Markdown 片段等） */
+function insertText(text: string): void {
+  if (!view) {
+    return
+  }
+  view.dispatch(view.state.replaceSelection(text))
+  view.focus()
+}
+
+/* 跳转到指定行并居中展示（Markdown 大纲跳转） */
+function scrollToLine(line: number): void {
+  if (!view) {
+    return
+  }
+  const total = view.state.doc.lines
+  const target = view.state.doc.line(Math.min(Math.max(1, line), total))
+  view.dispatch({
+    selection: { anchor: target.from },
+    effects: EditorView.scrollIntoView(target.from, { y: 'center' })
+  })
+  view.focus()
+}
+
+function focus(): void {
+  view?.focus()
+}
+
+defineExpose({ openSearch, insertText, scrollToLine, focus })
 
 onMounted(() => {
   if (!hostRef.value) {
@@ -475,6 +515,15 @@ watch(
   () => props.theme,
   (theme) => {
     view?.dispatch({ effects: themeCompartment.reconfigure(themeExtension(theme)) })
+  }
+)
+
+watch(
+  () => props.wrap,
+  (wrap) => {
+    view?.dispatch({
+      effects: wrapCompartment.reconfigure(wrap ? EditorView.lineWrapping : [])
+    })
   }
 )
 
