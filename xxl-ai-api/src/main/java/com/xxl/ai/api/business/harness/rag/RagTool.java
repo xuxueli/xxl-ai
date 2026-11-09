@@ -1,5 +1,6 @@
 package com.xxl.ai.api.business.harness.rag;
 
+import com.xxl.ai.api.business.harness.chat.TraceCollector;
 import com.xxl.ai.api.business.harness.llm.LlmModelFactory;
 import com.xxl.ai.api.business.knowledge.mapper.KnowledgeBaseMapper;
 import com.xxl.ai.api.business.knowledge.mapper.KnowledgeDocMapper;
@@ -38,11 +39,11 @@ import java.util.Map;
 /**
  * RAG 工具（harness，spring-ai + Milvus）
  *
- * 知识库向量化 / 检索 / 清理 / Advisor 装配一站式，内部收敛分片、嵌入模型解析、Milvus 存储与会话隔离：
+ * 知识库向量化 / 检索 / 清理 / 对话显式检索与引用上下文注入一站式，内部收敛分片、嵌入模型解析、Milvus 存储与会话隔离：
  *  - 向量化：分片 → Document（含 docId/chunkIndex 元数据）→ VectorStore.add（内部嵌入，先清旧向量）
  *  - 检索：VectorStore.similaritySearch，返回 {text,docId,chunkIndex,score}
  *  - 清理：按 docId 元数据过滤删除 / 失效向量存储缓存
- *  - Advisor：为对话装配 QuestionAnswerAdvisor 上下文注入
+ *  - 对话显式检索（[FEAT-003]）：按知识库前置检索命中分片、补齐知识库名与文档名、生成结构化引用来源并注入系统提示词
  *
  * 面向业务提供「知识库ID」与「知识库实体」两套入口；集合名 kb_base_{baseId}，实例按知识库ID缓存复用，
  * 缓存条目记录嵌入模型配置指纹，指纹变化（供应商连接/模型配置变更）后自动重建。
@@ -250,7 +251,7 @@ public class RagTool {
     }
 
     /**
-     * 为知识库构建 RAG Advisor（QuestionAnswerAdvisor，检索上下文自动注入系统提示）
+     * 为知识库构建 RAG Advisor（保留兼容入口）
      *
      * @return RAG Advisor；知识库未配置嵌入模型时返回 null
      */
@@ -264,7 +265,169 @@ public class RagTool {
                 .build();
     }
 
+    /**
+     * 对话显式 RAG 检索（[FEAT-003]）：
+     * 按知识库 ID 列表逐库执行向量检索，补齐知识库名与文档名，返回结构化引用列表；
+     * 单个知识库检索异常时写入 degradeNotices 降级提示，不阻断对话主流程。
+     *
+     * @param spaceId        Agent 所属空间ID（防跨空间越权读取知识库）
+     * @param kbIds          绑定的知识库ID列表
+     * @param query          当前用户提问
+     * @param degradeNotices 降级提示收集列表（输出参数）
+     * @param traceCollector 全链路追踪收集器（可空）
+     * @return 命中的知识库引用分片列表
+     */
+    public List<TraceCollector.RagReference> retrieveForChat(long spaceId,
+                                                             List<Long> kbIds,
+                                                             String query,
+                                                             List<String> degradeNotices,
+                                                             TraceCollector traceCollector) {
+        List<TraceCollector.RagReference> references = new ArrayList<>();
+        if (CollectionTool.isEmpty(kbIds) || StringTool.isBlank(query)) {
+            return references;
+        }
+        Map<Long, String> docNameCache = new HashMap<>();
+
+        for (Long kbId : kbIds) {
+            if (kbId == null || kbId <= 0) {
+                continue;
+            }
+            KnowledgeBase kb = knowledgeBaseMapper.load(kbId);
+            if (kb == null || kb.getSpaceId() != spaceId || kb.getStatus() == 1) {
+                continue;
+            }
+            MilvusVectorStore vectorStore = resolveVectorStore(kb);
+            if (vectorStore == null) {
+                continue;
+            }
+            TraceCollector.TraceSpan ragSpan = traceCollector != null
+                    ? traceCollector.startSpan("rag", "RAG 检索：" + kb.getName())
+                    : null;
+            try {
+                List<Map<String, Object>> hits = search(kb, query, kb.getTopK());
+                int hitCount = 0;
+                if (CollectionTool.isNotEmpty(hits)) {
+                    for (Map<String, Object> hit : hits) {
+                        String text = hit.get("text") != null ? String.valueOf(hit.get("text")) : "";
+                        if (StringTool.isBlank(text)) {
+                            continue;
+                        }
+                        long docId = parseLongObj(hit.get("docId"));
+                        int chunkIndex = (int) parseLongObj(hit.get("chunkIndex"));
+                        double score = parseDoubleObj(hit.get("score"));
+                        String docName = resolveDocName(docId, docNameCache);
+
+                        TraceCollector.RagReference ref = new TraceCollector.RagReference();
+                        ref.setKbId(kb.getId());
+                        ref.setKbName(kb.getName());
+                        ref.setDocId(docId);
+                        ref.setDocName(docName);
+                        ref.setChunkIndex(chunkIndex);
+                        ref.setScore(Math.round(score * 10000.0d) / 10000.0d);
+                        ref.setContent(text);
+                        references.add(ref);
+                        hitCount++;
+                    }
+                }
+                if (traceCollector != null) {
+                    traceCollector.finishSpan(ragSpan, "SUCCESS", "命中 " + hitCount + " 个分片");
+                    traceCollector.addLog("INFO", "rag",
+                            "知识库「" + kb.getName() + "」检索完成，命中 " + hitCount + " 个分片");
+                }
+            } catch (Exception e) {
+                logger.warn("Agent 知识库 RAG 显式检索失败，已降级跳过, kbId={}, name={}, err={}",
+                        kbId, kb.getName(), e.getMessage());
+                if (degradeNotices != null) {
+                    degradeNotices.add("【知识库降级】「" + kb.getName() + "」检索服务不可用，本次对话已跳过 RAG 上下文。\n");
+                }
+                if (traceCollector != null) {
+                    traceCollector.finishSpan(ragSpan, "ERROR", e.getMessage());
+                    traceCollector.addLog("WARN", "rag",
+                            "知识库「" + kb.getName() + "」检索降级跳过：" + e.getMessage());
+                }
+            }
+        }
+        return references;
+    }
+
+    /**
+     * 将显式检索命中的 RAG 引用片段拼入系统提示词（带编号与来源元信息）
+     */
+    public String injectContextPrompt(String systemPrompt, List<TraceCollector.RagReference> references) {
+        if (CollectionTool.isEmpty(references)) {
+            return systemPrompt;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (StringTool.isNotBlank(systemPrompt)) {
+            sb.append(systemPrompt.trim()).append("\n\n");
+        }
+        sb.append("## 知识库检索参考资料（RAG Context）\n")
+                .append("请优先依据以下检索到的知识库文档片段回答用户问题；若参考资料与问题无关或未包含答案，请如实说明。\n\n");
+        for (int i = 0; i < references.size(); i++) {
+            TraceCollector.RagReference ref = references.get(i);
+            sb.append("[").append(i + 1).append("] 来源：《")
+                    .append(StringTool.isNotBlank(ref.getKbName()) ? ref.getKbName() : "知识库")
+                    .append(" / ")
+                    .append(StringTool.isNotBlank(ref.getDocName()) ? ref.getDocName() : ("文档#" + ref.getDocId()))
+                    .append("》（分片 #").append(ref.getChunkIndex())
+                    .append("，相似度 ").append(String.format("%.2f", ref.getScore()))
+                    .append("）：\n")
+                    .append(ref.getContent())
+                    .append("\n\n");
+        }
+        return sb.toString().trim();
+    }
+
     // ==================== 内部实现（嵌入模型 / 向量存储 / 分片） ====================
+
+    /**
+     * 按文档ID查询文档名（带单次检索内存缓存）
+     */
+    private String resolveDocName(long docId, Map<Long, String> docNameCache) {
+        if (docId <= 0) {
+            return "未知文档";
+        }
+        String cached = docNameCache.get(docId);
+        if (cached != null) {
+            return cached;
+        }
+        String name = "文档#" + docId;
+        try {
+            KnowledgeDoc doc = knowledgeDocMapper.load(docId);
+            if (doc != null && StringTool.isNotBlank(doc.getName())) {
+                name = doc.getName();
+            }
+        } catch (Exception ignored) {
+        }
+        docNameCache.put(docId, name);
+        return name;
+    }
+
+    private static long parseLongObj(Object val) {
+        if (val instanceof Number num) {
+            return num.longValue();
+        }
+        if (val != null) {
+            try {
+                return Long.parseLong(String.valueOf(val));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0L;
+    }
+
+    private static double parseDoubleObj(Object val) {
+        if (val instanceof Number num) {
+            return num.doubleValue();
+        }
+        if (val != null) {
+            try {
+                return Double.parseDouble(String.valueOf(val));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0.0d;
+    }
 
     /**
      * 加载知识库（不存在抛异常）

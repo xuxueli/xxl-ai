@@ -1,6 +1,6 @@
-<!--
+﻿<!--
   AgentChat（Agent 公开对话页）
-  免登录访问：左侧维护多个对话，右侧对话正文（SSE 流式）
+  免登录访问：左侧维护多个对话，右侧对话正文（SSE 流式 + RAG 知识库引用卡片 + 工具调用实时胶囊 + 全链路可观测追踪抽屉）
 -->
 <template>
   <div class="agent-chat-page">
@@ -89,7 +89,59 @@
             <div v-for="(msg, index) in messages" :key="index" class="msg-row" :class="msg.role">
               <div class="msg-body">
                 <div class="msg-bubble">
-                  <!-- 思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
+                  <!-- 1、RAG 知识库引用折叠卡片（[FEAT-003]） -->
+                  <div
+                    v-if="msg.role === 'assistant' && msg.extData?.references && msg.extData.references.length > 0"
+                    class="msg-references"
+                  >
+                    <div class="msg-references-toggle" @click="toggleReferences(index)">
+                      <el-icon class="ref-icon"><Collection /></el-icon>
+                      <span class="ref-label">{{
+                        msg.showReferences
+                          ? t('business.chat.hideReferences', [msg.extData.references.length])
+                          : t('business.chat.referencesTitle', [msg.extData.references.length])
+                      }}</span>
+                      <el-icon class="ref-arrow" :class="{ open: msg.showReferences }"><ArrowDown /></el-icon>
+                    </div>
+                    <div v-if="msg.showReferences" class="msg-references-body">
+                      <div
+                        v-for="(refItem, rIdx) in msg.extData.references"
+                        :key="rIdx"
+                        class="ref-chip-card"
+                        @click="openTraceDrawer(msg, 'references')"
+                      >
+                        <div class="ref-chip-head">
+                          <span class="ref-chip-title">[{{ rIdx + 1 }}] {{ refItem.kbName }} / {{ refItem.docName }}</span>
+                          <span class="ref-chip-score">{{ t('business.chat.refScore', [Number(refItem.score || 0).toFixed(2)]) }}</span>
+                        </div>
+                        <div class="ref-chip-Snippet">{{ refItem.content }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 2、工具调用实时状态胶囊列表（[FEAT-007]） -->
+                  <div
+                    v-if="msg.role === 'assistant' && msg.extData?.toolTraces && msg.extData.toolTraces.length > 0"
+                    class="msg-tools-bar"
+                  >
+                    <div
+                      v-for="tool in msg.extData.toolTraces"
+                      :key="tool.callId"
+                      class="tool-pill"
+                      :class="'status-' + (tool.status || 'SUCCESS').toLowerCase()"
+                      @click="openTraceDrawer(msg, 'tools')"
+                    >
+                      <span class="tool-pill-type">{{ tool.toolType }}</span>
+                      <span class="tool-pill-name">{{ tool.toolName }}</span>
+                      <span class="tool-pill-state">
+                        <template v-if="tool.status === 'RUNNING'">{{ t('business.chat.toolCalling') }}...</template>
+                        <template v-else-if="tool.status === 'ERROR'">{{ t('business.chat.toolError') }}</template>
+                        <template v-else>{{ formatMs(tool.elapsedMs) }}</template>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- 3、思考过程：可折叠展示（业界常见体验，如 DeepSeek "深度思考"） -->
                   <div v-if="msg.reasoning" class="msg-reasoning">
                     <div class="msg-reasoning-toggle" @click="toggleThinking(index)">
                       <el-icon class="reasoning-icon"><MagicStick /></el-icon>
@@ -117,6 +169,26 @@
                   <!-- 异常消息状态提示：生成失败 -->
                   <div v-if="msg.role === 'assistant' && msg.status === 2" class="msg-status-tip">
                     <span>{{ t('business.chat.failed') }}</span>
+                  </div>
+
+                  <!-- 4、助手消息底部全链路可观测指标栏（[FEAT-001]/[FEAT-012]） -->
+                  <div v-if="msg.role === 'assistant' && hasTraceMeta(msg)" class="msg-trace-footer">
+                    <span v-if="msg.extData?.runMeta?.totalElapsedMs" class="trace-metric">
+                      {{ t('business.chat.traceTotalElapsed') }} {{ formatMs(msg.extData.runMeta.totalElapsedMs) }}
+                    </span>
+                    <span v-if="msg.extData?.runMeta?.ttftMs" class="trace-metric">
+                      {{ t('business.chat.traceTtft') }} {{ formatMs(msg.extData.runMeta.ttftMs) }}
+                    </span>
+                    <span v-if="msg.extData?.tokenUsage?.totalTokens" class="trace-metric">
+                      Tokens {{ msg.extData.tokenUsage.totalTokens }}
+                    </span>
+                    <span v-if="msg.extData?.toolTraces?.length" class="trace-metric">
+                      {{ t('business.chat.toolCount', [msg.extData.toolTraces.length]) }}
+                    </span>
+                    <span class="trace-open-link" @click="openTraceDrawer(msg, 'waterfall')">
+                      <el-icon><DataAnalysis /></el-icon>
+                      <span>{{ t('business.chat.viewTrace') }}</span>
+                    </span>
                   </div>
                 </div>
                 <!-- 发送时间：鼠标悬浮展示 -->
@@ -181,6 +253,14 @@
         </div>
       </div>
     </main>
+
+    <!-- 全链路可观测追踪抽屉 -->
+    <TraceInspectorDrawer
+      v-model:visible="traceDrawer.visible"
+      :msg-id="traceDrawer.msgId"
+      :trace-data="traceDrawer.data"
+      :default-tab="traceDrawer.tab"
+    />
   </div>
 </template>
 
@@ -191,8 +271,17 @@ import { useRoute, useRouter } from 'vue-router'
 import { createSession, deleteSession as removeSession, listSession, listMsg, loadAgentInfo, renameSession, stopStream } from '../api'
 import { useChatStream } from '../composables/useChatStream'
 import MarkdownView from '../components/MarkdownView.vue'
+import TraceInspectorDrawer from '../components/TraceInspectorDrawer.vue'
 import type { AgentChatInfo } from '../types'
-import type { Session, SessionMsg } from '@/modules/business/session/types'
+import {
+  parseSessionMsgExt,
+  type RagReference,
+  type Session,
+  type SessionMsg,
+  type SessionMsgExt,
+  type TokenUsage,
+  type ToolTraceItem
+} from '@/modules/business/session/types'
 import { parseTime } from '@/utils/common'
 import modal from '@/utils/modal'
 import { copyText } from '@/utils/clipboard'
@@ -215,9 +304,11 @@ const agent = ref<AgentChatInfo>()
 const sessionList = ref<Session[]>([])
 const sessionLoading = ref(false)
 const currentSessionId = ref<number | undefined>(undefined)
-/** 对话消息（含前端流式字段 showThinking） */
+/** 对话消息（含前端流式折叠状态与全链路可观测结构化数据） */
 interface SessionMsgItem extends SessionMsg {
   showThinking?: boolean
+  showReferences?: boolean
+  extData?: SessionMsgExt
 }
 const messages = ref<SessionMsgItem[]>([])
 const inputText = ref('')
@@ -233,6 +324,19 @@ const collapsed = ref(false)
 /** 对话标题编辑状态 */
 const editingSessionId = ref<number | undefined>(undefined)
 const editingTitle = ref('')
+
+/** 全链路可观测抽屉状态 */
+const traceDrawer = ref<{
+  visible: boolean
+  msgId?: number
+  data?: SessionMsgExt
+  tab: 'waterfall' | 'tools' | 'references' | 'logs'
+}>({
+  visible: false,
+  msgId: undefined,
+  data: undefined,
+  tab: 'waterfall'
+})
 
 // --------------------------------- init ---------------------------------
 
@@ -287,7 +391,6 @@ async function loadSessionList() {
 /** 新建对话：不立即建会话，进入新建状态并聚焦输入框，输入+发送后才生成对话 */
 function handleNewChat() {
   if (sending.value) return
-  // 已在新建对话状态：提示并聚焦，不重复进入
   if (newChat.value && !currentSessionId.value) {
     modal.msgWarning(t('business.chat.newChatAlready'))
     newChatInputRef.value?.focus()
@@ -315,7 +418,7 @@ function syncUrlSessionId(sessionId?: number) {
   router.replace({ path: `/chat/${uuid.value}`, query: sessionId ? { sessionId: String(sessionId) } : {} })
 }
 
-/** 选中对话：加载消息 */
+/** 选中对话：加载消息并解析 extJson */
 async function selectSession(sessionId: number) {
   currentSessionId.value = sessionId
   newChat.value = false
@@ -333,10 +436,15 @@ async function selectSession(sessionId: number) {
   }
 }
 
-/** 拉取会话消息，并重置前端流式展示状态 */
+/** 拉取会话消息，并重置前端流式展示状态与全链路追踪数据 */
 async function loadMessages(sessionId: number) {
   const res = await listMsg(sessionId)
-  messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
+  messages.value = res.data.map((m) => ({
+    ...m,
+    showThinking: false,
+    showReferences: false,
+    extData: parseSessionMsgExt(m.extJson)
+  }))
 }
 
 /** 重新加载当前对话消息（终止后回显后端已落库的终止内容，避免占位一直显示"思考中"） */
@@ -345,6 +453,93 @@ async function reloadMessages() {
   if (!sessionId) return
   await loadMessages(sessionId)
   await followBottom()
+}
+
+/**
+ * 构建单个助手消息的流式可观测事件回调集（支持流式进行中实时打开 Trace 抽屉查看 RUNNING 状态与实时日志）
+ */
+function buildStreamCallbacks(idx: number) {
+  const appendLiveLog = (m: SessionMsgItem, level: string, stage: string, message: string) => {
+    const now = new Date()
+    const time = `${now.toTimeString().slice(0, 8)}.${String(now.getMilliseconds()).padStart(3, '0')}`
+    const logs = [...(m.extData?.logs || []), { time, timestamp: Date.now(), level, stage, message }]
+    m.extData = { ...(m.extData || {}), logs }
+  }
+  const syncLiveDrawer = (m: SessionMsgItem) => {
+    if (traceDrawer.value.visible && (traceDrawer.value.msgId === m.id || !traceDrawer.value.msgId)) {
+      traceDrawer.value.msgId = m.id
+      traceDrawer.value.data = m.extData
+    }
+  }
+  return {
+    onStream: (msgId: number) => {
+      const m = messages.value[idx]
+      if (!m) return
+      m.id = msgId
+      if (!m.extData?.runMeta) {
+        m.extData = {
+          ...(m.extData || {}),
+          runMeta: {
+            runId: msgId,
+            sessionId: m.sessionId || 0,
+            agentId: agent.value?.id || 0,
+            state: 'RUNNING',
+            startTime: Date.now()
+          }
+        }
+        appendLiveLog(m, 'INFO', 'run', `Run #${msgId} 已建立流式通道`)
+      }
+      syncLiveDrawer(m)
+    },
+    onReference: (refs: RagReference[]) => {
+      const m = messages.value[idx]
+      if (!m) return
+      m.extData = { ...(m.extData || {}), references: refs }
+      appendLiveLog(m, 'INFO', 'rag', `知识库检索命中 ${refs.length} 个引用分片`)
+      syncLiveDrawer(m)
+      scrollToBottom()
+    },
+    onTool: (tool: ToolTraceItem) => {
+      const m = messages.value[idx]
+      if (!m) return
+      const prevTools = [...(m.extData?.toolTraces || [])]
+      const existIdx = prevTools.findIndex((item) => item.callId === tool.callId)
+      if (existIdx >= 0) {
+        prevTools[existIdx] = tool
+      } else {
+        prevTools.push(tool)
+      }
+      m.extData = { ...(m.extData || {}), toolTraces: prevTools }
+      appendLiveLog(
+        m,
+        tool.status === 'ERROR' ? 'ERROR' : 'INFO',
+        'tool',
+        `[${tool.toolType}] ${tool.toolName} -> ${tool.status}${tool.elapsedMs != null ? ` (${tool.elapsedMs}ms)` : ''}`
+      )
+      syncLiveDrawer(m)
+      scrollToBottom()
+    },
+    onUsage: (usage: TokenUsage) => {
+      const m = messages.value[idx]
+      if (!m) return
+      m.extData = { ...(m.extData || {}), tokenUsage: usage }
+      appendLiveLog(
+        m,
+        'INFO',
+        'llm',
+        `Token 统计更新：输入 ${usage.promptTokens}，输出 ${usage.completionTokens}，合计 ${usage.totalTokens}`
+      )
+      syncLiveDrawer(m)
+    },
+    onTrace: (ext: SessionMsgExt, rawJson: string) => {
+      const m = messages.value[idx]
+      if (!m) return
+      m.extJson = rawJson
+      m.extData = ext
+      syncLiveDrawer(m)
+    },
+    onError: () => reloadMessages()
+  }
 }
 
 /**
@@ -368,8 +563,7 @@ async function resumeGenerating(msg: SessionMsgItem) {
         if (m) m.content += chunk
         followBottom()
       },
-      // 续传过程中生成失败：同样回读后端失败态消息，终止"思考中"占位
-      () => reloadMessages()
+      buildStreamCallbacks(idx)
     )
   } catch (e) {
     // 续传失败保留已展示内容
@@ -471,6 +665,8 @@ async function handleSend() {
     content: '',
     reasoning: '',
     showThinking: true,
+    showReferences: false,
+    extData: {},
     addTime: now
   }
   const assistantIdx = messages.value.push(assistantMsg) - 1
@@ -480,20 +676,17 @@ async function handleSend() {
     await sendMessage(
       { uuid: uuid.value, visitorId: visitorId.value, sessionId, content },
       (chunk) => {
-        // 经响应式代理累加思考过程，触发视图逐段更新
         const msg = messages.value[assistantIdx]
         if (msg) msg.reasoning += chunk
         stickReasoning(assistantIdx)
         followBottom()
       },
       (chunk) => {
-        // 经响应式代理累加回复内容，触发视图逐段更新并按 Markdown 渲染
         const msg = messages.value[assistantIdx]
         if (msg) msg.content += chunk
         followBottom()
       },
-      // 生成失败：参考终止逻辑，从后端回读失败态消息（status=2 + 失败提示），终止"思考中"占位
-      () => reloadMessages()
+      buildStreamCallbacks(assistantIdx)
     )
     // 流结束后再次校准：Markdown 块（代码/表格等）渲染完成后高度变化
     await followBottom()
@@ -513,19 +706,15 @@ async function handleSend() {
 
 /**
  * 终止生成：先中断前端流（本地立即生效），再通知后端终止生成并清理工具调用进程
- * 后端终止失败时重试，仍失败则提示并重新拉取消息与后端状态收敛
  */
 async function handleStop() {
   const sessionId = currentSessionId.value
   if (!sending.value || !sessionId) return
-  // 先中断前端流（避免继续渲染、不再自动续传），后端终止为独立请求不影响此步
   stopMessage()
-  // 通知后端终止（失败重试），成功后再回读落库内容
   const stopped = await requestStop(sessionId)
   if (!stopped) {
     modal.msgError(t('business.chat.stopFail'))
   }
-  // 稍候重新拉取消息：回显后端已落库的内容（status=2），避免占位一直显示"思考中"
   setTimeout(() => {
     if (currentSessionId.value === sessionId) {
       reloadMessages()
@@ -589,6 +778,39 @@ async function stickReasoning(index: number) {
   if (el) el.scrollTop = el.scrollHeight
 }
 
+/** 展开/收起 RAG 知识库引用卡片 */
+function toggleReferences(index: number) {
+  const msg = messages.value[index]
+  if (msg) msg.showReferences = !msg.showReferences
+}
+
+/** 判断助手消息是否具备全链路可观测元数据 */
+function hasTraceMeta(msg: SessionMsgItem): boolean {
+  const ext = msg.extData
+  if (!ext) return false
+  return Boolean(
+    ext.runMeta ||
+      (ext.tokenUsage && ext.tokenUsage.totalTokens > 0) ||
+      (ext.toolTraces && ext.toolTraces.length > 0) ||
+      (ext.references && ext.references.length > 0) ||
+      (ext.spans && ext.spans.length > 0)
+  )
+}
+
+/** 打开全链路可观测抽屉 */
+function openTraceDrawer(msg: SessionMsgItem, tab: 'waterfall' | 'tools' | 'references' | 'logs' = 'waterfall') {
+  traceDrawer.value.msgId = msg.id ?? msg.extData?.runMeta?.runId
+  traceDrawer.value.data = msg.extData || parseSessionMsgExt(msg.extJson)
+  traceDrawer.value.tab = tab
+  traceDrawer.value.visible = true
+}
+
+function formatMs(ms?: number): string {
+  if (ms == null || ms < 0) return ''
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(2)}s`
+}
+
 // --------------------------------- 访客信息 ---------------------------------
 
 /** 访客下拉：复制访客信息并提示 */
@@ -608,11 +830,6 @@ function timeText(msg: SessionMsgItem) {
 
 // --------------------------------- 滚动 ---------------------------------
 
-/**
- * 对话区域滚动：计算是否贴近底部
- *   - 非底部（用户上翻阅读中）时显示「回到底部」按钮，流式期间不再强制吸底；
- *   - 贴近底部时保持自动跟随最新内容。
- */
 function handleScroll() {
   const el = chatBodyRef.value
   if (!el) return
@@ -669,11 +886,6 @@ function pinBottomAfterAssets() {
   }
 }
 
-/**
- * 自定义快速平滑滚动到底部（约 260ms）
- *   - 浏览器默认 smooth 在长距离下偏慢，改用 requestAnimationFrame 控制时长与缓动，快而顺滑；
- *   - easeOutCubic 缓动：先快后慢，观感接近主流聊天工具。
- */
 function smoothScrollBottom(el: HTMLElement) {
   const targetTop = el.scrollHeight
   const startTop = el.scrollTop
@@ -692,6 +904,15 @@ function smoothScrollBottom(el: HTMLElement) {
   requestAnimationFrame(tick)
 }
 
+async function scrollToBottom(force = false) {
+  if (force) {
+    const el = chatBodyRef.value
+    if (el) smoothScrollBottom(el)
+    nearBottom.value = true
+  } else {
+    await followBottom()
+  }
+}
 // --------------------------------- page init ---------------------------------
 onMounted(() => {
   init()
@@ -721,7 +942,6 @@ onMounted(() => {
     width 0.25s ease,
     border-right-color 0.25s ease;
 
-  /* 折叠：面板收窄至 0，内容随之隐藏 */
   &.collapsed {
     width: 0;
     border-right-color: transparent;
@@ -758,7 +978,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* 新建对话：按钮形式，水平居中于左侧面板 */
 .session-actions {
   display: flex;
   justify-content: center;
@@ -767,7 +986,6 @@ onMounted(() => {
 .session-actions .new-chat-btn {
   width: 100%;
   font-weight: 500;
-  /* 淡色主题：常态/悬浮/按下均取浅色调，观感柔和；不描边 */
   --el-button-bg-color: var(--el-color-primary-light-9);
   --el-button-border-color: transparent;
   --el-button-text-color: var(--el-color-primary-light-3);
@@ -837,7 +1055,6 @@ onMounted(() => {
   visibility: visible;
 }
 
-/* 左侧面板底部：访客信息 + 全屏切换 */
 .session-footer {
   flex-shrink: 0;
   padding: 14px 16px;
@@ -847,7 +1064,6 @@ onMounted(() => {
   justify-content: space-between;
 }
 
-/* 全屏切换图标（与访客图标保持同尺寸） */
 .footer-fullscreen {
   width: 14px;
   height: 14px;
@@ -887,7 +1103,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 左侧面板折叠/展开按钮 */
 .panel-toggle {
   flex-shrink: 0;
   font-size: 18px;
@@ -927,7 +1142,6 @@ onMounted(() => {
   }
 }
 
-/* 对话正文容器：包裹滚动区与「回到底部」悬浮按钮 */
 .chat-main {
   position: relative;
   flex: 1;
@@ -994,7 +1208,6 @@ onMounted(() => {
   }
 }
 
-/* 新建对话：中央区域展示输入框（整体居中，向上微调） */
 .chat-new {
   height: 100%;
   display: flex;
@@ -1010,7 +1223,6 @@ onMounted(() => {
   margin-bottom: 20vh;
 }
 
-/* 新建对话：Agent名称（大） + 介绍（中） */
 .chat-new-title {
   text-align: center;
   font-size: 26px;
@@ -1032,8 +1244,8 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* 新建对话输入框：圆角 */
-:deep(.chat-new .el-textarea__inner) {
+:deep(.chat-new .el-textarea__inner),
+:deep(.chat-input .el-textarea__inner) {
   border-radius: 12px;
 }
 
@@ -1145,7 +1357,6 @@ onMounted(() => {
     color: #303133;
   }
 
-  /* 发送时间：默认隐藏，鼠标悬浮展示 */
   .msg-time {
     margin-top: 4px;
     font-size: 11px;
@@ -1164,7 +1375,138 @@ onMounted(() => {
   }
 }
 
-/* 思考过程（可折叠，业界常见体验） */
+/* 1、RAG 知识库引用卡片 */
+.msg-references {
+  margin-bottom: 8px;
+  border: 1px solid #cce8e3;
+  background: #f0fdfa;
+  border-radius: 6px;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.msg-references-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #0d9488;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ref-arrow {
+  font-size: 11px;
+  transition: transform 0.2s;
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.msg-references-body {
+  padding: 6px 10px 8px;
+  border-top: 1px dashed #bce3dc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ref-chip-card {
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid #e2f2ef;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  &:hover {
+    border-color: #14b8a6;
+  }
+}
+
+.ref-chip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  margin-bottom: 2px;
+}
+
+.ref-chip-score {
+  font-size: 11px;
+  color: #14b8a6;
+}
+
+.ref-chip-Snippet {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 2、工具调用实时状态胶囊 */
+.msg-tools-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  white-space: normal;
+}
+
+.tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+  transition: all 0.2s;
+  &:hover {
+    border-color: #8b5cf6;
+  }
+}
+
+.tool-pill.status-running {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.tool-pill.status-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.tool-pill-type {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.tool-pill-name {
+  font-weight: 600;
+}
+
+.tool-pill-state {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* 3、思考过程（可折叠） */
 .msg-reasoning {
   margin-bottom: 8px;
   border: 1px dashed #dfcfa6;
@@ -1216,6 +1558,37 @@ onMounted(() => {
   }
 }
 
+/* 4、助手消息底部全链路可观测栏 */
+.msg-trace-footer {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #ebeef5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: #909399;
+  white-space: normal;
+}
+
+.trace-metric {
+  font-family: monospace;
+}
+
+.trace-open-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-color-primary);
+  font-weight: 500;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .msg-streaming {
   display: inline-flex;
   align-items: center;
@@ -1223,7 +1596,6 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* 消息状态提示：生成失败 */
 .msg-status-tip {
   display: inline-flex;
   align-items: center;
@@ -1236,7 +1608,6 @@ onMounted(() => {
   background: #fef0f0;
 }
 
-/* 思考中：省略号逐点跳动，呈现滚动加载效果 */
 .streaming-dots {
   display: inline-flex;
   align-items: flex-end;

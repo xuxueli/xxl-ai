@@ -9,6 +9,7 @@
 		<result column="role" property="role" />
 		<result column="reasoning" property="reasoning" />
 		<result column="content" property="content" />
+		<result column="ext_json" property="extJson" />
 		<result column="status" property="status" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
@@ -20,6 +21,7 @@
 		<result column="role" property="role" />
 		<result column="reasoning" property="reasoning" />
 		<result column="content" property="content" />
+		<result column="ext_json" property="extJson" />
 		<result column="status" property="status" />
 		<result column="add_time" property="addTime" />
 		<result column="update_time" property="updateTime" />
@@ -31,6 +33,7 @@
 		t.role,
 		t.reasoning,
 		t.content,
+		t.ext_json,
 		t.status,
 		t.add_time,
 		t.update_time
@@ -38,9 +41,9 @@
 
 	<insert id="insert" parameterType="com.xxl.ai.api.business.session.model.entity.SessionMsg" useGeneratedKeys="true" keyProperty="id" >
 		INSERT INTO xxl_ai_session_msg (
-			session_id, role, reasoning, content, status, add_time, update_time
+			session_id, role, reasoning, content, ext_json, status, add_time, update_time
 		) VALUES (
-			 #{sessionId}, #{role}, #{reasoning}, #{content}, #{status}, NOW(), NOW()
+			 #{sessionId}, #{role}, #{reasoning}, #{content}, #{extJson}, #{status}, NOW(), NOW()
 		 );
 	</insert>
 
@@ -48,6 +51,7 @@
 		UPDATE xxl_ai_session_msg
 		SET content = #{content},
 			reasoning = #{reasoning},
+			ext_json = #{extJson},
 			status = #{status},
 			update_time = NOW()
 		WHERE id = #{id}
@@ -102,7 +106,7 @@
 
 	<!-- 记忆归档：Agent×访客 消息ID大于 afterId 的已完成消息（取最近 limit 条，按时间正序） -->
 	<select id="listByAgentVisitorAfterId" parameterType="java.util.HashMap" resultMap="SessionMsg">
-		SELECT t.id, t.session_id, t.role, t.reasoning, t.content, t.status, t.add_time, t.update_time
+		SELECT t.id, t.session_id, t.role, t.reasoning, t.content, t.ext_json, t.status, t.add_time, t.update_time
 		FROM xxl_ai_session_msg AS t
 		JOIN xxl_ai_session AS s ON t.session_id = s.id
 		WHERE s.agent_id = #{agentId} AND s.visitor_id = #{visitorId}

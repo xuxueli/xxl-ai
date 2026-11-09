@@ -25,7 +25,7 @@ import java.util.TreeMap;
  * LLM 模型工厂（spring-ai）
  *
  * 按「供应商模型运行时配置」（SupplierRuntime）程序化构建 spring-ai 模型：
- *  - 对话模型：OpenAiChatModel（OpenAI 兼容协议，覆盖 Deepseek / GLM / Ollama(/v1) 等）
+ *  - 对话模型：OpenAiChatModel（OpenAI 兼容协议，覆盖 Deepseek / GLM / Ollama(/v1) 等，开启 streamUsage 采集流式 Token）
  *  - 嵌入模型：OpenAiEmbeddingModel（向量化）
  * 对话模型按「供应商 + 模型 + 会话」缓存、条目内记录配置指纹校验有效性；
  * 嵌入模型按需构建，实例生命周期由 RAG 向量存储缓存持有。
@@ -83,11 +83,12 @@ public class LlmModelFactory {
             return entry.model;
         }
 
-        // build model and store
+        // build model and store（开启 streamUsage=true，使流式尾帧返回 prompt/completion/total tokens）
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .baseUrl(normalizeBaseUrl(runtime.getBaseUrl()))
                 .apiKey(runtime.getApiKey())
                 .model(runtime.getModelName())
+                .streamUsage(true)
                 .customHeaders(buildHeaders(runtime.getHeaders(), sessionId))
                 .build();
         OpenAiChatModel model = OpenAiChatModel.builder()

@@ -12,6 +12,7 @@ public class SessionMsgDTO {
     private String role;        /* 角色：user-用户、assistant-助手 */
     private String reasoning;   /* 思考过程（推理模型 reasoning_content，可空） */
     private String content;     /* 消息内容 */
+    private String extJson;     /* 扩展信息（JSON：runMeta/tokenUsage/references/toolTraces/spans/logs） */
     private int status;         /* 状态：0-生成中、1-完成、2-失败（含主动终止） */
     private String addTime;     /* 新增时间（格式化字符串） */
     private String updateTime;  /* 更新时间（格式化字符串） */
@@ -54,6 +55,14 @@ public class SessionMsgDTO {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getExtJson() {
+        return extJson;
+    }
+
+    public void setExtJson(String extJson) {
+        this.extJson = extJson;
     }
 
     public int getStatus() {

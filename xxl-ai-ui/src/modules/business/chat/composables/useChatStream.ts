@@ -1,15 +1,34 @@
-/**
- * 对话流式 composable：SSE 事件解析 + 断线自动续传 + 主动终止
+﻿/**
+ * 对话流式 composable：SSE 事件解析 + 全链路可观测事件分流 + 断线自动续传 + 主动终止
  *
- * 发送/续传均返回可读流 reader，由本模块统一按 SSE 事件解析（stream/thinking/message/ping），
- * 中断时携带 msgId + lastEventId 自动续传（最多 3 次）；用户主动终止时不再续传。
+ * 发送/续传均返回可读流 reader，由本模块统一按 SSE 事件白名单解析：
+ *  - stream：结果流标识（msgId）
+ *  - thinking：思考过程增量
+ *  - message：回复正文增量
+ *  - reference：RAG 知识库检索引用列表（JSON）
+ *  - tool：工具调用实时状态（JSON：RUNNING / SUCCESS / ERROR）
+ *  - usage：Token 消耗实时统计（JSON）
+ *  - trace：完整全链路追踪快照（JSON，终态下发）
+ *  - ping：空闲心跳
+ *  - done / error：终态事件
  */
 import modal from '@/utils/modal'
 import { resumeStream, sendStream } from '../api'
 import { t } from '@/i18n'
+import type { RagReference, SessionMsgExt, TokenUsage, ToolTraceItem } from '@/modules/business/session/types'
 
 /** 流式增量回调 */
 export type ChatStreamHandler = (text: string) => void
+
+/** 全链路可观测与异常扩展回调集 */
+export interface ChatStreamCallbacks {
+  onStream?: (msgId: number) => void
+  onError?: (message: string) => void
+  onReference?: (references: RagReference[]) => void
+  onTool?: (tool: ToolTraceItem) => void
+  onUsage?: (usage: TokenUsage) => void
+  onTrace?: (ext: SessionMsgExt, rawJson: string) => void
+}
 
 /** 流状态：msgId 由 stream 事件回填，lastEventId 为已处理的结果流条目 */
 interface ChatStreamState {
@@ -30,15 +49,16 @@ export function useChatStream() {
     payload: { uuid: string; visitorId: string; sessionId: number; content: string },
     onThinking: ChatStreamHandler,
     onContent: ChatStreamHandler,
-    onError?: (message: string) => void
+    callbacksOrOnError?: ChatStreamCallbacks | ((message: string) => void)
   ) {
     stopped = false
     controller = new AbortController()
+    const callbacks = normalizeCallbacks(callbacksOrOnError)
     const reader = await sendStream(payload.uuid, payload.visitorId, payload.sessionId, payload.content, controller.signal)
     if (!reader) {
       throw new Error('empty stream')
     }
-    await streamWithResume(reader, {}, onThinking, onContent, onError, () => stopped, controller.signal)
+    await streamWithResume(reader, {}, onThinking, onContent, callbacks, () => stopped, controller.signal)
   }
 
   /**
@@ -48,14 +68,15 @@ export function useChatStream() {
     msgId: number,
     onThinking: ChatStreamHandler,
     onContent: ChatStreamHandler,
-    onError?: (message: string) => void
+    callbacksOrOnError?: ChatStreamCallbacks | ((message: string) => void)
   ) {
     if (!msgId) return
     stopped = false
     controller = new AbortController()
+    const callbacks = normalizeCallbacks(callbacksOrOnError)
     const reader = await resumeStream(msgId, undefined, controller.signal)
     if (!reader) return
-    await streamWithResume(reader, { msgId }, onThinking, onContent, onError, () => stopped, controller.signal)
+    await streamWithResume(reader, { msgId }, onThinking, onContent, callbacks, () => stopped, controller.signal)
   }
 
   /**
@@ -70,21 +91,27 @@ export function useChatStream() {
   return { sendMessage, resumeMessage, stopMessage }
 }
 
+function normalizeCallbacks(
+  callbacksOrOnError?: ChatStreamCallbacks | ((message: string) => void)
+): ChatStreamCallbacks {
+  if (!callbacksOrOnError) {
+    return {}
+  }
+  if (typeof callbacksOrOnError === 'function') {
+    return { onError: callbacksOrOnError }
+  }
+  return callbacksOrOnError
+}
+
 /**
  * 读取流并断线自动续传：正常结束（done/error 终态事件）返回；中断则携 msgId + lastEventId 续传（最多 3 次）
- *
- * @param reader    初始流（发送或续传获得）
- * @param state     流状态（stream 事件回填 msgId，内容事件推进 lastEventId）
- * @param onError   错误回调（error 终态事件携带的错误信息）
- * @param isStopped 是否已被用户主动终止（终止即不再续传）
- * @param signal    取消信号（终止时中断 fetch）
  */
 async function streamWithResume(
   reader: ReadableStreamDefaultReader<Uint8Array> | null,
   state: ChatStreamState,
   onThinking: ChatStreamHandler,
   onContent: ChatStreamHandler,
-  onError: ((message: string) => void) | undefined,
+  callbacks: ChatStreamCallbacks,
   isStopped: () => boolean,
   signal: AbortSignal
 ) {
@@ -93,7 +120,7 @@ async function streamWithResume(
     if (isStopped()) return
     let completed = false
     try {
-      completed = await readStream(reader, onThinking, onContent, onError, state)
+      completed = await readStream(reader, onThinking, onContent, callbacks, state)
     } catch (e) {
       // 网络中断：进入续传分支
       completed = false
@@ -115,19 +142,13 @@ async function streamWithResume(
 }
 
 /**
- * 流式读取：按 SSE 事件解析（stream=流标识，thinking=思考过程，message=回复内容，ping=心跳，
- * done=结束，error=错误），逐事件回调
- *
- * Spring SseEmitter 会将含换行的内容按行拆成多条 data: 行，同一事件内的 data: 内容必须以换行连接还原，
- * 否则多行/段落（如 ## 标题 + 正文）会被拼成单行，导致 markdown 实时渲染格式错乱（而刷新后从库中读取完整内容正常）。
- *
- * @returns 是否收到终态（done/error）；未收到即视为中断，由调用方携带 state 续传
+ * 流式读取：按 SSE 事件白名单解析（stream / thinking / message / reference / tool / usage / trace / ping / done / error）
  */
 async function readStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onThinking: ChatStreamHandler,
   onContent: ChatStreamHandler,
-  onError: ((message: string) => void) | undefined,
+  callbacks: ChatStreamCallbacks,
   state: ChatStreamState
 ): Promise<boolean> {
   const decoder = new TextDecoder('utf-8')
@@ -140,29 +161,73 @@ async function readStream(
 
   /** 派发单个事件：命中终态返回 true，终止读取 */
   const dispatch = (data: string): boolean => {
+    const currentEvent = eventName
+    eventName = 'message'
+
     // 终态事件（done/error）：后端专用事件名，不再混入内容通道
-    if (eventName === 'done') {
+    if (currentEvent === 'done') {
       if (eventId) state.lastEventId = eventId
       return true
     }
-    if (eventName === 'error') {
+    if (currentEvent === 'error') {
       if (eventId) state.lastEventId = eventId
       modal.msgError(data || t('business.chat.failed'))
-      onError?.(data)
+      callbacks.onError?.(data)
       return true
     }
     if (!data) return false
-    if (eventName === 'stream') {
+    if (currentEvent === 'stream') {
       state.msgId = Number(data)
+      if (state.msgId) {
+        callbacks.onStream?.(state.msgId)
+      }
       return false
     }
-    if (eventName === 'ping') return false
-    if (eventName === 'thinking') {
+    if (currentEvent === 'ping') return false
+
+    if (currentEvent === 'thinking') {
       onThinking(data)
-    } else {
+    } else if (currentEvent === 'message') {
       onContent(data)
+    } else if (currentEvent === 'reference') {
+      try {
+        const refs = JSON.parse(data) as RagReference[]
+        if (Array.isArray(refs)) {
+          callbacks.onReference?.(refs)
+        }
+      } catch (e) {
+        // 忽略非法 JSON
+      }
+    } else if (currentEvent === 'tool') {
+      try {
+        const tool = JSON.parse(data) as ToolTraceItem
+        if (tool && tool.callId) {
+          callbacks.onTool?.(tool)
+        }
+      } catch (e) {
+        // 忽略非法 JSON
+      }
+    } else if (currentEvent === 'usage') {
+      try {
+        const usage = JSON.parse(data) as TokenUsage
+        if (usage) {
+          callbacks.onUsage?.(usage)
+        }
+      } catch (e) {
+        // 忽略非法 JSON
+      }
+    } else if (currentEvent === 'trace') {
+      try {
+        const ext = JSON.parse(data) as SessionMsgExt
+        if (ext) {
+          callbacks.onTrace?.(ext, data)
+        }
+      } catch (e) {
+        // 忽略非法 JSON
+      }
     }
-    // 仅内容事件推进断点，续传时从该 id 之后继续
+
+    // 推进结果流断点 ID，续传时从该 id 之后继续
     if (eventId) state.lastEventId = eventId
     return false
   }
@@ -177,7 +242,7 @@ async function readStream(
     for (const line of lines) {
       // 空行为事件结束标志：拼装完整内容后统一派发
       if (line === '') {
-        if (dataLines.length > 0) {
+        if (dataLines.length > 0 || eventName === 'done' || eventName === 'error') {
           const data = dataLines.join('\n')
           dataLines = []
           if (dispatch(data)) return true
@@ -202,7 +267,7 @@ async function readStream(
     }
   }
   // 流结束兜底：派发未以空行收尾的残留数据（如最后一个事件未换行结尾）
-  if (dataLines.length > 0) {
+  if (dataLines.length > 0 || eventName === 'done' || eventName === 'error') {
     return dispatch(dataLines.join('\n'))
   }
   return false
