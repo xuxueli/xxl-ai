@@ -3,6 +3,10 @@
 * @author xuxueli 2026-10-31
 */
 import { onBeforeUnmount, onMounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
+import { api } from '@common/renderer/api'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
+import { t } from '@renderer/shell/i18n'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useChatStore } from '@modules/chat/renderer'
@@ -51,8 +55,8 @@ export function useAppBootstrap(): void {
   /* 挂载后：注册全局快捷键，绑定对话事件并初始化设置/项目/会话，默认进入最近对话 */
   onMounted(async () => {
     window.addEventListener('keydown', onGlobalKeydown)
-    chat.bind()
     try {
+      chat.bind()
       await settings.load()
       await appCenter.ensureLoaded()
       await provider.load()
@@ -69,6 +73,14 @@ export function useAppBootstrap(): void {
           void settings.checkUpdate(false)
         }, UPDATE_CHECK_DELAY)
       }
+    } catch (error) {
+      /* 启动数据加载失败：写入主进程日志并弹框说明，避免白屏且无任何提示 */
+      const message = ipcErrorMessage(error)
+      api.app.logError(`[bootstrap] ${message}`)
+      await ElMessageBox.alert(t('runtime.startup.bootFailureMessage', [message]), t('runtime.startup.bootFailureTitle'), {
+        confirmButtonText: t('common.confirm'),
+        type: 'error'
+      })
     } finally {
       /* 启动引导结束：无论成功或失败都退出全局加载态 */
       chat.finishBootstrap()

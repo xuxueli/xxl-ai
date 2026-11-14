@@ -55,6 +55,19 @@
     "dracula": "Dracula"
   },
   "runtime": {
+    "startup": {
+      "recoveryTitle": "Database reinitialized",
+      "recoveryMessage": "The existing database is incompatible with this version or cannot be opened. Its data was backed up automatically and a new database was created, so the app can keep running.",
+      "recoveryDetail": "Reason: {0}\nDetails: {1}\n\nWhat was done:\n1. The old database file was copied to: {2}\n2. A new database was created with the current schema and default data\n\nNote: old data is not imported automatically. Use the backup file in that folder to recover historical content.\nLog folder: {3}",
+      "incompatible": "Database schema is incompatible after upgrade",
+      "broken": "Database file cannot be opened or initialized",
+      "noBackup": "(no existing database file)",
+      "failureTitle": "Application failed to start",
+      "failureMessage": "Initialization failed. Startup was stopped to avoid a blank window.",
+      "failureDetail": "Error: {0}\n\nLog folder: {1}\nPlease share the logs in this folder with the developer.",
+      "bootFailureTitle": "Failed to load the interface",
+      "bootFailureMessage": "An error occurred while loading local data and was written to the run log.\nPlease restart the app. If it keeps failing, share the logs under tmp/log in the data folder with the developer.\n\nError: {0}"
+    },
     "error": {
       "projectMissing": "Project not found",
       "sessionMissing": "Session not found",

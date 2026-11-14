@@ -5,3 +5,4 @@
 
 export { buildMcpRuntimePath, buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
 export { registerLocalFileProtocol } from './localFileProtocol'
+export { showDatabaseRecoveryNotice, showStartupFailure } from './startupNotice'

@@ -8,13 +8,14 @@ import { BROWSER_IPC } from '@modules/browser/shared'
 import { APP_NAME } from '@common/shared/appInfo'
 import { getCacheDir, getDataDir } from '@common/main/config/paths'
 import { initDatabaseFromModules } from '@main/db'
+import type { DatabaseInitResult } from '@common/main/db'
 import { setMainLanguage } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
 import { purgeExpiredTraces } from '@modules/diagnostics/main'
 import { registerIpc } from '@main/ipc'
 import { cleanupGithubArchiveTemps } from '@modules/skill/main'
 import { ensureSeedProviders } from '@modules/provider/main'
-import { registerLocalFileProtocol } from '@modules/platform/main'
+import { registerLocalFileProtocol, showDatabaseRecoveryNotice, showStartupFailure } from '@modules/platform/main'
 import { disposeAllTerminals } from '@modules/terminal/main'
 import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
@@ -130,26 +131,30 @@ function createWindow(): void {
   }
 }
 
-/* 单实例锁：避免多开导致数据库竞争 */
-const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
-  app.quit()
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore()
-      }
-      mainWindow.focus()
-    }
-  })
+/*
+ * 启动引导：数据库初始化与后续装配分开处理。
+ *   - 旧库升级不兼容：初始化已自动备份并重建，这里弹框说明原因与备份位置；
+ *   - 其它启动异常：统一弹框提示并退出，避免界面白屏且错误不可见。
+ */
+async function bootstrap(): Promise<void> {
+  initLogger()
 
-  /* 应用就绪：初始化数据库、播种供应商、注册 IPC、建立窗口 */
-  app.whenReady().then(() => {
-    initLogger()
-    initDatabaseFromModules()
+  let database: DatabaseInitResult
+  try {
+    database = initDatabaseFromModules()
+  } catch (error) {
+    await showStartupFailure(error)
+    app.exit(1)
+    return
+  }
+
+  try {
     /* 主进程错误文案语言：语言由配置决定且不支持运行时切换，启动时初始化一次 */
     setMainLanguage(getSettings().language)
+    /* 旧库已备份重建：先告知用户原因与备份文件，再进入应用 */
+    if (database.recovered) {
+      await showDatabaseRecoveryNotice(database)
+    }
     /* 清理过期模型通讯记录（开发者模式） */
     purgeExpiredTraces()
     cleanupGithubArchiveTemps()
@@ -185,6 +190,29 @@ if (!gotLock) {
         createWindow()
       }
     })
+  } catch (error) {
+    await showStartupFailure(error)
+    app.exit(1)
+  }
+}
+
+/* 单实例锁：避免多开导致数据库竞争 */
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.focus()
+    }
+  })
+
+  /* 应用就绪：初始化数据库、播种供应商、注册 IPC、建立窗口 */
+  app.whenReady().then(() => {
+    void bootstrap()
   })
 
   /*

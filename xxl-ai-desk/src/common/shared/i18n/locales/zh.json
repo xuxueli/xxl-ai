@@ -55,6 +55,19 @@
     "dracula": "Dracula"
   },
   "runtime": {
+    "startup": {
+      "recoveryTitle": "数据库已重新初始化",
+      "recoveryMessage": "检测到历史数据库与当前版本不兼容或无法正常打开，已自动备份旧数据并创建全新数据库，应用可继续使用。",
+      "recoveryDetail": "原因：{0}\n详情：{1}\n\n已执行：\n1. 旧数据库文件已复制备份：{2}\n2. 已创建全新数据库并重新初始化表结构与默认数据\n\n注意：旧数据不会自动导入；如需找回历史内容，可在上述目录使用备份文件。\n日志目录：{3}",
+      "incompatible": "数据库结构升级不兼容",
+      "broken": "数据库文件无法正常打开或初始化失败",
+      "noBackup": "（无历史数据库文件）",
+      "failureTitle": "应用启动失败",
+      "failureMessage": "初始化过程中发生错误，已停止启动以避免界面白屏。",
+      "failureDetail": "错误信息：{0}\n\n日志目录：{1}\n可将该目录下的日志反馈给开发者定位问题。",
+      "bootFailureTitle": "界面加载失败",
+      "bootFailureMessage": "加载本地数据时发生错误，已记录到运行日志。\n请重启应用重试；若持续失败，请把数据目录下 tmp/log 的日志反馈给开发者。\n\n错误信息：{0}"
+    },
     "error": {
       "projectMissing": "项目不存在",
       "sessionMissing": "会话不存在",
