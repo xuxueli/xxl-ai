@@ -43,6 +43,8 @@ export interface BrowserCursorState {
   y: number
   /* 已完成首次定位（避免每次打开面板都重置位置） */
   placed: boolean
+  /* 停靠在右下角：未被指针动作移动过，尺寸变化时继续吸附角落 */
+  docked: boolean
   /* 动作类型（决定图标） */
   kind: BrowserActionKind
   /* 执行中的状态文案（光标旁展示） */
@@ -81,8 +83,12 @@ const MAX_RECORDS = 5
 const STATUS_LINGER = 4500
 /* 光标距内容区边缘的最小留白 */
 const EDGE_GAP = 12
-/* 首次定位的内缩：右下角空白处，留出指针（32×40）与光晕的位置，避开页面主内容 */
-const DEFAULT_INSET = 56
+
+/* 指针本体尺寸：由浮层按 CSS 变量传入，用于把光标完整收进可视范围 */
+export interface BrowserCursorPointSize {
+  width: number
+  height: number
+}
 
 /* 会话 ID → 光标状态 */
 const cursors = reactive<Record<string, BrowserCursorState>>({})
@@ -102,6 +108,7 @@ function ensureCursor(sessionId: string): BrowserCursorState {
       x: 0,
       y: 0,
       placed: false,
+      docked: true,
       kind: 'click',
       status: '',
       box: null,
@@ -112,26 +119,32 @@ function ensureCursor(sessionId: string): BrowserCursorState {
   return cursors[sessionId]
 }
 
-/* 同步内容区尺寸：首次定位放在中心；尺寸变化时把光标收进可视范围 */
+/* 同步内容区尺寸：未操作过时吸附右下角，操作过则只把光标收进可视范围 */
 export function syncBrowserCursorViewport(
   sessionId: string,
   width: number,
-  height: number
+  height: number,
+  point: BrowserCursorPointSize = { width: 0, height: 0 }
 ): void {
   try {
     if (!(width > 0) || !(height > 0)) {
       return
     }
     const cursor = ensureCursor(sessionId)
-    if (!cursor.placed) {
-      cursor.x = Math.round(Math.max(width - DEFAULT_INSET, EDGE_GAP))
-      cursor.y = Math.round(Math.max(height - DEFAULT_INSET, EDGE_GAP))
+    /* 指针本体有固定尺寸：上限要把本体让出来，否则箭头会伸出右 / 下边缘被裁掉 */
+    const maxX = Math.max(EDGE_GAP, width - point.width - EDGE_GAP)
+    const maxY = Math.max(EDGE_GAP, height - point.height - EDGE_GAP)
+    /* 停靠态（首次出现、空闲或未操作过）：始终跟随右下角，窗口 / 面板缩放时也吸附 */
+    if (!cursor.placed || cursor.docked || !cursor.busy) {
+      cursor.x = Math.round(maxX)
+      cursor.y = Math.round(maxY)
       cursor.placed = true
+      cursor.docked = true
       cursor.visible = true
       return
     }
-    cursor.x = Math.min(Math.max(cursor.x, EDGE_GAP), Math.max(EDGE_GAP, width - EDGE_GAP))
-    cursor.y = Math.min(Math.max(cursor.y, EDGE_GAP), Math.max(EDGE_GAP, height - EDGE_GAP))
+    cursor.x = Math.min(Math.max(cursor.x, EDGE_GAP), maxX)
+    cursor.y = Math.min(Math.max(cursor.y, EDGE_GAP), maxY)
     cursor.visible = true
   } catch {
     /* 可视化失败不影响动作 */
@@ -168,6 +181,8 @@ export function beginBrowserAction(input: {
       cursor.x = Math.round(input.point.x)
       cursor.y = Math.round(input.point.y)
       cursor.placed = true
+      /* 指针动作把光标带到目标位置：此后尺寸变化不再拉回右下角 */
+      cursor.docked = false
     }
     if (input.ripple) {
       cursor.ripple += 1

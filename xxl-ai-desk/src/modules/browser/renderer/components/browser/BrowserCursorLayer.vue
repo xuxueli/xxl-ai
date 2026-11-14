@@ -51,13 +51,22 @@ let observer: ResizeObserver | null = null
 /* 内容区尺寸：用于判断状态文案是否需要向内侧翻转 */
 const viewport = ref({ width: 0, height: 0 })
 
+/* 指针本体尺寸：以浮层 CSS 变量为准，避免 JS 与样式两处各写一份 */
+function cursorPointSize(el: HTMLElement): { width: number; height: number } {
+  const style = getComputedStyle(el)
+  return {
+    width: parseFloat(style.getPropertyValue('--agent-cursor-width')) || 0,
+    height: parseFloat(style.getPropertyValue('--agent-cursor-height')) || 0
+  }
+}
+
 function syncViewport(): void {
   const el = layerRef.value
   if (!el) {
     return
   }
   viewport.value = { width: el.clientWidth, height: el.clientHeight }
-  syncBrowserCursorViewport(props.sessionId, el.clientWidth, el.clientHeight)
+  syncBrowserCursorViewport(props.sessionId, el.clientWidth, el.clientHeight, cursorPointSize(el))
 }
 
 onMounted(() => {

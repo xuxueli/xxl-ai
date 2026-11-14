@@ -222,6 +222,8 @@ async function navigate(sessionId: string, id: string, url: string): Promise<voi
   browserStore().touch(sessionId)
   /* 开始新导航：先清掉上一页的加载失败记录，避免误判本次导航 */
   failedLoads.delete(id)
+  /* 新导航作废该标签页残留的排队导航：guest 就绪时不能把旧地址又盖回来 */
+  pendingNav.delete(id)
   const view = ensureWebview(id, sessionId)
   const tab = findTab(sessionId, id)
   if (tab) {
