@@ -15,7 +15,7 @@ defineProps<{
 
 /*
  * 光学尺寸补偿：部分图标的实际内容边界不同，
- * 通过裁切 viewBox 让它们在 18px 盒子里看起来一样大。
+ * 通过裁切 viewBox 让它们在 15px 盒子里看起来一样大。
  */
 const ICON_VIEWBOX: Partial<Record<NoteToolbarIconName, string>> = {
   search: '1 1 22 22',
@@ -37,10 +37,10 @@ const ICON_VIEWBOX: Partial<Record<NoteToolbarIconName, string>> = {
 </template>
 
 <style scoped lang="scss">
-/* 统一图标尺寸：与工具按钮共用 18px 视觉盒 */
+/* 统一图标尺寸：与项目名左侧图标一致（--desk-font-md = 15px） */
 .note-toolbar-icon {
-  width: 18px;
-  height: 18px;
+  width: var(--desk-font-md);
+  height: var(--desk-font-md);
   flex-shrink: 0;
 }
 </style>

@@ -31,6 +31,21 @@ md.use(footnote)
 /* 公式：$...$ 行内、$$...$$ 块级、```math 代码围栏 */
 md.use(katex, { delimiters: 'dollars', mathFence: true, throwOnError: false, strict: 'ignore' })
 
+/*
+ * 源码行锚点：给块级元素标注对应 Markdown 起止行（1 起），
+ * 供笔记等宿主做编辑器与预览的滚动联动。
+ */
+md.core.ruler.push('source_line_anchor', (state) => {
+  for (const token of state.tokens) {
+    if (!token.map || token.type === 'inline') {
+      continue
+    }
+    token.attrSet('data-md-line', String(token.map[0] + 1))
+    /* token.map 的结束下标本身即最后一行的 1 起行号 */
+    token.attrSet('data-md-line-end', String(token.map[1]))
+  }
+})
+
 /* 单块代码高亮长度上限：超过则跳过着色，避免超大代码块卡顿 */
 const MAX_HIGHLIGHT_LENGTH = 20000
 /* 超过该行数时折叠代码块，避免长代码撑满对话区 */
@@ -68,8 +83,12 @@ md.renderer.rules.fence = (tokens, index) => {
   const expandLabel = t('common.expand')
   const wrapLabel = t('common.wrap')
   const copyLabel = t('common.copy')
+  /* 代码块自定义渲染不经过 renderAttrs，需手动补源码行锚点 */
+  const lineAnchor = token.map
+    ? ` data-md-line="${token.map[0] + 1}" data-md-line-end="${token.map[1]}"`
+    : ''
   return (
-    `<div class="code-block${collapsible ? ' is-collapsed' : ''}">` +
+    `<div class="code-block${collapsible ? ' is-collapsed' : ''}"${lineAnchor}>` +
     '<div class="code-block-head">' +
     `<span class="code-lang">${escapeHtml(label)}</span>` +
     '<span class="code-actions">' +

@@ -23,6 +23,9 @@ import { baseName, isUnder, parentDir } from '@modules/apps/note/renderer/utils/
 /* 视图模式 */
 export type NoteMode = 'edit' | 'split' | 'preview'
 
+/* 保存状态：idle 未打开笔记，editing 有未保存改动，saving 正在写盘 */
+export type NoteSaveState = 'idle' | 'editing' | 'saving' | 'saved' | 'error'
+
 /* 合法视图模式 */
 function isNoteMode(value: unknown): value is NoteMode {
   return value === 'edit' || value === 'split' || value === 'preview'
@@ -77,6 +80,12 @@ function messageOf(error: unknown): string {
   return ipcErrorMessage(error)
 }
 
+/* 笔记修改时间 → 毫秒时间戳；非法时返回 null */
+function savedTimeOf(note: NoteContent): number | null {
+  const time = Date.parse(note.updateTime)
+  return Number.isNaN(time) ? null : time
+}
+
 export const useNoteStore = defineStore('note', () => {
   const ui = readUi()
 
@@ -86,6 +95,10 @@ export const useNoteStore = defineStore('note', () => {
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
+  /* 最近一次成功保存的时间（毫秒）；null 表示尚未在本会话保存过 */
+  const savedAt = ref<number | null>(null)
+  /* 保存失败信息：与加载错误分开，供状态栏展示与重试 */
+  const saveError = ref('')
 
   /* 目录树：按绝对目录缓存子项 */
   const childrenMap = ref<Record<string, NoteEntry[]>>({})
@@ -100,6 +113,9 @@ export const useNoteStore = defineStore('note', () => {
   const current = ref<NoteContent | null>(null)
   const draft = ref('')
   const selectedPath = ref('')
+  /* 光标位置：状态栏展示行 / 列 */
+  const cursorLine = ref(1)
+  const cursorColumn = ref(1)
 
   /* 界面偏好 */
   const mode = ref<NoteMode>(ui.mode)
@@ -112,11 +128,37 @@ export const useNoteStore = defineStore('note', () => {
   /* 是否未保存 */
   const dirty = computed(() => Boolean(current.value) && draft.value !== current.value?.content)
 
+  /* 保存状态：状态栏据此展示「编辑中 / 保存中 / 已保存 / 保存失败」 */
+  const saveState = computed<NoteSaveState>(() => {
+    if (!current.value) {
+      return 'idle'
+    }
+    if (saveError.value) {
+      return 'error'
+    }
+    if (saving.value) {
+      return 'saving'
+    }
+    return dirty.value ? 'editing' : 'saved'
+  })
+
   /* 大纲 */
   const outline = computed<OutlineItem[]>(() => parseOutline(draft.value))
 
   /* 当前笔记名称 */
   const currentName = computed(() => (current.value ? baseName(current.value.path) : ''))
+
+  /* 更新光标位置：由编辑器选区变化时写入 */
+  function setCursor(line: number, column: number): void {
+    cursorLine.value = line
+    cursorColumn.value = column
+  }
+
+  /* 重置光标位置：切换 / 清空笔记时回到首行首列 */
+  function resetCursor(): void {
+    cursorLine.value = 1
+    cursorColumn.value = 1
+  }
 
   /* 自动保存定时器 */
   let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -138,16 +180,20 @@ export const useNoteStore = defineStore('note', () => {
     const path = current.value.path
     const content = draft.value
     saving.value = true
+    /* 重试期间先清空上次失败信息，状态栏显示「保存中」 */
+    saveError.value = ''
     try {
       const saved = await api.note.write(path, content)
       /* 保存期间切走了笔记：只更新基线，不覆盖当前内容 */
       if (current.value?.path === path) {
         current.value = saved
+        savedAt.value = savedTimeOf(saved)
       }
       return true
-    } catch (saveError) {
-      error.value = messageOf(saveError)
-      ElMessage.error(t('note.saveFailed', [error.value]))
+    } catch (writeError) {
+      saveError.value = messageOf(writeError)
+      error.value = saveError.value
+      ElMessage.error(t('note.saveFailed', [saveError.value]))
       return false
     } finally {
       saving.value = false
@@ -396,6 +442,9 @@ export const useNoteStore = defineStore('note', () => {
     current.value = null
     draft.value = ''
     error.value = ''
+    saveError.value = ''
+    savedAt.value = null
+    resetCursor()
   }
 
   /* 打开笔记：未保存内容先落盘，失败则中止切换 */
@@ -413,6 +462,9 @@ export const useNoteStore = defineStore('note', () => {
       current.value = loadedNote
       draft.value = loadedNote.content
       selectedPath.value = path
+      savedAt.value = savedTimeOf(loadedNote)
+      saveError.value = ''
+      resetCursor()
     } catch (loadError) {
       error.value = messageOf(loadError)
       ElMessage.error(t('note.loadFailed', [error.value]))
@@ -442,11 +494,16 @@ export const useNoteStore = defineStore('note', () => {
         const loadedNote = await api.note.read(path)
         current.value = loadedNote
         draft.value = loadedNote.content
+        savedAt.value = savedTimeOf(loadedNote)
+        saveError.value = ''
       } catch {
         /* 文件已被删除：回到空态 */
         current.value = null
         draft.value = ''
         selectedPath.value = ''
+        savedAt.value = null
+        saveError.value = ''
+        resetCursor()
       }
     }
   }
@@ -486,6 +543,7 @@ export const useNoteStore = defineStore('note', () => {
       current.value = loadedNote
       draft.value = loadedNote.content
       selectedPath.value = loadedNote.path
+      savedAt.value = savedTimeOf(loadedNote)
     }
     await refresh()
     return renamed
@@ -516,6 +574,7 @@ export const useNoteStore = defineStore('note', () => {
         current.value = loadedNote
         draft.value = loadedNote.content
         selectedPath.value = loadedNote.path
+        savedAt.value = savedTimeOf(loadedNote)
       }
       /* 展开目标目录，确保移动结果可见 */
       expanded.value = { ...expanded.value, [targetDir]: true }
@@ -536,6 +595,9 @@ export const useNoteStore = defineStore('note', () => {
         current.value = null
         draft.value = ''
         selectedPath.value = ''
+        savedAt.value = null
+        saveError.value = ''
+        resetCursor()
       }
       await refresh()
       return true
@@ -598,11 +660,16 @@ export const useNoteStore = defineStore('note', () => {
     current,
     draft,
     selectedPath,
+    cursorLine,
+    cursorColumn,
     mode,
     treeCollapsed,
     treeWidth,
     rootPath,
     dirty,
+    saveState,
+    savedAt,
+    saveError,
     outline,
     currentName,
     allDirsExpanded,
@@ -615,6 +682,7 @@ export const useNoteStore = defineStore('note', () => {
     toggleAllDirs,
     openNote,
     save,
+    setCursor,
     createNote,
     createFolder,
     renameEntry,

@@ -3,7 +3,7 @@
  * 笔记文章目录：按标题层级缩进展示，支持折叠 / 展开与点击定位。
  * @author xuxueli 2026-11-08
  */
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import {
@@ -22,8 +22,15 @@ interface OutlineRow {
   collapsed: boolean
 }
 
-const props = defineProps<{ items: OutlineItem[] }>()
+const props = defineProps<{
+  items: OutlineItem[]
+  /* 编辑器顶部可见行：用于高亮当前章节 */
+  activeLine?: number
+}>()
 const emit = defineEmits<{ jump: [line: number] }>()
+
+/* 目录根节点：高亮变化时把当前项滚入可视区 */
+const rootRef = ref<HTMLElement | null>(null)
 
 /* 已折叠的标题路径 */
 const collapsed = ref<Set<string>>(new Set())
@@ -64,10 +71,31 @@ const rows = computed<OutlineRow[]>(() => {
   walk(tree.value, 0, '')
   return result
 })
+
+/* 当前章节：可见行中最后一个起始行不大于编辑器顶部行的标题 */
+const activeKey = computed(() => {
+  const line = props.activeLine ?? 0
+  let key = ''
+  for (const row of rows.value) {
+    if (row.node.line > line) {
+      break
+    }
+    key = row.key
+  }
+  return key
+})
+
+/* 高亮章节变化：让当前项在目录内保持可见 */
+watch(activeKey, async () => {
+  await nextTick()
+  rootRef.value
+    ?.querySelector<HTMLElement>('.outline-item.is-active')
+    ?.scrollIntoView({ block: 'nearest' })
+})
 </script>
 
 <template>
-  <div class="note-outline">
+  <div ref="rootRef" class="note-outline">
     <div
       v-for="row in rows"
       :key="row.key"
@@ -91,6 +119,7 @@ const rows = computed<OutlineRow[]>(() => {
       <span v-else class="outline-caret is-placeholder"></span>
       <button
         class="outline-item"
+        :class="{ 'is-active': row.key === activeKey }"
         :title="row.node.text"
         type="button"
         @click="emit('jump', row.node.line)"
@@ -162,6 +191,13 @@ const rows = computed<OutlineRow[]>(() => {
 .outline-item:hover {
   background: var(--desk-primary-soft);
   color: var(--desk-text);
+}
+
+/* 当前章节：与编辑器顶部位置对齐 */
+.outline-item.is-active {
+  background: var(--desk-primary-soft);
+  color: var(--desk-text);
+  font-weight: 600;
 }
 
 .outline-empty {

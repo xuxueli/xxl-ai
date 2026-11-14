@@ -27,6 +27,7 @@ interface EditorExpose {
   toggleSearch: () => void
   insertText: (text: string) => void
   scrollToLine: (line: number) => void
+  getTopLine: () => number
   getScrollRatio: () => number
   getSelection: () => EditorSelection | null
   replaceRange: (
@@ -46,6 +47,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   /* 选区变化：同步工具栏激活态 */
   'selection-change': [active: MarkdownAction[]]
+  /* 顶部可见行号：同步右侧目录高亮 */
+  'scroll-position': [line: number]
 }>()
 
 const store = useNoteStore()
@@ -62,10 +65,10 @@ const previewClass = computed(() => (store.mode === 'split' ? 'is-split' : ''))
 /* 预览配色：跟随编辑器主题，不随应用皮肤变化 */
 const previewStyle = computed(() => editorThemeVars(props.theme))
 
-/* 大纲跳转后的联动抑制截止时间：避免比例联动覆盖标题精确位置 */
+/* 大纲跳转后的联动抑制截止时间：避免滚动事件用近似位置覆盖精确对齐 */
 let ignoreScrollSyncUntil = 0
 
-/* 按滚动比例定位预览：编辑器与预览高度不同，用比例近似章节位置 */
+/* 按滚动比例定位预览：预览缺少源码行锚点时的兜底方案 */
 function applyPreviewRatio(ratio: number): void {
   const preview = previewRef.value
   if (!preview) {
@@ -75,49 +78,53 @@ function applyPreviewRatio(ratio: number): void {
   preview.scrollTop = max > 0 ? max * ratio : 0
 }
 
-/* 编辑器滚动：分屏时联动预览 */
-function onEditorScroll(ratio: number): void {
+/*
+ * 预览按源码行定位：取起始行不大于目标行的最近块，并按块内行进度插值，
+ * 使该块顶部与编辑器顶部可见行对齐；返回是否命中锚点。
+ */
+function syncPreviewToLine(line: number): boolean {
+  const preview = previewRef.value
+  if (!preview) {
+    return false
+  }
+  const blocks = preview.querySelectorAll<HTMLElement>(
+    '.markdown-body-content [data-md-line]'
+  )
+  let target: HTMLElement | null = null
+  let targetStart = 0
+  blocks.forEach((block) => {
+    const start = Number(block.dataset.mdLine)
+    /* 取起始行不大于目标行的最近块；同起始行时后出现的嵌套块优先 */
+    if (!Number.isFinite(start) || start > line || start < targetStart) {
+      return
+    }
+    target = block
+    targetStart = start
+  })
+  if (!target) {
+    return false
+  }
+  const block: HTMLElement = target
+  const end = Number(block.dataset.mdLineEnd ?? targetStart)
+  /* 块内按行数（含首尾）估算进度，使目标行大致落在容器顶部 */
+  const progress = end >= targetStart ? Math.min(1, (line - targetStart) / (end - targetStart + 1)) : 0
+  const offset = block.getBoundingClientRect().top - preview.getBoundingClientRect().top
+  preview.scrollTop = Math.max(
+    0,
+    preview.scrollTop + offset + block.offsetHeight * progress - 12
+  )
+  return true
+}
+
+/* 编辑器滚动：同步目录高亮，分屏时按源码行联动预览 */
+function onEditorScroll(line: number, ratio: number): void {
+  emit('scroll-position', line)
   if (store.mode !== 'split' || Date.now() < ignoreScrollSyncUntil) {
     return
   }
-  applyPreviewRatio(ratio)
-}
-
-/* 在预览中定位标题：按层级 + 文本匹配同名标题的出现序号，匹配不到时退回标题顺序索引 */
-function findPreviewHeading(line: number): HTMLElement | null {
-  const preview = previewRef.value
-  if (!preview) {
-    return null
+  if (!syncPreviewToLine(line)) {
+    applyPreviewRatio(ratio)
   }
-  const index = store.outline.findIndex((item) => item.line === line)
-  if (index < 0) {
-    return null
-  }
-  const item = store.outline[index]
-  const headings = Array.from(
-    preview.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
-  )
-  const matched = headings.filter(
-    (heading) =>
-      Number(heading.tagName.slice(1)) === item.level &&
-      (heading.textContent ?? '').trim() === item.text
-  )
-  /* 同名标题按在正文中的出现顺序对应，避免重复标题全部定位到第一处 */
-  const occurrence = store.outline
-    .slice(0, index)
-    .filter((entry) => entry.level === item.level && entry.text === item.text).length
-  return matched[occurrence] ?? headings[index] ?? null
-}
-
-/* 预览滚动到指定行对应的标题，保留少量顶部留白 */
-function scrollPreviewToLine(line: number): void {
-  const preview = previewRef.value
-  const heading = findPreviewHeading(line)
-  if (!preview || !heading) {
-    return
-  }
-  const offset = heading.getBoundingClientRect().top - preview.getBoundingClientRect().top
-  preview.scrollTop = Math.max(0, preview.scrollTop + offset - 12)
 }
 
 /* 大纲跳转：编辑与预览同时定位（预览态先切到分屏，避免定位时不可见） */
@@ -126,13 +133,13 @@ async function jump(line: number): Promise<void> {
     store.mode = 'split'
   }
   await nextTick()
-  /* 编辑器定位会触发滚动事件，短暂关闭比例联动以保证预览落在同一标题 */
+  /* 编辑器定位会触发滚动事件，短暂关闭联动以保证预览落在同一章节 */
   ignoreScrollSyncUntil = Date.now() + 200
   editorRef.value?.scrollToLine(line)
-  scrollPreviewToLine(line)
+  syncPreviewToLine(line)
 }
 
-/* 切换到分屏时，让预览对齐编辑器当前滚动位置 */
+/* 切换到分屏时，让预览对齐编辑器当前顶部行 */
 watch(
   () => store.mode,
   async (mode) => {
@@ -140,7 +147,10 @@ watch(
       return
     }
     await nextTick()
-    applyPreviewRatio(editorRef.value?.getScrollRatio() ?? 0)
+    const topLine = editorRef.value?.getTopLine() ?? 1
+    if (!syncPreviewToLine(topLine)) {
+      applyPreviewRatio(editorRef.value?.getScrollRatio() ?? 0)
+    }
   }
 )
 
@@ -154,8 +164,14 @@ function insertText(text: string): void {
   editorRef.value?.insertText(text)
 }
 
-/* 选区变化：向上同步激活格式与选中文本 */
+/* 选区变化：向上同步激活格式，并记录光标行列供状态栏展示 */
 function onSelectionChange(selection: EditorSelection | null): void {
+  if (selection) {
+    /* 绝对偏移 → 1 基行列：只截取光标前的文本即可 */
+    const before = store.draft.slice(0, selection.from)
+    const lineBreak = before.lastIndexOf('\n')
+    store.setCursor(before.split('\n').length, selection.from - lineBreak)
+  }
   emit('selection-change', selection ? resolveActiveFormats(selection) : [])
 }
 

@@ -395,7 +395,8 @@ onBeforeUnmount(() => {
         </button>
       </DeskTooltip>
 
-      <!-- 视图切换：图标按钮，与工具栏其它按钮同一尺寸 -->
+      <!-- 视图切换：与左侧工具区分隔 -->
+      <span class="toolbar-divider"></span>
       <div class="mode-switch">
         <DeskTooltip v-for="item in modes" :key="item.value" :content="t(item.labelKey)">
           <button
@@ -418,11 +419,11 @@ onBeforeUnmount(() => {
 /* 工具栏：左侧格式区自适应，右侧视图区固定 */
 .note-toolbar {
   flex-shrink: 0;
-  height: 44px;
-  padding: 0 10px;
+  height: 38px;
+  padding: 0 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-bottom: 1px solid var(--desk-border);
   background: var(--desk-bg-elevated);
 }
@@ -446,17 +447,17 @@ onBeforeUnmount(() => {
 .toolbar-divider {
   flex-shrink: 0;
   width: 1px;
-  height: 16px;
-  margin: 0 5px;
+  height: 14px;
+  margin: 0 4px;
   background: var(--desk-border);
 }
 
 .toolbar-btn {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: transparent;
   color: var(--desk-text-secondary);
   display: flex;
@@ -482,13 +483,13 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 
-/* 自绘图标：与工具栏图标保持同一视觉尺寸 */
+/* 自绘图标：与项目名左侧图标保持同一视觉尺寸 */
 .toolbar-svg-icon {
-  width: 18px;
-  height: 18px;
+  width: var(--desk-font-md);
+  height: var(--desk-font-md);
 }
 
-/* 标题按钮：主图标 + 小下拉箭头，整体保持 30px 宽 */
+/* 标题按钮：主图标 + 小下拉箭头，整体保持 28px 宽 */
 .heading-btn {
   gap: 0;
 }
@@ -498,7 +499,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 /* 更多菜单图标：弱化颜色，与文字对齐 */

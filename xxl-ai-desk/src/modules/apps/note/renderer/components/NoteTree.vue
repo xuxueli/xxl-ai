@@ -477,7 +477,7 @@ onBeforeUnmount(() => {
 
 .note-tree-head {
   flex-shrink: 0;
-  height: 44px;
+  height: 38px;
   padding: 0 8px 0 14px;
   display: flex;
   align-items: center;
@@ -505,6 +505,8 @@ onBeforeUnmount(() => {
   border-radius: 7px;
   background: transparent;
   color: var(--desk-text-secondary);
+  /* 与项目名左侧图标同尺寸：button 默认不继承字号，需显式指定 */
+  font-size: var(--desk-font-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,10 +523,10 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 
-/* 展开 / 折叠全部：与文件树自绘图标同一尺寸 */
+/* 展开 / 折叠全部：与项目名左侧图标同一尺寸 */
 .note-toggle-icon {
-  width: 15px;
-  height: 15px;
+  width: var(--desk-font-md);
+  height: var(--desk-font-md);
 }
 
 .note-tree-filter {

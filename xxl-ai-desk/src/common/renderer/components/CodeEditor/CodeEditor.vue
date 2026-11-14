@@ -60,8 +60,8 @@ const value = defineModel<string>({ required: true })
 const emit = defineEmits<{
   save: []
   'selection-change': [selection: EditorSelection | null]
-  /* 垂直滚动比例 0~1：宿主用于联动预览等区域 */
-  scroll: [ratio: number]
+  /* 滚动位置：顶部可见行号（1 起）与垂直滚动比例 0~1，供宿主联动预览等区域 */
+  scroll: [line: number, ratio: number]
 }>()
 
 /* 编辑器挂载点与实例 */
@@ -536,7 +536,7 @@ function insertText(text: string): void {
   view.focus()
 }
 
-/* 跳转到指定行并居中展示（Markdown 大纲跳转） */
+/* 跳转到指定行并置顶展示（Markdown 大纲跳转，与预览顶部对齐） */
 function scrollToLine(line: number): void {
   if (!view) {
     return
@@ -545,9 +545,19 @@ function scrollToLine(line: number): void {
   const target = view.state.doc.line(Math.min(Math.max(1, line), total))
   view.dispatch({
     selection: { anchor: target.from },
-    effects: EditorView.scrollIntoView(target.from, { y: 'center' })
+    effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 12 })
   })
   view.focus()
+}
+
+/* 当前顶部可见行号（1 起）：用于源码行 ↔ 预览块的滚动对齐 */
+function getTopLine(): number {
+  const scroller = view?.scrollDOM
+  if (!view || !scroller) {
+    return 1
+  }
+  const block = view.lineBlockAtHeight(scroller.scrollTop)
+  return view.state.doc.lineAt(block.from).number
 }
 
 /* 当前垂直滚动比例：0 为顶部，1 为底部（无法滚动时返回 0） */
@@ -571,7 +581,7 @@ function onScrollerScroll(): void {
   }
   scrollFrame = requestAnimationFrame(() => {
     scrollFrame = 0
-    emit('scroll', getScrollRatio())
+    emit('scroll', getTopLine(), getScrollRatio())
   })
 }
 
@@ -582,6 +592,7 @@ defineExpose({
   focus,
   getSelection,
   replaceRange,
+  getTopLine,
   getScrollRatio
 })
 

@@ -18,6 +18,7 @@ import NoteToolbar from '@modules/apps/note/renderer/components/NoteToolbar.vue'
 import NoteToolbarIcon from '@modules/apps/note/renderer/components/NoteToolbarIcon.vue'
 import NoteEditorPane from '@modules/apps/note/renderer/components/NoteEditorPane.vue'
 import NoteOutline from '@modules/apps/note/renderer/components/NoteOutline.vue'
+import NoteStatusBar from '@modules/apps/note/renderer/components/NoteStatusBar.vue'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
 import type { MarkdownAction, MermaidKind } from '@modules/apps/note/renderer/utils/markdownCommands'
 import { useAppCenterStore } from '@modules/appCenter/renderer'
@@ -41,10 +42,17 @@ const editorRef = ref<EditorExpose | null>(null)
 const activeFormats = ref<MarkdownAction[]>([])
 /* 右侧目录模块展开态 */
 const outlineOpen = ref(false)
+/* 编辑器顶部可见行：驱动右侧目录高亮当前章节 */
+const currentLine = ref(1)
 
 /* 选区变化 */
 function onSelectionChange(active: MarkdownAction[]): void {
   activeFormats.value = active
+}
+
+/* 编辑器滚动位置变化 */
+function onScrollPosition(line: number): void {
+  currentLine.value = line
 }
 
 /* 工具栏格式命令 */
@@ -110,8 +118,9 @@ async function insertImage(): Promise<void> {
   ElMessage.success(t('note.imageInserted'))
 }
 
-/* 文章目录跳转 */
+/* 文章目录跳转：同步高亮目标章节 */
 function jumpOutline(line: number): void {
+  currentLine.value = line
   editorRef.value?.scrollToLine(line)
 }
 
@@ -168,10 +177,11 @@ function onKeydown(event: KeyboardEvent): void {
   }
 }
 
-/* 当前笔记关闭时同步收起目录模块 */
+/* 当前笔记关闭时同步收起目录模块，并重置章节高亮 */
 watch(
   () => store.current,
   (current) => {
+    currentLine.value = 1
     if (!current) {
       outlineOpen.value = false
     }
@@ -229,7 +239,12 @@ onBeforeUnmount(() => {
         @toggle-outline="toggleOutline"
       />
       <div class="note-body">
-        <NoteEditorPane ref="editorRef" :theme="editorTheme" @selection-change="onSelectionChange" />
+        <NoteEditorPane
+          ref="editorRef"
+          :theme="editorTheme"
+          @scroll-position="onScrollPosition"
+          @selection-change="onSelectionChange"
+        />
         <aside v-if="outlineOpen && store.current" class="note-outline-side" :style="outlineStyle">
           <div class="outline-side-head">
             <span class="outline-side-title">{{ t('note.outline') }}</span>
@@ -238,10 +253,11 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <div class="outline-side-body">
-            <NoteOutline :items="store.outline" @jump="jumpOutline" />
+            <NoteOutline :items="store.outline" :active-line="currentLine" @jump="jumpOutline" />
           </div>
         </aside>
       </div>
+      <NoteStatusBar />
     </div>
   </div>
 </template>
