@@ -176,6 +176,8 @@
       "noteNameEmpty": "The name cannot be empty",
       "noteNameDuplicate": "A note or folder with the same name already exists",
       "noteRootDelete": "The note root folder cannot be deleted",
+      "noteRootMove": "The note root folder cannot be moved",
+      "noteMoveIntoSelf": "Cannot move an item into itself or its subfolder",
       "noteImageType": "Unsupported image format",
       "noteImageTooLarge": "The image exceeds the 20 MB limit",
       "appNotFound": "The app does not exist or cannot be installed",

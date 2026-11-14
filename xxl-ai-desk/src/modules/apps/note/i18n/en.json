@@ -40,6 +40,8 @@
     "imageFailed": "Insert image failed: {0}",
     "treeCollapse": "Collapse note tree",
     "treeExpand": "Expand note tree",
+    "expandAll": "Expand all folders",
+    "collapseAll": "Collapse all folders",
     "defaultDir": "Default: {0}"
   }
 }

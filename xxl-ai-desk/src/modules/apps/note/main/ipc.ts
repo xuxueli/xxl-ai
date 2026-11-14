@@ -16,6 +16,7 @@ import {
   getNoteSettings,
   getNoteStorageDir,
   listNotes,
+  moveNote,
   readNote,
   renameNote,
   saveImage,
@@ -47,6 +48,9 @@ export function registerNoteIpc(ipc: IpcContext): void {
     createFolder(dir, name)
   )
   ipc.handle(NOTE_IPC.rename, (_event, file: string, name: string) => renameNote(file, name))
+  ipc.handle(NOTE_IPC.move, (_event, file: string, targetDir: string) =>
+    moveNote(file, targetDir)
+  )
   ipc.handle(NOTE_IPC.trash, (_event, file: string) => trashNote(file))
   ipc.handle(NOTE_IPC.pickImages, async (_event, noteFile: string) => {
     const settings = getNoteSettings()

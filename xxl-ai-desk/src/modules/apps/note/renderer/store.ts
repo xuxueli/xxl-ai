@@ -337,6 +337,52 @@ export const useNoteStore = defineStore('note', () => {
     }
   }
 
+  /* 已加载的目录路径：用于判断「全部展开」状态 */
+  const loadedDirs = computed(() => {
+    const dirs = new Set<string>()
+    for (const entries of Object.values(childrenMap.value)) {
+      for (const entry of entries) {
+        if (entry.isDir) {
+          dirs.add(entry.path)
+        }
+      }
+    }
+    return [...dirs]
+  })
+
+  /* 是否已展开全部已加载目录 */
+  const allDirsExpanded = computed(
+    () => loadedDirs.value.length > 0 && loadedDirs.value.every((dir) => expanded.value[dir])
+  )
+
+  /* 展开全部目录：逐层加载并展开子目录（目录项不含符号链接，不会出现循环） */
+  async function expandAllDirs(): Promise<void> {
+    if (!rootPath.value) {
+      return
+    }
+    async function walk(dir: string): Promise<void> {
+      expanded.value = { ...expanded.value, [dir]: true }
+      await loadChildren(dir)
+      const subDirs = (childrenMap.value[dir] ?? []).filter((entry) => entry.isDir)
+      await Promise.all(subDirs.map((entry) => walk(entry.path)))
+    }
+    await walk(rootPath.value)
+  }
+
+  /* 折叠全部目录：仅保留根目录展开态（根目录不直接展示） */
+  function collapseAllDirs(): void {
+    expanded.value = rootPath.value ? { [rootPath.value]: true } : {}
+  }
+
+  /* 全部展开 / 全部折叠：按当前全部展开状态切换 */
+  async function toggleAllDirs(): Promise<void> {
+    if (allDirsExpanded.value) {
+      collapseAllDirs()
+      return
+    }
+    await expandAllDirs()
+  }
+
   /* 重置工作区（切换存储目录 / 停用时） */
   function resetWorkspace(): void {
     clearSaveTimer()
@@ -460,6 +506,31 @@ export const useNoteStore = defineStore('note', () => {
     }
   }
 
+  /* 移动笔记 / 目录到目标目录：同步更新当前打开笔记的路径 */
+  async function moveEntry(entry: NoteEntry, targetDir: string): Promise<boolean> {
+    if (!(await save())) {
+      return false
+    }
+    try {
+      const moved = await api.note.move(entry.path, targetDir)
+      if (current.value && isUnder(current.value.path, entry.path)) {
+        const path = current.value.path.replace(entry.path, moved.path)
+        const loadedNote = await api.note.read(path)
+        current.value = loadedNote
+        draft.value = loadedNote.content
+        selectedPath.value = loadedNote.path
+      }
+      /* 展开目标目录，确保移动结果可见 */
+      expanded.value = { ...expanded.value, [targetDir]: true }
+      await loadChildren(targetDir)
+      await refresh()
+      return true
+    } catch (moveError) {
+      ElMessage.error(messageOf(moveError))
+      return false
+    }
+  }
+
   /* 删除笔记 / 目录（移入废纸篓） */
   async function trashEntry(entry: NoteEntry): Promise<boolean> {
     try {
@@ -537,17 +608,20 @@ export const useNoteStore = defineStore('note', () => {
     dirty,
     outline,
     currentName,
+    allDirsExpanded,
     loadSettings,
     ensureLoaded,
     saveSettings,
     selectStorageDir,
     reloadTree,
     toggleDir,
+    toggleAllDirs,
     openNote,
     save,
     createNote,
     createFolder,
     renameEntry,
+    moveEntry,
     trashEntry,
     pickImages,
     saveImageBytes,

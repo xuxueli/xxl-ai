@@ -13,6 +13,7 @@ export const NOTE_IPC = {
   createNote: 'desk:note:create-note',
   createFolder: 'desk:note:create-folder',
   rename: 'desk:note:rename',
+  move: 'desk:note:move',
   trash: 'desk:note:trash',
   pickImages: 'desk:note:pick-images',
   saveImage: 'desk:note:save-image',

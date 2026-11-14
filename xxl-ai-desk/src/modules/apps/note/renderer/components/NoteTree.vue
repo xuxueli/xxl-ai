@@ -1,21 +1,24 @@
 <script setup lang="ts">
 /*
- * 笔记目录：根目录不展示（直接列出其子项）、按名称过滤、右键新建 / 重命名 / 删除 / 定位，宽度可拖拽。
+ * 笔记目录：根目录不展示（直接列出其子项）、按名称过滤、右键新建 / 重命名 / 删除 / 定位、拖拽移动，宽度可拖拽。
  * @author xuxueli 2026-11-08
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
+import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
 import { t } from '@renderer/shell/i18n'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import NoteTreeNode from '@modules/apps/note/renderer/components/NoteTreeNode.vue'
 import NoteNameDialog from '@modules/apps/note/renderer/components/NoteNameDialog.vue'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
+import { useNoteTreeDrag } from '@modules/apps/note/renderer/composables/useNoteTreeDrag'
 import { parentDir } from '@modules/apps/note/renderer/utils/path'
 import { matchesNoteEntry } from '@modules/apps/note/renderer/utils/tree'
 import type { NoteEntry } from '@modules/apps/note/shared'
 
 const store = useNoteStore()
+const { dragging, dropTargetPath, endDrag, canDropInto } = useNoteTreeDrag()
 
 /* 树宽度：拖拽像素值，按最小宽度夹取 */
 const treeWidth = computed({
@@ -33,6 +36,43 @@ const visibleRootChildren = computed(() => {
     ? rootChildren.value.filter((entry) => matchesNoteEntry(entry, word, store.childrenMap))
     : rootChildren.value
 })
+
+/* 拖拽到空白区：移动到笔记根目录 */
+function onRootDragOver(event: DragEvent): void {
+  if (!canDropInto(store.rootPath)) {
+    return
+  }
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  dropTargetPath.value = store.rootPath
+}
+
+/* 离开空白区：移入子元素时保留高亮 */
+function onRootDragLeave(event: DragEvent): void {
+  const current = event.currentTarget
+  const next = event.relatedTarget
+  if (current instanceof Node && next instanceof Node && current.contains(next)) {
+    return
+  }
+  if (dropTargetPath.value === store.rootPath) {
+    dropTargetPath.value = ''
+  }
+}
+
+/* 在空白区投放：把被拖节点移动到根目录 */
+async function onRootDrop(event: DragEvent): Promise<void> {
+  event.preventDefault()
+  const source = dragging.value
+  const target = store.rootPath
+  if (!source || !canDropInto(target)) {
+    endDrag()
+    return
+  }
+  endDrag()
+  await store.moveEntry(source, target)
+}
 
 /* 右键菜单状态 */
 const contextMenu = ref<{ entry: NoteEntry; x: number; y: number; visible: boolean } | null>(
@@ -268,11 +308,21 @@ onBeforeUnmount(() => {
     />
     <div class="note-tree-head">
       <span class="note-tree-title">{{ t('note.title') }}</span>
+      <!-- 顺序：新建笔记 → 新建目录 → 展开/折叠全部 → 打开目录 -->
       <button class="note-icon-btn" :title="t('note.newNote')" @click="createNote(store.rootPath)">
         <el-icon><DocumentAdd /></el-icon>
       </button>
       <button class="note-icon-btn" :title="t('note.newFolder')" @click="createFolder(store.rootPath)">
         <el-icon><FolderAdd /></el-icon>
+      </button>
+      <button
+        class="note-icon-btn"
+        :title="store.allDirsExpanded ? t('note.collapseAll') : t('note.expandAll')"
+        :disabled="!store.rootPath"
+        @click="store.toggleAllDirs"
+      >
+        <CollapseAllIcon v-if="store.allDirsExpanded" class="note-toggle-icon" />
+        <ExpandAllIcon v-else class="note-toggle-icon" />
       </button>
       <button class="note-icon-btn" :title="t('note.openDir')" @click="revealPath(store.rootPath)">
         <el-icon><FolderOpened /></el-icon>
@@ -290,7 +340,13 @@ onBeforeUnmount(() => {
         </template>
       </el-input>
     </div>
-    <el-scrollbar class="note-tree-body">
+    <el-scrollbar
+      class="note-tree-body"
+      :class="{ 'drop-root': store.rootPath !== '' && dropTargetPath === store.rootPath }"
+      @dragover="onRootDragOver"
+      @dragleave="onRootDragLeave"
+      @drop="onRootDrop"
+    >
       <template v-if="store.rootPath">
         <NoteTreeNode
           v-for="entry in visibleRootChildren"
@@ -380,6 +436,7 @@ onBeforeUnmount(() => {
 }
 
 .note-icon-btn {
+  flex-shrink: 0;
   width: 26px;
   height: 26px;
   padding: 0;
@@ -393,9 +450,20 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.note-icon-btn:hover {
+.note-icon-btn:hover:not(:disabled) {
   background: var(--desk-primary-soft);
   color: var(--desk-text);
+}
+
+.note-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 展开 / 折叠全部：与文件树自绘图标同一尺寸 */
+.note-toggle-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .note-tree-filter {
@@ -407,6 +475,11 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   padding: 0 6px 12px;
+}
+
+/* 拖拽到空白区：提示将移动到根目录 */
+.note-tree-body.drop-root {
+  background: var(--desk-primary-soft);
 }
 
 .note-tree-empty {

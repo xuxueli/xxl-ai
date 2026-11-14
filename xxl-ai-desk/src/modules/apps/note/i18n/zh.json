@@ -40,6 +40,8 @@
     "imageFailed": "插入图片失败：{0}",
     "treeCollapse": "收起笔记目录",
     "treeExpand": "展开笔记目录",
+    "expandAll": "展开全部目录",
+    "collapseAll": "折叠全部目录",
     "defaultDir": "默认目录：{0}"
   }
 }

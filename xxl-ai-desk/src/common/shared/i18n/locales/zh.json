@@ -176,6 +176,8 @@
       "noteNameEmpty": "名称不能为空",
       "noteNameDuplicate": "同名笔记或目录已存在",
       "noteRootDelete": "笔记根目录不允许删除",
+      "noteRootMove": "笔记根目录不允许移动",
+      "noteMoveIntoSelf": "不能移动到自身或其子目录",
       "noteImageType": "不支持的图片格式",
       "noteImageTooLarge": "图片体积超过 20MB",
       "appNotFound": "应用不存在或不支持安装",

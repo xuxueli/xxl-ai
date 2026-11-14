@@ -17,6 +17,7 @@ export const noteApi: NoteApi = {
   createNote: (dir, name) => ipcRenderer.invoke(NOTE_IPC.createNote, dir, name),
   createFolder: (dir, name) => ipcRenderer.invoke(NOTE_IPC.createFolder, dir, name),
   rename: (path, name) => ipcRenderer.invoke(NOTE_IPC.rename, path, name),
+  move: (path, targetDir) => ipcRenderer.invoke(NOTE_IPC.move, path, targetDir),
   trash: (path) => ipcRenderer.invoke(NOTE_IPC.trash, path),
   pickImages: (notePath) => ipcRenderer.invoke(NOTE_IPC.pickImages, notePath),
   saveImage: (notePath, data, extension) =>

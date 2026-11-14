@@ -21,6 +21,7 @@ export interface NoteApi {
   createNote(dir?: string, name?: string): Promise<NoteEntry>
   createFolder(dir: string | undefined, name: string): Promise<NoteEntry>
   rename(path: string, name: string): Promise<NoteEntry>
+  move(path: string, targetDir: string): Promise<NoteEntry>
   trash(path: string): Promise<void>
   pickImages(notePath: string): Promise<NoteSaveImageResult[]>
   saveImage(notePath: string, data: Uint8Array, extension: string): Promise<NoteSaveImageResult>

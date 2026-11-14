@@ -271,6 +271,36 @@ export function renameNote(source: string, name: string): NoteEntry {
   return toEntry(root, next)
 }
 
+/* 移动笔记 / 目录到目标目录：根目录禁止移动，目录不可移入自身或其子目录 */
+export function moveNote(source: string, targetDir: string): NoteEntry {
+  const root = resolvedRoot().root
+  const target = notePathOf(source)
+  assertNotResource(target)
+  if (resolve(target) === resolve(root)) {
+    throw new Error(t('runtime.error.noteRootMove'))
+  }
+  const dir = notePathOf(targetDir)
+  assertNotResource(dir)
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+    throw new Error(t('runtime.error.noteTargetNotDir'))
+  }
+  const info = statSync(target)
+  /* 已在目标目录内：直接返回，避免重复移动 */
+  if (resolve(dirname(target)) === resolve(dir)) {
+    return toEntry(root, target)
+  }
+  if (info.isDirectory() && isWithinRoot(target, dir)) {
+    throw new Error(t('runtime.error.noteMoveIntoSelf'))
+  }
+  const next = join(dir, basename(target))
+  assertNotResource(next)
+  if (existsSync(next)) {
+    throw new Error(t('runtime.error.noteNameDuplicate'))
+  }
+  renameSync(target, next)
+  return toEntry(root, next)
+}
+
 /* 删除笔记 / 目录：移入系统废纸篓，根目录禁止删除 */
 export async function trashNote(target: string): Promise<void> {
   const root = resolvedRoot().root
