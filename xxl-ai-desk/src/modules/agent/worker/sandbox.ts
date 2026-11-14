@@ -117,6 +117,8 @@ export async function guardPath(options: {
   language?: string
   /* 当前会话权限模式 */
   permissionMode: PermissionMode
+  /* 完整命令（action=command 时随审批一起展示） */
+  command?: string
   /* 完全信任根目录（如技能库）：读 / 写 / 命令均直接放行 */
   trustedRoots?: string[]
 }): Promise<{ allowed: boolean; abs: string; reason?: string }> {
@@ -155,7 +157,8 @@ export async function guardPath(options: {
       tool: options.tool,
       action: options.action,
       abs,
-      root: options.rootDir
+      root: options.rootDir,
+      command: options.action === 'command' ? options.command : undefined
     }
   })
   if (choice.status === 'submitted' && choice.value === 'allow') {

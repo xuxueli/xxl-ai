@@ -1,12 +1,11 @@
 /*
  * 本地文件系统服务（右侧「文件」面板）。
  *   - 所有读写均限定在项目根目录内，防止路径穿越访问项目外的文件。
- *   - 目录懒加载；文本文件按体积截断；图片附带 dataUrl 供内联预览。
+ *   - 目录懒加载；文本文件按体积截断；图片由渲染层经本地协议流式加载。
  */
 
 import { open, readdir, stat, writeFile as writeFileFs } from 'fs/promises'
 import { resolve } from 'path'
-import { imageMimeOf } from '@common/shared/fileTypes'
 import { shell } from 'electron'
 import { assertInside } from '@common/main/utils/pathGuard'
 import { t } from '@common/main/i18n'
@@ -15,8 +14,6 @@ import type { FileContent, FsEntry } from '@modules/file/shared'
 
 /* 文本预览体积上限（超过 10MB 仅截断展示，编辑器自动进入只读） */
 const MAX_TEXT_BYTES = 10 * 1024 * 1024
-/* 图片内联预览体积上限 */
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 /* 由项目主键解析沙箱根：调用方只能按项目访问，不能自带任意根目录 */
 function rootOf(projectId: number): string {
@@ -62,22 +59,6 @@ export async function listDir(projectId: number, dir: string): Promise<FsEntry[]
   }
 }
 
-/* 读取图片为 data URL（超限返回空串） */
-async function readImageDataUrl(file: string, size: number): Promise<string | undefined> {
-  const mime = imageMimeOf(file)
-  if (!mime || size > MAX_IMAGE_BYTES) {
-    return undefined
-  }
-  const handle = await open(file, 'r')
-  try {
-    const buffer = Buffer.alloc(size)
-    await handle.read(buffer, 0, size, 0)
-    return `data:${mime};base64,${buffer.toString('base64')}`
-  } finally {
-    await handle.close()
-  }
-}
-
 /* 写入文件：覆盖写入 UTF-8 文本（限定项目目录内） */
 export async function writeFile(projectId: number, file: string, content: string): Promise<void> {
   const root = rootOf(projectId)
@@ -100,7 +81,7 @@ export async function trashFile(projectId: number, file: string): Promise<void> 
   await shell.trashItem(target)
 }
 
-/* 读取文件：文本截断读取；二进制判定；图片附带 dataUrl */
+/* 读取文件：文本截断读取；二进制判定 */
 export async function readFile(projectId: number, file: string): Promise<FileContent> {
   const root = rootOf(projectId)
   assertInside(root, file)
@@ -109,15 +90,12 @@ export async function readFile(projectId: number, file: string): Promise<FileCon
     throw new Error(t('runtime.error.fileTargetIsDirPreview'))
   }
   const size = info.size
-  /* 图片优先按二进制处理并生成内联预览 */
-  const dataUrl = await readImageDataUrl(file, size)
-
   const readSize = Math.min(size, MAX_TEXT_BYTES)
   const handle = await open(file, 'r')
   try {
     const buffer = Buffer.alloc(readSize)
     await handle.read(buffer, 0, readSize, 0)
-    /* 含 NUL 字节判定为二进制（图片另有 dataUrl 可预览） */
+    /* 含 NUL 字节判定为二进制 */
     const binary = buffer.includes(0)
     return {
       path: file,
@@ -125,8 +103,7 @@ export async function readFile(projectId: number, file: string): Promise<FileCon
       content: binary ? '' : buffer.toString('utf8'),
       size,
       truncated: size > MAX_TEXT_BYTES,
-      binary,
-      dataUrl
+      binary
     }
   } finally {
     await handle.close()

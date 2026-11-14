@@ -10,6 +10,8 @@ import zhNote from '@modules/apps/note/i18n/zh.json'
 import enApp from '@modules/platform/i18n/en.json'
 import enAppCenter from '@modules/appCenter/i18n/en.json'
 import enNote from '@modules/apps/note/i18n/en.json'
+import zhBrowser from '@modules/browser/i18n/zh.json'
+import enBrowser from '@modules/browser/i18n/en.json'
 import zhChat from '@modules/chat/i18n/zh.json'
 import enChat from '@modules/chat/i18n/en.json'
 import zhGit from '@modules/git/i18n/zh.json'
@@ -29,8 +31,8 @@ export const i18n = createI18n({
   locale: 'zh',
   fallbackLocale: 'zh',
   messages: {
-    zh: { ...zhCommon, ...zhAgent, ...zhApp, ...zhAppCenter, ...zhNote, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
-    en: { ...enCommon, ...enAgent, ...enApp, ...enAppCenter, ...enNote, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
+    zh: { ...zhCommon, ...zhAgent, ...zhApp, ...zhAppCenter, ...zhNote, ...zhBrowser, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
+    en: { ...enCommon, ...enAgent, ...enApp, ...enAppCenter, ...enNote, ...enBrowser, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
   }
 })
 

@@ -83,6 +83,7 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
           tool: 'run_command',
           language: context.language,
           permissionMode: context.permissionMode,
+          command,
           trustedRoots
         })
         if (!outcome.allowed) {

@@ -149,6 +149,13 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     readOnly: true
   },
   {
+    name: 'move_browser',
+    category: 'browser',
+    titleKey: 'chat.tool.moveBrowser',
+    descriptionKey: 'plugin.builtinTool.desc.moveBrowser',
+    readOnly: true
+  },
+  {
     name: 'click_browser',
     category: 'browser',
     titleKey: 'chat.tool.clickBrowser',
@@ -160,6 +167,13 @@ export const BUILTIN_TOOL_CATALOG: BuiltinToolCatalogItem[] = [
     category: 'browser',
     titleKey: 'chat.tool.fillBrowser',
     descriptionKey: 'plugin.builtinTool.desc.fillBrowser',
+    readOnly: false
+  },
+  {
+    name: 'type_browser',
+    category: 'browser',
+    titleKey: 'chat.tool.typeBrowser',
+    descriptionKey: 'plugin.builtinTool.desc.typeBrowser',
     readOnly: false
   },
   {

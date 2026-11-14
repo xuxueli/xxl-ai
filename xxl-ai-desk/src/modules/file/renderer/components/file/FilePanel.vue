@@ -144,8 +144,41 @@ const showPreview = computed(() => preview.value && canPreview.value)
 
 /* 可编辑：文本文件且未被截断 */
 const editable = computed(() => Boolean(file.value) && !file.value?.binary && !file.value?.truncated)
+/* 工具栏预览/源码切换：Markdown 与可编辑图片（如 SVG）才有意义，普通图片直接展示预览 */
+const previewSwitchable = computed(() => isMarkdown.value || (isImage.value && editable.value))
+/* 编辑器主题仅代码编辑与 Markdown 预览需要；图片 / 音视频等预览不展示 */
+const showTheme = computed(() => editable.value || isMarkdown.value)
 /* 有未保存修改 */
 const dirty = computed(() => editable.value && draft.value !== original.value)
+
+/* 当前图片所在目录的同级图片：供放大预览左右切换 */
+const imageEntries = ref<FsEntry[]>([])
+const imagePaths = computed(() => imageEntries.value.map((entry) => entry.path))
+let imageListSeq = 0
+watch(
+  [() => (file.value?.path ? parentDir(file.value.path) : ''), isImage],
+  async ([dir, image]) => {
+    const seq = ++imageListSeq
+    const projectId = props.projectId
+    if (!dir || !image || !projectId) {
+      imageEntries.value = []
+      return
+    }
+    try {
+      const entries = await api.fs.list(projectId, dir)
+      /* 快速切换目录时丢弃过期响应 */
+      if (seq !== imageListSeq) {
+        return
+      }
+      imageEntries.value = entries.filter((entry) => !entry.isDir && isImageName(entry.name))
+    } catch {
+      if (seq === imageListSeq) {
+        imageEntries.value = []
+      }
+    }
+  },
+  { immediate: true }
+)
 
 /* 清空当前文件选择与内容（根目录切换 / 文件被删除时） */
 function clearSelection(): void {
@@ -156,6 +189,7 @@ function clearSelection(): void {
   preview.value = false
   original.value = ''
   draft.value = ''
+  imageEntries.value = []
 }
 
 /* 选中的文件在磁盘上变化（或被删除）时回读；编辑中（dirty）不覆盖 */
@@ -210,8 +244,8 @@ async function select(entry: FsEntry): Promise<boolean> {
     file.value = loaded
     original.value = loaded.content
     draft.value = loaded.content
-    /* 图片直接进入预览，避免展示无意义的二进制代码 */
-    preview.value = isImageName(loaded.name) && Boolean(loaded.dataUrl)
+    /* 图片直接进入预览，避免展示无意义的二进制代码（查看器通过本地协议流式加载，不受体积限制） */
+    preview.value = isImageName(loaded.name)
   } catch (error) {
     file.value = null
     fileError.value = (error as Error).message || t('panel.loadFail')
@@ -219,6 +253,14 @@ async function select(entry: FsEntry): Promise<boolean> {
     fileLoading.value = false
   }
   return true
+}
+
+/* 放大预览内左右切换图片：同步选中同目录下的目标图片 */
+function onSwitchImage(path: string): void {
+  const entry = imageEntries.value.find((item) => item.path === path)
+  if (entry) {
+    void select(entry)
+  }
 }
 
 /* 保存编辑内容到磁盘 */
@@ -428,8 +470,9 @@ async function menuRemove(): Promise<void> {
       :editable="editable"
       :dirty="dirty"
       :saving="saving"
-      :can-preview="canPreview"
+      :can-preview="previewSwitchable"
       :show-preview="showPreview"
+      :show-theme="showTheme"
       :has-file="Boolean(file)"
       :has-root="Boolean(root)"
       :tree-collapsed="treeCollapsed"
@@ -470,7 +513,9 @@ async function menuRemove(): Promise<void> {
         :is-audio="isAudio"
         :saving="saving"
         :editor-theme="editorTheme"
+        :image-paths="imagePaths"
         @save="save"
+        @switch-image="onSwitchImage"
       />
     </div>
 

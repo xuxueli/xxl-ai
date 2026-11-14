@@ -89,3 +89,9 @@ export function findTab(sessionId: string, id: string): BrowserTab | undefined {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+/* 内容区中心点（webview 视口坐标）：非指针动作的提示位置 */
+export function viewportCenterOf(view: WebviewElement): { x: number; y: number } {
+  const rect = view.getBoundingClientRect()
+  return { x: Math.round(rect.width / 2), y: Math.round(rect.height / 2) }
+}

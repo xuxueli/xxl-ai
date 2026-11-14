@@ -4,6 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { ElImageViewer } from 'element-plus'
 import { MarkdownBlock } from '@common/renderer/components'
 import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { parentDir } from '@modules/file/renderer/utils/path'
@@ -33,9 +34,11 @@ const props = defineProps<{
   saving: boolean
   /* 编辑器主题 */
   editorTheme?: EditorThemeId
+  /* 同目录图片路径（放大预览内左右切换） */
+  imagePaths: string[]
 }>()
 const draft = defineModel<string>('draft', { required: true })
-const emit = defineEmits<{ save: [] }>()
+const emit = defineEmits<{ save: []; 'switch-image': [path: string] }>()
 
 /* Markdown 预览渲染上限：超长文档只渲染前段，避免解析/排版阻塞界面 */
 const MAX_MARKDOWN_PREVIEW = 400000
@@ -48,14 +51,54 @@ const mediaUrl = computed(() => {
   return toLocalFileUrl(props.file.path)
 })
 
-/* 音视频解码失败提示（切换文件后复位） */
+/* 图片预览地址：同样走本地协议，避免整图 base64 经 IPC 传输并绕过体积上限 */
+const imageUrl = computed(() => {
+  if (!props.file || !props.isImage) {
+    return ''
+  }
+  return toLocalFileUrl(props.file.path)
+})
+
+/* 放大预览的图片列表（同目录图片），用于左右切换 */
+const imageUrls = computed(() => {
+  if (props.imagePaths.length > 0) {
+    return props.imagePaths.map((path) => toLocalFileUrl(path))
+  }
+  return imageUrl.value ? [imageUrl.value] : []
+})
+/* 当前图片在列表中的位置（不在列表中时退回首张） */
+const imageIndex = computed(() => {
+  const index = props.file ? props.imagePaths.indexOf(props.file.path) : -1
+  return index >= 0 ? index : 0
+})
+
+/* 音视频解码 / 图片加载失败提示（切换文件后复位） */
 const mediaError = ref('')
+const imageLoadError = ref('')
+/* 图片放大预览弹层可见态 */
+const imageViewerVisible = ref(false)
 watch(
   () => props.file?.path,
   () => {
     mediaError.value = ''
+    imageLoadError.value = ''
   }
 )
+
+/* 打开图片放大预览：点击图片弹出遮罩，支持缩放与旋转 */
+function openImageViewer(): void {
+  if (imageUrl.value && !imageLoadError.value) {
+    imageViewerVisible.value = true
+  }
+}
+
+/* 弹层内左右切换：同步选中文件，关闭弹层时正文与面包屑保持一致 */
+function onImageViewerSwitch(index: number): void {
+  const path = props.imagePaths[index]
+  if (path) {
+    emit('switch-image', path)
+  }
+}
 
 /* Markdown 预览内容：超长文档截断渲染，并给出提示 */
 const markdownPreviewTruncated = computed(
@@ -94,8 +137,16 @@ function onSave(): void {
       <div v-else-if="showPreview && markdownPreviewTruncated" class="viewer-banner">
         {{ t('panel.previewTruncated') }}
       </div>
-      <div v-if="showPreview && isImage && file.dataUrl" class="viewer-image">
-        <img :src="file.dataUrl" :alt="file.name" />
+      <div v-if="showPreview && isImage" class="viewer-image">
+        <img
+          v-if="!imageLoadError"
+          :src="imageUrl"
+          :alt="file.name"
+          :title="t('panel.preview')"
+          @error="imageLoadError = t('panel.loadFail')"
+          @click="openImageViewer"
+        />
+        <div v-else class="viewer-empty error">{{ imageLoadError }}</div>
       </div>
       <MarkdownBlock
         v-else-if="showPreview && isMarkdown"
@@ -147,6 +198,16 @@ function onSave(): void {
           <pre class="code-pre">{{ file.content }}</pre>
         </div>
       </div>
+      <!-- 图片放大预览：同目录图片可左右切换，点击遮罩或 Esc 关闭（独立于内容分支，避免打断 v-else-if 链） -->
+      <ElImageViewer
+        v-if="imageViewerVisible && imageUrls.length > 0"
+        :url-list="imageUrls"
+        :initial-index="imageIndex"
+        hide-on-click-modal
+        teleported
+        @switch="onImageViewerSwitch"
+        @close="imageViewerVisible = false"
+      />
     </template>
   </div>
 </template>
@@ -294,6 +355,7 @@ function onSave(): void {
   max-height: 100%;
   object-fit: contain;
   border-radius: var(--desk-radius-sm);
+  cursor: zoom-in;
 }
 
 .spin {

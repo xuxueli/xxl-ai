@@ -12,7 +12,7 @@ export interface FsEntry {
   isDir: boolean
 }
 
-/* 文件读取结果（文本预览；图片附带 dataUrl 供内联预览） */
+/* 文件读取结果（文本预览） */
 export interface FileContent {
   /* 绝对路径 */
   path: string
@@ -26,6 +26,4 @@ export interface FileContent {
   truncated: boolean
   /* 判定为二进制（不可文本预览） */
   binary: boolean
-  /* 图片预览数据 URL（仅可预览图片提供） */
-  dataUrl?: string
 }

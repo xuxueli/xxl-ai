@@ -4,6 +4,7 @@
  */
 
 export { default as BrowserPanel } from './components/browser/BrowserPanel.vue'
+export { default as BrowserAgentOverlay } from './components/browser/BrowserAgentOverlay.vue'
 export {
   cancelBrowserActions,
   cleanupBrowserSessions,

@@ -224,13 +224,22 @@ export function buildTargetScript(input: {
     el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
     if (${focus} && typeof el.focus === 'function') el.focus();
     const rect = el.getBoundingClientRect();
+    /* 可读目标名：优先无障碍名称，其次可见文本 / 值 / 占位，供动作可视化展示 */
+    const name = String(
+      el.getAttribute('aria-label') ||
+      el.getAttribute('title') ||
+      (el.innerText || '') ||
+      el.value ||
+      el.getAttribute('placeholder') ||
+      ''
+    ).replace(/\\s+/g, ' ').trim().slice(0, 40);
     return {
       ok: true,
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
       width: rect.width,
       height: rect.height,
-      tag: el.tagName ? el.tagName.toLowerCase() : ''
+      name
     };
   })()`
 }
@@ -278,5 +287,99 @@ export function buildScrollScript(input: {
       window.scrollBy({ top: direction === 'up' ? -amount : amount, behavior: 'smooth' });
     }
     return { ok: true, scrollY: Math.round(window.scrollY) };
+  })()`
+}
+
+/* 坐标点击：按视口坐标定位元素并派发点击（真实输入不可用时的降级） */
+export function buildCoordinateClickScript(input: {
+  x: number
+  y: number
+  button: 'left' | 'right'
+  count: number
+}): string {
+  const x = Math.round(input.x)
+  const y = Math.round(input.y)
+  return `(() => {
+    const el = document.elementFromPoint(${x}, ${y});
+    if (!el) return { ok: false, error: 'missing' };
+    const init = { bubbles: true, cancelable: true, clientX: ${x}, clientY: ${y}, button: ${input.button === 'right' ? 2 : 0} };
+    for (let i = 0; i < ${input.count}; i += 1) {
+      if ('${input.button}' === 'right') {
+        el.dispatchEvent(new MouseEvent('contextmenu', init));
+      } else {
+        el.dispatchEvent(new MouseEvent('click', init));
+      }
+    }
+    return { ok: true };
+  })()`
+}
+
+/* 坐标移动降级：真实指针不可用时，在页面内合成悬停事件，让 hover 效果仍能触发 */
+export function buildCoordinateMoveScript(input: { x: number; y: number }): string {
+  const x = Math.round(input.x)
+  const y = Math.round(input.y)
+  return `(() => {
+    const el = document.elementFromPoint(${x}, ${y});
+    if (!el) return { ok: false, error: 'missing' };
+    const init = { bubbles: true, cancelable: true, clientX: ${x}, clientY: ${y} };
+    el.dispatchEvent(new MouseEvent('mouseover', init));
+    el.dispatchEvent(new MouseEvent('mouseenter', { ...init, bubbles: false }));
+    el.dispatchEvent(new MouseEvent('mousemove', init));
+    return { ok: true };
+  })()`
+}
+
+/* 清空目标输入：内容可编辑与表单控件分别处理，并派发 input / change */
+export function buildClearScript(input: { ref?: string; selector?: string }): string {
+  const ref = input.ref ? JSON.stringify(input.ref) : 'null'
+  const selector = input.selector ? JSON.stringify(input.selector) : 'null'
+  return `(() => {
+    const store = window.__deskAgentSnapshot;
+    const el = ${ref} ? store?.refs.get(${ref}) : ${selector} ? document.querySelector(${selector}) : document.activeElement;
+    if (!el) return { ok: false };
+    if (el.isContentEditable) {
+      el.textContent = '';
+    } else {
+      const tag = el.tagName ? el.tagName.toLowerCase() : '';
+      const proto = tag === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) setter.call(el, '');
+      else el.value = '';
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true };
+  })()`
+}
+
+/* 文本插入降级：真实键盘不可用时，直接追加文本并派发 input / change */
+export function buildTypeScript(input: {
+  ref?: string
+  selector?: string
+  text: string
+  clear?: boolean
+}): string {
+  const ref = input.ref ? JSON.stringify(input.ref) : 'null'
+  const selector = input.selector ? JSON.stringify(input.selector) : 'null'
+  const text = JSON.stringify(input.text)
+  return `(() => {
+    const store = window.__deskAgentSnapshot;
+    const el = ${ref} ? store?.refs.get(${ref}) : ${selector} ? document.querySelector(${selector}) : document.activeElement;
+    if (!el) return { ok: false, error: 'missing' };
+    const text = ${text};
+    const base = ${input.clear === true} ? '' : (el.isContentEditable ? (el.textContent || '') : String(el.value || ''));
+    const next = base + text;
+    if (el.isContentEditable) {
+      el.textContent = next;
+    } else {
+      const tag = el.tagName ? el.tagName.toLowerCase() : '';
+      const proto = tag === 'textarea' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) setter.call(el, next);
+      else el.value = next;
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true, value: next };
   })()`
 }

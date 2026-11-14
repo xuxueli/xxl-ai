@@ -35,9 +35,13 @@ function clip(value: string, max = 72): string {
   return value.length > max ? `${value.slice(0, max)}…` : value
 }
 
-/* 读取字符串参数，非字符串返回空串 */
+/* 读取参数：字符串原样返回，数字转文本，其它类型返回空串 */
 function pick(args: ToolArgs, key: string): string {
-  return typeof args[key] === 'string' ? (args[key] as string) : ''
+  const value = args[key]
+  if (typeof value === 'string') {
+    return value
+  }
+  return typeof value === 'number' ? String(value) : ''
 }
 
 /* 路径类参数摘要：优先取主字段，多个字段用箭头连接 */
@@ -47,7 +51,9 @@ function pathDetail(args: ToolArgs, key = 'path'): string {
 
 /* 元素定位摘要：ref 优先，selector 兜底 */
 function targetDetail(args: ToolArgs): string {
-  return clip(pick(args, 'ref') || pick(args, 'selector'))
+  /* 坐标点击没有 ref / selector，直接展示落点 */
+  const point = pick(args, 'x') && pick(args, 'y') ? `(${pick(args, 'x')}, ${pick(args, 'y')})` : ''
+  return clip(pick(args, 'ref') || pick(args, 'selector') || point)
 }
 
 /* 工具名 → 展示元信息（顺序即维护顺序） */
@@ -90,6 +96,7 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
   },
   read_browser: { titleKey: 'readBrowser', icon: 'View', detail: (args) => clip(pick(args, 'selector')) },
   snapshot_browser: { titleKey: 'snapshotBrowser', icon: 'Document', detail: () => '' },
+  move_browser: { titleKey: 'moveBrowser', icon: 'SetUp', detail: targetDetail },
   click_browser: { titleKey: 'clickBrowser', icon: 'SetUp', detail: targetDetail },
   fill_browser: {
     titleKey: 'fillBrowser',
@@ -98,6 +105,11 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
       const fields = Array.isArray(args.fields) ? args.fields.length : 0
       return fields > 0 ? t('chat.toolFields', [fields]) : ''
     }
+  },
+  type_browser: {
+    titleKey: 'typeBrowser',
+    icon: 'EditPen',
+    detail: (args) => clip(pick(args, 'text'))
   },
   press_browser: { titleKey: 'pressBrowser', icon: 'EditPen', detail: (args) => clip(pick(args, 'key')) },
   scroll_browser: {

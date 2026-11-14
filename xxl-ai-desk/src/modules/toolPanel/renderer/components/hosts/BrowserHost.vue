@@ -17,6 +17,7 @@ import {
   executeBrowserAction,
   openBrowserRequest
 } from '@modules/browser/renderer'
+import { BrowserAgentOverlay } from '@modules/browser/renderer'
 import {
   pinWarmSession,
   setSessionHost,
@@ -110,6 +111,13 @@ onMounted(() => {
   /* Agent 页面动作：按会话路由，后台会话静默执行，不切换视图 */
   offActionRequest = api.browser.onActionRequest((request) => {
     const target = request.sessionId || currentKey.value
+    /* 首次导航若浏览器工具未展开，自动展开，便于实时观察 Agent 操作 */
+    if (request.action.type === 'navigate' && target === currentKey.value) {
+      const panel = toolPanel.sliceOf(target).panel
+      if (!panel.visible || panel.activeTab !== 'browser') {
+        toolPanel.openTab(target, 'browser')
+      }
+    }
     void executeBrowserAction(target, request.action).then((result) =>
       api.browser.respondAction(request.requestId, result)
     )
@@ -142,6 +150,11 @@ onBeforeUnmount(() => {
     >
       <!-- 加载进度条：与面板内的条保持一致，覆盖在 webview 之上 -->
       <div v-if="sessionId === currentKey && activeLoading" class="host-load-bar"><span></span></div>
+      <!-- Agent 动作可视化：光标、目标轮廓与动作条（仅当前会话可见时展示） -->
+      <BrowserAgentOverlay
+        v-if="sessionId === currentKey && activeVisible && activeHasPage"
+        :session-id="sessionId"
+      />
     </div>
   </div>
 </template>

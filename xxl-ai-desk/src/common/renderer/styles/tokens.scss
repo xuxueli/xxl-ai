@@ -63,6 +63,15 @@
   --desk-danger: var(--theme-danger);
   --desk-info: var(--theme-info);
 
+  /*
+   * Agent 操作可视化强调色：固定高饱和配色，不随主题变化。
+   * 浮层会覆盖在任意网页上，主题主色（黑白主题接近灰）不足以辨识。
+   */
+  --desk-agent-accent: #2f7bff;
+  --desk-agent-accent-2: #8b5cf6;
+  --desk-agent-accent-deep: #1b4fe0;
+  --desk-agent-contrast: #ffffff;
+
   /* 气泡与选区 */
   --desk-bubble-user: color-mix(in srgb, var(--theme-brand) 9%, var(--theme-content));
   --desk-bubble-user-text: var(--theme-text);

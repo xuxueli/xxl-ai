@@ -3,6 +3,7 @@
  *   - 危险命令：命中即拒绝，覆盖删根 / 格式化 / 提权 / 远端脚本直执行等；
  *   - 越界路径：只识别命令中的静态路径（cd、重定向、绝对路径、~、相对 ..），
  *     动态展开（$VAR / 命令替换）不参与判定；
+ *   - 代码文本（heredoc 正文、脚本片段、注释、URL）不是路径，不触发越界审批；
  *   - 无害设备路径（/dev/null 等）仅丢弃或回显输出，不参与越界与危险判定。
  *
  * @author xuxueli 2026-10-31
@@ -79,6 +80,58 @@ export function detectDangerousCommand(command: string): string | null {
   return null
 }
 
+/* 从一行里识别 heredoc 起始标记；引号内的 << 不算标记 */
+function heredocMarker(line: string): { delimiter: string; stripIndent: boolean } | null {
+  let quote = ''
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+    if (quote) {
+      if (char === quote) {
+        quote = ''
+      }
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+      continue
+    }
+    if (char !== '<' || line[index + 1] !== '<') {
+      continue
+    }
+    const match = /^<<(-?)\s*(['"]?)([A-Za-z_][\w-]*)\2/.exec(line.slice(index))
+    if (match) {
+      return { delimiter: match[3], stripIndent: match[1] === '-' }
+    }
+  }
+  return null
+}
+
+/*
+ * 去掉 heredoc 正文：<<'EOF' 与结束标记 EOF 之间是文件正文 / 脚本内容，
+ * 其中出现的「/」「a/b」等片段不是命令访问的路径，不参与越界判定。
+ */
+function stripHeredocs(command: string): string {
+  const lines = command.split('\n')
+  const kept: string[] = []
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    kept.push(line)
+    const marker = heredocMarker(line)
+    if (!marker) {
+      continue
+    }
+    /* 跳过正文，只保留结束标记行，避免正文参与后续分词 */
+    for (index += 1; index < lines.length; index += 1) {
+      const body = marker.stripIndent ? lines[index].replace(/^\t+/, '') : lines[index]
+      if (body === marker.delimiter) {
+        kept.push(lines[index])
+        break
+      }
+    }
+  }
+  return kept.join('\n')
+}
+
 /* 简易分词：按空白切分并保留引号内容，同时把 ; | & 作为分隔符 */
 function tokenize(command: string): string[] {
   const tokens: string[] = []
@@ -88,6 +141,10 @@ function tokenize(command: string): string[] {
     if (quote) {
       if (char === quote) {
         quote = ''
+      } else if (char === '\n' || char === '\r') {
+        /* 未闭合引号止于行尾：避免一行代码把后续多行文本吞成一个「路径」 */
+        quote = ''
+        current = ''
       } else {
         current += char
       }
@@ -119,10 +176,32 @@ function tokenize(command: string): string[] {
   return tokens
 }
 
+/* 是否为「像路径」的 token：命令里的代码文本、注释、URL 等不能当作越界路径 */
+function looksLikePath(value: string): boolean {
+  /* 多行文本（脚本正文 / heredoc 残留）不是路径 */
+  if (/[\r\n]/.test(value)) {
+    return false
+  }
+  /* 转义换行等代码片段（"\nconst x = ..."）不是路径 */
+  if (/\\[nrt]/.test(value)) {
+    return false
+  }
+  /* 注释（// /* *\/）与协议地址（http:// 等）不是本地路径 */
+  if (/^\/[/*]/.test(value) || /^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(value)) {
+    return false
+  }
+  /* 句首斜杠紧跟空白属于正文，不是路径 */
+  if (/^[~/]+\s/.test(value)) {
+    return false
+  }
+  /* 超过文件系统路径长度上限的文本不是路径 */
+  return value.length <= 512
+}
+
 /* 把 token 解析为绝对路径；非静态路径（命令替换 / 变量展开）返回空串 */
 function absoluteToken(rootDir: string, token: string): string {
   const value = token.replace(/^['"]|['"]$/g, '')
-  if (!value || /\$|`/.test(value)) {
+  if (!value || /\$|`/.test(value) || !looksLikePath(value)) {
     return ''
   }
   if (value === '~' || value.startsWith('~/')) {
@@ -146,7 +225,7 @@ function absoluteToken(rootDir: string, token: string): string {
  * 返回去重后的全部命中；动态展开不参与判定。
  */
 export function findOutsideTargets(command: string, rootDir: string): string[] {
-  const tokens = tokenize(command)
+  const tokens = tokenize(stripHeredocs(command))
   const hits = new Set<string>()
   const check = (token: string | undefined): void => {
     if (!token) {

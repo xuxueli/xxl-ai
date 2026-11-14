@@ -1,8 +1,8 @@
 /*
  * 浏览器类内置工具：在右侧「浏览器」面板打开、读取与操作页面。
  *   - 打开优先复用当前标签页；new_tab=true 时才新建（仅用户明确要求或需同时保留多页时）；
- *   - 读取 / 快照 / 点击 / 填写 / 等待 / 截图 / 诊断 / 标签页统一经动作桥完成；
- *   - 交互类（按键 / 滚动）见 browserInteract.ts，结果格式化见 browserFormat.ts；
+ *   - 读取 / 快照 / 移动 / 点击 / 填写 / 等待 / 截图 / 诊断 / 标签页统一经动作桥完成；
+ *   - 交互类（移动鼠标 / 按键 / 滚动）见 browserInteract.ts，结果格式化见 browserFormat.ts；
  *   - 元素 ref 由 snapshot_browser 生成，点击与填写优先使用 ref，避免猜测 CSS。
  *
  * @author xuxueli 2026-10-31
@@ -24,8 +24,10 @@ import { BROWSER_READ_DEFAULT_CHARS, BROWSER_READ_MAX_CHARS } from '@modules/bro
 import { runBrowserAction } from '@modules/browser/worker/browserBridgeClient'
 import { pageHeader, snapshotText } from '@modules/browser/worker/browserFormat'
 import {
+  createMoveBrowserTool,
   createPressBrowserTool,
   createScrollBrowserTool,
+  createTypeBrowserTool,
   type BrowserSchemaBuilder
 } from '@modules/browser/worker/browserInteract'
 
@@ -175,12 +177,14 @@ function createClickBrowserTool(Schema: SchemaBuilder, context: ToolContext): Ag
     name: 'click_browser',
     label: '点击页面元素',
     description: describe(
-      '点击当前页面元素。优先使用 snapshot_browser 返回的 ref，也可传 CSS selector。右键与双击可通过 button / click_count 指定',
-      'Click an element in the current page. Prefer the ref from snapshot_browser; a CSS selector also works. Use button / click_count for right-click or double-click.'
+      '点击当前页面元素或视口坐标。优先使用 snapshot_browser 返回的 ref，也可传 CSS selector；canvas / 地图等无 DOM 元素时传 x / y（相对内容区左上角像素）。右键与多次点击可通过 button / click_count 指定',
+      'Click an element or a viewport coordinate. Prefer the ref from snapshot_browser; a CSS selector also works. For canvas or map pages without DOM targets, pass x / y in pixels relative to the content area. Use button / click_count for right-click or repeated clicks.'
     ),
     parameters: Schema.obj({
       ref: Schema.opt(Schema.str({ description: 'snapshot_browser 返回的元素 ref，如 e12' })),
       selector: Schema.opt(Schema.str({ description: 'CSS 选择器（ref 缺失时使用）' })),
+      x: Schema.opt(Schema.num({ description: '视口横坐标（像素，相对内容区左上角）' })),
+      y: Schema.opt(Schema.num({ description: '视口纵坐标（像素，相对内容区左上角）' })),
       button: Schema.opt(
         Schema.oneOf(['left', 'right'], {
           description: '鼠标按键，默认 left'
@@ -191,19 +195,24 @@ function createClickBrowserTool(Schema: SchemaBuilder, context: ToolContext): Ag
     /* 点击可能触发导航：串行执行，避免与其它页面动作并发 */
     executionMode: 'sequential',
     execute: async (_toolCallId, params) => {
-      const { ref, selector, button, click_count } = params as {
+      const { ref, selector, x, y, button, click_count } = params as {
         ref?: string
         selector?: string
+        x?: number
+        y?: number
         button?: 'left' | 'right'
         click_count?: number
       }
-      if (!ref && !selector) {
+      const byPoint = Number.isFinite(x) && Number.isFinite(y)
+      if (!ref && !selector && !byPoint) {
         return toolError(tr(context, 'runtime.tool.clickNeedTarget'))
       }
       const result = await runBrowserAction(context, {
         type: 'click',
-        ref: ref?.trim() || undefined,
-        selector: selector?.trim() || undefined,
+        ref: byPoint ? undefined : ref?.trim() || undefined,
+        selector: byPoint ? undefined : selector?.trim() || undefined,
+        x: byPoint ? Number(x) : undefined,
+        y: byPoint ? Number(y) : undefined,
         button,
         clickCount: click_count
       })
@@ -450,12 +459,20 @@ const BROWSER_TOOL_DEFINITIONS: Array<{
     create: createSnapshotBrowserTool
   },
   {
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
+    create: createMoveBrowserTool
+  },
+  {
     meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 4000 },
     create: createClickBrowserTool
   },
   {
     meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 6000 },
     create: createFillBrowserTool
+  },
+  {
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 4000 },
+    create: createTypeBrowserTool
   },
   {
     meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 4000 },

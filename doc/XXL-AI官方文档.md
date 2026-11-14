@@ -1424,7 +1424,8 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 | fs | `move_file` | 否 | 工作区 / 完全 | 路径闸门 + 越界审批 | 2k |
 | shell | `run_command` | 否 | 工作区 / 完全 | 危险命令拦截 + 越界路径审批 | 20k |
 | browser | `open_browser` / `read_browser` / `snapshot_browser` | 是 | 三档 | Agent 工具开关 | 2k / 51k / 20k |
-| browser | `click_browser` / `fill_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 3k |
+| browser | `click_browser` / `fill_browser` / `type_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 3k / 3k |
+| browser | `move_browser` | 是 | 三档 | Agent 工具开关 | 2k |
 | browser | `scroll_browser` | 是 | 三档 | Agent 工具开关 | 2k |
 | browser | `press_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k |
 | browser | `wait_browser` / `screenshot_browser` / `inspect_browser` / `browser_tabs` | 是 | 三档 | Agent 工具开关 | 2k / 2k / 8k / 4k |

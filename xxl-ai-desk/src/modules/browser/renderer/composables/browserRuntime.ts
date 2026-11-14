@@ -17,6 +17,7 @@ import {
   enqueueSessionTask,
   sessionTaskIds
 } from '@modules/browser/renderer/composables/browserActionQueue'
+import { disposeBrowserCursor } from '@modules/browser/renderer/composables/browserCursor'
 import {
   getSessionHost,
   hasSessionHost,
@@ -43,13 +44,16 @@ import {
   diagnosticsActiveTab,
   fillActiveTab,
   historyActiveTab,
+  moveActiveTab,
   pressActiveTab,
   readActiveTab,
   screenshotActiveTab,
   scrollActiveTab,
   snapshotActiveTab,
   tabLabel,
-  waitActiveTab
+  typeActiveTab,
+  waitActiveTab,
+  withActivity
 } from '@modules/browser/renderer/composables/browserActions'
 import type { BrowserAction, BrowserActionResult, BrowserTabInfo } from '@modules/browser/shared'
 
@@ -149,6 +153,7 @@ export function disposeBrowserSession(sessionId: string): void {
   /* 会话删除：先取消挂起动作，避免动作在 webview 销毁后继续写状态 */
   cancelBrowserActions(sessionId)
   disposeSessionWebviews(sessionId)
+  disposeBrowserCursor(sessionId)
   browserStore().remove(sessionId)
   removeWarmSession(sessionId)
 }
@@ -238,7 +243,11 @@ async function navigate(sessionId: string, id: string, url: string): Promise<voi
   }
 }
 
-/* 创建标签页的 webview（懒创建、幂等） */
+/*
+ * 创建标签页的 webview（懒创建、幂等）。
+ * 创建、事件绑定与首帧导航排队属于同一生命周期，刻意保持在一个函数内，
+ * 便于按 Electron 事件时序阅读与排查；不要按行数机械拆分。
+ */
 function ensureWebview(id: string, sessionId: string): WebviewElement | null {
   const existing = webviews.get(id)
   if (existing) {
@@ -447,29 +456,92 @@ async function runBrowserAction(
   ensureBrowserSession(sessionId)
   switch (action.type) {
     case 'navigate':
-      return navigateRequested(sessionId, action, signal)
+      return withActivity(
+        sessionId,
+        {
+          kind: 'navigate',
+          label: t('browser.action.navigate', [action.url]),
+          status: t('browser.action.navigating', [action.url])
+        },
+        () => navigateRequested(sessionId, action, signal)
+      )
     case 'read':
-      return readActiveTab(sessionId, action)
+      return withActivity(
+        sessionId,
+        { kind: 'read', label: t('browser.action.read'), status: t('browser.action.reading') },
+        () => readActiveTab(sessionId, action)
+      )
     case 'snapshot':
-      return snapshotActiveTab(sessionId, action)
+      return withActivity(
+        sessionId,
+        {
+          kind: 'snapshot',
+          label: t('browser.action.snapshot'),
+          status: t('browser.action.snapping')
+        },
+        () => snapshotActiveTab(sessionId, action)
+      )
+    case 'move':
+      return moveActiveTab(sessionId, action)
     case 'click':
       return clickActiveTab(sessionId, action)
     case 'fill':
       return fillActiveTab(sessionId, action)
+    case 'type':
+      return typeActiveTab(sessionId, action)
     case 'press':
       return pressActiveTab(sessionId, action)
     case 'scroll':
       return scrollActiveTab(sessionId, action)
-    case 'wait':
-      return waitActiveTab(sessionId, action, signal)
+    case 'wait': {
+      const detail = (action.selector || action.text || action.url || '').slice(0, 60)
+      return withActivity(
+        sessionId,
+        {
+          kind: 'wait',
+          label: detail ? t('browser.action.wait', [detail]) : t('browser.action.waitPlain'),
+          status: detail
+            ? t('browser.action.waiting', [detail])
+            : t('browser.action.waitingPlain')
+        },
+        () => waitActiveTab(sessionId, action, signal)
+      )
+    }
     case 'screenshot':
-      return screenshotActiveTab(sessionId)
+      return withActivity(
+        sessionId,
+        {
+          kind: 'screenshot',
+          label: t('browser.action.screenshot'),
+          status: t('browser.action.screenshotting')
+        },
+        () => screenshotActiveTab(sessionId)
+      )
     case 'diagnostics':
       return diagnosticsActiveTab(sessionId)
     case 'tabs':
-      return manageTabs(sessionId, action)
-    case 'history':
-      return historyActiveTab(sessionId, action)
+      return withActivity(
+        sessionId,
+        {
+          kind: 'tabs',
+          label: t('browser.action.tabs'),
+          status: t('browser.action.managingTabs')
+        },
+        () => manageTabs(sessionId, action)
+      )
+    case 'history': {
+      const keys =
+        action.action === 'back'
+          ? { label: 'browser.action.historyBack', status: 'browser.action.goingBack' }
+          : action.action === 'forward'
+            ? { label: 'browser.action.historyForward', status: 'browser.action.goingForward' }
+            : { label: 'browser.action.historyReload', status: 'browser.action.reloading' }
+      return withActivity(
+        sessionId,
+        { kind: 'history', label: t(keys.label), status: t(keys.status) },
+        () => historyActiveTab(sessionId, action)
+      )
+    }
     default:
       return { ok: false, error: t('chat.browser.unsupported') }
   }

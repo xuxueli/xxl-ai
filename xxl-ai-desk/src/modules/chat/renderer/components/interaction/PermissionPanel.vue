@@ -28,6 +28,9 @@ const message = computed(() =>
     : t('chat.interaction.permission.message', [actionText.value])
 )
 
+/* 完整命令：仅命令类审批展示，让用户看清实际要执行什么 */
+const command = computed(() => props.request.permission.command)
+
 /* 允许 / 拒绝 */
 function allow(remember: boolean): void {
   emit('respond', { status: 'submitted', value: 'allow', remember })
@@ -47,6 +50,10 @@ function deny(): void {
     </div>
 
     <div class="detail-card">
+      <div v-if="command" class="detail-row">
+        <span class="detail-label">{{ t('chat.interaction.permission.command') }}</span>
+        <code class="detail-value command">{{ command }}</code>
+      </div>
       <div class="detail-row">
         <span class="detail-label">{{ t('chat.interaction.permission.pathOutside') }}</span>
         <code class="detail-value">{{ request.permission.abs }}</code>
@@ -130,6 +137,14 @@ function deny(): void {
   color: var(--desk-text-secondary);
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
   word-break: break-all;
+}
+
+/* 完整命令：保留换行与缩进，过长时在卡片内滚动，避免撑开面板 */
+.detail-value.command {
+  max-height: 132px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 解释授权后的实际影响，紧随问题说明 */

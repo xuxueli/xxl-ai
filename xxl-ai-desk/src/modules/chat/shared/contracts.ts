@@ -60,6 +60,8 @@ export interface InteractionPermission {
   action: 'read' | 'write' | 'command'
   abs: string
   root: string
+  /* 本次执行的完整命令（仅 action=command），供用户审批时查看 */
+  command?: string
 }
 
 /* 交互公共信息 */

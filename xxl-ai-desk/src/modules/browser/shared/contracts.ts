@@ -20,19 +20,30 @@ export interface BrowserFillField {
   checked?: boolean
 }
 
-/* 浏览器动作：导航、读取、快照、点击、填写、等待、截图、诊断、标签页与历史导航 */
+/* 浏览器动作：导航、读取、快照、移动、点击、填写、等待、截图、诊断、标签页与历史导航 */
 export type BrowserAction =
   | { type: 'navigate'; url: string; newTab?: boolean } /* 打开网页 */
   | { type: 'read'; selector?: string; maxChars?: number } /* 读取正文 */
   | { type: 'snapshot'; maxNodes?: number } /* 交互元素快照 */
+  | { type: 'move'; x: number; y: number } /* 移动鼠标到视口坐标（悬停，不点击） */
   | {
       type: 'click'
       ref?: string
       selector?: string
+      x?: number
+      y?: number
       button?: 'left' | 'right'
       clickCount?: number
-    } /* 点击元素 */
+    } /* 点击元素或视口坐标 */
   | { type: 'fill'; fields: BrowserFillField[]; submit?: boolean } /* 填写表单 */
+  | {
+      type: 'type'
+      text: string
+      ref?: string
+      selector?: string
+      delayMs?: number
+      clear?: boolean
+    } /* 逐字符输入文本 */
   | { type: 'press'; key: string; ref?: string; selector?: string } /* 按键 */
   | { type: 'scroll'; direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number } /* 滚轮滚动 */
   | { type: 'wait'; selector?: string; text?: string; url?: string; timeoutMs?: number } /* 等待条件 */
@@ -161,6 +172,8 @@ export interface BrowserActionResult {
   activeTabId?: string
   /* 已填写字段数（fill） */
   filled?: number
+  /* 已输入字符数（type） */
+  typed?: number
   /* 未找到的字段定位（fill） */
   missing?: string[]
   /* 动作摘要（click / fill / history） */

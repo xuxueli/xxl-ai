@@ -23,6 +23,8 @@ defineProps<{
   /* 是否可预览、预览是否生效 */
   canPreview: boolean
   showPreview: boolean
+  /* 是否展示编辑器主题（代码编辑 / Markdown 预览才需要） */
+  showTheme: boolean
   /* 是否有文件 / 项目目录（控制打开按钮可用态） */
   hasFile: boolean
   hasRoot: boolean
@@ -67,7 +69,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- 右侧：编辑动作 | 文件系统 | 外观 -->
+    <!-- 右侧：编辑动作 | 文件系统 -->
     <div class="desk-toolbar-actions">
       <DeskTooltip v-if="editable" :content="t('panel.saveHint')">
         <button
@@ -93,8 +95,15 @@ const emit = defineEmits<{
           <el-icon><Document v-if="showPreview" /><View v-else /></el-icon>
         </button>
       </DeskTooltip>
+      <!-- 编辑器主题：紧邻预览切换，下拉直接切换并持久化在本地 -->
+      <EditorThemeMenu
+        v-if="showTheme"
+        :theme="editorTheme"
+        :title="t('panel.editorTheme')"
+        @select="emit('theme-command', $event)"
+      />
 
-      <span v-if="editable || canPreview" class="desk-toolbar-divider"></span>
+      <span v-if="editable || canPreview || showTheme" class="desk-toolbar-divider"></span>
 
       <DeskTooltip :content="hasFile ? t('panel.openFolder') : t('panel.openProjectFolder')">
         <button
@@ -145,15 +154,6 @@ const emit = defineEmits<{
           </el-dropdown>
         </DeskTooltip>
       </div>
-
-      <span class="desk-toolbar-divider"></span>
-
-      <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
-      <EditorThemeMenu
-        :theme="editorTheme"
-        :title="t('panel.editorTheme')"
-        @select="emit('theme-command', $event)"
-      />
     </div>
   </div>
 </template>
