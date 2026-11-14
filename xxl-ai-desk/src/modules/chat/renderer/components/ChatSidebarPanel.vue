@@ -117,10 +117,15 @@ async function onSelect(id: number): Promise<void> {
     </SidebarRow>
   </div>
 
-  <!-- 「项目:」标题：右侧 排序（...）与 + 新建项目，鼠标悬浮展示 -->
+  <!-- 「项目:」标题：右侧 + 新建项目与 排序（...，固定最右），鼠标悬浮展示 -->
   <div class="project-head">
     <span class="project-label">{{ t('project.label') }}</span>
     <span class="project-head-actions">
+      <DeskTooltip :content="t('project.new')">
+        <el-icon class="project-icon-btn" @click="onCreateProject">
+          <Plus />
+        </el-icon>
+      </DeskTooltip>
       <DeskTooltip :content="t('common.actions')">
         <el-dropdown trigger="click" popper-class="sort-dropdown" @command="onSortCommand">
           <el-icon class="project-icon-btn"><MoreFilled /></el-icon>
@@ -129,22 +134,21 @@ async function onSelect(id: number): Promise<void> {
               <el-dropdown-item disabled class="sort-group">
                 {{ t('project.sortBy') }}
               </el-dropdown-item>
-              <el-dropdown-item command="name">
-                {{ t('project.sortName') }}
-                <el-icon v-if="sortBy === 'name'" class="sort-check"><Check /></el-icon>
+              <el-dropdown-item command="name" :class="{ 'sort-active': sortBy === 'name' }">
+                <span class="sort-option">
+                  <span>{{ t('project.sortName') }}</span>
+                  <el-icon v-if="sortBy === 'name'" class="sort-check"><Check /></el-icon>
+                </span>
               </el-dropdown-item>
-              <el-dropdown-item command="time">
-                {{ t('project.sortTime') }}
-                <el-icon v-if="sortBy === 'time'" class="sort-check"><Check /></el-icon>
+              <el-dropdown-item command="time" :class="{ 'sort-active': sortBy === 'time' }">
+                <span class="sort-option">
+                  <span>{{ t('project.sortTime') }}</span>
+                  <el-icon v-if="sortBy === 'time'" class="sort-check"><Check /></el-icon>
+                </span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-      </DeskTooltip>
-      <DeskTooltip :content="t('project.new')">
-        <el-icon class="project-icon-btn" @click="onCreateProject">
-          <Plus />
-        </el-icon>
       </DeskTooltip>
     </span>
   </div>

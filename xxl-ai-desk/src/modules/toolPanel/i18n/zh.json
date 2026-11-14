@@ -52,7 +52,7 @@
     "expandTree": "展开文件树",
     "open": "打开",
     "openDefault": "用默认应用打开",
-    "openFolder": "打开所在的文件夹",
+    "openFolder": "打开所在文件夹",
     "openProjectFolder": "打开项目文件夹",
     "copyPath": "复制路径",
     "copied": "路径已复制",

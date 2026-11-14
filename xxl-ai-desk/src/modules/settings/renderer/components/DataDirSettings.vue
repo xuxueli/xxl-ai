@@ -3,7 +3,7 @@
  * 设置 - 运行时数据目录：查看 / 修改 / 打开 / 重启生效。
  * @author xuxueli 2026-10-25
  */
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
@@ -14,12 +14,17 @@ const settings = useSettingsStore()
 /* 数据目录输入框（可编辑，保存后需重启生效） */
 const dataDirInput = ref('')
 
+/* 是否存在未保存的数据目录修改（用于保存按钮禁用） */
+const dataDirDirty = computed(() => dataDirInput.value.trim() !== settings.dataDir)
+
 /* 从设置同步当前数据目录 */
 function syncGeneral(): void {
   dataDirInput.value = settings.dataDir
 }
 
 watch(() => settings.loaded, syncGeneral)
+/* 切换设置子菜单时丢弃未保存的编辑，回到已保存的数据目录 */
+watch(() => settings.activeTab, syncGeneral)
 onMounted(syncGeneral)
 
 /* 通过系统对话框选择数据目录 */
@@ -33,7 +38,7 @@ async function browseDataDir(): Promise<void> {
 /* 保存数据目录（写入引导目录配置文件，重启后生效） */
 async function saveDataDir(): Promise<void> {
   try {
-    await settings.saveDataDir(dataDirInput.value)
+    await settings.saveDataDir(dataDirInput.value.trim())
     dataDirInput.value = settings.dataDir
     ElMessage.success(t('settings.dataDirSaved'))
   } catch (error) {
@@ -72,10 +77,13 @@ function onRelaunch(): void {
       <el-button @click="browseDataDir">{{ t('settings.browse') }}</el-button>
     </div>
     <div class="data-dir-actions">
-      <el-button type="primary" @click="saveDataDir">{{ t('common.save') }}</el-button>
+      <el-button type="primary" :disabled="!dataDirDirty" @click="saveDataDir">
+        {{ t('common.save') }}
+      </el-button>
       <el-button @click="resetDataDir">{{ t('settings.restoreDefault') }}</el-button>
       <el-button @click="settings.openDataDir()">{{ t('settings.openDir') }}</el-button>
       <el-button @click="onRelaunch">{{ t('settings.relaunch') }}</el-button>
+      <span v-if="dataDirDirty" class="data-dir-dirty">{{ t('settings.unsaved') }}</span>
     </div>
     <div class="field-hint">{{ t('settings.dbFile') }}: {{ settings.dbFile }}</div>
   </div>
@@ -110,8 +118,14 @@ function onRelaunch(): void {
 .data-dir-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.data-dir-dirty {
+  font-size: var(--desk-font-xs);
+  color: var(--el-color-warning);
 }
 
 .field-hint {

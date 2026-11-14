@@ -3,7 +3,7 @@
  * 会话侧栏 - 单个项目分组：项目行（重命名 / 删除 / 打开所在文件夹）与其下会话列表。
  * @author xuxueli 2026-10-25
  */
-import { ref, type ComponentPublicInstance } from 'vue'
+import { ref } from 'vue'
 import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'

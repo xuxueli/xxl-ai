@@ -32,6 +32,8 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
   const watchedDirs = new Set<string>()
   const reloading = new Set<string>()
   let offFsChange: (() => void) | null = null
+  /* 组件已卸载标记：异步加载返回后不再注册监听 */
+  let disposed = false
 
   /* 根目录直接子项 */
   const rootChildren = computed(() => {
@@ -61,10 +63,9 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     return word ? rootChildren.value.filter((entry) => matchNode(entry, word)) : rootChildren.value
   })
 
-  /* 注册目录监听（幂等） */
-  function registerWatch(dir: string): void {
-    const projectId = options.projectId()
-    if (!projectId || watchedDirs.has(dir)) {
+  /* 注册目录监听（幂等）：projectId 取调用时快照，避免切项目后串用 */
+  function registerWatch(projectId: number, dir: string): void {
+    if (watchedDirs.has(dir)) {
       return
     }
     watchedDirs.add(dir)
@@ -118,8 +119,15 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     loadingMap.value = { ...loadingMap.value, [path]: true }
     try {
       const entries = await api.fs.list(projectId, path)
+      /*
+       * 异步返回时可能已切换项目或卸载：
+       * 丢弃旧项目的响应，避免用新项目 id 监听上一项目的目录（越界 watch）。
+       */
+      if (disposed || options.root() !== root || options.projectId() !== projectId) {
+        return
+      }
       childrenMap.value = { ...childrenMap.value, [path]: entries }
-      registerWatch(path)
+      registerWatch(projectId, path)
       cleanupChildren(path, entries)
     } catch (error) {
       /* 目录可能已被删除：清空并停止监听；否则提示错误 */
@@ -237,6 +245,7 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
 
   /* 卸载：取消文件变更监听并注销全部目录监听 */
   onBeforeUnmount(() => {
+    disposed = true
     offFsChange?.()
     window.removeEventListener('focus', refreshLoadedDirs)
     for (const dir of [...watchedDirs]) {

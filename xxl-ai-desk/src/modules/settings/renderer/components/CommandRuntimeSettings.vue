@@ -72,6 +72,8 @@ function syncRuntime(): void {
 }
 
 watch(() => settings.loaded, syncRuntime)
+/* 切换设置子菜单时丢弃未保存的编辑，回到已保存的运行时配置 */
+watch(() => settings.activeTab, syncRuntime)
 onMounted(syncRuntime)
 
 /* 修改 Node 来源 / 路径后，清空旧的检测结果，避免展示过期状态 */

@@ -951,11 +951,30 @@ html.dark .el-button--primary {
   cursor: default;
 }
 
-.sort-dropdown .sort-check {
-  margin-left: auto;
+/* 排序项：名称居左、对勾居右，选中项加粗并使用高对比色 */
+.sort-dropdown .sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.sort-dropdown .el-dropdown-menu__item {
   padding-left: 12px;
-  font-size: var(--desk-font-sm);
-  color: var(--desk-primary);
+  padding-right: 12px;
+}
+
+.sort-dropdown .sort-active {
+  color: var(--desk-text);
+  font-weight: 600;
+}
+
+.sort-dropdown .sort-check {
+  flex-shrink: 0;
+  margin-right: 0;
+  font-size: var(--desk-icon-sm);
+  color: var(--desk-primary-hover);
 }
 
 /* --- 权限选择下拉：完全权限项用危险色，提示越权风险 --- */
