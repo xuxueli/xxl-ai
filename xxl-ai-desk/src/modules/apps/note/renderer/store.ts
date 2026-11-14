@@ -106,9 +106,8 @@ export const useNoteStore = defineStore('note', () => {
   const treeCollapsed = ref(ui.treeCollapsed)
   const treeWidth = ref(ui.treeWidth)
 
-  /* 根目录与根名称 */
+  /* 根目录 */
   const rootPath = computed(() => settings.value.resolvedStorageDir)
-  const rootName = computed(() => baseName(rootPath.value) || t('note.title'))
 
   /* 是否未保存 */
   const dirty = computed(() => Boolean(current.value) && draft.value !== current.value?.content)
@@ -535,7 +534,6 @@ export const useNoteStore = defineStore('note', () => {
     treeCollapsed,
     treeWidth,
     rootPath,
-    rootName,
     dirty,
     outline,
     currentName,

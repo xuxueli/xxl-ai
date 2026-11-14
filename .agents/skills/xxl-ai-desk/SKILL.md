@@ -297,7 +297,7 @@ modules/{domain}/
 3. **数据结构**：按 §2.1 同步 `db/schema.ts` 与 `db/index.ts` 的 `DDL`。
 4. **主进程落位**：`modules/{domain}/main/*.ts` + `shared/contracts|ipc|api` + `preload/index.ts`；需要运行时再加 `main/runtime.ts` 与 `worker/*` 实现。
 5. **渲染进程落位**：`modules/{domain}/renderer` 的 store + 页面/组件 + routes + 文案。
-6. **验证**：按 §7 执行（`type-check` → `build` → 端到端）；完成后清理测试数据并恢复用户状态。
+6. **验证**：按 §7 分组执行（先设计原则，再结构 / 契约 / 渲染 / 运行时，最后 `type-check` → `build` → 端到端）；完成后清理测试数据并恢复用户状态。
 
 `方案.md` 最小结构：需求结论 / 数据库设计 / 后端改动 / 前端改动 / 验证结果。
 
@@ -529,31 +529,55 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ## 7. 校验清单
 
+**顺序固定：先过 §7.1 设计原则，再按分组核对实现细节。设计原则不过，其余项一律视为未通过。**
+
+### 7.1 设计原则（必查，对应 `AGENTS.md` §三）
+
+- [ ] **DRY**：同一段逻辑出现第三次才抽公共实现；不存在为「将来复用」预建的抽象层。
+- [ ] **KISS**：实现最直接，无假想需求；未新增非必要的接口 / 工厂 / 配置项 / 包装函数 / 扩展点。
+- [ ] **单一职责**：一个文件 / 函数 / 组件只有一个变更理由；渲染、消毒、交互、状态等边界未混在一起。
+- [ ] **同类场景同一套方案**：优先复用已有工具 / 组件；若另起一套，已说明旧方案为何不适用。
+- [ ] 反向自查：本改动既无过度设计（抽象 / 分层 / 配置多余），也无重复实现（同一职责多处代码）。
+
+### 7.2 结构与落位
+
 - [ ] 需求目录 `xxl-ai-spec/{yyyyMMdd}-{module}/` 存在，`方案.md` 与 SQL 同步。
 - [ ] 结构一致：`modules/{domain}/main/schema.ts` / `ddl.ts`，并由 `src/main/db.ts` 聚合。
-- [ ] `common/main/db#getDb()` 是唯一持久化出口；`src/main/ipc.ts` / `src/main/db.ts` / `src/main/i18n.ts` / `src/preload/index.ts` / `shell/router` / `shell/i18n` 仅聚合；契约 / IPC 常量 / Api / preload 齐备。
-- [ ] 依赖方向符合 §1.3；配置与运行时未耦合；运行时使用官方方案。
 - [ ] 顶层目录保持 `src/common` + `src/modules`，未新增其它顶层分层或 `modules` 下的框架 / 业务嵌套层。
 - [ ] 新增 `common` 内容满足「≥2 个领域使用且无业务规则」；`common` 内无领域名，单域逻辑未外溢。
-- [ ] 领域文案在 `modules/{domain}/i18n`，公共词条在 `common/shared/i18n`，zh/en 成对。
+- [ ] `common/main/db#getDb()` 是唯一持久化出口；`src/main/ipc.ts` / `src/main/db.ts` / `src/main/i18n.ts` / `src/preload/index.ts` / `shell/router` / `shell/i18n` 仅聚合；契约 / IPC 常量 / Api / preload 齐备。
+- [ ] 依赖方向符合 §1.3；配置与运行时未耦合；运行时使用官方方案。
 - [ ] 同一职责域只有一处实现，跨模块仅经公共入口；`index.ts` 无未使用导出、无循环 / 双向依赖。
 - [ ] 外壳、`src/main/ipc.ts`、调用方未承载域内校验 / 归一 / 默认值 / 级联清理。
 - [ ] 新增/变更依赖为精确版本（无 `^` / `~` / 区间）；lock 当前被 `.gitignore` 忽略，如放开需同步提交。
+
+### 7.3 契约与数据
+
 - [ ] 通道 `desk:{module}:{action}`；时间 ISO；布尔归一。
-- [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后已清理关联会话运行时；默认与占用中的 Agent 未被删除。
 - [ ] 上下文分项只存 `desk_session.context_breakdown`；`desk_message.data` 未被写入 UI 派生字段；删除消息后分项已清空。
-- [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。
 - [ ] 内置应用仅在 `appCenter` 注册表登记；安装 / 启用 / 配置统一走 `desk_app_setting`；应用页隐藏外壳子菜单、顶栏取应用名、启用后图标栏出现入口。
-- [ ] 目录监听复用 `common/main/utils/directoryWatcher.ts`；渲染层只重载变更目录，页面对应 `bindWatcher` / `unbindWatcher`，退出时 `dispose` 清理。
+
+### 7.4 渲染、i18n 与界面
+
+- [ ] 渲染仅经 `api`；路由已登记；文案 `t()` / 主进程 `translate()` 且 zh/en 成对；无硬编码中文。
+- [ ] 领域文案在 `modules/{domain}/i18n`，公共词条在 `common/shared/i18n`，zh/en 成对。
+- [ ] UI 复用 tokens / 外壳 / 列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
+- [ ] 布局尺寸变更已同步 `common/renderer/config/layout.ts` 与 `common/renderer/styles/tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
 - [ ] 侧栏导航：切换板块直接跳变并默认展开，只有重复点击当前板块才播放折叠动画；应用页直接收起，不播放动画。
+- [ ] 目录监听复用 `common/main/utils/directoryWatcher.ts`；渲染层只重载变更目录，页面对应 `bindWatcher` / `unbindWatcher`，退出时 `dispose` 清理。
+
+### 7.5 Agent 运行时与安全边界
+
+- [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后已清理关联会话运行时；默认与占用中的 Agent 未被删除。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
 - [ ] 人机交互按会话隔离并占用输入框位置；权限 / 用户确认标题与配色固定；多问题使用 `round` / `total`；后台 `evict` 已延后到本轮结束，未误取消审批。
-- [ ] UI 复用 tokens/外壳/列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
-- [ ] 布局尺寸变更已同步 `common/renderer/config/layout.ts` 与 `common/renderer/styles/tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
 - [ ] 技能库读写不触发审批；`read_skill` 仍只认已启用技能；未新增脆弱的 shell 只读命令白名单。
-- [ ] 资源生命周期闭环；超时/取消/失败隔离/进程无残留。
-- [ ] `npm run type-check`、`npm run build` 通过；涉及 IPC/运行时完成端到端验证。
-- [ ] 注释与命名符合既有风格；无死代码/调试残留/测试数据。
+
+### 7.6 交付与验证
+
+- [ ] 资源生命周期闭环；超时 / 取消 / 失败隔离 / 进程无残留。
+- [ ] `npm run type-check`、`npm run build` 通过；涉及 IPC / 运行时完成端到端验证。
+- [ ] 注释与命名符合 `AGENTS.md`「通用约定」；无死代码 / 调试残留 / 测试数据。
 
 ## 8. 参考实现
 

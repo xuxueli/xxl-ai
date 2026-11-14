@@ -5,6 +5,7 @@
  */
 import { computed } from 'vue'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
+import { matchesNoteEntry } from '@modules/apps/note/renderer/utils/tree'
 import type { NoteEntry } from '@modules/apps/note/shared'
 
 const props = defineProps<{
@@ -27,21 +28,10 @@ const expanded = computed(() => Boolean(store.expanded[props.entry.path]) || fil
 /* 已加载子项 */
 const children = computed(() => store.childrenMap[props.entry.path] ?? [])
 
-/* 关键字命中：自身命中，或任一已加载子项命中 */
-function matches(item: NoteEntry): boolean {
-  const keyword = store.keyword.trim().toLowerCase()
-  if (!keyword) {
-    return true
-  }
-  if (item.name.toLowerCase().includes(keyword)) {
-    return true
-  }
-  const kids = store.childrenMap[item.path]
-  return Boolean(kids && kids.some((child) => matches(child)))
-}
-
 /* 过滤后的可见子项 */
-const visibleChildren = computed(() => children.value.filter((child) => matches(child)))
+const visibleChildren = computed(() =>
+  children.value.filter((child) => matchesNoteEntry(child, store.keyword, store.childrenMap))
+)
 
 /* 点击行：目录切换展开 / 收起，文件打开 */
 async function onClick(): Promise<void> {

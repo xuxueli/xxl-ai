@@ -1,11 +1,10 @@
 <script setup lang="ts">
 /*
- * 项目文件树：根节点一键折叠、目录过滤、懒加载展开与文件选中。
+ * 项目文件树：根目录不展示（直接列出其子项）、目录过滤、懒加载展开与文件选中。
  * @author xuxueli 2026-10-25
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useProjectFileTree } from '@modules/file/renderer/composables/useProjectFileTree'
-import { baseName } from '@modules/file/renderer/utils/path'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { LAYOUT } from '@common/renderer/config/layout'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
@@ -109,15 +108,6 @@ const { childrenMap, expandedMap, loadingMap, visibleRoot, toggle } = useProject
   expanded
 })
 
-/* 根节点：以项目目录名为标题，点击箭头可一键折叠 / 展开整棵文件树 */
-const rootEntry = computed<FsEntry | null>(() => {
-  const root = props.root
-  if (!root) {
-    return null
-  }
-  return { name: baseName(root) || root, path: root, isDir: true }
-})
-
 /* 右键事件上抛给文件面板（统一处理选中与菜单动作） */
 function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void {
   emit('context-menu', entry, position)
@@ -140,10 +130,12 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
     </div>
     <div class="tree-body">
       <div v-if="!root" class="tree-empty">{{ t('panel.needProject') }}</div>
-      <template v-else-if="rootEntry">
-        <!-- 根节点：项目目录名，点击左侧箭头一键折叠 / 展开整棵文件树 -->
+      <template v-else>
+        <!-- 根目录不展示，直接以顶层节点呈现其子项 -->
         <FileTreeNode
-          :entry="rootEntry"
+          v-for="entry in visibleRoot"
+          :key="entry.path"
+          :entry="entry"
           :depth="0"
           :children-map="childrenMap"
           :expanded-map="expandedMap"

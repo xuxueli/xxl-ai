@@ -87,7 +87,7 @@ business/harness
 3. **生成或手写代码**：平台内置代码生成器已下线，缺省由 AI 按模板直生等价代码落位（后端 6 件套 + 前端 vue3 文件），落位细则见下方「后端落位清单 / 前端落位清单」。
 4. **落位**：业务一级化——后端 Java 落 `business/{module}`（同名业务；多业务模块在模块下再分 `{business}`），Mapper XML 落 `resources/mapper/business/{module}/`；前端业务模块聚合落 `modules/business/{module}/`（pages/index.vue + api/index.ts + types/index.ts）。
 5. **菜单/权限**：在 `XxlRoleEnum#buildRoleResources` 对应角色分支追加菜单(type=1)；页面按钮 `v-hasPermi` 复用菜单权限标识（需按钮级细粒度时再追加 type=2 按钮资源）。
-6. **验证**：起 `xxl-ai-api`(8080) + `xxl-ai-ui`(3000，代理 /api→8080)，菜单可见、CRUD 可用、权限生效；验证结果回填 `方案.md`。
+6. **验证**：按「校验清单」分组执行（先设计原则，再后端 / 前端 / 权限 / 边界，最后联调）；起 `xxl-ai-api`(8080) + `xxl-ai-ui`(3000，代理 /api→8080)，确认菜单可见、CRUD 可用、权限生效；验证结果回填 `方案.md`。
 
 > ⚠️ **SQL 执行规范（强制，防乱码）**：写/执行任何含中文的 SQL（建表、菜单/权限初始化、联调造测试数据 INSERT 等）前，必须确保连接字符集为 utf8mb4，否则中文 `COMMENT`/表名/`INSERT` 数据落库会乱码。本项目 MySQL 跑在 docker 容器（容器名 `xxl-ai-mysql`，docker-compose 定义），服务端已配置 utf8mb4，但 CLIENT 侧 CLI 默认连接字符集是 **latin1**，必须显式指定 utf8mb4，例如：
 
@@ -308,15 +308,44 @@ if (role == ADMIN) {
 
 ## 校验清单
 
+**顺序固定：先过「设计原则」，再按分组核对实现细节。设计原则不过，其余项一律视为未通过。**
+
+### 设计原则（必查，对应 `AGENTS.md` §三）
+
+- [ ] **DRY**：同一段逻辑出现第三次才抽公共实现；不存在为「将来复用」预建的抽象层。
+- [ ] **KISS**：实现最直接，无假想需求；未新增非必要的接口 / 工厂 / 配置项 / 包装函数 / 扩展点。
+- [ ] **单一职责**：一个类 / 方法 / 组件只有一个变更理由；编排、校验、运行时、渲染等边界未混在一起。
+- [ ] **同类场景同一套方案**：优先复用已有工具 / 组件 / 模板；若另起一套，已说明旧方案为何不适用。
+- [ ] 反向自查：本改动既无过度设计（抽象 / 分层 / 配置多余），也无重复实现（同一职责多处代码）。
+
+### 需求与落盘
+
 - [ ] 需求子目录 `xxl-ai-spec/{yyyyMMdd}-{business}/` 已创建，`方案.md`（六大块齐全）+ SQL 已落盘并同步。
+
+### 后端与数据库
+
 - [ ] `xxl-ai-api` 下 `mvn -q compile` 通过。
-- [ ] 后端：Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
-- [ ] 前端：types 三件齐（实体/Query/ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
-- [ ] 权限：菜单在 `XxlRoleEnum` 已注册；按钮 `v-hasPermi` 复用菜单权限标识（`{module}:default` / `{module}:{business}`）。注释符合 `AGENTS.md`「通用约定」。
-- [ ] 边界：业务模块功能完备，含全部 CRUD 与对外操作入口（controller 齐全）；运行时实现统一落 `business/harness`，harness 无 controller、只被上层调用；运行时接口 URL 不变。
-- [ ] i18n：页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`。语言配置 `default-settings.ts` 的 `language`。
-- [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`。
-- [ ] 联调：菜单可见、列表/新增/修改/删除/搜索可用、权限失效项按钮隐藏、空参数后端友好提示。
+- [ ] Controller 全 `@XxlSso`，方法顺序 `pageList/load/insert/delete/update`，分页 `offset/pagesize`，XML resultMap + `NOW()`，校验 `Response.ofFail`。
+- [ ] 防乱码：所有 `.sql` 首行有 `SET NAMES utf8mb4;`；执行连接字符集为 utf8mb4。
+
+### 前端与 i18n
+
+- [ ] types 三件齐（实体 / Query / ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
+- [ ] 页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`；语言配置取 `default-settings.ts` 的 `language`。
+
+### 菜单与权限
+
+- [ ] 菜单在 `XxlRoleEnum` 已注册；按钮 `v-hasPermi` 复用菜单权限标识（`{module}:default` / `{module}:{business}`）。
+
+### 边界与运行时
+
+- [ ] 业务模块功能完备，含全部 CRUD 与对外操作入口（controller 齐全）。
+- [ ] 运行时实现统一落 `business/harness`，harness 无 controller、只被上层调用；业务侧未新增运行时子包或直接依赖 SDK；运行时接口 URL 不变。
+
+### 联调与交付
+
+- [ ] 注释与命名符合 `AGENTS.md`「通用约定」；无死代码 / 调试残留 / 测试数据。
+- [ ] 联调：菜单可见、列表 / 新增 / 修改 / 删除 / 搜索可用、权限失效项按钮隐藏、空参数后端友好提示。
 
 ## 参考文件（绝对路径）
 

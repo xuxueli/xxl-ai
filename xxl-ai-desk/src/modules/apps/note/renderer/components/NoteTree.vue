@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 笔记目录：根目录展开、按名称过滤、右键新建 / 重命名 / 删除 / 定位，宽度可拖拽。
+ * 笔记目录：根目录不展示（直接列出其子项）、按名称过滤、右键新建 / 重命名 / 删除 / 定位，宽度可拖拽。
  * @author xuxueli 2026-11-08
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -12,6 +12,7 @@ import NoteTreeNode from '@modules/apps/note/renderer/components/NoteTreeNode.vu
 import NoteNameDialog from '@modules/apps/note/renderer/components/NoteNameDialog.vue'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
 import { parentDir } from '@modules/apps/note/renderer/utils/path'
+import { matchesNoteEntry } from '@modules/apps/note/renderer/utils/tree'
 import type { NoteEntry } from '@modules/apps/note/shared'
 
 const store = useNoteStore()
@@ -22,16 +23,16 @@ const treeWidth = computed({
   set: (value: number) => store.setTreeWidth(value)
 })
 
-/* 根节点：以笔记目录名展示，点击箭头展开 / 收起整棵树 */
-const rootEntry = computed<NoteEntry | null>(() => {
-  if (!store.rootPath) {
-    return null
-  }
-  return { name: store.rootName, path: store.rootPath, relativePath: '', isDir: true }
-})
-
-/* 根目录子项 */
+/* 根目录子项：根目录本身不展示，直接以顶层节点呈现 */
 const rootChildren = computed(() => store.childrenMap[store.rootPath] ?? [])
+
+/* 过滤后的根目录可见子项 */
+const visibleRootChildren = computed(() => {
+  const word = store.keyword.trim()
+  return word
+    ? rootChildren.value.filter((entry) => matchesNoteEntry(entry, word, store.childrenMap))
+    : rootChildren.value
+})
 
 /* 右键菜单状态 */
 const contextMenu = ref<{ entry: NoteEntry; x: number; y: number; visible: boolean } | null>(
@@ -290,9 +291,11 @@ onBeforeUnmount(() => {
       </el-input>
     </div>
     <el-scrollbar class="note-tree-body">
-      <template v-if="rootEntry">
+      <template v-if="store.rootPath">
         <NoteTreeNode
-          :entry="rootEntry"
+          v-for="entry in visibleRootChildren"
+          :key="entry.path"
+          :entry="entry"
           :depth="0"
           @context-menu="openMenu"
         />
