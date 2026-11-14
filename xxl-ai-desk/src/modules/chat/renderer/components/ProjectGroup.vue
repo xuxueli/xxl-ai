@@ -260,7 +260,8 @@ async function onDeleteSession(id: number): Promise<void> {
 
 .project-icon {
   flex-shrink: 0;
-  font-size: var(--desk-font-md);
+  /* 与扩展中心 / 设置等子菜单项图标同尺寸（14px） */
+  font-size: var(--desk-icon-sm);
 }
 
 /* 行内操作：内容本身横排（悬浮展示由 SidebarRow 统一控制） */
