@@ -62,9 +62,6 @@ const boundAgent = computed(() => {
     agentStore.defaultAgent
   )
 })
-
-/* 软件名称：优先取用户自定义名称，未设置时回落应用默认名称 */
-const appName = computed(() => settings.settings.appName || t('app.name'))
 </script>
 
 <template>
@@ -75,7 +72,7 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
         <el-icon><HomeFilled /></el-icon>
       </span>
       <!-- 软件名称：原导航按钮位置 -->
-      <div class="topbar-brand">{{ appName }}</div>
+      <div class="topbar-brand">{{ settings.displayAppName }}</div>
       <!-- 有标题时展示分隔线（｜），分隔软件名称与标题 -->
       <span v-if="hasTitle" class="topbar-sep" aria-hidden="true"></span>
       <div v-if="hasTitle" class="desk-topbar-context">

@@ -65,7 +65,7 @@ function onRelaunch(): void {
 </script>
 
 <template>
-  <div class="data-dir settings-section">
+  <div class="data-dir">
     <div class="settings-block-title">{{ t('settings.dataDir') }}</div>
     <div class="settings-block-tip data-dir-tip">{{ t('settings.dataDirTip') }}</div>
     <div class="data-dir-row">

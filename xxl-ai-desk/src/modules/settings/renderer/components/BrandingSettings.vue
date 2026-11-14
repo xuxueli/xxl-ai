@@ -8,14 +8,15 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
+import {
+  BACKGROUND_OPACITY_MAX,
+  BACKGROUND_OPACITY_MIN,
+  type BrandingKind
+} from '@modules/settings/shared'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
-import logo from '@resources/icon.png'
 
 const settings = useSettingsStore()
-
-/* Logo 预览：未自定义时展示内置图标 */
-const logoPreview = computed(() => settings.logoUrl || logo)
 
 /* 背景图预览：与对话区一致，叠加当前不透明度 */
 const backgroundPreview = computed(() =>
@@ -32,18 +33,20 @@ watch(
   }
 )
 
-/* 选择图片：主进程负责对话框、校验、复制与落盘 */
-async function chooseImage(kind: 'logo' | 'background'): Promise<void> {
+/* 选择图片：主进程负责对话框、校验、复制与落盘；取消时不提示成功 */
+async function chooseImage(kind: BrandingKind): Promise<void> {
   try {
-    await settings.selectBranding(kind)
-    ElMessage.success(t('common.saved'))
+    const changed = await settings.selectBranding(kind)
+    if (changed) {
+      ElMessage.success(t('common.saved'))
+    }
   } catch (error) {
     ElMessage.error(ipcErrorMessage(error))
   }
 }
 
 /* 恢复默认 Logo / 移除背景图 */
-async function restoreDefault(kind: 'logo' | 'background'): Promise<void> {
+async function restoreDefault(kind: BrandingKind): Promise<void> {
   try {
     await settings.resetBranding(kind)
     ElMessage.success(t('common.saved'))
@@ -52,9 +55,15 @@ async function restoreDefault(kind: 'logo' | 'background'): Promise<void> {
   }
 }
 
-/* 不透明度释放后保存 */
-function saveOpacity(value: number | number[]): void {
-  void settings.saveSetting('backgroundOpacity', Array.isArray(value) ? value[0] : value)
+/* 不透明度释放后保存：失败时提示并回滚为已保存值 */
+async function saveOpacity(value: number | number[]): Promise<void> {
+  const next = Array.isArray(value) ? value[0] : value
+  try {
+    await settings.saveSetting('backgroundOpacity', next)
+  } catch (error) {
+    opacity.value = settings.settings.backgroundOpacity
+    ElMessage.error(ipcErrorMessage(error))
+  }
 }
 
 /* 滑杆百分比提示 */
@@ -73,7 +82,7 @@ function formatOpacity(value: number): string {
       <div class="branding-label">{{ t('settings.logo') }}</div>
       <div class="branding-control branding-media">
         <div class="branding-preview logo-preview">
-          <img :src="logoPreview" alt="logo" />
+          <img :src="settings.displayLogoUrl" alt="logo" />
         </div>
         <div class="branding-body">
           <div class="branding-actions">
@@ -116,8 +125,8 @@ function formatOpacity(value: number): string {
         <div class="branding-slider">
           <el-slider
             v-model="opacity"
-            :min="0.1"
-            :max="0.9"
+            :min="BACKGROUND_OPACITY_MIN"
+            :max="BACKGROUND_OPACITY_MAX"
             :step="0.05"
             :format-tooltip="formatOpacity"
             @change="saveOpacity"

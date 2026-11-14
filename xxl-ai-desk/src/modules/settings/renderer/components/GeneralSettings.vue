@@ -34,7 +34,7 @@ const language = computed<AppSettings['language']>({
 </script>
 
 <template>
-  <div class="settings-section">
+  <div>
     <el-form label-position="top" class="settings-form">
       <el-form-item :label="t('settings.appearance')">
         <el-radio-group v-model="appearance" class="soft-radio">
@@ -87,8 +87,6 @@ const language = computed<AppSettings['language']>({
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
-
 /* Element Plus 表单内容为 flex 容器，需显式撑满，否则内部网格按内容宽度收缩 */
 .settings-form :deep(.el-form-item__content) {
   width: 100%;
@@ -102,7 +100,7 @@ const language = computed<AppSettings['language']>({
   width: 100%;
 }
 
-/* 主题卡片：色板预览 + 名称，10 套主题自适应多列 */
+/* 主题卡片：色板预览 + 名称，14 套主题自适应多列 */
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));

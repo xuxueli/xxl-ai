@@ -28,11 +28,11 @@ Renderer ──preload 白名单（DeskApi）──▶ Main ──utilityProcess
 ```
 src/
 ├── common/                         # 一级公共：跨域、无业务规则
-│   ├── shared/                     # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、providerUrl、runtimeLog、appInfo、i18n
+│   ├── shared/                     # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、model、permission、providerUrl、runtimeLog、appInfo、i18n
 │   ├── main/                       # 主进程基础设施：db(getDb) / config/paths / utils(http·logger·pathGuard·ttlCache·directoryWatcher·localFileRoots) / ipc
-│   └── renderer/                   # 渲染公共：api(window.desk) / components(CodeEditor·MarkdownBlock) / composables / config / styles / types / utils
+│   └── renderer/                   # 渲染公共：api(window.desk) / components(CollapseShell·CodeEditor·MarkdownBlock) / composables / config / styles / types / utils
 ├── modules/                        # 单领域模块：一个域一个目录
-│   ├── platform/                   # shared · main · preload · i18n（系统外壳 / 更新 / 运行时环境 / 本地文件协议）
+│   ├── platform/                   # shared · main · preload · renderer · i18n（系统外壳 / 更新 / 运行时环境 / 本地文件协议）
 │   ├── appCenter/                  # shared · main · preload · renderer · i18n（内置应用注册 / 安装启用 / 市场）
 │   ├── apps/{appId}/               # 子应用：shared · main · preload · renderer · i18n（如 apps/note）
 │   ├── settings/                   # shared · main · preload · renderer · i18n
@@ -59,6 +59,7 @@ src/
         ├── config/nav.ts
         ├── composables/            # useAppBootstrap / useSessionLifecycle / useQuickAction
         ├── stores/layout.ts
+        ├── appSettings.ts          # 应用设置面板注册表装配
         └── i18n/index.ts           # 渲染层词条组合根
 ```
 
@@ -142,7 +143,7 @@ modules/{domain}/
 - **唯一持久化出口**：`getDb()` 只在 `common/main/db`；各域 `main/schema.ts` 定义表，`main/ddl.ts` 提供建表片段，`src/main/db.ts` 聚合。
 - **运行时门面**：需要运行时能力时，`modules/{domain}/main/*` 编排 → agent 运行时 → worker；`modules/agent/worker` 提供沙箱与工具注册助手。
 - **基础设施独立**：路径解析在 `common/main/config/paths.ts`；`db` 不反向依赖任何领域模块。
-- **本地文件访问**：渲染层一律经 `common/renderer/utils/localFileUrl.ts#toLocalFileUrl()` 转 `desk-file://`，禁止 `file://`；新增文件类型需同步 `common/shared/fileTypes.ts` 与 `index.html` 的 CSP（`img-src` / `media-src`）。
+- **本地文件访问**：渲染层一律经 `common/renderer/utils/localFileUrl.ts#toLocalFileUrl()` 转 `desk-file://`，禁止 `file://`；新增文件类型需同步 `common/shared/fileTypes.ts` 与 `src/renderer/index.html` 的 CSP（`img-src` / `media-src`）。
 - **IPC 三段式**：`modules/{domain}/shared/ipc.ts` 通道 → `main/ipc.ts` 注册 → `preload/index.ts` 暴露；`src/main/ipc.ts`、`src/preload/index.ts` 只聚合。
 - **i18n**：公共词条在 `common/shared/i18n/locales`，领域词条在 `modules/{domain}/i18n/{zh,en}.json`；主进程由 `src/main/i18n.ts`、Worker 由 `modules/agent/worker/i18n.ts`、渲染层由 `shell/i18n/index.ts` 合并后注册。编辑器 / 主题等跨域共用词条放 `common/shared/i18n`。
 - **目录监听**：file / note 共用 `common/main/utils/directoryWatcher.ts#DirectoryWatcher`；各域只做 IPC 边界校验与回调注入，禁止再各写一份 `fs.watch` 逻辑。
@@ -184,10 +185,10 @@ modules/{domain}/
 | 主进程业务与编排 | `modules/{domain}/main/*.ts` |
 | 内置应用注册 / 安装启用 / 配置 | `modules/appCenter/{shared,main,preload,renderer}`（`desk_app_setting`） |
 | 子应用（如笔记） | `modules/apps/{appId}/`，路由 `/apps/{appId}` |
-| 平台能力（外壳 / 更新 / 运行时 / 文件协议） | `modules/platform/{shared,main,preload}` |
+| 平台能力（外壳 / 更新 / 运行时 / 文件协议 / 运行期图标） | `modules/platform/{shared,main,preload,renderer}` |
 | 应用设置面板注册 | `modules/appCenter/renderer/appSettings.ts` + `shell/appSettings.ts` 装配 |
 | 目录监听（file / note 等） | `common/main/utils/directoryWatcher.ts#DirectoryWatcher`，域内只做 IPC 校验与回调 |
-| 跨模块编辑器 / Markdown 组件 | `common/renderer/components/{CodeEditor,MarkdownBlock}/` |
+| 跨模块编辑器 / Markdown 组件 | `common/renderer/components/{CodeEditor,MarkdownBlock}/`（含共用的 `EditorThemeMenu`） |
 | Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
@@ -196,6 +197,7 @@ modules/{domain}/
 | DeskApi 类型聚合 | `src/preload/deskApi.ts` |
 | 渲染能力入口 | `common/renderer/api/index.ts` |
 | 跨模块组件 | `common/renderer/components/{Name}/index.vue` |
+| 可折叠面板外壳（宽度过渡 + 内容左移） | `common/renderer/components/CollapseShell/` + `common/renderer/composables/useCollapseAnimation.ts` |
 | 布局骨架 / 区域组件 | `renderer/src/shell/layout/{,components/}` |
 | 跨模块组合式函数 / 纯工具 | `common/renderer/{composables,utils}` |
 | 模块页面 / 模块内组件 | `modules/{domain}/renderer/{pages,components}` |
@@ -294,7 +296,7 @@ modules/{domain}/
 
 1. **需求确认（必须）**：模块命名、字段与校验、系统能力（对话框/shell/终端/文件）、页面形态、改动范围、验证范围；确认后写入需求目录的 `方案.md`。
 2. **需求落盘**：`xxl-ai-spec/{yyyyMMdd}-{module}/` 建 `方案.md` 与建表 SQL（SQLite DDL）。
-3. **数据结构**：按 §2.1 同步 `db/schema.ts` 与 `db/index.ts` 的 `DDL`。
+3. **数据结构**：按 §2.1 同步 `modules/{domain}/main/schema.ts` 与 `modules/{domain}/main/ddl.ts`，并由 `src/main/db.ts` 聚合。
 4. **主进程落位**：`modules/{domain}/main/*.ts` + `shared/contracts|ipc|api` + `preload/index.ts`；需要运行时再加 `main/runtime.ts` 与 `worker/*` 实现。
 5. **渲染进程落位**：`modules/{domain}/renderer` 的 store + 页面/组件 + routes + 文案。
 6. **验证**：按 §7 分组执行（先设计原则，再结构 / 契约 / 渲染 / 运行时，最后 `type-check` → `build` → 端到端）；完成后清理测试数据并恢复用户状态。
@@ -437,9 +439,11 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **布局不承载启动逻辑**：`App.vue` 只组装外壳；全局快捷键、设置/项目/会话初始化、会话生命周期与更新检查在 `shell/composables/useAppBootstrap.ts`。
 - **面板宽度约束**：左侧子菜单栏与右侧工具面板均按像素持久化；子菜单栏最小 150px，工具面板最小 150px（文件工具展开目录树时 300px），二者上限都要为会话区保留 400px。
 - **工具面板统一入口**：文件 / Git / 终端 / 浏览器均为右侧工具面板的 Tab，顺序为文件、Git、终端、浏览器；开发者模式追加「诊断」Tab，关闭后回退文件面板。
-- **面板交互统一复用**：拖拽用 `common/renderer/composables/usePanelResize.ts` + `shell/layout/components/PanelResizer/index.vue`；左侧栏宽度走 `shell/stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `modules/toolPanel/renderer/store`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
+- **顶栏图标按钮统一复用**：顶栏右侧操作（搜索 / 会话列表 / 工具面板）统一用 `shell/layout/components/Navbar/NavbarIconButton.vue`，即时提示与激活态不再各写一份。
+- **工具条样式统一复用**：工具条结构统一用全局 `.desk-toolbar` / `.desk-toolbar-btn` / `.desk-toolbar-divider`，禁止模块内再定义一套 `.toolbar-btn` 副本；编辑器主题下拉统一用 `CodeEditor/EditorThemeMenu`。
+- **面板交互统一复用**：拖拽用 `common/renderer/composables/usePanelResize.ts` + `shell/layout/components/PanelResizer/index.vue`；折叠用 `common/renderer/components/CollapseShell` + `useCollapseAnimation`（会话列表 / 笔记目录 / 文件树共用，禁止各写一份宽度与位移过渡）；左侧栏宽度走 `shell/stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `modules/toolPanel/renderer/store`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
 - **共享选中态归属域**：跨「子菜单 ↔ 页面」的选中态放所属域 store（如 `modules/settings/renderer/store` 的 `activeTab`），不塞进 `layout`。
-- **配色分层**：`--desk-chrome-bg`（顶栏+图标栏）> `--desk-panel-bg`（子菜单栏）> `--desk-bg`（正文）；不加分隔线，仅「子菜单栏 ↔ 正文」保留 1px `--desk-border`。
+- **配色分层**：`--desk-surface-chrome`（顶栏+图标栏）> `--desk-surface-panel`（子菜单栏）> `--desk-surface-content`（正文）；不加分隔线，仅「子菜单栏 ↔ 正文」保留 1px `--desk-border`。
 - **尺寸令牌**：`--desk-header-height`、`--desk-rail-width`、`--desk-sidebar-width`、`--desk-terminal-height`、`--desk-panel-header-height`；JS 侧尺寸统一取 `common/renderer/config/layout.ts#LAYOUT`；自绘 SVG 统一 `.desk-svg-icon`，尺寸由使用处覆盖。
 - **字体层级**：文字统一使用 `--desk-font-{xs,sm,base,md,lg,xl}`，图标字号使用 `--desk-icon-md`；禁止在组件内新增绝对 px 字号。
 
@@ -564,6 +568,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - [ ] 领域文案在 `modules/{domain}/i18n`，公共词条在 `common/shared/i18n`，zh/en 成对。
 - [ ] UI 复用 tokens / 外壳 / 列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
 - [ ] 布局尺寸变更已同步 `common/renderer/config/layout.ts` 与 `common/renderer/styles/tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
+- [ ] 折叠交互复用 `CollapseShell` + `useCollapseAnimation`，未新增手写的宽度 / 位移过渡与折叠状态机。
 - [ ] 侧栏导航：切换板块直接跳变并默认展开；仅首页会话列表可折叠，其他板块固定展示；应用页直接收起，不播放动画。
 - [ ] 目录监听复用 `common/main/utils/directoryWatcher.ts`；渲染层只重载变更目录，页面对应 `bindWatcher` / `unbindWatcher`，退出时 `dispose` 清理。
 
@@ -584,7 +589,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 - 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/{agentService,agentMemoryService}.ts`、`modules/agent/main/host/runtimeHost.ts`
 - 渲染：`modules/mcp/renderer/{pages,components}`（管理 + 发现）、`modules/chat/renderer/store/{index,stream}.ts`
-- 内置应用：`modules/appCenter/**`（注册表 / 安装启用 / 市场）、`modules/apps/note/**`（目录树 / 编辑器 / 浮动目录 / 目录监听）
-- 公共能力：`common/main/utils/directoryWatcher.ts`（目录监听）、`common/renderer/components/CodeEditor/`（编辑器与主题）
+- 内置应用：`modules/appCenter/**`（注册表 / 安装启用 / 市场）、`modules/apps/note/**`（目录树 / 编辑器 / 右侧文章目录 / 目录监听）
+- 公共能力：`common/main/utils/directoryWatcher.ts`（目录监听）、`common/renderer/components/CollapseShell/`（折叠面板外壳）、`common/renderer/components/CodeEditor/`（编辑器与主题）
 - 运行时：`modules/agent/worker/session.ts`、`modules/agent/worker/tools/index.ts`、`modules/agent/worker/toolkit.ts`
 - 构建：`package.json`（`type-check` / `build` / `dev`）、`electron.vite.config.ts`

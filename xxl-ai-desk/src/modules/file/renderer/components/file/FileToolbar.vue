@@ -6,8 +6,9 @@
  */
 import { t } from '@renderer/shell/i18n'
 import { DeskTooltip } from '@common/renderer/components'
-import { PaletteIcon, SidebarToggleIcon } from '@common/renderer/components/icons'
-import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
+import { SidebarToggleIcon } from '@common/renderer/components/icons'
+import EditorThemeMenu from '@common/renderer/components/CodeEditor/EditorThemeMenu.vue'
+import type { EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import type { OpenWithApp } from '@modules/platform/shared'
 
 defineProps<{
@@ -148,45 +149,16 @@ const emit = defineEmits<{
       <span class="desk-toolbar-divider"></span>
 
       <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
-      <DeskTooltip :content="t('panel.editorTheme')">
-        <el-dropdown
-          trigger="click"
-          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
-        >
-          <button class="desk-toolbar-btn" :aria-label="t('panel.editorTheme')">
-            <PaletteIcon class="toolbar-svg-icon" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item
-                v-for="option in EDITOR_THEMES"
-                :key="option.id"
-                :command="option.id"
-              >
-                <div class="theme-option">
-                  <span :class="{ 'theme-active': option.id === editorTheme }">
-                    {{ t(option.labelKey) }}
-                  </span>
-                  <el-icon v-if="option.id === editorTheme" class="theme-check">
-                    <Check />
-                  </el-icon>
-                </div>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </DeskTooltip>
+      <EditorThemeMenu
+        :theme="editorTheme"
+        :title="t('panel.editorTheme')"
+        @select="emit('theme-command', $event)"
+      />
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-/* 自绘图标：与工具栏图标保持同一视觉尺寸 */
-.toolbar-svg-icon {
-  width: var(--desk-font-md);
-  height: var(--desk-font-md);
-}
-
 .file-breadcrumb {
   display: flex;
   align-items: center;
@@ -266,24 +238,5 @@ const emit = defineEmits<{
 .open-split :deep(.el-dropdown) {
   display: inline-flex;
   height: 100%;
-}
-
-/* 当前编辑器主题：加粗 + 品牌色 */
-.theme-active {
-  color: var(--desk-primary);
-  font-weight: 600;
-}
-
-/* 主题下拉项：名称居左，对勾居右 */
-.theme-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-}
-
-.theme-check {
-  color: var(--desk-primary);
 }
 </style>

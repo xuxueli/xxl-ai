@@ -200,7 +200,7 @@
       "noteImageTooLarge": "图片体积超过 20MB",
       "appNotFound": "应用不存在或不支持安装",
       "appNotAvailable": "该应用建设中，暂不可安装",
-      "brandingType": "仅支持常见图片格式（PNG / JPG / WEBP / GIF / BMP / ICO / SVG）",
+      "brandingType": "不支持的图片格式",
       "brandingTooLarge": "图片超过大小上限（{0}MB）",
       "brandingReadFailed": "图片读取失败：{0}"
     },

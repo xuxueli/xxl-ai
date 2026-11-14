@@ -3,10 +3,11 @@
  * 项目文件树：根目录不展示（直接列出其子项）、目录过滤、懒加载展开与文件选中。
  * @author xuxueli 2026-10-25
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useProjectFileTree } from '@modules/file/renderer/composables/useProjectFileTree'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { LAYOUT } from '@common/renderer/config/layout'
+import { CollapseShell } from '@common/renderer/components'
 import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import FileTreeNode from '@modules/file/renderer/components/file/FileTreeNode.vue'
@@ -41,14 +42,14 @@ const expanded = computed({
   }
 })
 /* 文件区容器宽度：用于把拖拽像素换算为占比 */
-const treeRef = ref<HTMLElement | null>(null)
+const treeRef = ref<InstanceType<typeof CollapseShell> | null>(null)
 const containerWidth = ref(0)
 let observer: ResizeObserver | null = null
 let syncFrame = 0
 
 /* 同步文件区宽度（工具面板宽度变化时更新） */
 function syncContainerWidth(): void {
-  containerWidth.value = treeRef.value?.parentElement?.clientWidth ?? 0
+  containerWidth.value = treeRef.value?.root?.parentElement?.clientWidth ?? 0
 }
 
 /* 合并面板拖拽期间的高频尺寸回调 */
@@ -64,7 +65,7 @@ function scheduleSyncContainerWidth(): void {
 
 onMounted(() => {
   syncContainerWidth()
-  const parent = treeRef.value?.parentElement
+  const parent = treeRef.value?.root?.parentElement
   if (parent) {
     observer = new ResizeObserver(scheduleSyncContainerWidth)
     observer.observe(parent)
@@ -104,8 +105,7 @@ const treeWidth = computed({
 
 /* 文件树折叠态与折叠过渡：状态变化时播放宽度动画 */
 const collapsed = computed(() => fileState.value.treeCollapsed)
-const { animated, play, onTransitionEnd } = useCollapseAnimation()
-watch(collapsed, () => play())
+const { animated, onTransitionEnd } = useCollapseAnimation(() => collapsed.value)
 
 const { childrenMap, expandedMap, loadingMap, visibleRoot, toggle } = useProjectFileTree({
   root: () => props.root,
@@ -121,11 +121,12 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
 </script>
 
 <template>
-  <div
+  <CollapseShell
     ref="treeRef"
-    class="file-tree desk-collapse-shell"
-    :class="{ 'is-collapsed': collapsed, animated }"
-    :style="{ width: collapsed ? '0px' : `${treeWidth}px` }"
+    class="file-tree"
+    :width="treeWidth"
+    :collapsed="collapsed"
+    :animated="animated"
     @transitionend="onTransitionEnd"
   >
     <!-- 右边缘拖拽手柄：拖拽调整目录树宽度，双击恢复默认宽度；折叠时随外壳宽度隐藏 -->
@@ -136,11 +137,7 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
       :title="t('layout.resetPanelWidth')"
       @reset="toolPanel.resetTreeWidth(props.sessionId)"
     />
-    <div
-      class="file-tree-inner desk-collapse-inner"
-      :style="{ width: `${treeWidth}px` }"
-      :inert="collapsed"
-    >
+    <div class="file-tree-inner">
       <div class="tree-filter">
         <el-input v-model="keyword" size="small" clearable :placeholder="t('panel.filterPlaceholder')">
           <template #prefix><el-icon><Search /></el-icon></template>
@@ -170,11 +167,11 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
         </template>
       </div>
     </div>
-  </div>
+  </CollapseShell>
 </template>
 
 <style scoped lang="scss">
-/* 左侧文件树：外层负责折叠宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
+/* 左侧文件树：折叠外壳负责宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
 .file-tree {
   position: relative;
   min-width: 0;

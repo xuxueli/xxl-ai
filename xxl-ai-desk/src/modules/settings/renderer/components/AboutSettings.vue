@@ -3,25 +3,17 @@
  * 设置 - 关于我们：版本信息、检查更新与官方链接。
  * @author xuxueli 2026-10-25
  */
-import { computed } from 'vue'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
-import defaultLogo from '@resources/icon.png'
 
 const settings = useSettingsStore()
-
-/* Logo：优先取用户自定义图片，未设置时回落内置图标 */
-const logo = computed(() => settings.logoUrl || defaultLogo)
-
-/* 应用名称：优先取用户自定义名称 */
-const appName = computed(() => settings.settings.appName || t('app.name'))
 </script>
 
 <template>
-  <div class="about settings-section">
+  <div class="about">
     <div class="about-brand">
-      <img class="about-logo" :src="logo" alt="logo" />
-      <div class="about-name">{{ appName }}</div>
+      <img class="about-logo" :src="settings.displayLogoUrl" alt="logo" />
+      <div class="about-name">{{ settings.displayAppName }}</div>
     </div>
     <div class="about-list">
       <div class="about-row">
@@ -60,8 +52,6 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
-
 /* 关于我们：宽度由设置页外层容器控制（50% 居中） */
 .about {
   display: flex;

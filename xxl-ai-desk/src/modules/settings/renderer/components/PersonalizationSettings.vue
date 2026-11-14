@@ -18,7 +18,7 @@ const slogan = ref('')
 
 /* 从设置同步个性化表单（空值回退内置文案） */
 function syncPersonalization(): void {
-  appName.value = settings.settings.appName || t('app.name')
+  appName.value = settings.displayAppName
   slogan.value = settings.settings.slogan || t('chat.emptyTitle')
 }
 
@@ -42,7 +42,7 @@ function restorePersonalization(): void {
 </script>
 
 <template>
-  <div class="settings-section">
+  <div>
     <div class="settings-block-title">{{ t('settings.appInfoTitle') }}</div>
     <div class="settings-block-tip app-info-tip">{{ t('settings.appInfoTip') }}</div>
 

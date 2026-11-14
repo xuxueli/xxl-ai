@@ -45,9 +45,9 @@ export function useAppBootstrap(): void {
 
   /* 应用名称同步窗口标题：与顶栏、关于页保持一致 */
   watch(
-    () => settings.settings.appName,
+    () => settings.displayAppName,
     (name) => {
-      document.title = name || t('app.name')
+      document.title = name
     },
     { immediate: true }
   )

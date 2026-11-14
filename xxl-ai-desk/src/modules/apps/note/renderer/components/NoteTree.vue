@@ -3,10 +3,10 @@
  * 笔记目录：根目录不展示（直接列出其子项）、按名称过滤、右键新建 / 重命名 / 删除 / 定位、拖拽移动，宽度可拖拽。
  * @author xuxueli 2026-11-08
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
-import { DeskTooltip } from '@common/renderer/components'
+import { CollapseShell, DeskTooltip } from '@common/renderer/components'
 import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
 import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
@@ -30,11 +30,7 @@ const treeWidth = computed({
 })
 
 /* 目录折叠过渡：仅在折叠状态变化时播放 */
-const { animated, play, onTransitionEnd } = useCollapseAnimation()
-watch(
-  () => store.treeCollapsed,
-  () => play()
-)
+const { animated, onTransitionEnd } = useCollapseAnimation(() => store.treeCollapsed)
 
 /* 根目录子项：根目录本身不展示，直接以顶层节点呈现 */
 const rootChildren = computed(() => store.childrenMap[store.rootPath] ?? [])
@@ -352,10 +348,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="note-tree desk-collapse-shell"
-    :class="{ 'is-collapsed': store.treeCollapsed, animated }"
-    :style="{ width: store.treeCollapsed ? '0px' : `${treeWidth}px` }"
+  <CollapseShell
+    class="note-tree"
+    :width="treeWidth"
+    :collapsed="store.treeCollapsed"
+    :animated="animated"
     @transitionend="onTransitionEnd"
   >
     <!-- 右边缘拖拽手柄：拖拽调整目录宽度，双击恢复默认；折叠时随外壳宽度隐藏 -->
@@ -366,11 +363,7 @@ onBeforeUnmount(() => {
       :title="t('layout.resetPanelWidth')"
       @reset="store.resetTreeWidth"
     />
-    <div
-      class="note-tree-inner desk-collapse-inner"
-      :style="{ width: `${treeWidth}px` }"
-      :inert="store.treeCollapsed"
-    >
+    <div class="note-tree-inner">
       <div class="note-tree-head">
         <span class="note-tree-title">{{ t('note.title') }}</span>
         <!-- 顺序：新建笔记 → 新建目录 → 展开/折叠全部 → 打开目录 -->
@@ -443,48 +436,48 @@ onBeforeUnmount(() => {
         </div>
       </el-scrollbar>
     </div>
+  </CollapseShell>
 
-    <!-- 右键菜单：样式与文件树右键菜单保持一致 -->
-    <Teleport to="body">
-      <div
-        v-if="contextMenu?.visible"
-        ref="menuRef"
-        class="note-menu"
-        :style="{ left: `${menuPosition.left}px`, top: `${menuPosition.top}px` }"
-        @contextmenu.prevent
-      >
-        <template v-for="(item, index) in menuItems" :key="item.action">
-          <div v-if="index > 0 && item.action === 'trash'" class="note-menu-sep"></div>
-          <button
-            class="note-menu-item"
-            :class="{ danger: item.action === 'trash' }"
-            @click="onMenuAction(item.action)"
-          >
-            <el-icon><component :is="item.icon" /></el-icon>
-            <span>{{ t(item.labelKey) }}</span>
-          </button>
-        </template>
-      </div>
-    </Teleport>
+  <!-- 右键菜单：样式与文件树右键菜单保持一致 -->
+  <Teleport to="body">
+    <div
+      v-if="contextMenu?.visible"
+      ref="menuRef"
+      class="note-menu"
+      :style="{ left: `${menuPosition.left}px`, top: `${menuPosition.top}px` }"
+      @contextmenu.prevent
+    >
+      <template v-for="(item, index) in menuItems" :key="item.action">
+        <div v-if="index > 0 && item.action === 'trash'" class="note-menu-sep"></div>
+        <button
+          class="note-menu-item"
+          :class="{ danger: item.action === 'trash' }"
+          @click="onMenuAction(item.action)"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ t(item.labelKey) }}</span>
+        </button>
+      </template>
+    </div>
+  </Teleport>
 
-    <!-- 名称弹框：新建笔记 / 新建目录 / 重命名共用 -->
-    <NoteNameDialog
-      v-model="nameDialogVisible"
-      :title="nameDialogState?.title ?? ''"
-      :initial-value="nameDialogState?.initialValue ?? ''"
-      :root-path="store.rootPath"
-      :directory="nameDialogState?.directory"
-      :placeholder="nameDialogState?.placeholder ?? ''"
-      :required-message="nameDialogState?.requiredMessage ?? ''"
-      :error-message="nameDialogError"
-      @submit="onNameSubmit"
-      @clear-error="nameDialogError = ''"
-    />
-  </div>
+  <!-- 名称弹框：新建笔记 / 新建目录 / 重命名共用 -->
+  <NoteNameDialog
+    v-model="nameDialogVisible"
+    :title="nameDialogState?.title ?? ''"
+    :initial-value="nameDialogState?.initialValue ?? ''"
+    :root-path="store.rootPath"
+    :directory="nameDialogState?.directory"
+    :placeholder="nameDialogState?.placeholder ?? ''"
+    :required-message="nameDialogState?.requiredMessage ?? ''"
+    :error-message="nameDialogError"
+    @submit="onNameSubmit"
+    @clear-error="nameDialogError = ''"
+  />
 </template>
 
 <style scoped lang="scss">
-/* 笔记目录：外层只负责折叠宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
+/* 笔记目录：外层折叠外壳负责宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
 .note-tree {
   position: relative;
   height: 100%;

@@ -19,7 +19,7 @@ const developerMode = computed({
 </script>
 
 <template>
-  <div class="developer settings-section">
+  <div class="developer">
     <div class="settings-block-title">{{ t('settings.developerTitle') }}</div>
     <div class="settings-block-tip developer-tip">{{ t('settings.developerTip') }}</div>
     <div class="developer-field">

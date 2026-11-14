@@ -7,6 +7,7 @@ import { computed, watch } from 'vue'
 import { useChatStore } from '@modules/chat/renderer'
 import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { SidePanelIcon } from '@common/renderer/components/icons'
+import NavbarIconButton from '@renderer/shell/layout/components/Navbar/NavbarIconButton.vue'
 import { t } from '@renderer/shell/i18n'
 
 const chat = useChatStore()
@@ -34,35 +35,12 @@ function togglePanel(): void {
 </script>
 
 <template>
-  <!-- 悬浮提示即时展示：与左侧图标栏保持一致，关闭延迟与过渡 -->
-  <el-tooltip
-    :content="toggleTitle"
-    placement="bottom"
-    effect="light"
-    popper-class="desk-tooltip"
-    :show-after="0"
-    :hide-after="0"
-    :offset="8"
-    transition=""
-  >
-    <button
-      class="icon-button"
-      :class="{ active: toolPanelVisible }"
-      :aria-label="toggleTitle"
-      @click="togglePanel"
-    >
-      <SidePanelIcon class="panel-icon" />
-    </button>
-  </el-tooltip>
+  <NavbarIconButton :title="toggleTitle" :active="toolPanelVisible" @click="togglePanel">
+    <SidePanelIcon class="panel-icon" />
+  </NavbarIconButton>
 </template>
 
 <style scoped lang="scss">
-/* 面板开关激活态：高亮当前已展开的面板 */
-.icon-button.active {
-  background: var(--desk-selected-bg);
-  color: var(--desk-text);
-}
-
 /* 面板图标尺寸 */
 .panel-icon {
   width: 16px;

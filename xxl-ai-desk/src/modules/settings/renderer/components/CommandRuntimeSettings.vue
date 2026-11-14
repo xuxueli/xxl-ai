@@ -156,7 +156,7 @@ function showDetectResult(result: RuntimeDetectResult): void {
 </script>
 
 <template>
-  <div class="runtime settings-section">
+  <div class="runtime">
     <div class="settings-block-title">{{ t('settings.runtimeTitle') }}</div>
     <div class="settings-block-tip runtime-tip">{{ t('settings.runtimeTip') }}</div>
 

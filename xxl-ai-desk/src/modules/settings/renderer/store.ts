@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { setLanguage, t } from '@renderer/shell/i18n'
+import builtinLogo from '@resources/icon.png'
 import { createDefaultSettings } from '@modules/settings/shared'
 import type { AppSettings, BrandingAssets, BrandingKind, SessionDefaults } from '@modules/settings/shared'
 import type { RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from '@modules/platform/shared'
@@ -23,6 +24,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const backgroundUrl = computed(() =>
     branding.value.backgroundPath ? toLocalFileUrl(branding.value.backgroundPath) : ''
   )
+  /* Logo 展示地址：自定义图片优先，未设置时回落内置图标（空态 / 关于页 / 设置预览共用） */
+  const displayLogoUrl = computed(() => logoUrl.value || builtinLogo)
+  /* 应用名称展示文案：自定义名称优先，未设置时回落默认名称（顶栏 / 窗口标题 / 关于页共用） */
+  const displayAppName = computed(() => settings.value.appName || t('app.name'))
   /* 设置是否已首次加载 */
   const loaded = ref(false)
   /* 运行时数据目录（含默认目录与库文件路径） */
@@ -111,9 +116,14 @@ export const useSettingsStore = defineStore('settings', () => {
     await saveSettings(patch)
   }
 
-  /* 选择品牌图片：系统对话框 + 复制落盘由主进程完成，返回最新资源 */
-  async function selectBranding(kind: BrandingKind): Promise<void> {
-    branding.value = await api.settings.selectBranding(kind)
+  /* 选择品牌图片：系统对话框 + 复制落盘由主进程完成；返回是否实际变更 */
+  async function selectBranding(kind: BrandingKind): Promise<boolean> {
+    const assets = await api.settings.selectBranding(kind)
+    if (!assets) {
+      return false
+    }
+    branding.value = assets
+    return true
   }
 
   /* 恢复默认 Logo / 移除背景图 */
@@ -206,6 +216,8 @@ export const useSettingsStore = defineStore('settings', () => {
     branding,
     logoUrl,
     backgroundUrl,
+    displayLogoUrl,
+    displayAppName,
     loaded,
     dataDir,
     defaultDataDir,

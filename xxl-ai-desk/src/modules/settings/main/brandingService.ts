@@ -21,10 +21,23 @@ import { getBrandingFileNames, saveBrandingFileName } from './settingsService'
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
 const BACKGROUND_MAX_BYTES = 15 * 1024 * 1024
 
+/*
+ * 可接受的扩展名：
+ *   - Logo 需交给 nativeImage 解析为窗口 / Dock 图标，排除 SVG / APNG / AVIF 等
+ *     无法稳定解析的格式，避免 Windows / Linux 下静默回退内置图标；
+ *   - 背景图由 Chromium 渲染，沿用公共图片格式清单。
+ */
+const LOGO_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.ico']
+
 /* 品牌文件名前缀：与设置键一一对应 */
 const FILE_PREFIX: Record<BrandingKind, string> = {
   logo: 'logo',
   background: 'background'
+}
+
+/* 按资源类型取可接受的扩展名清单 */
+function acceptedExtensions(kind: BrandingKind): string[] {
+  return kind === 'logo' ? LOGO_EXTENSIONS : IMAGE_EXTENSIONS
 }
 
 /* 品牌文件名 → 可访问绝对路径：文件缺失时返回空串，避免前端展示破图 */
@@ -52,6 +65,10 @@ export function readBrandingLogoDataUrl(): string {
     return ''
   }
   try {
+    /* 文件可能被外部替换：超过上限时不读取，按无 Logo 处理 */
+    if (statSync(logoPath).size > LOGO_MAX_BYTES) {
+      return ''
+    }
     const base64 = readFileSync(logoPath).toString('base64')
     return `data:${imageMimeOf(logoPath) || 'image/png'};base64,${base64}`
   } catch {
@@ -59,28 +76,37 @@ export function readBrandingLogoDataUrl(): string {
   }
 }
 
-/* 返回最新资源并同步运行期图标：Logo 变更后窗口 / Dock 立即更新 */
-function syncBrandingAssets(): BrandingAssets {
+/*
+ * 返回最新资源并同步运行期图标：
+ *   - 仅 Logo 变更需要更新窗口图标，选择 / 移除背景图不应触碰图标；
+ *   - macOS 的圆角 Dock 图标由渲染层生成，主进程只在其它平台直接应用原图。
+ */
+function syncBrandingAssets(kind?: BrandingKind): BrandingAssets {
   const assets = getBrandingAssets()
-  applyAppIcon(assets.logoPath)
+  if (kind === 'logo' && process.platform !== 'darwin') {
+    applyAppIcon(assets.logoPath)
+  }
   return assets
 }
 
 /* 校验图片类型与大小：不通过时抛出用户可读错误 */
 function assertImageFile(kind: BrandingKind, file: string): void {
   const extension = extname(file).toLowerCase()
-  if (!IMAGE_EXTENSIONS.includes(extension)) {
+  if (!acceptedExtensions(kind).includes(extension)) {
+    throw new Error(t('runtime.error.brandingType'))
+  }
+  const stat = statSync(file)
+  if (!stat.isFile()) {
     throw new Error(t('runtime.error.brandingType'))
   }
   const maxBytes = kind === 'logo' ? LOGO_MAX_BYTES : BACKGROUND_MAX_BYTES
-  if (statSync(file).size > maxBytes) {
+  if (stat.size > maxBytes) {
     throw new Error(t('runtime.error.brandingTooLarge', [Math.round(maxBytes / 1024 / 1024)]))
   }
 }
 
-/* 删除某类品牌资源的旧文件：文件缺失或删除失败都不阻塞设置更新 */
-function removeBrandingFile(kind: BrandingKind): void {
-  const fileName = getBrandingFileNames()[kind]
+/* 删除指定文件名：文件缺失或删除失败都不阻塞设置更新 */
+function removeBrandingFileByName(fileName: string): void {
   if (!fileName) {
     return
   }
@@ -97,19 +123,26 @@ function saveBrandingFromFile(kind: BrandingKind, source: string): BrandingAsset
   ensureBrandingDir()
   const extension = extname(source).toLowerCase()
   const fileName = `${FILE_PREFIX[kind]}-${Date.now()}-${randomUUID().slice(0, 8)}${extension}`
+  const target = join(getBrandingDir(), fileName)
   try {
-    copyFileSync(source, join(getBrandingDir(), fileName))
+    copyFileSync(source, target)
   } catch (error) {
     throw new Error(t('runtime.error.brandingReadFailed', [(error as Error).message]))
   }
-  /* 先复制成功再删除旧文件，避免复制失败时丢失当前资源 */
-  removeBrandingFile(kind)
-  saveBrandingFileName(kind, fileName)
-  return syncBrandingAssets()
+  /* 先写入新文件名再删除旧文件：写库失败时仍保留当前生效资源 */
+  const previousName = getBrandingFileNames()[kind]
+  try {
+    saveBrandingFileName(kind, fileName)
+  } catch (error) {
+    removeBrandingFileByName(fileName)
+    throw error
+  }
+  removeBrandingFileByName(previousName)
+  return syncBrandingAssets(kind)
 }
 
-/* 选择图片（用户取消时返回当前资源） */
-export async function selectBranding(kind: BrandingKind): Promise<BrandingAssets> {
+/* 选择图片：用户取消时返回 null，由渲染层跳过成功提示 */
+export async function selectBranding(kind: BrandingKind): Promise<BrandingAssets | null> {
   ensureBrandingDir()
   const result = await dialog.showOpenDialog({
     title: t(kind === 'logo' ? 'settings.logoPickTitle' : 'settings.backgroundPickTitle'),
@@ -118,17 +151,18 @@ export async function selectBranding(kind: BrandingKind): Promise<BrandingAssets
     filters: [
       {
         name: t('settings.imageFilter'),
-        extensions: IMAGE_EXTENSIONS.map((extension) => extension.slice(1))
+        extensions: acceptedExtensions(kind).map((extension) => extension.slice(1))
       }
     ]
   })
-  const source = result.canceled ? '' : result.filePaths[0] ?? ''
-  return source ? saveBrandingFromFile(kind, source) : syncBrandingAssets()
+  const source = result.canceled ? '' : (result.filePaths[0] ?? '')
+  return source ? saveBrandingFromFile(kind, source) : null
 }
 
-/* 恢复默认 / 移除背景：删除文件并清空设置 */
+/* 恢复默认 / 移除背景：清空设置后再删除文件，避免配置指向已删除的文件 */
 export function resetBranding(kind: BrandingKind): BrandingAssets {
-  removeBrandingFile(kind)
+  const previousName = getBrandingFileNames()[kind]
   saveBrandingFileName(kind, '')
-  return syncBrandingAssets()
+  removeBrandingFileByName(previousName)
+  return syncBrandingAssets(kind)
 }

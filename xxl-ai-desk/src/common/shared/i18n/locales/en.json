@@ -200,7 +200,7 @@
       "noteImageTooLarge": "The image exceeds the 20 MB limit",
       "appNotFound": "The app does not exist or cannot be installed",
       "appNotAvailable": "This app is under construction and cannot be installed yet",
-      "brandingType": "Only common image formats are supported (PNG / JPG / WEBP / GIF / BMP / ICO / SVG)",
+      "brandingType": "Unsupported image format",
       "brandingTooLarge": "The image exceeds the {0} MB limit",
       "brandingReadFailed": "Failed to read the image: {0}"
     },

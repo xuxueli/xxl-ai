@@ -45,7 +45,7 @@ function resetShortcuts(): void {
 </script>
 
 <template>
-  <div class="shortcuts settings-section">
+  <div class="shortcuts">
     <div class="settings-block-title">{{ t('settings.shortcuts') }}</div>
     <div class="settings-block-tip shortcuts-tip">{{ t('settings.shortcutsTip') }}</div>
     <div v-for="action in quickActions" :key="action.id" class="shortcut-row">

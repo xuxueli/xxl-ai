@@ -8,12 +8,8 @@ let typingPlayed = false
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '@renderer/shell/i18n'
 import { useSettingsStore } from '@modules/settings/renderer'
-import defaultLogo from '@resources/icon.png'
 
 const settings = useSettingsStore()
-
-/* Logo：优先取用户自定义图片，未设置时回落内置图标 */
-const logo = computed(() => settings.logoUrl || defaultLogo)
 
 /* 完整标题文案：优先取用户自定义标语，未设置时回落默认欢迎语 */
 const fullTitle = computed(() => settings.settings.slogan || t('chat.emptyTitle'))
@@ -85,7 +81,7 @@ onBeforeUnmount(stopTyping)
 
 <template>
   <div class="empty-state">
-    <img class="empty-logo" :src="logo" alt="logo" />
+    <img class="empty-logo" :src="settings.displayLogoUrl" alt="logo" />
     <h1 class="empty-title">
       <span>{{ displayTitle }}</span>
       <span v-if="typing" class="empty-caret" aria-hidden="true"></span>

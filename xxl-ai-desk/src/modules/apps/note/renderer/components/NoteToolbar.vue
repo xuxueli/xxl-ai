@@ -6,9 +6,10 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { DeskTooltip } from '@common/renderer/components'
 import { LAYOUT } from '@common/renderer/config/layout'
-import { PaletteIcon, SidebarToggleIcon } from '@common/renderer/components/icons'
+import { SidebarToggleIcon } from '@common/renderer/components/icons'
+import EditorThemeMenu from '@common/renderer/components/CodeEditor/EditorThemeMenu.vue'
 import { t } from '@renderer/shell/i18n'
-import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
+import type { EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import NoteToolbarIcon from '@modules/apps/note/renderer/components/NoteToolbarIcon.vue'
 import type { NoteToolbarIconName } from '@modules/apps/note/renderer/components/toolbarIcons'
 import NoteHelpDialog from '@modules/apps/note/renderer/components/NoteHelpDialog.vue'
@@ -50,10 +51,6 @@ const modes = [
   { value: 'preview', icon: 'modePreview', labelKey: 'note.modePreview' }
 ] as const
 
-/* 是否是当前主题 */
-function isThemeActive(id: EditorThemeId): boolean {
-  return props.editorTheme === id
-}
 
 /* 当前是否处于该格式 */
 function isActive(action: MarkdownAction): boolean {
@@ -150,12 +147,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="toolbarRef" class="note-toolbar">
+  <div ref="toolbarRef" class="desk-toolbar">
     <!-- 左侧：树开关 + 格式化动作 -->
-    <div class="toolbar-main">
+    <div class="desk-toolbar-main">
       <DeskTooltip :content="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')">
         <button
-          class="toolbar-btn"
+          class="desk-toolbar-btn"
           :class="{ active: store.treeCollapsed }"
           :aria-label="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')"
           @click="store.toggleTree"
@@ -164,12 +161,12 @@ onBeforeUnmount(() => {
         </button>
       </DeskTooltip>
 
-      <span class="toolbar-divider"></span>
+      <span class="desk-toolbar-divider"></span>
 
       <!-- 标题：H1–H6，再次选择同一级别取消标题 -->
       <el-dropdown trigger="click" @command="onHeadingCommand">
         <button
-          class="toolbar-btn heading-btn"
+          class="desk-toolbar-btn heading-btn"
           :class="{ active: active.some((item) => item.startsWith('h')) }"
           :disabled="!store.current"
           :aria-label="t('note.format.heading')"
@@ -187,69 +184,69 @@ onBeforeUnmount(() => {
       </el-dropdown>
 
       <DeskTooltip :content="t('note.format.bold')">
-        <button class="toolbar-btn" :class="{ active: isActive('bold') }" :disabled="!store.current" @click="run('bold')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('bold') }" :disabled="!store.current" @click="run('bold')">
           <NoteToolbarIcon name="bold" />
         </button>
       </DeskTooltip>
       <DeskTooltip :content="t('note.format.italic')">
-        <button class="toolbar-btn" :class="{ active: isActive('italic') }" :disabled="!store.current" @click="run('italic')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('italic') }" :disabled="!store.current" @click="run('italic')">
           <NoteToolbarIcon name="italic" />
         </button>
       </DeskTooltip>
       <DeskTooltip v-if="!compact" :content="t('note.format.strike')">
-        <button class="toolbar-btn" :class="{ active: isActive('strike') }" :disabled="!store.current" @click="run('strike')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('strike') }" :disabled="!store.current" @click="run('strike')">
           <NoteToolbarIcon name="strike" />
         </button>
       </DeskTooltip>
       <DeskTooltip v-if="!compact" :content="t('note.format.inlineCode')">
-        <button class="toolbar-btn" :class="{ active: isActive('inlineCode') }" :disabled="!store.current" @click="run('inlineCode')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('inlineCode') }" :disabled="!store.current" @click="run('inlineCode')">
           <NoteToolbarIcon name="inlineCode" />
         </button>
       </DeskTooltip>
       <DeskTooltip :content="t('note.format.quote')">
-        <button class="toolbar-btn" :class="{ active: isActive('quote') }" :disabled="!store.current" @click="run('quote')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('quote') }" :disabled="!store.current" @click="run('quote')">
           <NoteToolbarIcon name="quote" />
         </button>
       </DeskTooltip>
 
-      <span class="toolbar-divider"></span>
+      <span class="desk-toolbar-divider"></span>
 
       <!-- 链接：直接插入 [link](url) 模板 -->
       <DeskTooltip :content="t('note.format.link')">
-        <button class="toolbar-btn" :disabled="!store.current" @click="run('link')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" @click="run('link')">
           <NoteToolbarIcon name="link" />
         </button>
       </DeskTooltip>
 
       <!-- 图片 -->
       <DeskTooltip :content="t('note.insertImage')">
-        <button class="toolbar-btn" :disabled="!store.current" @click="emit('insert-image')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" @click="emit('insert-image')">
           <NoteToolbarIcon name="image" />
         </button>
       </DeskTooltip>
 
       <!-- 代码块 -->
       <DeskTooltip v-if="!compact" :content="t('note.format.codeBlock')">
-        <button class="toolbar-btn" :disabled="!store.current" @click="run('codeBlock')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" @click="run('codeBlock')">
           <NoteToolbarIcon name="codeBlock" />
         </button>
       </DeskTooltip>
 
-      <span class="toolbar-divider"></span>
+      <span class="desk-toolbar-divider"></span>
 
       <!-- 列表 -->
       <DeskTooltip :content="t('note.format.bulletList')">
-        <button class="toolbar-btn" :class="{ active: isActive('bulletList') }" :disabled="!store.current" @click="run('bulletList')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('bulletList') }" :disabled="!store.current" @click="run('bulletList')">
           <NoteToolbarIcon name="bulletList" />
         </button>
       </DeskTooltip>
       <DeskTooltip :content="t('note.format.orderedList')">
-        <button class="toolbar-btn" :class="{ active: isActive('orderedList') }" :disabled="!store.current" @click="run('orderedList')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('orderedList') }" :disabled="!store.current" @click="run('orderedList')">
           <NoteToolbarIcon name="orderedList" />
         </button>
       </DeskTooltip>
       <DeskTooltip :content="t('note.format.taskList')">
-        <button class="toolbar-btn" :class="{ active: isActive('taskList') }" :disabled="!store.current" @click="run('taskList')">
+        <button class="desk-toolbar-btn" :class="{ active: isActive('taskList') }" :disabled="!store.current" @click="run('taskList')">
           <NoteToolbarIcon name="taskList" />
         </button>
       </DeskTooltip>
@@ -278,7 +275,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <template #reference>
-          <button class="toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.table')">
+          <button class="desk-toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.table')">
             <NoteToolbarIcon name="table" />
           </button>
         </template>
@@ -286,14 +283,14 @@ onBeforeUnmount(() => {
 
       <!-- 分割线 -->
       <DeskTooltip v-if="!compact" :content="t('note.format.divider')">
-        <button class="toolbar-btn" :disabled="!store.current" @click="run('divider')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" @click="run('divider')">
           <NoteToolbarIcon name="divider" />
         </button>
       </DeskTooltip>
 
       <!-- 公式：行内 / 块级 -->
       <el-dropdown trigger="click" @command="onFormulaCommand">
-        <button class="toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.formula')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.formula')">
           <NoteToolbarIcon name="formula" />
         </button>
         <template #dropdown>
@@ -307,7 +304,7 @@ onBeforeUnmount(() => {
       <!-- Mermaid 图表：按类型插入模板 -->
       <DeskTooltip :content="t('note.format.diagram')">
         <el-dropdown trigger="click" @command="(kind: MermaidKind) => insertDiagram(kind)">
-          <button class="toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.diagram')">
+          <button class="desk-toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.diagram')">
             <NoteToolbarIcon name="diagram" />
           </button>
           <template #dropdown>
@@ -329,7 +326,7 @@ onBeforeUnmount(() => {
 
       <!-- 更多：仅工具栏宽度不足时出现 -->
       <el-dropdown v-if="compact" trigger="click" @command="(command: MarkdownAction) => run(command)">
-        <button class="toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.more')">
+        <button class="desk-toolbar-btn" :disabled="!store.current" :aria-label="t('note.format.more')">
           <NoteToolbarIcon name="more" />
         </button>
         <template #dropdown>
@@ -344,9 +341,9 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 右侧：查找 / 目录 / 主题 / 帮助 / 视图切换 -->
-    <div class="toolbar-view">
+    <div class="desk-toolbar-actions">
       <DeskTooltip :content="t('note.findReplace')">
-        <button class="toolbar-btn" @click="emit('find')">
+        <button class="desk-toolbar-btn" @click="emit('find')">
           <NoteToolbarIcon name="search" />
         </button>
       </DeskTooltip>
@@ -354,7 +351,7 @@ onBeforeUnmount(() => {
       <!-- 文章目录：右侧模块，可在面板右上角关闭 -->
       <DeskTooltip :content="t('note.outline')">
         <button
-          class="toolbar-btn"
+          class="desk-toolbar-btn"
           :class="{ active: outlineOpen }"
           :disabled="!store.current"
           @click="emit('toggle-outline')"
@@ -364,48 +361,25 @@ onBeforeUnmount(() => {
       </DeskTooltip>
 
       <!-- 编辑器主题：与文件工具一致，选择后持久化 -->
-      <DeskTooltip :content="t('note.theme')">
-        <el-dropdown
-          trigger="click"
-          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
-        >
-          <button class="toolbar-btn">
-            <PaletteIcon class="toolbar-svg-icon" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item
-                v-for="option in EDITOR_THEMES"
-                :key="option.id"
-                :command="option.id"
-              >
-                <div class="theme-option">
-                  <span :class="{ 'theme-active': isThemeActive(option.id) }">
-                    {{ t(option.labelKey) }}
-                  </span>
-                  <el-icon v-if="isThemeActive(option.id)" class="theme-check">
-                    <Check />
-                  </el-icon>
-                </div>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </DeskTooltip>
+      <EditorThemeMenu
+        :theme="editorTheme"
+        :title="t('note.theme')"
+        @select="emit('theme-command', $event)"
+      />
 
       <!-- 帮助 -->
       <DeskTooltip :content="t('note.format.help')">
-        <button class="toolbar-btn" @click="helpVisible = true">
+        <button class="desk-toolbar-btn" @click="helpVisible = true">
           <NoteToolbarIcon name="help" />
         </button>
       </DeskTooltip>
 
       <!-- 视图切换：与左侧工具区分隔 -->
-      <span class="toolbar-divider"></span>
+      <span class="desk-toolbar-divider"></span>
       <div class="mode-switch">
         <DeskTooltip v-for="item in modes" :key="item.value" :content="t(item.labelKey)">
           <button
-            class="toolbar-btn"
+            class="desk-toolbar-btn"
             :class="{ active: mode === item.value }"
             @click="mode = item.value"
           >
@@ -421,79 +395,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
-/* 工具栏：左侧格式区自适应，右侧视图区固定 */
-.note-toolbar {
-  flex-shrink: 0;
-  height: 38px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-bottom: 1px solid var(--desk-border);
-  background: var(--desk-bg-elevated);
-}
-
-.toolbar-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  overflow: hidden;
-}
-
-.toolbar-view {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.toolbar-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 14px;
-  margin: 0 4px;
-  background: var(--desk-border);
-}
-
-.toolbar-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--desk-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.toolbar-btn:hover:not(:disabled) {
-  background: var(--desk-primary-soft);
-  color: var(--desk-text);
-}
-
-/* 文章目录 / 当前格式打开时保持按钮高亮 */
-.toolbar-btn.active {
-  background: var(--desk-primary-soft);
-  color: var(--desk-primary);
-}
-
-.toolbar-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/* 自绘图标：与项目名左侧图标保持同一视觉尺寸 */
-.toolbar-svg-icon {
-  width: var(--desk-font-md);
-  height: var(--desk-font-md);
-}
-
 /* 树开关图标：尺寸跟随工具栏按钮字号 */
 .tree-toggle-icon {
   font-size: var(--desk-font-md);
@@ -565,24 +466,5 @@ onBeforeUnmount(() => {
 .table-picker-cell.active {
   border-color: var(--desk-primary);
   background: var(--desk-primary-soft);
-}
-
-/* 当前主题：加粗 + 品牌色 */
-.theme-active {
-  color: var(--desk-primary);
-  font-weight: 600;
-}
-
-/* 主题下拉项：名称居左，对勾居右 */
-.theme-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-}
-
-.theme-check {
-  color: var(--desk-primary);
 }
 </style>

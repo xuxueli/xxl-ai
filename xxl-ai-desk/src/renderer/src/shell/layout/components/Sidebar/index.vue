@@ -3,7 +3,7 @@
  * 左侧栏：常驻图标栏 + 子菜单内容区（首页 / 插件 / 系统设置 按板块切换；应用板块由应用自身承载）
  * @author xuxueli 2026-10-18
  */
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import SidebarRail from '@renderer/shell/layout/components/Sidebar/SidebarRail.vue'
 import SidebarContent from '@renderer/shell/layout/components/Sidebar/SidebarContent.vue'
@@ -13,6 +13,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { usePanelWidths } from '@renderer/shell/layout/composables/usePanelWidths'
 import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
+import { CollapseShell } from '@common/renderer/components'
 import { isAppPage } from '@modules/appCenter/shared'
 import { sectionOfPath } from '@renderer/shell/config/nav'
 import { t } from '@renderer/shell/i18n'
@@ -21,12 +22,8 @@ const route = useRoute()
 const layout = useLayoutStore()
 const chat = useChatStore()
 
-/* 会话列表折叠过渡：仅手动切换时播放，切换板块直接跳变 */
-const { animated, play, onTransitionEnd } = useCollapseAnimation()
-watch(
-  () => layout.chatSidebarCollapsed,
-  () => play()
-)
+/* 会话列表折叠过渡：仅手动折叠 / 展开时播放，切换板块直接跳变 */
+const { animated, onTransitionEnd } = useCollapseAnimation(() => layout.chatSidebarCollapsed)
 
 /* 当前所属板块：仅首页会话列表支持折叠 */
 const isChat = computed(() => sectionOfPath(route.path) === 'home')
@@ -44,56 +41,44 @@ const { sidebarWidth, resetSidebarWidth } = usePanelWidths(() => sessionKey.valu
 </script>
 
 <template>
-  <aside
-    class="sidebar-container desk-collapse-shell"
-    :class="{
-      'is-collapsed': isChat && layout.chatSidebarCollapsed,
-      animated: animated && isChat
-    }"
-    :style="{
-      width: showContent
-        ? `calc(var(--desk-rail-width) + ${sidebarWidth}px)`
-        : 'var(--desk-rail-width)'
-    }"
+  <CollapseShell
+    tag="aside"
+    class="sidebar-container"
+    :width="sidebarWidth"
+    :collapsed="!showContent"
+    offset="var(--desk-rail-width)"
+    :animated="animated && isChat"
     @transitionend="onTransitionEnd"
   >
-    <SidebarRail />
+    <template #prefix>
+      <SidebarRail />
+    </template>
 
-    <!-- 子菜单内容区：常驻展示；进入应用自身页面时收起 -->
-    <div
-      class="sidebar-content desk-collapse-inner"
-      :style="{ width: `${sidebarWidth}px` }"
-      :aria-hidden="!showContent"
-      :inert="!showContent"
-    >
-      <!-- 右边缘拖拽手柄：拖拽调整面板宽度，双击恢复默认宽度 -->
-      <PanelResizer
-        v-if="showContent"
-        v-model:size="sidebarWidth"
-        side="left"
-        :title="t('layout.resetPanelWidth')"
-        @reset="resetSidebarWidth"
-      />
+    <!-- 右边缘拖拽手柄：拖拽调整面板宽度，双击恢复默认宽度 -->
+    <PanelResizer
+      v-if="showContent"
+      v-model:size="sidebarWidth"
+      side="left"
+      :title="t('layout.resetPanelWidth')"
+      @reset="resetSidebarWidth"
+    />
 
+    <div class="sidebar-content">
       <SidebarContent />
     </div>
-  </aside>
+  </CollapseShell>
 </template>
 
 <style scoped lang="scss">
-/* 左侧栏：图标栏 + 子菜单内容区（宽度过渡与折叠位移由共享折叠样式提供） */
+/* 左侧栏：图标栏 + 子菜单内容区（宽度过渡与折叠位移由 CollapseShell 提供） */
 .sidebar-container {
-  width: calc(var(--desk-rail-width) + var(--desk-sidebar-width));
-  flex-shrink: 0;
   position: relative;
-  display: flex;
-  flex-direction: row;
   background: var(--desk-surface-sidebar);
-  overflow: hidden;
 }
 
-/* 内容区：图标栏右侧；宽度固定，折叠时向左滑出并被容器裁切 */
+/* 内容区：图标栏右侧，铺满折叠外壳的固定内容宽度 */
 .sidebar-content {
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -186,7 +186,7 @@
   --desk-icon-md: 16px;
   --desk-icon-lg: 18px;
 
-  /* 动效：侧栏折叠过渡（JS 兜底复位时长见 common/renderer/composables/useCollapseAnimation.ts） */
+  /* 动效：折叠面板过渡（JS 兜底复位时长见 common/renderer/composables/useCollapseAnimation.ts） */
   --desk-motion-collapse: 200ms;
   --desk-motion-ease: ease;
 

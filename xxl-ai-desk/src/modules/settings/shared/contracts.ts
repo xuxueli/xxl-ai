@@ -11,28 +11,36 @@ import type { PermissionMode } from '@common/shared/permission'
 export const APPEARANCES = ['light', 'dark', 'system'] as const
 export type Appearance = (typeof APPEARANCES)[number]
 
-/* 主题配色预设（顺序即设置页展示顺序：中性 → 蓝 → 暖 → 青绿 → 紫，第一套为安装默认） */
+/* 主题配色预设（顺序即设置页展示顺序：中性 → 冷蓝 → 青绿 → 暖色 → 紫粉，第一套为安装默认） */
 export const THEME_PRESETS = [
   /* 中性（极简灰为安装默认） */
   'github',
   'classic',
-  /* 蓝色系 */
+  /* 冷蓝色系 */
+  'nord',
   'onedark',
   'tokyo-night',
-  'nord',
+  /* 青绿色系 */
+  'mint',
+  'everforest',
+  'matcha',
   /* 暖色系 */
   'kanagawa',
+  'solarized',
   'gruvbox',
-  /* 青绿系 */
-  'mint',
-  /* 紫色系 */
+  /* 紫粉色系 */
   'catppuccin',
+  'dracula',
   'rose-pine'
 ] as const
 export type ThemePreset = (typeof THEME_PRESETS)[number]
 
 /* 品牌资源类型：Logo / 背景图 */
 export type BrandingKind = 'logo' | 'background'
+
+/* 背景图不透明度范围：主进程归一化与设置页滑杆共用，避免两处边界漂移 */
+export const BACKGROUND_OPACITY_MIN = 0.1
+export const BACKGROUND_OPACITY_MAX = 0.6
 
 /* 品牌资源：主进程解析后的绝对路径，空串表示使用内置资源 */
 export interface BrandingAssets {
@@ -69,7 +77,7 @@ export interface AppSettings {
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string
-  /* 对话区背景图不透明度（0.1 ~ 0.6，未设置背景图时不生效） */
+  /* 对话区背景图不透明度（BACKGROUND_OPACITY_MIN ~ MAX，未设置背景图时不生效） */
   backgroundOpacity: number
   /* 快捷操作快捷键（缺省项回退 DEFAULT_SHORTCUTS） */
   shortcuts: ShortcutMap

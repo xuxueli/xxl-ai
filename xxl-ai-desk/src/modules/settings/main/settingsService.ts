@@ -8,6 +8,8 @@ import { getDb } from '@common/main/db'
 import { settingTable } from '@modules/settings/main/schema'
 import {
   APPEARANCES,
+  BACKGROUND_OPACITY_MAX,
+  BACKGROUND_OPACITY_MIN,
   THEME_PRESETS,
   type AppSettings,
   type BrandingKind,
@@ -45,7 +47,7 @@ function normalizeTheme(value: string | undefined): AppSettings['themePreset'] {
     : DEFAULT_APP_SETTINGS.themePreset
 }
 
-/* 归一化背景图不透明度：限制在 0.1 ~ 0.9，非法值回退默认 */
+/* 归一化背景图不透明度：限制在共享范围内，非法值回退默认 */
 function normalizeBackgroundOpacity(value: string | undefined): number {
   if (value === undefined || value.trim() === '') {
     return DEFAULT_APP_SETTINGS.backgroundOpacity
@@ -55,7 +57,10 @@ function normalizeBackgroundOpacity(value: string | undefined): number {
     return DEFAULT_APP_SETTINGS.backgroundOpacity
   }
   /* 限制范围并保留两位小数，避免浮点尾数写入库 */
-  return Math.round(Math.min(0.9, Math.max(0.1, parsed)) * 100) / 100
+  return (
+    Math.round(Math.min(BACKGROUND_OPACITY_MAX, Math.max(BACKGROUND_OPACITY_MIN, parsed)) * 100) /
+    100
+  )
 }
 
 /* 为快捷键绑定补齐 Shift（已包含则原样返回；主键保持在末尾） */

@@ -1,13 +1,13 @@
 /*
- * 侧栏折叠过渡：仅手动切换时播放动画，切换板块 / 路由时直接跳变。
+ * 折叠过渡：仅折叠状态变化时播放，切换板块 / 路由时直接跳变。
  * @author xuxueli 2026-11-15
  */
-import { onScopeDispose, ref } from 'vue'
+import { onScopeDispose, ref, watch } from 'vue'
 
 /* 兜底复位时长：略长于 tokens.scss 的 --desk-motion-collapse，过渡事件缺失时也能复位动画标记 */
 const COLLAPSE_FALLBACK_MS = 260
 
-export function useCollapseAnimation() {
+export function useCollapseAnimation(collapsed: () => boolean) {
   /* 是否播放宽度 / 位移过渡 */
   const animated = ref(false)
   /* 兜底定时器：正常过渡结束时会被清掉 */
@@ -22,7 +22,7 @@ export function useCollapseAnimation() {
     timer = null
   }
 
-  /* 开始一次折叠 / 展开过渡 */
+  /* 折叠状态变化：开启一次过渡，并设置兜底复位 */
   function play(): void {
     animated.value = true
     clearTimer()
@@ -41,7 +41,8 @@ export function useCollapseAnimation() {
     animated.value = false
   }
 
+  watch(collapsed, play)
   onScopeDispose(clearTimer)
 
-  return { animated, play, onTransitionEnd }
+  return { animated, onTransitionEnd }
 }
