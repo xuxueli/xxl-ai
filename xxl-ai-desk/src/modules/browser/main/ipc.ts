@@ -6,6 +6,7 @@
 import type { IpcContext } from '@common/main/ipc'
 import { BROWSER_IPC } from '../shared/ipc'
 import { resolveBrowserAction, setBrowserActionSender } from './browserBridge'
+import { setBrowserPanelActive } from './shortcut'
 import { setBrowserOpener } from '@modules/agent/main'
 
 export function registerBrowserIpc(ipc: IpcContext): void {
@@ -18,4 +19,8 @@ export function registerBrowserIpc(ipc: IpcContext): void {
   ipc.handle(BROWSER_IPC.actionResult, (_event, requestId: string, result) =>
     resolveBrowserAction(requestId, result)
   )
+  /* 面板激活态：仅激活时主进程才拦截浏览器快捷键 */
+  ipc.handle(BROWSER_IPC.setPanelActive, (_event, active: boolean) => {
+    setBrowserPanelActive(active === true)
+  })
 }

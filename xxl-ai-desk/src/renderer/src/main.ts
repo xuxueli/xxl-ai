@@ -32,7 +32,6 @@ import {
   Folder,
   FolderAdd,
   FolderOpened,
-  FullScreen,
   Grid,
   HomeFilled,
   InfoFilled,
@@ -42,6 +41,7 @@ import {
   Minus,
   Monitor,
   MoreFilled,
+  Mute,
   Notebook,
   Operation,
   Plus,
@@ -49,6 +49,7 @@ import {
   QuestionFilled,
   Reading,
   Refresh,
+  RefreshRight,
   Search,
   SetUp,
   ShoppingCartFull,
@@ -62,7 +63,8 @@ import {
   User,
   VideoPause,
   View,
-  WarningFilled
+  WarningFilled,
+  ZoomIn
 } from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
@@ -106,7 +108,6 @@ const icons = {
   Folder,
   FolderAdd,
   FolderOpened,
-  FullScreen,
   Grid,
   HomeFilled,
   InfoFilled,
@@ -116,6 +117,7 @@ const icons = {
   Minus,
   Monitor,
   MoreFilled,
+  Mute,
   Notebook,
   Operation,
   Plus,
@@ -123,6 +125,7 @@ const icons = {
   QuestionFilled,
   Reading,
   Refresh,
+  RefreshRight,
   Search,
   SetUp,
   ShoppingCartFull,
@@ -136,7 +139,8 @@ const icons = {
   User,
   VideoPause,
   View,
-  WarningFilled
+  WarningFilled,
+  ZoomIn
 }
 for (const [name, component] of Object.entries(icons)) {
   app.component(name, component)

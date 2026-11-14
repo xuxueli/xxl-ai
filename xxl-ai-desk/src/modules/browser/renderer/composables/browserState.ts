@@ -18,12 +18,22 @@ export interface WebviewElement extends HTMLElement {
   goBack(): void
   goForward(): void
   reload(): void
+  reloadIgnoringCache(): void
   stop(): void
   focus(): void
   openDevTools(): void
   remove(): void
+  setZoomFactor(factor: number): void
+  setAudioMuted(muted: boolean): void
+  findInPage(text: string, options?: { forward?: boolean; findNext?: boolean }): number
+  stopFindInPage(action: 'clearSelection' | 'keepSelection' | 'activateSelection'): void
   capturePage(): Promise<{ getSize(): { width: number; height: number }; toDataURL(): string }>
   executeJavaScript(code: string): Promise<unknown>
+}
+
+/* 页内查找结果事件（webview 的 found-in-page） */
+export interface WebviewFoundEvent extends Event {
+  result: { activeMatchOrdinal: number; matches: number }
 }
 
 /* ============ 运行时资源（模块级单例） ============ */

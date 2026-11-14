@@ -100,6 +100,20 @@ export interface BrowserActionRequest {
   action: BrowserAction
 }
 
+/* 面板快捷键按键信息（主进程拦截后转发渲染层；Esc 不含修饰键） */
+export interface BrowserKeyInput {
+  /* 主键（小写） */
+  key: string
+  /* macOS ⌘ / Windows 与 Linux 的 Win 键 */
+  meta: boolean
+  /* Ctrl */
+  control: boolean
+  /* Alt / Option */
+  alt: boolean
+  /* Shift */
+  shift: boolean
+}
+
 /* 浏览器动作结果（按动作类型填充对应字段） */
 export interface BrowserActionResult {
   /* 是否成功 */

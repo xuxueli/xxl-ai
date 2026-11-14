@@ -64,17 +64,29 @@ watch(
   min-height: 0;
 }
 
+/* Tab 头与其它工具面板的二级工具栏对齐 */
 .diagnostics-tabs :deep(.el-tabs__header) {
   margin: 0;
-  padding: 0 12px;
+  padding: 0 8px;
+  height: 38px;
+  background: var(--desk-bg-elevated);
 }
 
-/* 内层 Tab 字号对齐其它工具面板（文件 / Git / 终端） */
 .diagnostics-tabs :deep(.el-tabs__item) {
-  height: 32px;
-  line-height: 32px;
+  height: 38px;
+  line-height: 38px;
   font-size: var(--desk-font-sm);
   color: var(--desk-text-secondary);
+}
+
+.diagnostics-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--desk-primary);
+}
+
+/* 底部指示线收敛为 1px，与其它工具条边框一致 */
+.diagnostics-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background: var(--desk-border);
 }
 
 .diagnostics-tabs :deep(.el-tabs__content) {

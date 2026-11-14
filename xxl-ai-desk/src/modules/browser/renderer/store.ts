@@ -23,6 +23,14 @@ export interface BrowserTab {
   canBack: boolean
   /* 是否可前进 */
   canForward: boolean
+  /* 是否已静音（运行时状态） */
+  muted: boolean
+  /* 缩放比例，1 表示 100%（运行时状态） */
+  zoom: number
+  /* 页内查找：匹配总数（运行时状态） */
+  findMatches: number
+  /* 页内查找：当前匹配序号（运行时状态） */
+  findActive: number
 }
 
 /* 单个会话的浏览器状态 */
@@ -52,7 +60,11 @@ export function createBrowserTab(url = ''): BrowserTab {
     loading: false,
     hasPage: Boolean(url),
     canBack: false,
-    canForward: false
+    canForward: false,
+    muted: false,
+    zoom: 1,
+    findMatches: 0,
+    findActive: 0
   }
 }
 
@@ -62,7 +74,14 @@ const storage = createSessionScopedStorage<BrowserSessionState>({
   version: STORAGE_VERSION,
   toStored: (state) => ({
     version: STORAGE_VERSION,
-    tabs: state.tabs,
+    /* 仅保存标签与地址：加载、前进后退、静音、缩放与查找结果均为运行时状态 */
+    tabs: state.tabs.map((tab) => ({
+      id: tab.id,
+      input: tab.input,
+      currentUrl: tab.currentUrl,
+      title: tab.title,
+      hasPage: tab.hasPage
+    })),
     activeId: state.activeId
   }),
   fromStored: (raw) => {
@@ -86,7 +105,11 @@ const storage = createSessionScopedStorage<BrowserSessionState>({
         loading: false,
         hasPage: tab.hasPage === true,
         canBack: false,
-        canForward: false
+        canForward: false,
+        muted: false,
+        zoom: 1,
+        findMatches: 0,
+        findActive: 0
       })
     }
     if (tabs.length === 0) {

@@ -91,6 +91,21 @@
     "openDevTools": "Open DevTools",
     "copyUrl": "Copy URL",
     "copiedUrl": "URL copied",
-    "copyFail": "Copy failed"
+    "copyFail": "Copy failed",
+    "findInPage": "Find in page",
+    "findPlaceholder": "Find in page",
+    "findNoMatch": "No matches",
+    "findPrev": "Previous match",
+    "findNext": "Next match",
+    "closeFind": "Close find",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "hardReload": "Hard reload",
+    "copyTitleLink": "Copy title and URL",
+    "copiedTitleLink": "Title and URL copied"
   }
 }

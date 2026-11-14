@@ -20,7 +20,7 @@ import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
 import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
-import { disposeBrowserActions } from '@modules/browser/main'
+import { bindBrowserShortcut, disposeBrowserActions } from '@modules/browser/main'
 import { initLogger } from '@common/main/utils/logger'
 
 /* 业务数据目录：默认系统配置目录，可由 xxl-ai-desk-config.json 切换；必须在 app ready 前设置 */
@@ -103,6 +103,9 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  /* 浏览器面板快捷键：主窗口内按键先经主进程拦截（避开菜单加速键） */
+  bindBrowserShortcut(mainWindow.webContents)
+
   /*
    * 拦截主窗口内导航：Markdown / 页面内的普通链接不得替换应用界面。
    * 同文档（仅 hash 变化）放行；其余 http(s) 交给系统浏览器。
@@ -169,6 +172,8 @@ if (!gotLock) {
           })
           return { action: 'deny' }
         })
+        /* webview 内按键不冒泡到渲染窗口：guest 的快捷键同样在主进程拦截 */
+        bindBrowserShortcut(contents)
       }
     })
 

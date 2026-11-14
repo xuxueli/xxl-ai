@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /*
- * 文件面板工具栏：面包屑 + 保存 / 预览 / 打开所在目录 / 打开方式。
+ * 文件面板工具栏：面包屑 + 保存 / 预览 / 打开所在目录 / 打开方式 / 编辑器主题。
+ * 视觉与笔记工具栏保持一致：38px 图标工具条、分组分隔线、无边框按钮。
  * @author xuxueli 2026-10-25
  */
 import { t } from '@renderer/shell/i18n'
@@ -42,60 +43,39 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="file-toolbar">
-    <div class="file-leading">
+  <div class="desk-toolbar">
+    <!-- 左侧：树开关 + 面包屑 -->
+    <div class="desk-toolbar-main">
       <!-- 文件树折叠 / 展开：位于目录名左侧，控制整个文件树区域显隐 -->
       <DeskTooltip :content="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')">
-        <button class="panel-btn tree-toggle" @click="emit('toggle-tree')">
+        <button
+          class="desk-toolbar-btn"
+          :aria-label="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')"
+          @click="emit('toggle-tree')"
+        >
           <el-icon><Expand v-if="treeCollapsed" /><Fold v-else /></el-icon>
         </button>
       </DeskTooltip>
-      <div class="file-breadcrumb">
+      <span class="desk-toolbar-divider"></span>
+      <div class="file-breadcrumb" :title="breadcrumb.join(' / ')">
         <template v-for="(seg, index) in breadcrumb" :key="index">
           <span v-if="index > 0" class="crumb-sep">›</span>
           <span class="crumb" :class="{ current: index === breadcrumb.length - 1 }">{{ seg }}</span>
         </template>
       </div>
     </div>
-    <div class="file-actions">
-      <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
-      <DeskTooltip :content="t('panel.editorTheme')">
-        <el-dropdown
-          trigger="click"
-          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
-        >
-          <button class="panel-btn">
-            <PaletteIcon class="panel-svg-icon" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item
-                v-for="option in EDITOR_THEMES"
-                :key="option.id"
-                :command="option.id"
-              >
-                <div class="theme-option">
-                  <span :class="{ 'theme-active': option.id === editorTheme }">
-                    {{ t(option.labelKey) }}
-                  </span>
-                  <el-icon v-if="option.id === editorTheme" class="theme-check">
-                    <Check />
-                  </el-icon>
-                </div>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </DeskTooltip>
+
+    <!-- 右侧：编辑动作 | 文件系统 | 外观 -->
+    <div class="desk-toolbar-actions">
       <DeskTooltip v-if="editable" :content="t('panel.saveHint')">
         <button
-          class="panel-btn"
+          class="desk-toolbar-btn"
           :class="{ active: dirty }"
           :disabled="!dirty || saving"
+          :aria-label="t('panel.save')"
           @click="emit('save')"
         >
           <el-icon><Finished /></el-icon>
-          <span>{{ t('panel.save') }}</span>
         </button>
       </DeskTooltip>
       <DeskTooltip
@@ -103,29 +83,32 @@ const emit = defineEmits<{
         :content="showPreview ? t('panel.code') : t('panel.preview')"
       >
         <button
-          class="panel-btn"
+          class="desk-toolbar-btn"
           :class="{ active: showPreview }"
+          :aria-label="showPreview ? t('panel.code') : t('panel.preview')"
           @click="emit('toggle-preview')"
         >
-          <el-icon><Document /></el-icon>
-          <span>{{ showPreview ? t('panel.code') : t('panel.preview') }}</span>
+          <el-icon><Document v-if="showPreview" /><View v-else /></el-icon>
         </button>
       </DeskTooltip>
+
+      <span v-if="editable || canPreview" class="desk-toolbar-divider"></span>
+
       <DeskTooltip :content="hasFile ? t('panel.openFolder') : t('panel.openProjectFolder')">
         <button
-          class="panel-btn"
+          class="desk-toolbar-btn"
           :disabled="!hasFile && !hasRoot"
+          :aria-label="hasFile ? t('panel.openFolder') : t('panel.openProjectFolder')"
           @click="emit('reveal')"
         >
           <el-icon><FolderOpened /></el-icon>
         </button>
       </DeskTooltip>
       <!-- 打开：左半默认应用直接打开，右半下拉选择打开方式 -->
-      <div class="panel-btn open-split" :class="{ disabled: !hasFile }">
+      <div class="desk-toolbar-btn open-split" :class="{ disabled: !hasFile }">
         <DeskTooltip :content="t('panel.openDefault')">
           <button class="open-split-main" :disabled="!hasFile" @click="emit('open-default')">
             <el-icon><DocumentAdd /></el-icon>
-            <span>{{ t('panel.open') }}</span>
           </button>
         </DeskTooltip>
         <DeskTooltip :content="t('panel.open')">
@@ -160,21 +143,47 @@ const emit = defineEmits<{
           </el-dropdown>
         </DeskTooltip>
       </div>
+
+      <span class="desk-toolbar-divider"></span>
+
+      <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
+      <DeskTooltip :content="t('panel.editorTheme')">
+        <el-dropdown
+          trigger="click"
+          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
+        >
+          <button class="desk-toolbar-btn" :aria-label="t('panel.editorTheme')">
+            <PaletteIcon class="toolbar-svg-icon" />
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="option in EDITOR_THEMES"
+                :key="option.id"
+                :command="option.id"
+              >
+                <div class="theme-option">
+                  <span :class="{ 'theme-active': option.id === editorTheme }">
+                    {{ t(option.labelKey) }}
+                  </span>
+                  <el-icon v-if="option.id === editorTheme" class="theme-check">
+                    <Check />
+                  </el-icon>
+                </div>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </DeskTooltip>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-/* 工具栏：面包屑居左，操作居右 */
-.file-toolbar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  height: var(--desk-panel-header-height);
-  padding: 0 12px 0 16px;
-  border-bottom: 1px solid var(--desk-border);
+/* 自绘图标：与工具栏图标保持同一视觉尺寸 */
+.toolbar-svg-icon {
+  width: var(--desk-font-md);
+  height: var(--desk-font-md);
 }
 
 .file-breadcrumb {
@@ -186,19 +195,6 @@ const emit = defineEmits<{
   overflow: hidden;
   font-size: var(--desk-font-sm);
   color: var(--desk-text-tertiary);
-}
-
-/* 左侧：文件树折叠按钮 + 面包屑 */
-.file-leading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-
-.tree-toggle {
-  flex-shrink: 0;
 }
 
 .crumb {
@@ -219,34 +215,21 @@ const emit = defineEmits<{
   color: var(--desk-text-tertiary);
 }
 
-.file-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-/* 自绘图标：调色盘 viewBox 留白较多，略放大保持视觉尺寸 */
-.panel-svg-icon {
-  width: 17px;
-  height: 17px;
-}
-
 /* 打开按钮：左半默认打开 + 右半打开方式下拉，整体保持一个按钮外观 */
 .open-split {
+  width: auto;
   gap: 0;
-  padding: 0;
   overflow: hidden;
 }
 
 .open-split.disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 /* 无文件时保持按钮静止，不响应悬浮高亮 */
 .open-split.disabled:hover {
-  background: var(--desk-bg);
+  background: transparent;
   color: var(--desk-text-secondary);
 }
 
@@ -264,13 +247,12 @@ const emit = defineEmits<{
 }
 
 .open-split-main {
-  gap: 5px;
-  padding: 0 10px;
+  padding: 0 4px;
 }
 
-/* 右半下拉触发器：与左半用细线分隔，仅展示箭头 */
+/* 右半下拉触发器：与左半用细线分隔，仅展示小箭头 */
 .open-split-toggle {
-  padding: 0 6px;
+  padding: 0 2px;
   border-left: 1px solid var(--desk-border);
 }
 

@@ -91,6 +91,21 @@
     "openDevTools": "打开开发者工具",
     "copyUrl": "复制网址",
     "copiedUrl": "网址已复制",
-    "copyFail": "复制失败"
+    "copyFail": "复制失败",
+    "findInPage": "页内查找",
+    "findPlaceholder": "在页面中查找",
+    "findNoMatch": "无匹配",
+    "findPrev": "上一个",
+    "findNext": "下一个",
+    "closeFind": "关闭查找",
+    "zoom": "缩放",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "resetZoom": "重置缩放",
+    "mute": "静音",
+    "unmute": "取消静音",
+    "hardReload": "强制刷新",
+    "copyTitleLink": "复制标题和链接",
+    "copiedTitleLink": "标题和链接已复制"
   }
 }

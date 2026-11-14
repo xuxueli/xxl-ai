@@ -6,7 +6,7 @@
  * @author xuxueli 2026-10-25
  */
 
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { t } from '@renderer/shell/i18n'
@@ -30,7 +30,8 @@ import {
   readyTabs,
   stateOf,
   webviews,
-  type WebviewElement
+  type WebviewElement,
+  type WebviewFoundEvent
 } from '@modules/browser/renderer/composables/browserState'
 import {
   clickActiveTab,
@@ -70,6 +71,10 @@ interface ConsoleMessageEvent extends Event {
 const MAX_TABS = 8
 /* 单标签页诊断上限，避免长期运行无限增长 */
 const MAX_DIAGNOSTICS = 100
+/* 面板缩放：步长、上下限（1 表示 100%） */
+const ZOOM_STEP = 0.1
+const ZOOM_MIN = 0.25
+const ZOOM_MAX = 3
 
 /* 地址栏聚焦时不覆盖用户正在编辑的输入 */
 let inputFocused = false
@@ -240,6 +245,14 @@ function ensureWebview(id: string, sessionId: string): WebviewElement | null {
   el.setAttribute('src', 'about:blank')
   el.addEventListener('dom-ready', () => {
     readyTabs.add(id)
+    /* 宿主重建后恢复静音与缩放 */
+    const current = findTab(sessionId, id)
+    if (current?.muted) {
+      el.setAudioMuted(true)
+    }
+    if (current && current.zoom !== 1) {
+      el.setZoomFactor(current.zoom)
+    }
     /* guest 就绪后执行等待中的导航（新标签刚创建时的导航走这里） */
     const queued = pendingNav.get(id)
     if (queued) {
@@ -301,6 +314,15 @@ function ensureWebview(id: string, sessionId: string): WebviewElement | null {
     const title = (event as TitleEvent).title
     if (current && title) {
       current.title = title
+    }
+  })
+  /* 页内查找结果：回写匹配进度，供查找条展示（不影响 Agent 动作） */
+  el.addEventListener('found-in-page', (event) => {
+    const result = (event as WebviewFoundEvent).result
+    const current = findTab(sessionId, id)
+    if (current && result) {
+      current.findMatches = result.matches
+      current.findActive = result.activeMatchOrdinal
     }
   })
   host.appendChild(el)
@@ -505,6 +527,17 @@ export function useBrowserPanel(sessionId: string) {
   const activeId = computed(() => state.value.activeId)
   const activeTab = computed(() => activeTabOf(state.value))
 
+  /* 当前标签页 webview（未就绪时为空） */
+  function activeView(): WebviewElement | undefined {
+    return webviews.get(state.value.activeId)
+  }
+
+  /* 页内查找：开关与关键词，匹配进度由标签页运行时回写 */
+  const findOpen = ref(false)
+  const findText = ref('')
+  const findMatches = computed(() => activeTab.value?.findMatches ?? 0)
+  const findActive = computed(() => activeTab.value?.findActive ?? 0)
+
   /* 地址栏文本双向绑定到当前标签页 */
   const addressInput = computed({
     get: () => activeTab.value?.input ?? '',
@@ -546,7 +579,7 @@ export function useBrowserPanel(sessionId: string) {
 
   /* 刷新 / 停止 */
   function reloadOrStop(): void {
-    const view = webviews.get(state.value.activeId)
+    const view = activeView()
     if (!view) {
       void go()
       return
@@ -556,6 +589,87 @@ export function useBrowserPanel(sessionId: string) {
     } else {
       view.reload()
     }
+  }
+
+  /* 刷新当前页（快捷键固定刷新，不做停止） */
+  function reload(): void {
+    const view = activeView()
+    if (!view) {
+      void go()
+      return
+    }
+    view.reload()
+  }
+
+  /* 强制刷新：忽略缓存重新加载 */
+  function hardReload(): void {
+    activeView()?.reloadIgnoringCache()
+  }
+
+  /* 设置缩放比例：按标签页记录并夹取上下限 */
+  function setZoom(value: number): void {
+    const tab = activeTabOf(state.value)
+    const view = activeView()
+    if (!tab || !view) {
+      return
+    }
+    const next = Math.min(Math.max(Math.round(value * 100) / 100, ZOOM_MIN), ZOOM_MAX)
+    tab.zoom = next
+    view.setZoomFactor(next)
+  }
+
+  /* 放大 / 缩小 / 重置缩放 */
+  function zoomIn(): void {
+    setZoom((activeTabOf(state.value)?.zoom ?? 1) + ZOOM_STEP)
+  }
+
+  function zoomOut(): void {
+    setZoom((activeTabOf(state.value)?.zoom ?? 1) - ZOOM_STEP)
+  }
+
+  function resetZoom(): void {
+    setZoom(1)
+  }
+
+  /* 切换静音 */
+  function toggleMute(): void {
+    const tab = activeTabOf(state.value)
+    const view = activeView()
+    if (!tab || !view) {
+      return
+    }
+    tab.muted = !tab.muted
+    view.setAudioMuted(tab.muted)
+  }
+
+  /* 页内查找：打开 / 关闭 */
+  function openFind(): void {
+    findOpen.value = true
+  }
+
+  function closeFind(): void {
+    findOpen.value = false
+    activeView()?.stopFindInPage('clearSelection')
+  }
+
+  /* 关键词变化：新文本从头查找，空文本清空高亮 */
+  function searchFind(): void {
+    const view = activeView()
+    const text = findText.value
+    if (!view || !text) {
+      view?.stopFindInPage('clearSelection')
+      return
+    }
+    view.findInPage(text, { forward: true, findNext: false })
+  }
+
+  /* 上一个 / 下一个匹配 */
+  function findNext(forward: boolean): void {
+    const view = activeView()
+    if (!view || !findText.value) {
+      return
+    }
+    view.findInPage(findText.value, { forward, findNext: true })
   }
 
   /* 在系统浏览器中打开当前页 */
@@ -580,10 +694,33 @@ export function useBrowserPanel(sessionId: string) {
     }
   }
 
+  /* 复制标题和链接 */
+  async function copyTitleLink(): Promise<void> {
+    const tab = activeTabOf(state.value)
+    if (!tab?.currentUrl) {
+      return
+    }
+    const text = tab.title ? `${tab.title}\n${tab.currentUrl}` : tab.currentUrl
+    try {
+      await navigator.clipboard.writeText(text)
+      ElMessage.success(t('panel.copiedTitleLink'))
+    } catch {
+      ElMessage.error(t('panel.copyFail'))
+    }
+  }
+
   /* 更多操作分发 */
   function onMore(command: string): void {
-    if (command === 'copy') {
+    if (command === 'find') {
+      openFind()
+    } else if (command === 'copy') {
       void copyAddress()
+    } else if (command === 'copyTitleLink') {
+      void copyTitleLink()
+    } else if (command === 'mute') {
+      toggleMute()
+    } else if (command === 'hardReload') {
+      hardReload()
     } else if (command === 'devtools') {
       const tab = activeTabOf(state.value)
       if (tab) {
@@ -613,9 +750,24 @@ export function useBrowserPanel(sessionId: string) {
     closeTab: (id: string) => closeTab(sessionId, id),
     back,
     forward,
+    reload,
     reloadOrStop,
+    hardReload,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    toggleMute,
     go,
     openExternal,
+    copyTitleLink,
+    findOpen,
+    findText,
+    findMatches,
+    findActive,
+    openFind,
+    closeFind,
+    searchFind,
+    findNext,
     onMore,
     onAddressFocus,
     onAddressBlur

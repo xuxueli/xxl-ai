@@ -253,42 +253,75 @@ body.resizing-vertical {
 }
 
 
-/* --- 面板工具按钮：文件 / Git 工具栏共用 --- */
-.panel-btn {
-  display: inline-flex;
+/* --- 工具面板二级工具条：文件 / Git / 终端 / 浏览器 / 诊断共用 --- */
+.desk-toolbar {
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 8px;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--desk-border);
-  border-radius: 8px;
-  background: var(--desk-bg);
-  color: var(--desk-text-secondary);
-  font-size: var(--desk-font-sm);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  gap: 6px;
+  border-bottom: 1px solid var(--desk-border);
+  background: var(--desk-bg-elevated);
 }
 
-.panel-btn:hover:not(:disabled) {
+.desk-toolbar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.desk-toolbar-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.desk-toolbar-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 14px;
+  margin: 0 4px;
+  background: var(--desk-border);
+}
+
+.desk-toolbar-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--desk-text-secondary);
+  font-size: var(--desk-font-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.desk-toolbar-btn:hover:not(:disabled) {
   background: var(--desk-primary-soft);
   color: var(--desk-text);
 }
 
-.panel-btn.active {
-  background: var(--desk-segment-bg);
-  color: var(--desk-text);
-  border-color: var(--desk-segment-border);
+/* 当前生效 / 打开状态：浅品牌底 + 主色 */
+.desk-toolbar-btn.active {
+  background: var(--desk-primary-soft);
+  color: var(--desk-primary);
 }
 
-.panel-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.desk-toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
-.panel-btn .chevron {
+.desk-toolbar-btn .chevron {
   font-size: var(--desk-icon-xs);
 }
 

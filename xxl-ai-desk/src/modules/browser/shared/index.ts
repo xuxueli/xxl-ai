@@ -4,5 +4,5 @@
  */
 
 export type { BrowserApi } from './api'
-export type { BrowserAction, BrowserActionRequest, BrowserActionResult, BrowserConsoleEntry, BrowserFillField, BrowserSnapshotNode, BrowserTabInfo } from './contracts'
+export type { BrowserAction, BrowserActionRequest, BrowserActionResult, BrowserConsoleEntry, BrowserFillField, BrowserKeyInput, BrowserSnapshotNode, BrowserTabInfo } from './contracts'
 export { BROWSER_IPC } from './ipc'

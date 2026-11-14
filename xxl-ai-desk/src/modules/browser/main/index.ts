@@ -4,3 +4,4 @@
  */
 
 export { disposeBrowserActions, requestBrowserAction } from './browserBridge'
+export { bindBrowserShortcut } from './shortcut'

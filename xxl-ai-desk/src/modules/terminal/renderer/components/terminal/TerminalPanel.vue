@@ -26,8 +26,8 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
 
 <template>
   <div class="tool-panel-terminal">
-    <!-- 终端标签栏：切换/关闭终端标签，标签右侧为新建 -->
-    <div class="terminal-header">
+    <!-- 终端标签栏：左侧切换/关闭标签，右侧固定新建 -->
+    <div class="desk-toolbar">
       <div class="terminal-tabs">
         <button
           v-for="tab in tabs"
@@ -41,8 +41,14 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
           <span class="terminal-tab-name">{{ tab.title }}</span>
           <el-icon class="terminal-tab-close" @click.stop="disposeTab(tab.id)"><Close /></el-icon>
         </button>
+      </div>
+      <div class="desk-toolbar-actions">
         <DeskTooltip :content="t('toolPanel.newTerminal')">
-          <button class="icon-button terminal-new" @click="openTerminal">
+          <button
+            class="desk-toolbar-btn"
+            :aria-label="t('toolPanel.newTerminal')"
+            @click="openTerminal"
+          >
             <el-icon><Plus /></el-icon>
           </button>
         </DeskTooltip>
@@ -71,23 +77,14 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
   background: var(--desk-bg);
 }
 
-.terminal-header {
-  height: var(--desk-panel-header-height);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px 0 14px;
-  border-bottom: 1px solid var(--desk-border);
-}
-
-/* 标签区 + 新建按钮：新建紧随标签右侧且不随标签滚动 */
+/* 标签区：横向滚动，新建按钮固定在右侧动作区 */
 .terminal-tabs {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
+  height: 100%;
   overflow-x: auto;
 }
 
@@ -97,9 +94,10 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  padding: 4px 6px 4px 10px;
+  height: 26px;
+  padding: 0 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   background: transparent;
   font-size: var(--desk-font-sm);
   color: var(--desk-text-secondary);
@@ -115,7 +113,7 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
 
 .terminal-tab.active {
   background: var(--desk-primary-soft);
-  color: var(--desk-text);
+  color: var(--desk-primary);
 }
 
 .terminal-tab-name {

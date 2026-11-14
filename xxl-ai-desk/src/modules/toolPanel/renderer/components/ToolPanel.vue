@@ -9,7 +9,14 @@ import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
 import { DeskTooltip } from '@common/renderer/components'
 import { FilePanel } from '@modules/file/renderer'
-import { GitIcon, GlobeIcon, TerminalIcon } from '@common/renderer/components/icons'
+import {
+  GitIcon,
+  GlobeIcon,
+  PanelCollapseIcon,
+  PanelMaximizeIcon,
+  PanelRestoreIcon,
+  TerminalIcon
+} from '@common/renderer/components/icons'
 import { BrowserPanel } from '@modules/browser/renderer'
 import { GitPanel } from '@modules/git/renderer'
 import { TerminalPanel } from '@modules/terminal/renderer'
@@ -127,14 +134,19 @@ function toggleFocus(): void {
       </div>
       <div class="tool-actions">
         <DeskTooltip :content="panel.mode === 'focus' ? t('panel.restore') : t('panel.maximize')">
-          <button class="icon-button" @click="toggleFocus">
-            <el-icon v-if="panel.mode === 'focus'"><Minus /></el-icon>
-            <el-icon v-else><FullScreen /></el-icon>
+          <button
+            class="icon-button"
+            :class="{ active: panel.mode === 'focus' }"
+            :aria-label="panel.mode === 'focus' ? t('panel.restore') : t('panel.maximize')"
+            @click="toggleFocus"
+          >
+            <PanelRestoreIcon v-if="panel.mode === 'focus'" class="tool-action-icon" />
+            <PanelMaximizeIcon v-else class="tool-action-icon" />
           </button>
         </DeskTooltip>
         <DeskTooltip :content="t('panel.close')">
-          <button class="icon-button" @click="closePanel">
-            <el-icon><Close /></el-icon>
+          <button class="icon-button" :aria-label="t('panel.close')" @click="closePanel">
+            <PanelCollapseIcon class="tool-action-icon" />
           </button>
         </DeskTooltip>
       </div>
@@ -149,7 +161,12 @@ function toggleFocus(): void {
         :root="props.root"
         :project-name="props.projectName"
       />
-      <BrowserPanel v-if="opened.browser" v-show="activeTab === 'browser'" :session-id="props.sessionId" />
+      <BrowserPanel
+        v-if="opened.browser"
+        v-show="activeTab === 'browser'"
+        :session-id="props.sessionId"
+        :active="panel.visible && activeTab === 'browser'"
+      />
       <DiagnosticsPanel
         v-if="opened.diagnostics"
         v-show="activeTab === 'diagnostics'"
@@ -242,6 +259,18 @@ function toggleFocus(): void {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+}
+
+/* 聚焦模式下保持按钮高亮，提示当前面板已放大 */
+.tool-actions .icon-button.active {
+  background: var(--desk-primary-soft);
+  color: var(--desk-primary);
+}
+
+/* 自绘面板图标：与 icon-button 字号同尺寸 */
+.tool-action-icon {
+  width: var(--desk-icon-md);
+  height: var(--desk-icon-md);
 }
 
 .tool-panel-body {
