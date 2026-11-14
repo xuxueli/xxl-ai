@@ -153,12 +153,13 @@ function buildEditorTheme(palette: EditorThemePalette): Extension {
     },
     /*
      * 选区配色：CodeMirror 基础主题的聚焦选区选择器带完整层级（5 个类），
-     * 这里用同等完整的选择器保证优先级不被覆盖，否则聚焦时仍显示默认色。
+     * 这里用同等完整的选择器保证优先级不被覆盖；再补一层带 .cm-selectionLayer
+     * 的选择器，让编辑器失焦后的选区也沿用主题色，而不是回落到默认灰。
      */
-    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused .cm-selectionBackground, & .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
       backgroundColor: palette.selection
     },
-    '.cm-selectionMatch': { backgroundColor: palette.selection },
+    '.cm-selectionMatch': { backgroundColor: palette.selectionMatch },
     '.cm-searchMatch': { backgroundColor: palette.searchMatch },
     '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: palette.searchMatchActive },
     '.cm-panels': {

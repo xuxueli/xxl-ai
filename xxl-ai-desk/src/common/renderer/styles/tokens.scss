@@ -67,7 +67,14 @@
   --desk-bubble-user: color-mix(in srgb, var(--theme-brand) 9%, var(--theme-content));
   --desk-bubble-user-text: var(--theme-text);
   --desk-bubble-assistant: var(--theme-elevated);
-  --desk-selection: color-mix(in srgb, var(--theme-brand) 32%, transparent);
+  /*
+   * 文本选区：不跟随品牌色 —— 极简灰 / 经典灰等中性主题的品牌色为灰阶，
+   * 直接混色会得到与背景几乎同色的浅灰块，选中态难以辨认。
+   * 这里固定使用明度差明确的蓝色系，浅色主题为实色浅蓝、深色主题为实色深蓝。
+   */
+  --desk-selection: #9cc2f6;
+  /* 选中词的其余出现位置：更淡的提示色，避免与真正的选区混淆 */
+  --desk-selection-match: rgba(59, 130, 246, 0.13);
   --desk-code-inline-bg: color-mix(in srgb, var(--theme-text) 7%, transparent);
 
   /* 分段控件 / 按钮 / 开关 */
@@ -200,6 +207,9 @@
   --code-green: #7ee787;
   --code-yellow: #f2cc60;
   --code-subst: #e6edf3;
+
+  --desk-selection: #35547d;
+  --desk-selection-match: rgba(120, 170, 255, 0.14);
 
   --desk-shadow: 0 12px 32px color-mix(in srgb, var(--theme-shadow) 55%, transparent);
   --desk-shadow-soft:

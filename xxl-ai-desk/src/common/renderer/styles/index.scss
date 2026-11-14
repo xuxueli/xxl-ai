@@ -307,6 +307,12 @@ body.resizing-vertical {
   background: var(--desk-text-tertiary);
 }
 
+/* --- 文本选区：全应用统一配色，预览区 / 表单等原生选区与编辑器保持一致 --- */
+::selection {
+  background: var(--desk-selection);
+  color: inherit;
+}
+
 /* --- 会话内搜索高亮（CSS Custom Highlight API） --- */
 ::highlight(chat-search) {
   background: color-mix(in srgb, var(--desk-warning) 28%, transparent);

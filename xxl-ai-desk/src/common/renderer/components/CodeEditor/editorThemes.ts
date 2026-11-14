@@ -52,6 +52,7 @@ export interface EditorThemePalette {
   activeLine: string
   activeGutter: string
   selection: string
+  selectionMatch: string
   searchMatch: string
   searchMatchActive: string
   keyword: string
@@ -79,6 +80,7 @@ const AUTO_PALETTE: EditorThemePalette = {
   activeLine: 'color-mix(in srgb, var(--desk-primary) 6%, transparent)',
   activeGutter: 'color-mix(in srgb, var(--desk-primary) 8%, transparent)',
   selection: 'var(--desk-selection)',
+  selectionMatch: 'var(--desk-selection-match)',
   searchMatch: 'color-mix(in srgb, var(--desk-warning) 26%, transparent)',
   searchMatchActive: 'color-mix(in srgb, var(--desk-warning) 62%, transparent)',
   keyword: 'var(--code-red)',
@@ -96,7 +98,11 @@ const AUTO_PALETTE: EditorThemePalette = {
   invalid: 'var(--code-red)'
 }
 
-/* 固定主题：只用于编辑器，不影响应用外壳 */
+/*
+ * 固定主题：只用于编辑器，不影响应用外壳。
+ * 注意：CodeMirror 的选区画在 .cm-selectionLayer（z-index: -1，位于正文背景之下），
+ * 当前行高亮必须使用半透明色，否则不透明底色会把同一行的选区整块盖住（双击选词时最明显）。
+ */
 const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
   'github-light': {
     background: '#ffffff',
@@ -104,9 +110,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#f6f8fa',
     gutterText: '#6e7781',
     border: '#d0d7de',
-    activeLine: '#f3f5f8',
+    activeLine: 'rgba(31, 35, 40, 0.045)',
     activeGutter: '#eaeef2',
-    selection: '#7db5ff',
+    selection: '#9cc2f6',
+    selectionMatch: 'rgba(9, 105, 218, 0.14)',
     searchMatch: 'rgba(255, 213, 0, 0.35)',
     searchMatchActive: 'rgba(255, 176, 0, 0.65)',
     keyword: '#cf222e',
@@ -129,9 +136,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#21252b',
     gutterText: '#5c6370',
     border: '#3a3f4b',
-    activeLine: '#2c313a',
+    activeLine: 'rgba(255, 255, 255, 0.025)',
     activeGutter: '#323842',
-    selection: '#545d75',
+    selection: '#35547d',
+    selectionMatch: 'rgba(97, 175, 239, 0.16)',
     searchMatch: 'rgba(229, 192, 123, 0.35)',
     searchMatchActive: 'rgba(229, 192, 123, 0.7)',
     keyword: '#c678dd',
@@ -154,9 +162,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#2b303b',
     gutterText: '#616e88',
     border: '#3b4252',
-    activeLine: '#3b4252',
+    activeLine: 'rgba(136, 192, 208, 0.11)',
     activeGutter: '#434c5e',
-    selection: '#5d6c8c',
+    selection: '#35547d',
+    selectionMatch: 'rgba(136, 192, 208, 0.16)',
     searchMatch: 'rgba(235, 203, 139, 0.35)',
     searchMatchActive: 'rgba(235, 203, 139, 0.7)',
     keyword: '#81a1c1',
@@ -179,9 +188,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#21222c',
     gutterText: '#6272a4',
     border: '#44475a',
-    activeLine: '#44475a',
+    activeLine: 'rgba(189, 147, 249, 0.10)',
     activeGutter: '#4d5066',
-    selection: '#626797',
+    selection: '#35547d',
+    selectionMatch: 'rgba(189, 147, 249, 0.16)',
     searchMatch: 'rgba(241, 250, 140, 0.3)',
     searchMatchActive: 'rgba(241, 250, 140, 0.65)',
     keyword: '#ff79c6',
@@ -204,9 +214,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#eee8d5',
     gutterText: '#93a1a1',
     border: '#eee8d5',
-    activeLine: '#eee8d5',
+    activeLine: 'rgba(0, 0, 0, 0.06)',
     activeGutter: '#e6dfc9',
-    selection: '#9ac2da',
+    selection: '#9cc2f6',
+    selectionMatch: 'rgba(38, 139, 210, 0.14)',
     searchMatch: 'rgba(181, 137, 0, 0.3)',
     searchMatchActive: 'rgba(181, 137, 0, 0.6)',
     keyword: '#859900',
@@ -229,9 +240,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#f0f0f0',
     gutterText: '#9d9d9f',
     border: '#e5e5e6',
-    activeLine: '#f0f0f0',
+    activeLine: 'rgba(0, 0, 0, 0.04)',
     activeGutter: '#e8e8e8',
-    selection: '#93acee',
+    selection: '#9cc2f6',
+    selectionMatch: 'rgba(64, 120, 242, 0.14)',
     searchMatch: 'rgba(230, 180, 0, 0.3)',
     searchMatchActive: 'rgba(230, 180, 0, 0.6)',
     keyword: '#a626a4',
@@ -254,9 +266,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#073642',
     gutterText: '#586e75',
     border: '#073642',
-    activeLine: '#073642',
+    activeLine: 'rgba(126, 200, 214, 0.055)',
     activeGutter: '#0b3d4a',
-    selection: '#135a6d',
+    selection: '#35547d',
+    selectionMatch: 'rgba(38, 139, 210, 0.18)',
     searchMatch: 'rgba(181, 137, 0, 0.3)',
     searchMatchActive: 'rgba(181, 137, 0, 0.6)',
     keyword: '#859900',
@@ -279,9 +292,10 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     gutterBg: '#1c2128',
     gutterText: '#768390',
     border: '#444c56',
-    activeLine: '#2d333b',
+    activeLine: 'rgba(255, 255, 255, 0.055)',
     activeGutter: '#373e47',
-    selection: '#48649c',
+    selection: '#35547d',
+    selectionMatch: 'rgba(83, 155, 245, 0.18)',
     searchMatch: 'rgba(210, 153, 34, 0.3)',
     searchMatchActive: 'rgba(210, 153, 34, 0.65)',
     keyword: '#f47067',
