@@ -116,6 +116,8 @@ export const useNoteStore = defineStore('note', () => {
   /* 光标位置：状态栏展示行 / 列 */
   const cursorLine = ref(1)
   const cursorColumn = ref(1)
+  /* 选中字符数：状态栏展示选中文字长度，0 表示无选区 */
+  const selectedLength = ref(0)
 
   /* 界面偏好 */
   const mode = ref<NoteMode>(ui.mode)
@@ -154,10 +156,16 @@ export const useNoteStore = defineStore('note', () => {
     cursorColumn.value = column
   }
 
-  /* 重置光标位置：切换 / 清空笔记时回到首行首列 */
+  /* 更新选中字符数：由编辑器选区变化时写入 */
+  function setSelectionLength(length: number): void {
+    selectedLength.value = length > 0 ? length : 0
+  }
+
+  /* 重置光标位置：切换 / 清空笔记时回到首行首列并清空选区 */
   function resetCursor(): void {
     cursorLine.value = 1
     cursorColumn.value = 1
+    selectedLength.value = 0
   }
 
   /* 自动保存定时器 */
@@ -662,6 +670,7 @@ export const useNoteStore = defineStore('note', () => {
     selectedPath,
     cursorLine,
     cursorColumn,
+    selectedLength,
     mode,
     treeCollapsed,
     treeWidth,
@@ -683,6 +692,7 @@ export const useNoteStore = defineStore('note', () => {
     openNote,
     save,
     setCursor,
+    setSelectionLength,
     createNote,
     createFolder,
     renameEntry,

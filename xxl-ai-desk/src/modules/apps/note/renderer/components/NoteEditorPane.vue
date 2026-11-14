@@ -164,7 +164,7 @@ function insertText(text: string): void {
   editorRef.value?.insertText(text)
 }
 
-/* 选区变化：向上同步激活格式，并记录光标行列供状态栏展示 */
+/* 选区变化：向上同步激活格式，并记录光标行列与选中长度供状态栏展示 */
 function onSelectionChange(selection: EditorSelection | null): void {
   if (selection) {
     /* 绝对偏移 → 1 基行列：只截取光标前的文本即可 */
@@ -172,6 +172,8 @@ function onSelectionChange(selection: EditorSelection | null): void {
     const lineBreak = before.lastIndexOf('\n')
     store.setCursor(before.split('\n').length, selection.from - lineBreak)
   }
+  /* 选中文字长度：按选区覆盖的原始字符数统计，无选区时为 0 */
+  store.setSelectionLength(selection ? selection.text.length : 0)
   emit('selection-change', selection ? resolveActiveFormats(selection) : [])
 }
 

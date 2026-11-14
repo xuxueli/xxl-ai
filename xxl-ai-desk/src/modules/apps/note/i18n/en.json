@@ -37,6 +37,7 @@
     "statusSaveNow": "Click to save now",
     "wordCount": "{0} chars",
     "cursorPosition": "Ln {0}, Col {1}",
+    "selectionCount": "{0} selected",
     "insertImage": "Insert image",
     "findReplace": "Find and replace",
     "theme": "Editor theme",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 笔记底部状态栏：保存状态（编辑中 / 保存中 / 已保存 / 保存失败）与字数。
+ * 笔记底部状态栏：保存状态（编辑中 / 保存中 / 已保存 / 保存失败）、光标位置、选中长度与字数。
  * @author xuxueli 2026-11-14
  */
 import { computed } from 'vue'
@@ -79,6 +79,9 @@ const savedTime = computed(() =>
   store.savedAt && store.saveState !== 'error' ? shortTime(store.savedAt) : ''
 )
 
+/* 选中字符数文案：千位分隔，长选区更易读 */
+const selectionText = computed(() => store.selectedLength.toLocaleString())
+
 /* 编辑中可点击立即保存，失败态可点击重试 */
 const clickable = computed(
   () => store.saveState === 'editing' || store.saveState === 'error'
@@ -111,7 +114,13 @@ function onStatusClick(): void {
       <span v-if="store.mode !== 'preview'" class="meta-item">
         {{ t('note.cursorPosition', [store.cursorLine, store.cursorColumn]) }}
       </span>
-      <span v-if="store.mode !== 'preview'" class="meta-sep">·</span>
+      <span
+        v-if="store.mode !== 'preview' && store.selectedLength"
+        class="meta-item is-selection"
+      >
+        {{ t('note.selectionCount', [selectionText]) }}
+      </span>
+      <span v-if="store.mode !== 'preview'" class="meta-divider"></span>
       <span class="meta-item">{{ t('note.wordCount', [charText]) }}</span>
     </div>
   </footer>
@@ -121,7 +130,7 @@ function onStatusClick(): void {
 /* 底部状态栏：与工具栏同一表面色，弱化存在感 */
 .note-status-bar {
   flex-shrink: 0;
-  height: 24px;
+  height: 26px;
   padding: 0 12px 0 10px;
   display: flex;
   align-items: center;
@@ -216,10 +225,39 @@ function onStatusClick(): void {
 
 .meta-item {
   white-space: nowrap;
+  transition: color 0.15s ease;
 }
 
-.meta-sep {
-  color: var(--desk-border-strong);
+/* 选中长度：主题色胶囊，与常规信息区分 */
+.meta-item.is-selection {
+  height: 17px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--desk-primary-soft);
+  color: var(--desk-primary);
+  font-weight: 500;
+  animation: selection-pop 0.16s ease-out;
+}
+
+/* 细分隔线：替代字符分隔符，状态栏更清爽 */
+.meta-divider {
+  width: 1px;
+  height: 10px;
+  background: var(--desk-border-strong);
+  opacity: 0.7;
+}
+
+@keyframes selection-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes status-pulse {

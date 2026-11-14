@@ -1824,7 +1824,6 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 4、【ING】长任务：
   - task：info、step_dag(步骤、验收)、总验收
   - log：log_id、task_id、data、current_step；
-  - 唤起：
 
 
 ### TODO LIST
