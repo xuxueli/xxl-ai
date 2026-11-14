@@ -196,7 +196,7 @@ const boundAgent = computed(() => {
   margin-right: 10px;
   padding: 2px 8px 2px 4px;
   border-radius: 999px;
-  background: var(--desk-segment-bg);
+  background: var(--desk-chip-bg);
 }
 
 .topbar-agent-name {

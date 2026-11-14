@@ -79,6 +79,12 @@
 
   /* 分段控件 / 按钮 / 开关 */
   --desk-segment-bg: color-mix(in srgb, var(--theme-brand) 12%, var(--theme-content));
+  /*
+   * chrome 区域（顶栏等）上的胶囊标识底：segment 以内容区白色为基色，
+   * 放到带色相的 chrome 上会浮出一块异色块；这里改用文本色极淡叠加，
+   * 与任何底色的明度关系保持一致。
+   */
+  --desk-chip-bg: color-mix(in srgb, var(--theme-text) 7%, transparent);
   --desk-segment-text: var(--theme-brand-strong);
   --desk-segment-border: color-mix(in srgb, var(--theme-brand) 22%, var(--theme-content));
   /* 主按钮：浅品牌底 + 品牌边框 + 品牌字，清晰但不抢戏 */
