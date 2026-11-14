@@ -9,7 +9,10 @@ import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { parentDir } from '@modules/file/renderer/utils/path'
 import { t } from '@renderer/shell/i18n'
 import type { FileContent } from '@modules/file/shared'
-import type { EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
+import {
+  editorThemeVars,
+  type EditorThemeId
+} from '@common/renderer/components/CodeEditor/editorThemes'
 
 /* 代码编辑器按需加载：未进入编辑态时不加载 CodeMirror */
 const CodeEditor = defineAsyncComponent(() => import('@common/renderer/components/CodeEditor/CodeEditor.vue'))
@@ -66,6 +69,9 @@ const markdownPreviewContent = computed(() => {
 /* 只读代码行数（编辑态行号由 CodeMirror 提供） */
 const lineCount = computed(() => (props.file ? props.file.content.split('\n').length : 0))
 
+/* Markdown 预览配色：与编辑器主题保持一致，不随应用皮肤变化 */
+const markdownPreviewStyle = computed(() => editorThemeVars(props.editorTheme))
+
 /* 透传编辑器保存事件 */
 function onSave(): void {
   emit('save')
@@ -94,6 +100,7 @@ function onSave(): void {
       <MarkdownBlock
         v-else-if="showPreview && isMarkdown"
         class="viewer-markdown"
+        :style="markdownPreviewStyle"
         :content="markdownPreviewContent"
         :base-dir="parentDir(file.path)"
       />
@@ -242,6 +249,8 @@ function onSave(): void {
   min-height: 0;
   overflow: auto;
   padding: 16px 20px;
+  background: var(--desk-bg);
+  color: var(--desk-text);
   font-size: var(--desk-font-base);
 }
 

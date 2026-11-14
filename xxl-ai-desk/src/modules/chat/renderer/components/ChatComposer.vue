@@ -500,17 +500,23 @@ function onKeydown(event: KeyboardEvent): void {
 /* 底部操作行：左下选择项目/模型，右下发送/停止 */
 .composer-bar {
   display: flex;
+  /* 极窄宽度下兜底换行，避免左侧选择器盖住发送按钮 */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-height: 28px;
 }
 
+/* 左侧选择器只占剩余空间，空间不足时收缩（发送按钮不参与压缩） */
 .composer-left {
   display: flex;
+  /* basis 为 0：先让出空间，再按剩余宽度撑开，避免推迟发送按钮换行 */
+  flex: 1 1 0;
   align-items: center;
   gap: 2px;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* 「+」关联文件按钮：与选择器触发器保持同一视觉密度 */
@@ -601,12 +607,14 @@ function onKeydown(event: KeyboardEvent): void {
   background: var(--desk-primary-soft);
 }
 
-/* 无边框选择器触发器：图标 + 文本 + 向下角标 */
+/* 无边框选择器触发器：图标 + 内容 + 向下角标 */
 .picker-trigger {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 220px;
+  /* 允许收缩到内容宽度以下，配合 picker-name 省略号 */
+  min-width: 0;
   min-height: 28px;
   box-sizing: border-box;
   padding: 4px 8px;
@@ -639,6 +647,8 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 .picker-trigger .picker-name {
+  /* min-width: 0 是省略号生效的前提：否则 flex 项按内容撑开 */
+  min-width: 0;
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -647,6 +657,9 @@ function onKeydown(event: KeyboardEvent): void {
 
 :deep(.el-dropdown) {
   outline: none;
+  /* 下拉触发器作为 flex 项参与收缩，长模型名优先截断 */
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 /* 选择器下拉：当前项高亮；下拉项图标与文案留白 */

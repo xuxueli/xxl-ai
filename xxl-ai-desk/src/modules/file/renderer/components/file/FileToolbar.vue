@@ -5,6 +5,7 @@
  */
 import { t } from '@renderer/shell/i18n'
 import { DeskTooltip } from '@common/renderer/components'
+import { PaletteIcon } from '@common/renderer/components/icons'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import type { OpenWithApp } from '@modules/platform/shared'
 
@@ -64,7 +65,7 @@ const emit = defineEmits<{
           @command="(command: string) => emit('theme-command', command as EditorThemeId)"
         >
           <button class="panel-btn">
-            <el-icon><Brush /></el-icon>
+            <PaletteIcon class="panel-svg-icon" />
           </button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -223,6 +224,12 @@ const emit = defineEmits<{
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* 自绘图标：调色盘 viewBox 留白较多，略放大保持视觉尺寸 */
+.panel-svg-icon {
+  width: 17px;
+  height: 17px;
 }
 
 /* 打开按钮：左半默认打开 + 右半打开方式下拉，整体保持一个按钮外观 */

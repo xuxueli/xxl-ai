@@ -771,6 +771,25 @@ body.resizing-vertical {
 }
 
 /* --- 聊天代码块：GitHub 风格「语言标签 + 复制按钮」头部 --- */
+/* Mermaid 图表：渲染成功后替代代码块，按内容宽度自适应 */
+.markdown-body .mermaid-block {
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px auto;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--desk-border);
+  border-radius: 8px;
+  background: var(--desk-surface-content);
+  text-align: center;
+}
+
+.markdown-body .mermaid-block svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 .markdown-body .code-block {
   margin: 0.8em 0;
   border: 1px solid var(--desk-code-border);

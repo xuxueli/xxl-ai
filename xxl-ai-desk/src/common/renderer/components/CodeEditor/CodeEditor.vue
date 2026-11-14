@@ -34,7 +34,7 @@ import {
   indentOnInput,
   syntaxHighlighting
 } from '@codemirror/language'
-import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from '@codemirror/search'
+import { highlightSelectionMatches, closeSearchPanel, openSearchPanel, search, searchPanelOpen, searchKeymap } from '@codemirror/search'
 import { tags } from '@lezer/highlight'
 import { i18n, t } from '@renderer/shell/i18n'
 import EditorSearchPanel from '@common/renderer/components/CodeEditor/EditorSearchPanel.vue'
@@ -43,6 +43,7 @@ import {
   type EditorThemeId,
   type EditorThemePalette
 } from '@common/renderer/components/CodeEditor/editorThemes'
+import type { EditorSelection } from '@common/renderer/components/CodeEditor/types'
 
 const props = withDefaults(
   defineProps<{
@@ -56,11 +57,18 @@ const props = withDefaults(
   { theme: 'auto', wrap: false }
 )
 const value = defineModel<string>({ required: true })
-const emit = defineEmits<{ save: [] }>()
+const emit = defineEmits<{
+  save: []
+  'selection-change': [selection: EditorSelection | null]
+  /* 垂直滚动比例 0~1：宿主用于联动预览等区域 */
+  scroll: [ratio: number]
+}>()
 
 /* 编辑器挂载点与实例 */
 const hostRef = ref<HTMLElement | null>(null)
 let view: EditorView | null = null
+/* 滚动通知的动画帧句柄：合并高频滚动事件 */
+let scrollFrame = 0
 /* 语言、主题与换行通过 Compartment 动态替换，避免重建编辑器 */
 const languageCompartment = new Compartment()
 const themeCompartment = new Compartment()
@@ -89,6 +97,10 @@ function buildHighlightStyle(palette: EditorThemePalette): HighlightStyle {
     { tag: [tags.variableName, tags.definition(tags.variableName)], color: palette.variable },
     { tag: [tags.meta, tags.processingInstruction], color: palette.meta },
     { tag: [tags.link, tags.url], color: palette.link, textDecoration: 'underline' },
+    /*
+     * 标题取链接色（蓝 / 青）：标题是文档锚点，作为强调色比代码里的「类型色」更符合语义，
+     * 也与 VS Code 等编辑器 Markdown 标题的常见配色一致，不再出现无来由的橙棕色。
+     */
     {
       tag: [
         tags.heading,
@@ -99,7 +111,7 @@ function buildHighlightStyle(palette: EditorThemePalette): HighlightStyle {
         tags.heading5,
         tags.heading6
       ],
-      color: palette.type,
+      color: palette.link,
       fontWeight: '700'
     },
     { tag: [tags.quote], color: palette.comment, fontStyle: 'italic' },
@@ -440,12 +452,15 @@ function baseExtensions(): Extension[] {
     saveKeymap,
     keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap]),
     EditorView.updateListener.of((update) => {
-      if (!update.docChanged) {
-        return
+      if (update.docChanged) {
+        const text = update.state.doc.toString()
+        if (text !== value.value) {
+          value.value = text
+        }
       }
-      const text = update.state.doc.toString()
-      if (text !== value.value) {
-        value.value = text
+      /* 光标 / 选区变化时通知宿主，用于工具栏激活态与链接预填 */
+      if (update.docChanged || update.selectionSet) {
+        emit('selection-change', currentSelection())
       }
     }),
     languageCompartment.of([])
@@ -453,10 +468,63 @@ function baseExtensions(): Extension[] {
 }
 
 /* 编辑器公开能力：供笔记等宿主工具栏调用（查找、插入、定位与聚焦） */
-function openSearch(): void {
-  if (view) {
-    openSearchPanel(view)
+function toggleSearch(): void {
+  if (!view) {
+    return
   }
+  /* 再次点击关闭面板，实现工具栏按钮的开关语义 */
+  if (searchPanelOpen(view.state)) {
+    closeSearchPanel(view)
+    view.focus()
+    return
+  }
+  openSearchPanel(view)
+}
+
+/* 当前选区详情：绝对偏移、选中文本与所覆盖的完整行 */
+function currentSelection(): EditorSelection | null {
+  if (!view) {
+    return null
+  }
+  const selection = view.state.selection.main
+  const lineFrom = view.state.doc.lineAt(selection.from).from
+  /* 选区恰好结束在下一行行首时，不应把下一行纳入格式化范围 */
+  const lineEnd = selection.to > selection.from ? selection.to - 1 : selection.to
+  const lineTo = view.state.doc.lineAt(lineEnd).to
+  return {
+    from: selection.from,
+    to: selection.to,
+    text: view.state.sliceDoc(selection.from, selection.to),
+    lineFrom,
+    lineTo,
+    lineText: view.state.sliceDoc(lineFrom, lineTo)
+  }
+}
+
+/* 读取当前选区（工具栏格式化前获取） */
+function getSelection(): EditorSelection | null {
+  return currentSelection()
+}
+
+/* 按绝对偏移替换文本，并把选区定位到替换内容内的相对位置 */
+function replaceRange(
+  from: number,
+  to: number,
+  text: string,
+  selectFrom?: number,
+  selectTo?: number
+): void {
+  if (!view) {
+    return
+  }
+  const start = from + (selectFrom ?? text.length)
+  const end = from + (selectTo ?? selectFrom ?? text.length)
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: start, head: end },
+    scrollIntoView: true
+  })
+  view.focus()
 }
 
 /* 在光标 / 选区处插入文本（图片 Markdown 片段等） */
@@ -482,11 +550,40 @@ function scrollToLine(line: number): void {
   view.focus()
 }
 
+/* 当前垂直滚动比例：0 为顶部，1 为底部（无法滚动时返回 0） */
+function getScrollRatio(): number {
+  const scroller = view?.scrollDOM
+  if (!scroller) {
+    return 0
+  }
+  const max = scroller.scrollHeight - scroller.clientHeight
+  return max > 0 ? scroller.scrollTop / max : 0
+}
+
 function focus(): void {
   view?.focus()
 }
 
-defineExpose({ openSearch, insertText, scrollToLine, focus })
+/* 滚动事件：按动画帧合并后向上通知滚动比例 */
+function onScrollerScroll(): void {
+  if (scrollFrame) {
+    return
+  }
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0
+    emit('scroll', getScrollRatio())
+  })
+}
+
+defineExpose({
+  toggleSearch,
+  insertText,
+  scrollToLine,
+  focus,
+  getSelection,
+  replaceRange,
+  getScrollRatio
+})
 
 onMounted(() => {
   if (!hostRef.value) {
@@ -499,8 +596,10 @@ onMounted(() => {
     }),
     parent: hostRef.value
   })
+  view.scrollDOM.addEventListener('scroll', onScrollerScroll, { passive: true })
   void applyLanguage(props.fileName)
   view.focus()
+  emit('selection-change', currentSelection())
 })
 
 /* 外部内容变化（切换文件 / 回填草稿）时同步到编辑器 */
@@ -540,6 +639,11 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (scrollFrame) {
+    cancelAnimationFrame(scrollFrame)
+    scrollFrame = 0
+  }
+  view?.scrollDOM.removeEventListener('scroll', onScrollerScroll)
   view?.destroy()
   view = null
 })

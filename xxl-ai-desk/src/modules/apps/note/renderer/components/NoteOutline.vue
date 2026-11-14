@@ -150,7 +150,7 @@ const rows = computed<OutlineRow[]>(() => {
   background: transparent;
   color: var(--desk-text-secondary);
   font: inherit;
-  font-size: var(--desk-font-xs);
+  font-size: var(--desk-font-sm);
   line-height: 1.5;
   text-align: left;
   cursor: pointer;

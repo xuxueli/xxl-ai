@@ -455,7 +455,8 @@ shell/layout/index.vue（app-wrapper，纵向）
   - 目录树只展示目录与 `.md`，根级 `resource` 与隐藏项不展示；
   - 目录树实时监听复用 `common/main/utils/directoryWatcher.ts`（按已展开目录非递归监听，50ms 去抖），渲染层只重载变更目录；
   - 笔记渲染层 `store` 负责监听生命周期（`bindWatcher` / `unbindWatcher`），组件只处理 UI；
-  - 工具栏为三段式：左树开关、中视图切换、右查找/插图/主题/文章目录；文章目录为浮动面板，仅再次点击图标关闭；
+  - 工具栏为左右两段式：左侧树开关 + Markdown 格式化动作（标题 / 加粗 / 斜体 / 删除线 / 行内代码 / 引用 / 链接 / 图片 / 代码块 / 列表 / 表格 / 分割线 / 公式 / Mermaid / 更多），右侧查找、目录、主题、帮助与视图切换；仅当工具栏宽度不足时才出现「更多」；
+  - 文章目录为右侧可关闭模块（标题栏 + 关闭按钮），不再使用浮动面板；帮助为弹窗，上半部分展示 Markdown 语法示例，下半部分展示快捷键；
   - 编辑器主题与文件工具共用 `EDITOR_THEME_STORAGE_KEY`（`common/renderer/components/CodeEditor/editorThemes.ts`）。
 
 ## 6. Agent 运行时

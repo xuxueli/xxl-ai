@@ -74,15 +74,20 @@ const emit = defineEmits<{ click: [] }>()
   text-overflow: ellipsis;
 }
 
-/* 行内操作：仅悬浮时展示，避免非选中行常驻图标 */
+/*
+ * 行内操作：仅悬浮时展示，避免非选中行常驻图标。
+ * 用 visibility 隐藏而不是 display:none：下拉弹层的锚点就在此处，display:none 会让锚点尺寸变为 0，
+ * 弹层打开 / 关闭时会回落到窗口左上角（与 macOS 红黄绿按钮重叠）。
+ */
 .sidebar-row-actions {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  visibility: hidden;
 }
 
 .sidebar-row:hover .sidebar-row-actions {
-  display: inline-flex;
+  visibility: visible;
 }
 </style>

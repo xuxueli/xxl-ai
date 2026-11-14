@@ -112,7 +112,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#d0d7de',
     activeLine: 'rgba(31, 35, 40, 0.045)',
     activeGutter: '#eaeef2',
-    selection: '#9cc2f6',
+    selection: '#7caff7',
     selectionMatch: 'rgba(9, 105, 218, 0.14)',
     searchMatch: 'rgba(255, 213, 0, 0.35)',
     searchMatchActive: 'rgba(255, 176, 0, 0.65)',
@@ -138,7 +138,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#3a3f4b',
     activeLine: 'rgba(255, 255, 255, 0.025)',
     activeGutter: '#323842',
-    selection: '#35547d',
+    selection: '#4173ad',
     selectionMatch: 'rgba(97, 175, 239, 0.16)',
     searchMatch: 'rgba(229, 192, 123, 0.35)',
     searchMatchActive: 'rgba(229, 192, 123, 0.7)',
@@ -164,7 +164,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#3b4252',
     activeLine: 'rgba(136, 192, 208, 0.11)',
     activeGutter: '#434c5e',
-    selection: '#35547d',
+    selection: '#4f78ad',
     selectionMatch: 'rgba(136, 192, 208, 0.16)',
     searchMatch: 'rgba(235, 203, 139, 0.35)',
     searchMatchActive: 'rgba(235, 203, 139, 0.7)',
@@ -190,7 +190,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#44475a',
     activeLine: 'rgba(189, 147, 249, 0.10)',
     activeGutter: '#4d5066',
-    selection: '#35547d',
+    selection: '#4173ad',
     selectionMatch: 'rgba(189, 147, 249, 0.16)',
     searchMatch: 'rgba(241, 250, 140, 0.3)',
     searchMatchActive: 'rgba(241, 250, 140, 0.65)',
@@ -216,7 +216,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#eee8d5',
     activeLine: 'rgba(0, 0, 0, 0.06)',
     activeGutter: '#e6dfc9',
-    selection: '#9cc2f6',
+    selection: '#7fb2f7',
     selectionMatch: 'rgba(38, 139, 210, 0.14)',
     searchMatch: 'rgba(181, 137, 0, 0.3)',
     searchMatchActive: 'rgba(181, 137, 0, 0.6)',
@@ -242,7 +242,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#e5e5e6',
     activeLine: 'rgba(0, 0, 0, 0.04)',
     activeGutter: '#e8e8e8',
-    selection: '#9cc2f6',
+    selection: '#7caff7',
     selectionMatch: 'rgba(64, 120, 242, 0.14)',
     searchMatch: 'rgba(230, 180, 0, 0.3)',
     searchMatchActive: 'rgba(230, 180, 0, 0.6)',
@@ -268,7 +268,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#073642',
     activeLine: 'rgba(126, 200, 214, 0.055)',
     activeGutter: '#0b3d4a',
-    selection: '#35547d',
+    selection: '#1f6a95',
     selectionMatch: 'rgba(38, 139, 210, 0.18)',
     searchMatch: 'rgba(181, 137, 0, 0.3)',
     searchMatchActive: 'rgba(181, 137, 0, 0.6)',
@@ -294,7 +294,7 @@ const PALETTES: Record<Exclude<EditorThemeId, 'auto'>, EditorThemePalette> = {
     border: '#444c56',
     activeLine: 'rgba(255, 255, 255, 0.055)',
     activeGutter: '#373e47',
-    selection: '#35547d',
+    selection: '#4173ad',
     selectionMatch: 'rgba(83, 155, 245, 0.18)',
     searchMatch: 'rgba(210, 153, 34, 0.3)',
     searchMatchActive: 'rgba(210, 153, 34, 0.65)',
@@ -320,6 +320,46 @@ export function editorPalette(id: string | undefined): EditorThemePalette {
     return AUTO_PALETTE
   }
   return PALETTES[id as Exclude<EditorThemeId, 'auto'>] ?? AUTO_PALETTE
+}
+
+/*
+ * 编辑器内容区配色变量：编辑器、Markdown 预览与右侧目录共用同一套主题，
+ * 不读取应用皮肤的语义色。仅在对应容器上覆盖 --desk-* / --code-*，不影响其它区域。
+ */
+export function editorThemeVars(id: string | undefined): Record<string, string> {
+  const palette = editorPalette(id)
+  /* 在编辑器底色上叠一层文字色，得到与主题同色相的浅底 */
+  const tint = (color: string, percent: number): string =>
+    `color-mix(in srgb, ${color} ${percent}%, ${palette.background})`
+  return {
+    /* 表面与文本 */
+    '--desk-bg': palette.background,
+    '--desk-bg-elevated': tint(palette.text, 5),
+    '--desk-panel-bg': tint(palette.text, 4),
+    '--desk-text': palette.text,
+    '--desk-text-secondary': palette.comment,
+    '--desk-text-tertiary': palette.gutterText,
+    '--desk-border': palette.border,
+    '--desk-border-strong': tint(palette.text, 16),
+    /* 强调色：链接 / 引用 / 表格等统一取编辑器主题的链接色 */
+    '--desk-primary': palette.link,
+    '--desk-primary-soft': tint(palette.link, 10),
+    /* 代码块与行内代码 */
+    '--desk-code-bg': tint(palette.text, 6),
+    '--desk-code-text': palette.text,
+    '--desk-code-border': palette.border,
+    '--desk-code-inline-bg': `color-mix(in srgb, ${palette.text} 8%, transparent)`,
+    /* highlight.js 语法色与编辑器语法高亮同源 */
+    '--code-red': palette.keyword,
+    '--code-purple': palette.function,
+    '--code-blue': palette.property,
+    '--code-string': palette.string,
+    '--code-orange': palette.type,
+    '--code-comment': palette.comment,
+    '--code-green': palette.tag,
+    '--code-yellow': palette.number,
+    '--code-subst': palette.text
+  }
 }
 
 /* 是否为合法主题标识（持久化读取时校验） */

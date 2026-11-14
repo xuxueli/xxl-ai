@@ -215,14 +215,14 @@ function onAction(row: ProjectDTO, command: string): void {
                 <el-dropdown-item command="memory">
                   {{ t('agent.memoryView') }}
                 </el-dropdown-item>
-                <el-dropdown-item command="rename">
+                <el-dropdown-item command="rename" divided>
                   {{ t('project.rename') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="delete" class="danger-item">
+                  {{ t('project.delete') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="reveal">
                   {{ t('project.openFolder') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="delete" divided class="danger-item">
-                  {{ t('project.delete') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>

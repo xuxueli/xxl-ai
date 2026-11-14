@@ -72,7 +72,7 @@
    * 直接混色会得到与背景几乎同色的浅灰块，选中态难以辨认。
    * 这里固定使用明度差明确的蓝色系，浅色主题为实色浅蓝、深色主题为实色深蓝。
    */
-  --desk-selection: #9cc2f6;
+  --desk-selection: #7caff7;
   /* 选中词的其余出现位置：更淡的提示色，避免与真正的选区混淆 */
   --desk-selection-match: rgba(59, 130, 246, 0.13);
   --desk-code-inline-bg: color-mix(in srgb, var(--theme-text) 7%, transparent);
@@ -165,6 +165,7 @@
   /* 左侧图标栏：独立尺寸，不与顶栏高度绑定 */
   --desk-rail-width: 44px;
   --desk-sidebar-width: 240px;
+  --desk-note-outline-width: 240px;
   --desk-panel-header-height: 40px;
   --desk-scrollbar-size: 8px;
   /* 会话内容列：正文滚动容器两侧对称预留滚动条空间，输入框用 content-gutter 补偿后与其等宽同中心 */
@@ -208,7 +209,7 @@
   --code-yellow: #f2cc60;
   --code-subst: #e6edf3;
 
-  --desk-selection: #35547d;
+  --desk-selection: #4173ad;
   --desk-selection-match: rgba(120, 170, 255, 0.14);
 
   --desk-shadow: 0 12px 32px color-mix(in srgb, var(--theme-shadow) 55%, transparent);

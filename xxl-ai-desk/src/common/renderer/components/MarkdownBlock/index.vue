@@ -3,12 +3,13 @@
   统一渲染助手回复 / 文件预览 / 技能详情：带结果缓存，并承载代码复制/换行/展开、图片预览与链接外开。
 -->
 <script setup lang="ts">
-import { computed, onBeforeUpdate, onUpdated, ref } from 'vue'
+import { computed, onBeforeUpdate, onMounted, onUpdated, ref } from 'vue'
 import { ElImageViewer } from 'element-plus'
 import { renderMarkdown } from '@common/renderer/components/MarkdownBlock/useMarkdown'
 import { onCodeBlockClick, restoreCodeBlockState } from '@common/renderer/components/MarkdownBlock/useCodeBlock'
 import { onContentLinkClick } from '@common/renderer/composables/useContentLink'
 import { t } from '@renderer/shell/i18n'
+import { renderMermaidBlocks } from '@common/renderer/components/MarkdownBlock/useMermaid'
 
 const props = defineProps<{
   /* Markdown 原文 */
@@ -49,6 +50,14 @@ onUpdated(() => {
   }
   if (root.value) {
     restoreCodeBlockState(root.value)
+    void renderMermaidBlocks(root.value)
+  }
+})
+
+/* 首次渲染完成后把 mermaid 代码块替换为图表 */
+onMounted(() => {
+  if (root.value) {
+    void renderMermaidBlocks(root.value)
   }
 })
 
