@@ -47,6 +47,40 @@ body.resizing-vertical {
   stroke-linejoin: round;
 }
 
+/* --- 侧栏折叠过渡：外层宽度动画 + 内层定宽位移淡出（会话列表 / 笔记目录 / 文件树共用） --- */
+.desk-collapse-shell {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* 仅手动折叠 / 展开时播放过渡，切换板块直接跳变 */
+.desk-collapse-shell.animated {
+  transition: width var(--desk-motion-collapse) var(--desk-motion-ease);
+}
+
+/* 拖拽调整宽度期间禁用过渡，避免追帧造成卡顿 */
+body.resizing .desk-collapse-shell {
+  transition: none;
+}
+
+.desk-collapse-inner {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+.desk-collapse-shell.animated .desk-collapse-inner {
+  transition:
+    transform var(--desk-motion-collapse) var(--desk-motion-ease),
+    opacity var(--desk-motion-collapse) var(--desk-motion-ease);
+}
+
+/* 折叠态：内容向左滑出并被外壳裁切 */
+.desk-collapse-shell.is-collapsed .desk-collapse-inner {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* 左侧栏子菜单列表容器（首页面板 / 通用子菜单共用） */
 .sidebar-list {
   flex: 1;

@@ -6,7 +6,7 @@
  */
 import { t } from '@renderer/shell/i18n'
 import { DeskTooltip } from '@common/renderer/components'
-import { PaletteIcon } from '@common/renderer/components/icons'
+import { PaletteIcon, SidebarToggleIcon } from '@common/renderer/components/icons'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import type { OpenWithApp } from '@modules/platform/shared'
 
@@ -50,10 +50,11 @@ const emit = defineEmits<{
       <DeskTooltip :content="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')">
         <button
           class="desk-toolbar-btn"
+          :class="{ active: treeCollapsed }"
           :aria-label="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')"
           @click="emit('toggle-tree')"
         >
-          <el-icon><Expand v-if="treeCollapsed" /><Fold v-else /></el-icon>
+          <SidebarToggleIcon :collapsed="treeCollapsed" />
         </button>
       </DeskTooltip>
       <span class="desk-toolbar-divider"></span>

@@ -1,17 +1,28 @@
 /* 设置与供应商状态 */
 
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
+import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { setLanguage, t } from '@renderer/shell/i18n'
 import { createDefaultSettings } from '@modules/settings/shared'
-import type { AppSettings, SessionDefaults } from '@modules/settings/shared'
+import type { AppSettings, BrandingAssets, BrandingKind, SessionDefaults } from '@modules/settings/shared'
 import type { RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from '@modules/platform/shared'
 
 export const useSettingsStore = defineStore('settings', () => {
   /* 应用设置（默认值与主进程共用 shared/defaults） */
   const settings = ref<AppSettings>(createDefaultSettings())
+  /* 品牌资源：自定义 Logo / 背景图绝对路径（空串表示内置资源） */
+  const branding = ref<BrandingAssets>({ logoPath: '', backgroundPath: '' })
+  /* 自定义 Logo 的本地文件 URL（未设置时为空，使用方回退内置图标） */
+  const logoUrl = computed(() =>
+    branding.value.logoPath ? toLocalFileUrl(branding.value.logoPath) : ''
+  )
+  /* 对话区背景图的本地文件 URL（未设置时为空） */
+  const backgroundUrl = computed(() =>
+    branding.value.backgroundPath ? toLocalFileUrl(branding.value.backgroundPath) : ''
+  )
   /* 设置是否已首次加载 */
   const loaded = ref(false)
   /* 运行时数据目录（含默认目录与库文件路径） */
@@ -61,7 +72,12 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /* 首次加载设置与供应商 */
   async function load(): Promise<void> {
-    settings.value = await api.settings.get()
+    const [nextSettings, assets] = await Promise.all([
+      api.settings.get(),
+      api.settings.getBranding()
+    ])
+    settings.value = nextSettings
+    branding.value = assets
     const info = await api.app.info()
     version.value = info.version
     dataDir.value = info.dataDir
@@ -93,6 +109,16 @@ export const useSettingsStore = defineStore('settings', () => {
     const patch: Partial<AppSettings> = {}
     patch[key] = value
     await saveSettings(patch)
+  }
+
+  /* 选择品牌图片：系统对话框 + 复制落盘由主进程完成，返回最新资源 */
+  async function selectBranding(kind: BrandingKind): Promise<void> {
+    branding.value = await api.settings.selectBranding(kind)
+  }
+
+  /* 恢复默认 Logo / 移除背景图 */
+  async function resetBranding(kind: BrandingKind): Promise<void> {
+    branding.value = await api.settings.resetBranding(kind)
   }
 
   /* 更新新建会话默认配置：合并后整体写入一条 JSON，避免设置表键值膨胀 */
@@ -177,6 +203,9 @@ export const useSettingsStore = defineStore('settings', () => {
 
   return {
     settings,
+    branding,
+    logoUrl,
+    backgroundUrl,
     loaded,
     dataDir,
     defaultDataDir,
@@ -186,6 +215,8 @@ export const useSettingsStore = defineStore('settings', () => {
     load,
     saveSettings,
     saveSetting,
+    selectBranding,
+    resetBranding,
     saveSessionDefaults,
     selectDataDir,
     saveDataDir,

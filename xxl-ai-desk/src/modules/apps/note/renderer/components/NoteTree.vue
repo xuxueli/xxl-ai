@@ -3,11 +3,12 @@
  * 笔记目录：根目录不展示（直接列出其子项）、按名称过滤、右键新建 / 重命名 / 删除 / 定位、拖拽移动，宽度可拖拽。
  * @author xuxueli 2026-11-08
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { DeskTooltip } from '@common/renderer/components'
 import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
+import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
@@ -27,6 +28,13 @@ const treeWidth = computed({
   get: () => store.treeWidth,
   set: (value: number) => store.setTreeWidth(value)
 })
+
+/* 目录折叠过渡：仅在折叠状态变化时播放 */
+const { animated, play, onTransitionEnd } = useCollapseAnimation()
+watch(
+  () => store.treeCollapsed,
+  () => play()
+)
 
 /* 根目录子项：根目录本身不展示，直接以顶层节点呈现 */
 const rootChildren = computed(() => store.childrenMap[store.rootPath] ?? [])
@@ -344,85 +352,97 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="note-tree" :style="{ width: `${treeWidth}px` }">
-    <!-- 右边缘拖拽手柄：拖拽调整目录宽度，双击恢复默认 -->
+  <div
+    class="note-tree desk-collapse-shell"
+    :class="{ 'is-collapsed': store.treeCollapsed, animated }"
+    :style="{ width: store.treeCollapsed ? '0px' : `${treeWidth}px` }"
+    @transitionend="onTransitionEnd"
+  >
+    <!-- 右边缘拖拽手柄：拖拽调整目录宽度，双击恢复默认；折叠时随外壳宽度隐藏 -->
     <PanelResizer
+      v-if="!store.treeCollapsed"
       v-model:size="treeWidth"
       side="left"
       :title="t('layout.resetPanelWidth')"
       @reset="store.resetTreeWidth"
     />
-    <div class="note-tree-head">
-      <span class="note-tree-title">{{ t('note.title') }}</span>
-      <!-- 顺序：新建笔记 → 新建目录 → 展开/折叠全部 → 打开目录 -->
-      <DeskTooltip :content="t('note.newNote')">
-        <button class="note-icon-btn" @click="createNote(store.rootPath)">
-          <el-icon><DocumentAdd /></el-icon>
-        </button>
-      </DeskTooltip>
-      <DeskTooltip :content="t('note.newFolder')">
-        <button class="note-icon-btn" @click="createFolder(store.rootPath)">
-          <el-icon><FolderAdd /></el-icon>
-        </button>
-      </DeskTooltip>
-      <DeskTooltip
-        :content="store.allDirsExpanded ? t('note.collapseAll') : t('note.expandAll')"
-      >
-        <button
-          class="note-icon-btn"
-          :disabled="!store.rootPath"
-          @click="store.toggleAllDirs"
-        >
-          <CollapseAllIcon v-if="store.allDirsExpanded" class="note-toggle-icon" />
-          <ExpandAllIcon v-else class="note-toggle-icon" />
-        </button>
-      </DeskTooltip>
-      <DeskTooltip :content="t('note.openDir')">
-        <button class="note-icon-btn" @click="revealPath(store.rootPath)">
-          <el-icon><FolderOpened /></el-icon>
-        </button>
-      </DeskTooltip>
-    </div>
-    <div class="note-tree-filter">
-      <el-input
-        v-model="store.keyword"
-        size="small"
-        clearable
-        :placeholder="t('note.searchPlaceholder')"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-    </div>
-    <el-scrollbar
-      class="note-tree-body"
-      :class="{ 'drop-root': store.rootPath !== '' && dropTargetPath === store.rootPath }"
-      @dragover="onRootDragOver"
-      @dragleave="onRootDragLeave"
-      @drop="onRootDrop"
+    <div
+      class="note-tree-inner desk-collapse-inner"
+      :style="{ width: `${treeWidth}px` }"
+      :inert="store.treeCollapsed"
     >
-      <template v-if="store.rootPath">
-        <NoteTreeNode
-          v-for="entry in visibleRootChildren"
-          :key="entry.path"
-          :entry="entry"
-          :depth="0"
-          @context-menu="openMenu"
-          @create-note="createNoteIn"
-        />
-        <div
-          v-if="!store.loading && store.keyword.trim() === '' && rootChildren.length === 0"
-          class="note-tree-empty"
+      <div class="note-tree-head">
+        <span class="note-tree-title">{{ t('note.title') }}</span>
+        <!-- 顺序：新建笔记 → 新建目录 → 展开/折叠全部 → 打开目录 -->
+        <DeskTooltip :content="t('note.newNote')">
+          <button class="note-icon-btn" @click="createNote(store.rootPath)">
+            <el-icon><DocumentAdd /></el-icon>
+          </button>
+        </DeskTooltip>
+        <DeskTooltip :content="t('note.newFolder')">
+          <button class="note-icon-btn" @click="createFolder(store.rootPath)">
+            <el-icon><FolderAdd /></el-icon>
+          </button>
+        </DeskTooltip>
+        <DeskTooltip
+          :content="store.allDirsExpanded ? t('note.collapseAll') : t('note.expandAll')"
         >
-          <div class="empty-title">{{ t('note.emptyTree') }}</div>
-          <div class="empty-tip">{{ t('note.emptyTreeTip') }}</div>
-        </div>
-      </template>
-      <div v-else class="note-tree-empty">
-        <div class="empty-tip">{{ t('common.empty') }}</div>
+          <button
+            class="note-icon-btn"
+            :disabled="!store.rootPath"
+            @click="store.toggleAllDirs"
+          >
+            <CollapseAllIcon v-if="store.allDirsExpanded" class="note-toggle-icon" />
+            <ExpandAllIcon v-else class="note-toggle-icon" />
+          </button>
+        </DeskTooltip>
+        <DeskTooltip :content="t('note.openDir')">
+          <button class="note-icon-btn" @click="revealPath(store.rootPath)">
+            <el-icon><FolderOpened /></el-icon>
+          </button>
+        </DeskTooltip>
       </div>
-    </el-scrollbar>
+      <div class="note-tree-filter">
+        <el-input
+          v-model="store.keyword"
+          size="small"
+          clearable
+          :placeholder="t('note.searchPlaceholder')"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
+      <el-scrollbar
+        class="note-tree-body"
+        :class="{ 'drop-root': store.rootPath !== '' && dropTargetPath === store.rootPath }"
+        @dragover="onRootDragOver"
+        @dragleave="onRootDragLeave"
+        @drop="onRootDrop"
+      >
+        <template v-if="store.rootPath">
+          <NoteTreeNode
+            v-for="entry in visibleRootChildren"
+            :key="entry.path"
+            :entry="entry"
+            :depth="0"
+            @context-menu="openMenu"
+            @create-note="createNoteIn"
+          />
+          <div
+            v-if="!store.loading && store.keyword.trim() === '' && rootChildren.length === 0"
+            class="note-tree-empty"
+          >
+            <div class="empty-title">{{ t('note.emptyTree') }}</div>
+            <div class="empty-tip">{{ t('note.emptyTreeTip') }}</div>
+          </div>
+        </template>
+        <div v-else class="note-tree-empty">
+          <div class="empty-tip">{{ t('common.empty') }}</div>
+        </div>
+      </el-scrollbar>
+    </div>
 
     <!-- 右键菜单：样式与文件树右键菜单保持一致 -->
     <Teleport to="body">
@@ -464,11 +484,16 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
+/* 笔记目录：外层只负责折叠宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
 .note-tree {
   position: relative;
-  flex-shrink: 0;
-  min-width: 0;
   height: 100%;
+  min-width: 0;
+}
+
+.note-tree-inner {
+  height: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--desk-surface-sidebar);

@@ -26,6 +26,7 @@
     "path": "目录",
     "listTitle": "项目列表",
     "filterPlaceholder": "按项目名称或目录搜索",
-    "filterEmpty": "没有匹配的项目"
+    "filterEmpty": "没有匹配的项目",
+    "memoryAction": "长期记忆"
   }
 }

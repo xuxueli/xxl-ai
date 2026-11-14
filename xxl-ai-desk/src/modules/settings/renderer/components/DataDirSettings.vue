@@ -65,7 +65,7 @@ function onRelaunch(): void {
 </script>
 
 <template>
-  <div class="data-dir">
+  <div class="data-dir settings-section">
     <div class="settings-block-title">{{ t('settings.dataDir') }}</div>
     <div class="settings-block-tip data-dir-tip">{{ t('settings.dataDirTip') }}</div>
     <div class="data-dir-row">
@@ -104,15 +104,16 @@ function onRelaunch(): void {
   margin-bottom: 12px;
 }
 
+/* 目录输入 + 浏览按钮：随内容区铺满，避免右侧留白 */
 .data-dir-row {
   display: flex;
   gap: 8px;
-  max-width: 640px;
   margin-bottom: 12px;
 }
 
 .data-dir-input {
   flex: 1;
+  min-width: 0;
 }
 
 .data-dir-actions {
@@ -133,5 +134,6 @@ function onRelaunch(): void {
   font-size: var(--desk-font-sm);
   color: var(--desk-text-tertiary);
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  word-break: break-all;
 }
 </style>

@@ -127,6 +127,16 @@ export function getNotesDir(): string {
   return join(getDataDir(), 'notes')
 }
 
+/* 品牌资源目录（数据目录下的 branding：自定义 Logo / 背景图） */
+export function getBrandingDir(): string {
+  return join(getDataDir(), 'branding')
+}
+
+/* 确保品牌资源目录存在 */
+export function ensureBrandingDir(): void {
+  mkdirSync(getBrandingDir(), { recursive: true })
+}
+
 /* 运行时临时目录（下载、解压等一次性文件统一放在这里，不隐藏便于人工清理） */
 export function getTempDir(): string {
   return join(getDataDir(), 'tmp')

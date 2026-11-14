@@ -186,6 +186,10 @@
   --desk-icon-md: 16px;
   --desk-icon-lg: 18px;
 
+  /* 动效：侧栏折叠过渡（JS 兜底复位时长见 common/renderer/composables/useCollapseAnimation.ts） */
+  --desk-motion-collapse: 200ms;
+  --desk-motion-ease: ease;
+
   /* Element Plus 基础尺寸 */
   --el-font-size-extra-small: var(--desk-font-xs);
   --el-font-size-small: var(--desk-font-sm);

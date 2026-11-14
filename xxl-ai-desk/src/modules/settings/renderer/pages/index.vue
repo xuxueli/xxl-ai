@@ -31,26 +31,32 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
       <div class="settings-inner">
         <el-tabs v-model="settings.activeTab" class="settings-tabs">
           <el-tab-pane :label="t('settings.general')" name="general">
-            <GeneralSettings />
+            <div class="settings-pane settings-pane-narrow">
+              <GeneralSettings />
+            </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.personalization')" name="personalization">
-            <PersonalizationSettings />
+            <div class="settings-pane settings-pane-narrow">
+              <PersonalizationSettings />
+            </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.providers')" name="providers">
             <ProviderSettings />
           </el-tab-pane>
+          <el-tab-pane :label="t('settings.projects')" name="projects">
+            <ProjectSettings />
+          </el-tab-pane>
           <el-tab-pane :label="t('settings.runtimeTab')" name="runtime">
-            <div class="settings-pane">
+            <div class="settings-pane settings-pane-narrow">
               <DataDirSettings />
               <CommandRuntimeSettings />
               <DeveloperSettings />
             </div>
           </el-tab-pane>
-          <el-tab-pane :label="t('settings.projects')" name="projects">
-            <ProjectSettings />
-          </el-tab-pane>
           <el-tab-pane :label="t('settings.about')" name="about">
-            <AboutSettings />
+            <div class="settings-pane settings-pane-half">
+              <AboutSettings />
+            </div>
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -88,10 +94,30 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
   overflow: visible;
 }
 
+/* 正文与扩展中心一致：占满内容区，仅保留左右内边距 */
 .settings-inner {
-  max-width: 940px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 28px 28px 48px;
+}
+
+/* 保证百分比宽度基于完整正文区域计算 */
+.settings-tabs,
+.settings-tabs :deep(.el-tabs__content),
+.settings-tabs :deep(.el-tab-pane) {
+  width: 100%;
+}
+
+/* 常规 / 个性化 / 运行设置：与会话正文最大宽度一致，靠左对齐 */
+.settings-pane-narrow {
+  width: 100%;
+  max-width: var(--desk-chat-width);
+}
+
+/* 关于我们：软件窗口宽度的 50%，水平居中，窗口较窄时不超过正文区 */
+.settings-pane-half {
+  width: min(50vw, 100%);
   margin: 0 auto;
-  padding: 28px 32px 48px;
 }
 
 /* 独立子菜单首个分区不重复画顶部分隔线 */

@@ -57,8 +57,8 @@ export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
     entryPath: '/settings',
     items: [
       { key: 'providers', labelKey: 'settings.providers', icon: 'Cpu', tab: 'providers' },
-      { key: 'runtime', labelKey: 'settings.runtimeTab', icon: 'Monitor', tab: 'runtime' },
       { key: 'projects', labelKey: 'settings.projects', icon: 'Folder', tab: 'projects' },
+      { key: 'runtime', labelKey: 'settings.runtimeTab', icon: 'Monitor', tab: 'runtime' },
       { key: 'general', labelKey: 'settings.general', icon: 'Setting', tab: 'general', divider: true },
       {
         key: 'personalization',

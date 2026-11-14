@@ -3,10 +3,11 @@
  * 项目文件树：根目录不展示（直接列出其子项）、目录过滤、懒加载展开与文件选中。
  * @author xuxueli 2026-10-25
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useProjectFileTree } from '@modules/file/renderer/composables/useProjectFileTree'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { LAYOUT } from '@common/renderer/config/layout'
+import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import FileTreeNode from '@modules/file/renderer/components/file/FileTreeNode.vue'
 import { t } from '@renderer/shell/i18n'
@@ -101,6 +102,11 @@ const treeWidth = computed({
   set: (value: number) => toolPanel.setTreeWidth(props.sessionId, clampTreeWidth(value))
 })
 
+/* 文件树折叠态与折叠过渡：状态变化时播放宽度动画 */
+const collapsed = computed(() => fileState.value.treeCollapsed)
+const { animated, play, onTransitionEnd } = useCollapseAnimation()
+watch(collapsed, () => play())
+
 const { childrenMap, expandedMap, loadingMap, visibleRoot, toggle } = useProjectFileTree({
   root: () => props.root,
   projectId: () => props.projectId,
@@ -115,55 +121,71 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
 </script>
 
 <template>
-  <div ref="treeRef" class="file-tree" :style="{ width: `${treeWidth}px` }">
-    <!-- 右边缘拖拽手柄：拖拽调整目录树宽度，双击恢复默认宽度 -->
+  <div
+    ref="treeRef"
+    class="file-tree desk-collapse-shell"
+    :class="{ 'is-collapsed': collapsed, animated }"
+    :style="{ width: collapsed ? '0px' : `${treeWidth}px` }"
+    @transitionend="onTransitionEnd"
+  >
+    <!-- 右边缘拖拽手柄：拖拽调整目录树宽度，双击恢复默认宽度；折叠时随外壳宽度隐藏 -->
     <PanelResizer
+      v-if="!collapsed"
       v-model:size="treeWidth"
       side="left"
       :title="t('layout.resetPanelWidth')"
       @reset="toolPanel.resetTreeWidth(props.sessionId)"
     />
-    <div class="tree-filter">
-      <el-input v-model="keyword" size="small" clearable :placeholder="t('panel.filterPlaceholder')">
-        <template #prefix><el-icon><Search /></el-icon></template>
-      </el-input>
-    </div>
-    <div class="tree-body">
-      <div v-if="!root" class="tree-empty">{{ t('panel.needProject') }}</div>
-      <template v-else>
-        <!-- 根目录不展示，直接以顶层节点呈现其子项 -->
-        <FileTreeNode
-          v-for="entry in visibleRoot"
-          :key="entry.path"
-          :entry="entry"
-          :depth="0"
-          :children-map="childrenMap"
-          :expanded-map="expandedMap"
-          :loading-map="loadingMap"
-          :selected-path="selectedPath"
-          :keyword="keyword"
-          @select="emit('select', $event)"
-          @toggle="toggle"
-          @context-menu="onContextMenu"
-        />
-        <div v-if="childrenMap[root] && visibleRoot.length === 0" class="tree-empty">
-          {{ t('panel.emptyTree') }}
-        </div>
-      </template>
+    <div
+      class="file-tree-inner desk-collapse-inner"
+      :style="{ width: `${treeWidth}px` }"
+      :inert="collapsed"
+    >
+      <div class="tree-filter">
+        <el-input v-model="keyword" size="small" clearable :placeholder="t('panel.filterPlaceholder')">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+      </div>
+      <div class="tree-body">
+        <div v-if="!root" class="tree-empty">{{ t('panel.needProject') }}</div>
+        <template v-else>
+          <!-- 根目录不展示，直接以顶层节点呈现其子项 -->
+          <FileTreeNode
+            v-for="entry in visibleRoot"
+            :key="entry.path"
+            :entry="entry"
+            :depth="0"
+            :children-map="childrenMap"
+            :expanded-map="expandedMap"
+            :loading-map="loadingMap"
+            :selected-path="selectedPath"
+            :keyword="keyword"
+            @select="emit('select', $event)"
+            @toggle="toggle"
+            @context-menu="onContextMenu"
+          />
+          <div v-if="childrenMap[root] && visibleRoot.length === 0" class="tree-empty">
+            {{ t('panel.emptyTree') }}
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-/* 左侧文件树：宽度可拖拽，最小 150px，正文至少保留 150px */
+/* 左侧文件树：外层负责折叠宽度过渡，内容区宽度固定，折叠时整体左移淡出 */
 .file-tree {
   position: relative;
-  flex-shrink: 0;
-  min-width: 150px;
-  max-width: calc(100% - 150px);
+  min-width: 0;
+  min-height: 0;
+}
+
+.file-tree-inner {
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   border-right: 1px solid var(--desk-border);
   background: var(--desk-sidebar);
 }

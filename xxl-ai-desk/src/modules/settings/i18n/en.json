@@ -28,10 +28,25 @@
     "shortcutRecording": "Press keys…",
     "shortcutEmpty": "Not set",
     "shortcutReset": "Reset shortcuts",
+    "appInfoTitle": "App info",
+    "appInfoTip": "The name appears in the top bar, the window title and on the About page; the slogan appears on the chat empty state.",
     "name": "Name",
     "namePlaceholder": "App name shown at the top-left corner",
     "slogan": "Slogan",
     "sloganPlaceholder": "Welcome text on the empty state, e.g. What can I help you with?",
+    "brandingTitle": "Brand assets",
+    "brandingTip": "Customize the app logo and chat background; images stay on this device.",
+    "logo": "Logo",
+    "logoHint": "Used for the window / Dock icon, chat empty state and About page; supports PNG / JPG / WEBP / GIF / BMP / ICO / SVG, up to 2 MB.",
+    "background": "Background",
+    "backgroundHint": "Applies to the chat content area only; supports common image formats, up to 15 MB.",
+    "backgroundEmpty": "No background image",
+    "backgroundOpacity": "Opacity",
+    "chooseImage": "Choose image",
+    "removeBackground": "Remove background",
+    "logoPickTitle": "Choose a logo image",
+    "backgroundPickTitle": "Choose a background image",
+    "imageFilter": "Image files",
     "providers": "Model providers",
     "providerListTitle": "Provider list",
     "providerName": "Name",
@@ -104,6 +119,6 @@
     "headersExample": "Example: ",
     "languageZh": "中文",
     "languageEn": "English",
-    "projects": "Projects"
+    "projects": "Project settings"
   }
 }

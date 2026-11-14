@@ -21,6 +21,8 @@ export interface BuiltinApp {
   descKey: string
   /* 图标组件名 */
   icon: string
+  /* 图标视觉缩放：补偿不同图标在画布内的留白差异，使图标栏视觉尺寸一致（默认 1） */
+  iconScale?: number
   /* 应用路由（建设中应用可缺省） */
   path?: string
   /* 分类 */
@@ -36,6 +38,8 @@ export const BUILTIN_APPS: BuiltinApp[] = [
     titleKey: 'note.title',
     descKey: 'appCenter.noteDesc',
     icon: 'Notebook',
+    /* Notebook 图形在 1024 画布中占比高于其它图标（约 87% vs 80%），略缩小对齐视觉高度 */
+    iconScale: 0.93,
     path: '/apps/note',
     category: 'efficiency',
     availability: 'available'

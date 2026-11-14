@@ -447,7 +447,6 @@ async function menuRemove(): Promise<void> {
     <div class="file-main">
       <!-- 左：项目目录树（可折叠隐藏） -->
       <FileTreePanel
-        v-show="!treeCollapsed"
         :session-id="props.sessionId"
         :project-id="props.projectId"
         :root="root"

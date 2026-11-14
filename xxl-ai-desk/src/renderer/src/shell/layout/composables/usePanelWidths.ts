@@ -27,9 +27,9 @@ export function usePanelWidths(sessionId: () => string) {
       : Math.round(viewportWidth.value * LAYOUT.toolPanel.defaultRatio)
   )
 
-  /* 左侧栏有效宽度（不含图标栏；折叠时为 0），作为工具面板上限的计算依据 */
+  /* 左侧栏有效宽度（不含图标栏；会话列表折叠时为 0），作为工具面板上限的计算依据 */
   const effectiveSidebarWidth = computed(() =>
-    layout.sidebarCollapsed ? 0 : Math.max(LAYOUT.sidebar.min, layout.sidebarWidth)
+    layout.chatSidebarCollapsed ? 0 : Math.max(LAYOUT.sidebar.min, layout.sidebarWidth)
   )
 
   /* 工具面板最小宽度：文件工具展开目录树时，需同时容纳「树 150 + 正文 150」 */

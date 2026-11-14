@@ -3,6 +3,7 @@
  * @author xuxueli 2026-11-07
  */
 
+export { applyAppIcon, resolveDefaultAppIcon } from './appIconService'
 export { buildMcpRuntimePath, buildRuntimePath, getRuntimeShellDir, runtimePathPrefix } from './envService'
 export { registerLocalFileProtocol } from './localFileProtocol'
 export { showDatabaseRecoveryNotice, showStartupFailure } from './startupNotice'

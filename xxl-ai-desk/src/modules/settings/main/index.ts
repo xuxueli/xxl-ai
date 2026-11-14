@@ -3,4 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
+export { getBrandingAssets } from './brandingService'
 export { getSettings, saveSettings } from './settingsService'

@@ -28,10 +28,25 @@
     "shortcutRecording": "请按下快捷键…",
     "shortcutEmpty": "未设置",
     "shortcutReset": "恢复默认快捷键",
+    "appInfoTitle": "应用信息",
+    "appInfoTip": "名称显示在顶栏、窗口标题与关于页，Slogan 显示在对话空态欢迎页。",
     "name": "名称",
     "namePlaceholder": "显示在左上角的应用名称",
     "slogan": "Slogan",
     "sloganPlaceholder": "空态欢迎语，如：需要我帮你做什么？",
+    "brandingTitle": "品牌资源",
+    "brandingTip": "自定义应用 Logo 与对话区背景；图片仅保存在本机。",
+    "logo": "Logo",
+    "logoHint": "用于窗口 / Dock 图标、对话空态与关于页；支持 PNG / JPG / WEBP / GIF / BMP / ICO / SVG，最大 2MB。",
+    "background": "背景图",
+    "backgroundHint": "仅作用于对话内容区；支持常见图片格式，最大 15MB。",
+    "backgroundEmpty": "未设置背景图",
+    "backgroundOpacity": "不透明度",
+    "chooseImage": "选择图片",
+    "removeBackground": "移除背景",
+    "logoPickTitle": "选择 Logo 图片",
+    "backgroundPickTitle": "选择背景图片",
+    "imageFilter": "图片文件",
     "providers": "模型供应商",
     "providerListTitle": "供应商列表",
     "providerName": "名称",
@@ -104,6 +119,6 @@
     "headersExample": "示例：",
     "languageZh": "中文",
     "languageEn": "English",
-    "projects": "项目"
+    "projects": "项目设置"
   }
 }

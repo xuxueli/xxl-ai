@@ -3,13 +3,14 @@
  *   - 读取时逐项回退默认值；保存为部分更新（upsert）。
  */
 
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { settingTable } from '@modules/settings/main/schema'
 import {
   APPEARANCES,
   THEME_PRESETS,
   type AppSettings,
+  type BrandingKind,
   type SessionDefaults
 } from '@modules/settings/shared/contracts'
 import { DEFAULT_APP_SETTINGS, DEFAULT_SESSION_DEFAULTS } from '@modules/settings/shared/defaults'
@@ -24,6 +25,12 @@ const THEME_VALUES = new Set<string>(THEME_PRESETS)
 /* 旧版分散存储的会话默认配置键：合并为 sessionDefaults 后清理 */
 const LEGACY_SESSION_KEYS = ['providerId', 'modelId', 'reasoningLevel', 'permissionMode']
 
+/* 品牌资源文件名键：文件本身由 brandingService 维护，此处只负责持久化 */
+const BRANDING_FILE_KEYS: Record<BrandingKind, string> = {
+  logo: 'brandingLogo',
+  background: 'brandingBackground'
+}
+
 /* 归一化外观：非法值回退默认 */
 function normalizeAppearance(value: string | undefined): AppSettings['appearance'] {
   return APPEARANCE_VALUES.has(value ?? '')
@@ -36,6 +43,19 @@ function normalizeTheme(value: string | undefined): AppSettings['themePreset'] {
   return THEME_VALUES.has(value ?? '')
     ? (value as AppSettings['themePreset'])
     : DEFAULT_APP_SETTINGS.themePreset
+}
+
+/* 归一化背景图不透明度：限制在 0.1 ~ 0.9，非法值回退默认 */
+function normalizeBackgroundOpacity(value: string | undefined): number {
+  if (value === undefined || value.trim() === '') {
+    return DEFAULT_APP_SETTINGS.backgroundOpacity
+  }
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_APP_SETTINGS.backgroundOpacity
+  }
+  /* 限制范围并保留两位小数，避免浮点尾数写入库 */
+  return Math.round(Math.min(0.9, Math.max(0.1, parsed)) * 100) / 100
 }
 
 /* 为快捷键绑定补齐 Shift（已包含则原样返回；主键保持在末尾） */
@@ -139,6 +159,7 @@ export function getSettings(): AppSettings {
     sessionDefaults: parseSessionDefaults(map),
     appName: map.get('appName') ?? DEFAULT_APP_SETTINGS.appName,
     slogan: map.get('slogan') ?? DEFAULT_APP_SETTINGS.slogan,
+    backgroundOpacity: normalizeBackgroundOpacity(map.get('backgroundOpacity')),
     shortcuts: parseShortcuts(map.get('shortcuts')),
     runtimeNodeMode: map.get('runtimeNodeMode') === 'custom' ? 'custom' : DEFAULT_APP_SETTINGS.runtimeNodeMode,
     runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULT_APP_SETTINGS.runtimeNodePath,
@@ -166,4 +187,28 @@ export function saveSettings(patch: Partial<AppSettings>): AppSettings {
     db.delete(settingTable).where(inArray(settingTable.key, LEGACY_SESSION_KEYS)).run()
   }
   return getSettings()
+}
+
+/* 读取品牌资源文件名（空串表示未设置） */
+export function getBrandingFileNames(): Record<BrandingKind, string> {
+  const rows = getDb().select().from(settingTable).all()
+  const map = new Map(rows.map((row) => [row.key, row.value]))
+  return {
+    logo: map.get(BRANDING_FILE_KEYS.logo) ?? '',
+    background: map.get(BRANDING_FILE_KEYS.background) ?? ''
+  }
+}
+
+/* 保存品牌资源文件名：空值删除记录，避免残留失效文件名 */
+export function saveBrandingFileName(kind: BrandingKind, fileName: string): void {
+  const key = BRANDING_FILE_KEYS[kind]
+  const db = getDb()
+  if (!fileName) {
+    db.delete(settingTable).where(eq(settingTable.key, key)).run()
+    return
+  }
+  db.insert(settingTable)
+    .values({ key, value: fileName })
+    .onConflictDoUpdate({ target: settingTable.key, set: { value: fileName } })
+    .run()
 }

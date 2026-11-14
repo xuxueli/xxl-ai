@@ -10,6 +10,7 @@ import { t } from '@common/main/i18n'
 import type { RuntimeInfo } from '../shared/contracts'
 import { APP_IPC, SHELL_IPC, UPDATE_IPC } from '../shared/ipc'
 import { getDataDir, getDbFile, getDefaultDataDir, setDataDir } from '@common/main/config/paths'
+import { applyAppIconDataUrl } from './appIconService'
 import { detectExecutable } from './envService'
 import { checkForUpdate, openDownload } from './updateService'
 import { listOpenWithApps, openWith } from './openWithService'
@@ -57,6 +58,7 @@ export function registerPlatformIpc(ipc: IpcContext): void {
     return result.canceled || result.filePaths.length === 0 ? '' : result.filePaths[0]
   })
   ipc.handle(APP_IPC.detectExecutable, (_event, input) => detectExecutable(input))
+  ipc.handle(APP_IPC.setIcon, (_event, dataUrl?: string) => applyAppIconDataUrl(dataUrl))
   /* 渲染层异常上报：只落日志，不做业务处理 */
   ipcMain.on(APP_IPC.logError, (_event, message: string) => {
     log.error('[renderer]', message)

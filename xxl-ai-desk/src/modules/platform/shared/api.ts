@@ -13,6 +13,8 @@ export interface AppApi {
   relaunch(): Promise<void>
   selectExecutable(title?: string): Promise<string>
   detectExecutable(input: RuntimeExecInput): Promise<RuntimeDetectResult>
+  /* 应用运行期图标：传 PNG data URL，空串恢复内置图标 */
+  setIcon(dataUrl: string): Promise<void>
   logError(message: string): void
 }
 

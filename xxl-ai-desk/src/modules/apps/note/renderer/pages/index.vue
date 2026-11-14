@@ -224,7 +224,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="note-app">
-    <NoteTree v-show="!store.treeCollapsed" />
+    <NoteTree />
     <div class="note-main">
       <NoteToolbar
         :editor-theme="editorTheme"

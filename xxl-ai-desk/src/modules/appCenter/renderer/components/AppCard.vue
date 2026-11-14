@@ -54,7 +54,9 @@ const statusActive = computed(() =>
   <div class="app-card" :class="{ 'is-building': building }">
     <div class="app-card-top">
       <div class="app-icon">
-        <el-icon><component :is="app.icon" /></el-icon>
+        <el-icon :style="app.iconScale ? { transform: `scale(${app.iconScale})` } : undefined">
+          <component :is="app.icon" />
+        </el-icon>
       </div>
       <div class="app-meta">
         <div class="app-name-row">

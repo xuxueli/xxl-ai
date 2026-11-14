@@ -12,4 +12,5 @@ export { default as PanelCollapseIcon } from '@common/renderer/components/icons/
 export { default as PanelMaximizeIcon } from '@common/renderer/components/icons/PanelMaximizeIcon.vue'
 export { default as PanelRestoreIcon } from '@common/renderer/components/icons/PanelRestoreIcon.vue'
 export { default as SidePanelIcon } from '@common/renderer/components/icons/SidePanelIcon.vue'
+export { default as SidebarToggleIcon } from '@common/renderer/components/icons/SidebarToggleIcon.vue'
 export { default as TerminalIcon } from '@common/renderer/components/icons/TerminalIcon.vue'

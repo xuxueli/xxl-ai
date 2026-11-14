@@ -36,6 +36,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sessionDefaults: DEFAULT_SESSION_DEFAULTS,
   appName: '',
   slogan: '',
+  backgroundOpacity: 0.25,
   shortcuts: DEFAULT_SHORTCUTS,
   runtimeNodeMode: 'builtin',
   runtimeNodePath: '',

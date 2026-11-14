@@ -26,6 +26,7 @@
     "path": "Folder",
     "listTitle": "Project list",
     "filterPlaceholder": "Search by project name or folder",
-    "filterEmpty": "No matching projects"
+    "filterEmpty": "No matching projects",
+    "memoryAction": "Memory"
   }
 }

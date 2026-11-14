@@ -11,6 +11,7 @@ export const APP_IPC = {
   relaunch: 'desk:app:relaunch',
   selectExecutable: 'desk:app:select-executable',
   detectExecutable: 'desk:app:detect-executable',
+  setIcon: 'desk:app:set-icon',
   logError: 'desk:app:log-error'
 } as const
 

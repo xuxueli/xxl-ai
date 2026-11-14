@@ -1,7 +1,7 @@
 /* XXL-AI-Desk 主进程入口：窗口、生命周期、IPC 装配 */
 
-import { app, BrowserWindow, nativeImage, shell } from 'electron'
-import { existsSync, mkdirSync } from 'fs'
+import { app, BrowserWindow, shell } from 'electron'
+import { mkdirSync } from 'fs'
 import { join } from 'path'
 import './i18n'
 import { BROWSER_IPC } from '@modules/browser/shared'
@@ -10,12 +10,18 @@ import { getCacheDir, getDataDir } from '@common/main/config/paths'
 import { initDatabaseFromModules } from '@main/db'
 import type { DatabaseInitResult } from '@common/main/db'
 import { setMainLanguage } from '@common/main/i18n'
-import { getSettings } from '@modules/settings/main'
+import { getBrandingAssets, getSettings } from '@modules/settings/main'
 import { purgeExpiredTraces } from '@modules/diagnostics/main'
 import { registerIpc } from '@main/ipc'
 import { cleanupGithubArchiveTemps } from '@modules/skill/main'
 import { ensureSeedProviders } from '@modules/provider/main'
-import { registerLocalFileProtocol, showDatabaseRecoveryNotice, showStartupFailure } from '@modules/platform/main'
+import {
+  applyAppIcon,
+  registerLocalFileProtocol,
+  resolveDefaultAppIcon,
+  showDatabaseRecoveryNotice,
+  showStartupFailure
+} from '@modules/platform/main'
 import { disposeAllTerminals } from '@modules/terminal/main'
 import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
@@ -37,19 +43,11 @@ app.setPath('sessionData', cacheDir)
 /* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null
 
-/* 运行期应用图标路径：开发期取项目 resources/icon.png；打包后取 resources/icon.png（由 electron-builder extraResources 注入） */
-function resolveAppIconPath(): string | null {
-  const iconPath = app.isPackaged
-    ? join(process.resourcesPath, 'icon.png')
-    : join(app.getAppPath(), 'resources', 'icon.png')
-  return existsSync(iconPath) ? iconPath : null
-}
-
 /* 创建主窗口 */
 function createWindow(): void {
   /* macOS：隐藏标题栏但保留系统红黄绿按钮，内容铺满整个窗口；其它平台沿用系统默认边框 */
   const isMac = process.platform === 'darwin'
-  const appIconPath = resolveAppIconPath()
+  const appIconPath = resolveDefaultAppIcon()
   mainWindow = new BrowserWindow({
     width: 1512,
     height: 944,
@@ -82,10 +80,8 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
-  /* macOS：dev 期运行原装 Electron，Dock 图标仍为 Electron 默认，需显式覆盖（打包后 bundle 已是自定义 icns，属冗余设置） */
-  if (isMac && appIconPath) {
-    app.dock?.setIcon(nativeImage.createFromPath(appIconPath))
-  }
+  /* 运行期应用图标：自定义 Logo 优先，未设置时回退内置 icon.png */
+  applyAppIcon(getBrandingAssets().logoPath)
 
   /* 窗口关闭：解除引用并结算未完成的浏览器读取，避免等待超时 */
   mainWindow.on('closed', () => {

@@ -5,14 +5,12 @@
  */
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useLayoutStore } from '@renderer/shell/stores/layout'
 import { SECTION_ENTRY, SECTION_ICON, sectionOfPath, type SectionKey } from '@renderer/shell/config/nav'
 import { useAppCenterStore } from '@modules/appCenter/renderer'
 import { t } from '@renderer/shell/i18n'
 
 const route = useRoute()
 const router = useRouter()
-const layout = useLayoutStore()
 const appCenter = useAppCenterStore()
 
 /* 固定入口：顶部功能组 + 底部系统设置组 */
@@ -33,6 +31,7 @@ const appEntries = computed(() =>
       key: app.id,
       labelKey: app.titleKey,
       icon: app.icon,
+      iconScale: app.iconScale,
       path: app.path as string
     }))
 )
@@ -55,13 +54,11 @@ function isFixedActive(key: SectionKey): boolean {
   return section.value === key
 }
 
-/* 切换固定板块：点击当前板块折叠 / 展开子菜单栏，点击其它板块跳转入口 */
+/* 切换固定板块：已在当前板块时保持子菜单常驻，否则跳转入口 */
 function goSection(key: SectionKey): void {
   if (isFixedActive(key)) {
-    layout.toggleSidebar()
     return
   }
-  layout.expandSidebar()
   void router.push(SECTION_ENTRY[key])
 }
 
@@ -70,7 +67,6 @@ function goApp(path: string): void {
   if (route.path === path) {
     return
   }
-  layout.expandSidebar()
   void router.push(path)
 }
 </script>
@@ -124,7 +120,9 @@ function goApp(path: string): void {
               :aria-label="t(entry.labelKey)"
               @click="goApp(entry.path)"
             >
-              <el-icon><component :is="entry.icon" /></el-icon>
+              <el-icon :style="entry.iconScale ? { transform: `scale(${entry.iconScale})` } : undefined">
+                <component :is="entry.icon" />
+              </el-icon>
             </button>
           </el-tooltip>
         </div>
@@ -162,7 +160,7 @@ function goApp(path: string): void {
 .sidebar-rail {
   flex-shrink: 0;
   width: var(--desk-rail-width);
-  /* 盖在滑动的内容区之上，内容折叠时从图标栏下方滑出 */
+  /* 盖在内容区之上，避免内容区滚动时溢出到图标栏 */
   position: relative;
   z-index: 1;
   display: flex;

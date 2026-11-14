@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, cpSync, s
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path'
 import { shell } from 'electron'
 import { t } from '@common/main/i18n'
-import { imageMimeOf } from '@common/shared/fileTypes'
+import { IMAGE_EXTENSIONS, imageMimeOf } from '@common/shared/fileTypes'
 import { isWithinRoot, resolveTarget } from '@common/main/utils/pathGuard'
 import type {
   NoteContent,
@@ -30,8 +30,6 @@ const MAX_TEXT_BYTES = 10 * 1024 * 1024
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024
 /* 目录 / 文件名称长度上限 */
 const MAX_NAME_LENGTH = 80
-/* 支持的图片扩展名（与 imageMimeOf 白名单一致，供选择框过滤） */
-export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.svg']
 
 /* 目录解析缓存：设置变更时失效，避免每次请求都做写探针 */
 let rootCache: { configured: string; resolved: ResolvedNoteRoot } | null = null

@@ -33,7 +33,6 @@
     "memoryGenerateTime": "Memory generated at",
     "memorySessionHeader": "## Session: {0}",
     "memorySessionUntitled": "Untitled session",
-    "memoryView": "View Long-term Memory",
     "memoryDialogTitle": "Long-term memory of \"{0}\"",
     "memoryOff": "Long-term memory is disabled, content is empty",
     "memoryContentPlaceholder": "Maintain long-term memory by the fixed dimensions; it is injected into the next chat after saving",

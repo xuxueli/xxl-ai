@@ -33,7 +33,6 @@
     "memoryGenerateTime": "记忆生成时间",
     "memorySessionHeader": "## 会话：{0}",
     "memorySessionUntitled": "未命名会话",
-    "memoryView": "查看长期记忆",
     "memoryDialogTitle": "「{0}」的长期记忆",
     "memoryOff": "长期记忆已关闭，内容为空",
     "memoryContentPlaceholder": "按固定维度维护长期记忆，保存后在下次对话注入",

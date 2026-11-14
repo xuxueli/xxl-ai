@@ -6,7 +6,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { DeskTooltip } from '@common/renderer/components'
 import { LAYOUT } from '@common/renderer/config/layout'
-import { PaletteIcon } from '@common/renderer/components/icons'
+import { PaletteIcon, SidebarToggleIcon } from '@common/renderer/components/icons'
 import { t } from '@renderer/shell/i18n'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import NoteToolbarIcon from '@modules/apps/note/renderer/components/NoteToolbarIcon.vue'
@@ -154,8 +154,13 @@ onBeforeUnmount(() => {
     <!-- 左侧：树开关 + 格式化动作 -->
     <div class="toolbar-main">
       <DeskTooltip :content="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')">
-        <button class="toolbar-btn" @click="store.toggleTree">
-          <NoteToolbarIcon :name="store.treeCollapsed ? 'treeExpand' : 'treeCollapse'" />
+        <button
+          class="toolbar-btn"
+          :class="{ active: store.treeCollapsed }"
+          :aria-label="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')"
+          @click="store.toggleTree"
+        >
+          <SidebarToggleIcon class="tree-toggle-icon" :collapsed="store.treeCollapsed" />
         </button>
       </DeskTooltip>
 
@@ -487,6 +492,11 @@ onBeforeUnmount(() => {
 .toolbar-svg-icon {
   width: var(--desk-font-md);
   height: var(--desk-font-md);
+}
+
+/* 树开关图标：尺寸跟随工具栏按钮字号 */
+.tree-toggle-icon {
+  font-size: var(--desk-font-md);
 }
 
 /* 标题按钮：主图标 + 小下拉箭头，整体保持 28px 宽 */

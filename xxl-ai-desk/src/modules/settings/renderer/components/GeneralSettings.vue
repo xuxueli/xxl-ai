@@ -34,7 +34,7 @@ const language = computed<AppSettings['language']>({
 </script>
 
 <template>
-  <div>
+  <div class="settings-section">
     <el-form label-position="top" class="settings-form">
       <el-form-item :label="t('settings.appearance')">
         <el-radio-group v-model="appearance" class="soft-radio">
@@ -87,9 +87,7 @@ const language = computed<AppSettings['language']>({
 </template>
 
 <style scoped lang="scss">
-.settings-form {
-  max-width: 640px;
-}
+@use '../../../../common/renderer/styles/settingsBlock.scss';
 
 /* Element Plus 表单内容为 flex 容器，需显式撑满，否则内部网格按内容宽度收缩 */
 .settings-form :deep(.el-form-item__content) {

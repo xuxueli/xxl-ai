@@ -4,6 +4,14 @@
  *   - 只统一字体与颜色，上下间距由各组件按所处位置补充。
  */
 
+/*
+ * 表单类设置区块的最大宽度：与会话正文一致（--desk-chat-width，880px）。
+ * 表格与主题网格仍占满外层内容区。
+ */
+.settings-section {
+  max-width: var(--desk-chat-width);
+}
+
 /* 区块标题：与 Element 表单标签同一字号行高，切换区块时不跳动 */
 .settings-block-title {
   font-size: var(--desk-font-base);

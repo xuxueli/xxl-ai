@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChatCommandPalette, ChatSearchAction, useCommandPalette } from '@modules/chat/renderer'
 import { ToolPanelToggle } from '@modules/toolPanel/renderer'
+import ChatSidebarToggle from '@renderer/shell/layout/components/Navbar/ChatSidebarToggle.vue'
 import { useChatStore } from '@modules/chat/renderer'
 import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
@@ -86,9 +87,10 @@ const appName = computed(() => settings.settings.appName || t('app.name'))
       </div>
     </div>
 
-    <!-- 对话页操作：搜索（chat）+ 终端 / 工具面板（toolPanel） -->
+    <!-- 对话页操作：搜索（chat）+ 会话列表开关 + 终端 / 工具面板（toolPanel） -->
     <div v-if="isChat" class="desk-topbar-actions">
       <ChatSearchAction />
+      <ChatSidebarToggle />
       <ToolPanelToggle />
     </div>
 

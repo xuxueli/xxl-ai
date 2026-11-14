@@ -11,6 +11,7 @@ import ChatComposer from '@modules/chat/renderer/components/ChatComposer.vue'
 import InteractionPanel from '@modules/chat/renderer/components/interaction/InteractionPanel.vue'
 import ChatEmptyExtras from '@modules/chat/renderer/components/ChatEmptyExtras.vue'
 import EmptyState from '@modules/chat/renderer/components/EmptyState.vue'
+import { useSettingsStore } from '@modules/settings/renderer'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { useProjectStore } from '@modules/project/renderer'
@@ -22,6 +23,7 @@ import { t } from '@renderer/shell/i18n'
 import type { PermissionMode } from '@modules/chat/shared'
 
 const router = useRouter()
+const settings = useSettingsStore()
 const chat = useChatStore()
 const provider = useProviderStore()
 const project = useProjectStore()
@@ -32,6 +34,17 @@ const chatUi = useChatUiStore()
 const sessionKey = computed(() => sessionKeyOf(chat.currentId))
 /* 当前会话的对话 UI 切片（草稿、滚动位置） */
 const chatUiState = computed(() => chatUi.sliceOf(sessionKey.value))
+
+/* 自定义背景图样式：仅设置背景图时注入，未设置保持默认内容底色 */
+const backgroundStyle = computed(() => {
+  if (!settings.backgroundUrl) {
+    return {}
+  }
+  return {
+    '--desk-chat-bg-image': `url(${settings.backgroundUrl})`,
+    '--desk-chat-bg-opacity': String(settings.settings.backgroundOpacity)
+  }
+})
 
 /* 消息滚动容器与输入框组件引用 */
 const scrollRef = ref<HTMLElement | null>(null)
@@ -236,7 +249,11 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
 </script>
 
 <template>
-  <div class="chat-content" :class="{ empty: !hasMessages && !loadingMessages }">
+  <div
+    class="chat-content"
+    :class="{ empty: !hasMessages && !loadingMessages }"
+    :style="backgroundStyle"
+  >
     <div v-if="loadingMessages" class="chat-body loading">
       <el-icon class="spin"><Loading /></el-icon>
     </div>
@@ -297,6 +314,8 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
 <style scoped lang="scss">
 .chat-content {
   position: relative;
+  /* 独立层叠上下文：背景图伪元素置于内容之下、容器底色之上 */
+  isolation: isolate;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -304,6 +323,19 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
   display: flex;
   flex-direction: column;
   background: var(--desk-surface-content);
+}
+
+/* 自定义背景图：仅覆盖对话内容区，不拦截交互 */
+.chat-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--desk-chat-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--desk-chat-bg-opacity, 0.25);
+  pointer-events: none;
 }
 
 /* 空态：标题/项目选择、输入框与示例作为一组整体垂直居中（整体略上移） */

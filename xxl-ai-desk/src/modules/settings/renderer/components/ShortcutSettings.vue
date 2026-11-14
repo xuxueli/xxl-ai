@@ -45,7 +45,7 @@ function resetShortcuts(): void {
 </script>
 
 <template>
-  <div class="shortcuts">
+  <div class="shortcuts settings-section">
     <div class="settings-block-title">{{ t('settings.shortcuts') }}</div>
     <div class="settings-block-tip shortcuts-tip">{{ t('settings.shortcutsTip') }}</div>
     <div v-for="action in quickActions" :key="action.id" class="shortcut-row">
@@ -76,11 +76,12 @@ function resetShortcuts(): void {
   margin-bottom: 12px;
 }
 
+/* 标签与录制框左右对齐：整行铺满内容区，与上方表单同宽 */
 .shortcut-row {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 16px;
-  max-width: 640px;
   height: 40px;
 }
 

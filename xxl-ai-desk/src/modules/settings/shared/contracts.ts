@@ -31,6 +31,15 @@ export const THEME_PRESETS = [
 ] as const
 export type ThemePreset = (typeof THEME_PRESETS)[number]
 
+/* 品牌资源类型：Logo / 背景图 */
+export type BrandingKind = 'logo' | 'background'
+
+/* 品牌资源：主进程解析后的绝对路径，空串表示使用内置资源 */
+export interface BrandingAssets {
+  logoPath: string
+  backgroundPath: string
+}
+
 /* 新建会话默认配置：统一存为一条 JSON，避免设置表键值碎片化 */
 export interface SessionDefaults {
   /* 上次选择的项目主键（0 表示未选择） */
@@ -60,6 +69,8 @@ export interface AppSettings {
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string
+  /* 对话区背景图不透明度（0.1 ~ 0.6，未设置背景图时不生效） */
+  backgroundOpacity: number
   /* 快捷操作快捷键（缺省项回退 DEFAULT_SHORTCUTS） */
   shortcuts: ShortcutMap
   /* 命令运行环境：Node 来源（builtin 内置 Electron Node / custom 自定义路径） */

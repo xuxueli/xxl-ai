@@ -424,7 +424,7 @@ export const useWidgetStore = defineStore('widget', () => {
 shell/layout/index.vue（app-wrapper，纵向）
 ├─ Navbar        全局顶栏（固定最顶部，整体 -webkit-app-region: drag）
 └─ app-body（横向）
-   ├─ Sidebar     SidebarRail（常驻图标栏）+ SidebarContent（可折叠/可拖拽内容区）
+   ├─ Sidebar     SidebarRail（常驻图标栏）+ SidebarContent（首页会话列表可折叠 / 可拖拽；其他板块固定展示）
    │              └─ SidebarContent：ChatSidebarPanel（首页）/ SidebarMenu（插件、设置）
    └─ AppMain     正文（RouterView）
 ```
@@ -432,7 +432,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **术语边界**：`layout` 指应用外壳；`nav` 指导航；`sidebar` 指左侧整列；`rail` 指图标栏；`panel` 只指正文内可调整尺寸的面板（工具/终端/文件/浏览器）；`shell` 只用于操作系统 shell（`api.shell`、`desk:shell:*`）。
 - **导航单一来源**：板块 ↔ 入口路径 ↔ 顶栏标题 ↔ 子菜单项均在 `renderer/src/shell/config/nav.ts`（`NAV_SECTIONS` / `SECTION_ENTRY` / `SECTION_ICON`）。新增板块需同步：`nav.ts`、`SidebarRail` 按钮、路由与正文页。
 - **顶栏**：左侧依次为首页图标（纯展示标识，不提供跳转与浮层）与软件名称（`appName` 优先、回落 `app.name`），其后为板块图标 + 标题/操作，标题随路由（首页=会话标题，插件=「插件」，设置=「系统设置」，应用页=应用名称）；软件名称与标题间的细线仅在有标题时展示；交互控件 `no-drag`。顶栏标题只做展示，不重复会话重命名 / 删除等侧栏已有操作。
-- **子菜单**：标题 18px/600，条目 14px/400，选中项 600 + 浅底；不展示 Logo；图标栏常驻。切换板块时子菜单直接跳变并默认展开，只有重复点击当前板块按钮才播放折叠 / 展开动画。
+- **子菜单**：标题 18px/600，条目 14px/400，选中项 600 + 浅底；不展示 Logo；图标栏常驻。切换板块时子菜单直接跳变并默认展开；仅首页会话列表可由顶栏开关折叠 / 展开，其他板块子菜单固定展示。
 - **布局不承载域逻辑**：域内逻辑下沉 `modules/{domain}/renderer`；`SidebarContent` 是唯一装配侧栏域内容的位置。
 - **布局不承载启动逻辑**：`App.vue` 只组装外壳；全局快捷键、设置/项目/会话初始化、会话生命周期与更新检查在 `shell/composables/useAppBootstrap.ts`。
 - **面板宽度约束**：左侧子菜单栏与右侧工具面板均按像素持久化；子菜单栏最小 150px，工具面板最小 150px（文件工具展开目录树时 300px），二者上限都要为会话区保留 400px。
@@ -564,7 +564,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - [ ] 领域文案在 `modules/{domain}/i18n`，公共词条在 `common/shared/i18n`，zh/en 成对。
 - [ ] UI 复用 tokens / 外壳 / 列表规范；弹层 append-to-body 且拖拽区可用；全局样式已验证影响面。
 - [ ] 布局尺寸变更已同步 `common/renderer/config/layout.ts` 与 `common/renderer/styles/tokens.scss`；跨进程尺寸使用共享常量，无魔法数。
-- [ ] 侧栏导航：切换板块直接跳变并默认展开，只有重复点击当前板块才播放折叠动画；应用页直接收起，不播放动画。
+- [ ] 侧栏导航：切换板块直接跳变并默认展开；仅首页会话列表可折叠，其他板块固定展示；应用页直接收起，不播放动画。
 - [ ] 目录监听复用 `common/main/utils/directoryWatcher.ts`；渲染层只重载变更目录，页面对应 `bindWatcher` / `unbindWatcher`，退出时 `dispose` 清理。
 
 ### 7.5 Agent 运行时与安全边界

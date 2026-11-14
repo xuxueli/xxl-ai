@@ -30,7 +30,9 @@
   },
   "layout": {
     "resetPanelWidth": "双击恢复默认宽度",
-    "resetPanelHeight": "双击恢复默认高度"
+    "resetPanelHeight": "双击恢复默认高度",
+    "collapseChatSidebar": "收起会话列表",
+    "expandChatSidebar": "展开会话列表"
   },
   "editor": {
     "find": "查找",
@@ -197,7 +199,10 @@
       "noteImageType": "不支持的图片格式",
       "noteImageTooLarge": "图片体积超过 20MB",
       "appNotFound": "应用不存在或不支持安装",
-      "appNotAvailable": "该应用建设中，暂不可安装"
+      "appNotAvailable": "该应用建设中，暂不可安装",
+      "brandingType": "仅支持常见图片格式（PNG / JPG / WEBP / GIF / BMP / ICO / SVG）",
+      "brandingTooLarge": "图片超过大小上限（{0}MB）",
+      "brandingReadFailed": "图片读取失败：{0}"
     },
     "dialog": {
       "selectFolderTitle": "选择项目目录",

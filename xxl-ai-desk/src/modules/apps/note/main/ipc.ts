@@ -7,9 +7,9 @@ import { dialog } from 'electron'
 import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
 import { registerLocalFileRoot } from '@common/main/utils/localFileRoots'
+import { IMAGE_EXTENSIONS } from '@common/shared/fileTypes'
 import { NOTE_IPC } from '../shared/ipc'
 import {
-  IMAGE_EXTENSIONS,
   assertNoteDir,
   createFolder,
   createNote,

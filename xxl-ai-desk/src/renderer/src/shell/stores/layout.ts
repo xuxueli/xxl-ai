@@ -1,12 +1,12 @@
-/* 应用外壳布局状态：左侧栏折叠与宽度（会话内工具 / 终端状态见 toolPanel store） */
+/* 应用外壳布局状态：左侧会话栏折叠与会话列表宽度（会话内工具 / 终端状态见 toolPanel store） */
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { createPersistedWidth } from '@renderer/shell/layout/utils/persistedWidth'
 import { LAYOUT } from '@common/renderer/config/layout'
 
-/* 侧栏折叠过渡时长（与 Sidebar 样式保持一致） */
-const ANIMATE_DURATION = 220
+/* 会话列表折叠状态存储键 */
+const CHAT_SIDEBAR_COLLAPSED_KEY = 'desk-chat-sidebar-collapsed'
 
 export const useLayoutStore = defineStore('layout', () => {
   /* 左侧子菜单栏宽度：三板块共用（拖拽调整、持久化、双击复位） */
@@ -17,47 +17,23 @@ export const useLayoutStore = defineStore('layout', () => {
     max: () => Math.max(LAYOUT.sidebar.min, window.innerWidth)
   })
 
-  /* 左侧栏是否折叠（折叠后仅保留图标栏，内容区铺满） */
-  const sidebarCollapsed = ref(false)
+  /* 会话列表是否折叠（仅首页生效，其他板块子菜单固定展示） */
+  const chatSidebarCollapsed = ref(localStorage.getItem(CHAT_SIDEBAR_COLLAPSED_KEY) === '1')
 
-  /* 是否播放折叠过渡：仅手动点击当前板块图标时开启，切换板块一律直接跳变 */
-  const sidebarAnimated = ref(false)
-  let animateTimer: ReturnType<typeof setTimeout> | null = null
-
-  /* 停止折叠过渡 */
-  function stopSidebarAnimation(): void {
-    sidebarAnimated.value = false
-    if (animateTimer) {
-      clearTimeout(animateTimer)
-      animateTimer = null
+  /* 切换会话列表折叠状态 */
+  function toggleChatSidebar(): void {
+    chatSidebarCollapsed.value = !chatSidebarCollapsed.value
+    try {
+      localStorage.setItem(CHAT_SIDEBAR_COLLAPSED_KEY, chatSidebarCollapsed.value ? '1' : '0')
+    } catch {
+      /* 本地存储不可用时忽略（仅影响恢复） */
     }
-  }
-
-  /* 切换侧栏折叠状态：重复点击当前板块图标时展示 / 折叠 */
-  function toggleSidebar(): void {
-    sidebarAnimated.value = true
-    sidebarCollapsed.value = !sidebarCollapsed.value
-    if (animateTimer) {
-      clearTimeout(animateTimer)
-    }
-    animateTimer = setTimeout(() => {
-      animateTimer = null
-      sidebarAnimated.value = false
-    }, ANIMATE_DURATION)
-  }
-
-  /* 展开侧栏：图标栏切换入口时还原完整子菜单栏，直接展开不播放动画 */
-  function expandSidebar(): void {
-    stopSidebarAnimation()
-    sidebarCollapsed.value = false
   }
 
   return {
-    sidebarCollapsed,
-    sidebarAnimated,
     sidebarWidth: sidebar.width,
     setSidebarWidth: sidebar.setWidth,
-    toggleSidebar,
-    expandSidebar
+    chatSidebarCollapsed,
+    toggleChatSidebar
   }
 })

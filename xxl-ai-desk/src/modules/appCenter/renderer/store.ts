@@ -17,6 +17,7 @@ export interface AppItem {
   titleKey: string
   descKey: string
   icon: string
+  iconScale?: number
   path?: string
   category: AppCategory
   availability: AppAvailability

@@ -5,5 +5,5 @@
 
 export type { SettingsApi } from './api'
 export { THEME_PRESETS } from './contracts'
-export type { AppSettings, SessionDefaults } from './contracts'
+export type { AppSettings, BrandingAssets, BrandingKind, SessionDefaults } from './contracts'
 export { NEW_CHAT_TITLE, createDefaultSettings } from './defaults'

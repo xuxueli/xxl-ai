@@ -15,6 +15,7 @@ export const appApi: AppApi = {
   relaunch: () => ipcRenderer.invoke(APP_IPC.relaunch),
   selectExecutable: (title?: string) => ipcRenderer.invoke(APP_IPC.selectExecutable, title),
   detectExecutable: (input) => ipcRenderer.invoke(APP_IPC.detectExecutable, input),
+  setIcon: (dataUrl: string) => ipcRenderer.invoke(APP_IPC.setIcon, dataUrl),
   logError: (message: string) => ipcRenderer.send(APP_IPC.logError, message)
 }
 

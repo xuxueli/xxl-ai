@@ -20,6 +20,9 @@ const IMAGE_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml'
 }
 
+/* 支持的图片扩展名（由 MIME 表派生，供文件选择框与图片校验共用） */
+export const IMAGE_EXTENSIONS = Object.keys(IMAGE_TYPES)
+
 /* 扩展名 → 媒体类别 + MIME */
 const MEDIA_TYPES: Record<string, { kind: MediaKind; mime: string }> = {
   '.mp4': { kind: 'video', mime: 'video/mp4' },
