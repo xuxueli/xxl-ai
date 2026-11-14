@@ -3,7 +3,7 @@
  * Git 提交区：提交信息与提交按钮。
  * @author xuxueli 2026-10-31
  */
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 defineProps<{
   busy: boolean

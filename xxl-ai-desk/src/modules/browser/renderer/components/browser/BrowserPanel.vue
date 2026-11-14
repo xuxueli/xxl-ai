@@ -8,7 +8,7 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { DeskTooltip } from '@common/renderer/components'
 import { isMac } from '@common/renderer/utils/shortcut'
 import { useBrowserSessionStore } from '@modules/browser/renderer'

@@ -4,7 +4,7 @@
  * @author xuxueli 2026-11-14
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 /* 语法行：图标 + 名称 + Markdown 示例（示例为代码，不参与文案翻译） */
 interface SyntaxRow {

@@ -6,7 +6,7 @@
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { usePagedList } from '@modules/diagnostics/renderer/composables/usePagedList'
 import { formatClock, previewOfTrace, previewTag, traceStatusText } from '@modules/diagnostics/renderer/utils/diagnosticsDisplay'

@@ -6,7 +6,7 @@
  */
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import GeneralSettings from '@modules/settings/renderer/components/GeneralSettings.vue'
 import DataDirSettings from '@modules/settings/renderer/components/DataDirSettings.vue'
 import CommandRuntimeSettings from '@modules/settings/renderer/components/CommandRuntimeSettings.vue'

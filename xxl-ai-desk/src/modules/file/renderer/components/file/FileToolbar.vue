@@ -4,7 +4,7 @@
  * 视觉与笔记工具栏保持一致：38px 图标工具条、分组分隔线、无边框按钮。
  * @author xuxueli 2026-10-25
  */
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { DeskTooltip } from '@common/renderer/components'
 import { SidebarToggleIcon } from '@common/renderer/components/icons'
 import EditorThemeMenu from '@common/renderer/components/CodeEditor/EditorThemeMenu.vue'

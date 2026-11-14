@@ -7,7 +7,7 @@
  * @author xuxueli 2026-11-08
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { AppItem } from '@modules/appCenter/renderer/store'
 
 const props = withDefaults(

@@ -7,7 +7,7 @@
  */
 import { computed } from 'vue'
 import { DeskTooltip } from '@common/renderer/components'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { PermissionInteractionRequest, InteractionResult } from '@modules/chat/shared'
 
 const props = defineProps<{ request: PermissionInteractionRequest }>()

@@ -6,7 +6,7 @@
  */
 
 import type { Ref } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ChatEvent } from '@modules/chat/shared'
 import type { ToolCallState, UiMessage } from '@modules/chat/renderer/types'
 import { appendPart, refreshContent, uid } from '@modules/chat/renderer/store/messageMapping'

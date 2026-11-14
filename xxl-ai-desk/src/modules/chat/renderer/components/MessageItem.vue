@@ -4,7 +4,7 @@
  * @author xuxueli 2026-10-18
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { formatTime } from '@modules/chat/renderer/utils/format'
 import MessageTimeline from '@modules/chat/renderer/components/MessageTimeline.vue'
 import type { UiMessage } from '@modules/chat/renderer/types'

@@ -5,7 +5,7 @@
 */
 import { useCommandPalette } from '@modules/chat/renderer/composables/useCommandPalette'
 import NavbarIconButton from '@renderer/shell/layout/components/Navbar/NavbarIconButton.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const { openPalette } = useCommandPalette()
 </script>

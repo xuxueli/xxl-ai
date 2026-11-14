@@ -6,7 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { AppSettings } from '@modules/settings/shared'
 import type { RuntimeDetectResult } from '@modules/platform/shared'
 

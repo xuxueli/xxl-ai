@@ -9,7 +9,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { createBrowserTab } from '@modules/browser/renderer'
 import { normalizeBrowserUrl } from '@modules/browser/shared/browserUrl'
 import {

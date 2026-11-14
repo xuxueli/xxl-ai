@@ -5,7 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import AppCard from '@modules/appCenter/renderer/components/AppCard.vue'
 import { useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
 import { APP_CATEGORIES, type AppAvailability, type AppCategory } from '@modules/appCenter/shared'

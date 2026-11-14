@@ -10,7 +10,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { normalizePath, parentDir } from '@modules/file/renderer/utils/path'
 import { imageMimeOf, mediaKindOf } from '@common/shared/fileTypes'
@@ -255,11 +255,31 @@ async function select(entry: FsEntry): Promise<boolean> {
   return true
 }
 
-/* 放大预览内左右切换图片：同步选中同目录下的目标图片 */
-function onSwitchImage(path: string): void {
+/* 放大预览内左右切换图片：仅原地替换文件内容，不进入 loading / 预览复位流程，避免弹层卸载重挂导致闪烁 */
+let imageSwitchSeq = 0
+async function onSwitchImage(path: string): Promise<void> {
+  const projectId = props.projectId
   const entry = imageEntries.value.find((item) => item.path === path)
-  if (entry) {
-    void select(entry)
+  if (!projectId || !entry) {
+    return
+  }
+  const seq = ++imageSwitchSeq
+  selected.value = entry
+  toolPanel.setSelectedPath(props.sessionId, entry.path)
+  try {
+    const loaded = await api.fs.read(projectId, entry.path)
+    /* 快速连点箭头时丢弃过期响应 */
+    if (seq !== imageSwitchSeq) {
+      return
+    }
+    file.value = loaded
+    original.value = loaded.content
+    draft.value = loaded.content
+    preview.value = true
+  } catch (error) {
+    if (seq === imageSwitchSeq) {
+      ElMessage.error((error as Error).message || t('panel.loadFail'))
+    }
   }
 }
 

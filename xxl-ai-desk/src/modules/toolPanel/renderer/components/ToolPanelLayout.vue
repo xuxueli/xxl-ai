@@ -6,7 +6,7 @@
 import { usePanelWidths } from '@renderer/shell/layout/composables/usePanelWidths'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import ToolPanel from '@modules/toolPanel/renderer/components/ToolPanel.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const props = defineProps<{
   /* 当前会话 key（真实会话 id 或草稿 key） */

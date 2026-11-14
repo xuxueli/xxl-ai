@@ -6,7 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { CONTEXT_WINDOW_DEFAULT, DEFAULT_MODEL_TYPE, type ModelType } from '@common/shared/model'
 import type { ProviderDTO } from '@modules/provider/shared'
 

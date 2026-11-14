@@ -5,7 +5,7 @@
  * @author xuxueli 2026-10-25
  */
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import {
   buildClickScript,
   buildClearScript,
@@ -28,7 +28,6 @@ import {
   readyTabs,
   sleep,
   stateOf,
-  viewportCenterOf,
   webviews,
   type WebviewElement
 } from '@modules/browser/renderer/composables/browserState'
@@ -666,7 +665,7 @@ export async function scrollActiveTab(
     return page
   }
   const { tab, view } = page
-  /* 光标落在内容区中心，标签说明滚动方向 */
+  /* 滚动只切换图标与文案，不移动光标：连续滚动时指针不应反复跳到页面中心 */
   const keys = {
     up: { label: 'browser.action.scrollUp', status: 'browser.action.scrollingUp' },
     down: { label: 'browser.action.scrollDown', status: 'browser.action.scrollingDown' },
@@ -677,8 +676,7 @@ export async function scrollActiveTab(
     sessionId,
     kind: 'scroll',
     label: t(keys.label),
-    status: t(keys.status),
-    point: viewportCenterOf(view)
+    status: t(keys.status)
   })
   let raw: { ok?: boolean; scrollY?: number } | undefined
   try {
@@ -851,7 +849,8 @@ export async function historyActiveTab(
 }
 
 /*
- * 非指针动作的可视化包装：光标移动到内容区中心并展示状态文案。
+ * 非指针动作的可视化包装：只切换光标状态文案与图标，不移动光标。
+ * 读取 / 快照 / 等待 / 截图 / 导航没有落点，把指针甩到页面中心反而挡住内容。
  * 只影响视觉，动作结果与耗时保持原样。
  */
 export async function withActivity<T extends BrowserActionResult>(
@@ -859,12 +858,7 @@ export async function withActivity<T extends BrowserActionResult>(
   activity: { kind: BrowserActionKind; label: string; status: string },
   run: () => Promise<T>
 ): Promise<T> {
-  const tab = activeTabOf(stateOf(sessionId))
-  const view = tab ? webviews.get(tab.id) : undefined
-  const rect = view?.getBoundingClientRect()
-  const point =
-    view && rect && rect.width > 0 && rect.height > 0 ? viewportCenterOf(view) : undefined
-  const actionId = beginBrowserAction({ sessionId, ...activity, point })
+  const actionId = beginBrowserAction({ sessionId, ...activity })
   try {
     const result = await run()
     endBrowserAction(sessionId, actionId, { ok: result.ok, error: result.error })

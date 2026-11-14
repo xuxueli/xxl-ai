@@ -12,7 +12,7 @@ import '@xterm/xterm/css/xterm.css'
 import { api } from '@common/renderer/api'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import type { TerminalEvent } from '@modules/terminal/shared'
 

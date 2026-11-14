@@ -6,7 +6,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import AppCard from '@modules/appCenter/renderer/components/AppCard.vue'
 import { appSettingsOf, useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
 

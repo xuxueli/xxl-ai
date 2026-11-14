@@ -1,14 +1,14 @@
-/* 国际化：装配公共词条与各领域词条，语言由设置驱动 */
-import { createI18n } from 'vue-i18n'
+/* 国际化组合根：装配公共词条与各领域词条，注册到 common 的 i18n 单例 */
+import { i18n, registerMessages, setLanguage, t } from '@common/renderer/i18n'
 import zhCommon from '@common/shared/i18n/locales/zh.json'
 import enCommon from '@common/shared/i18n/locales/en.json'
 import zhAgent from '@modules/agent/i18n/zh.json'
 import enAgent from '@modules/agent/i18n/en.json'
 import zhApp from '@modules/platform/i18n/zh.json'
-import zhAppCenter from '@modules/appCenter/i18n/zh.json'
-import zhNote from '@modules/apps/note/i18n/zh.json'
 import enApp from '@modules/platform/i18n/en.json'
+import zhAppCenter from '@modules/appCenter/i18n/zh.json'
 import enAppCenter from '@modules/appCenter/i18n/en.json'
+import zhNote from '@modules/apps/note/i18n/zh.json'
 import enNote from '@modules/apps/note/i18n/en.json'
 import zhBrowser from '@modules/browser/i18n/zh.json'
 import enBrowser from '@modules/browser/i18n/en.json'
@@ -25,21 +25,36 @@ import enSettings from '@modules/settings/i18n/en.json'
 import zhToolPanel from '@modules/toolPanel/i18n/zh.json'
 import enToolPanel from '@modules/toolPanel/i18n/en.json'
 
-/* 国际化：语言由设置驱动，不支持运行时切换（重启生效） */
-export const i18n = createI18n({
-  legacy: false,
-  locale: 'zh',
-  fallbackLocale: 'zh',
-  messages: {
-    zh: { ...zhCommon, ...zhAgent, ...zhApp, ...zhAppCenter, ...zhNote, ...zhBrowser, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
-    en: { ...enCommon, ...enAgent, ...enApp, ...enAppCenter, ...enNote, ...enBrowser, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
+/* 词条装配：公共词条在前，领域词条按模块顺序合并 */
+registerMessages({
+  zh: {
+    ...zhCommon,
+    ...zhAgent,
+    ...zhApp,
+    ...zhAppCenter,
+    ...zhNote,
+    ...zhBrowser,
+    ...zhChat,
+    ...zhGit,
+    ...zhPlugin,
+    ...zhProject,
+    ...zhSettings,
+    ...zhToolPanel
+  },
+  en: {
+    ...enCommon,
+    ...enAgent,
+    ...enApp,
+    ...enAppCenter,
+    ...enNote,
+    ...enBrowser,
+    ...enChat,
+    ...enGit,
+    ...enPlugin,
+    ...enProject,
+    ...enSettings,
+    ...enToolPanel
   }
 })
 
-/* 全局翻译函数快捷方式 */
-export const t = i18n.global.t
-
-/* 应用语言 */
-export function setLanguage(language: 'zh' | 'en'): void {
-  i18n.global.locale.value = language
-}
+export { i18n, setLanguage, t }

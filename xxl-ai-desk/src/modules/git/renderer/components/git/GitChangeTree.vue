@@ -8,7 +8,7 @@ import { useToolPanelStore } from '@modules/toolPanel/renderer'
 import { DeskTooltip } from '@common/renderer/components'
 import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import GitChangeRow from '@modules/git/renderer/components/git/GitChangeRow.vue'
 import {
   buildGitChangeTree,

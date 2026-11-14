@@ -2,8 +2,8 @@
 /*
  * 浏览器浮层光标：常驻指针、动作状态文案、目标轮廓与点击涟漪。
  *   - 挂在壳级浏览器宿主内，覆盖在 webview 之上，纯展示不拦截交互；
- *   - 光标固定尺寸，不随页面缩放变化；空闲时弱化，动作时高亮并显示状态；
- *   - 打开面板即定位到内容区中心，之后保持在上一次操作位置。
+ *   - 光标固定尺寸，不随页面缩放变化；空闲时弱化并回到箭头指针，动作时显示对应图标与状态；
+ *   - 首次定位在内容区右下角，之后保持在上一次操作位置。
  * @author xuxueli 2026-11-15
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -45,14 +45,18 @@ watch(
   { immediate: true }
 )
 
-/* 内容区尺寸变化：首次居中定位，之后把光标收进可视范围 */
+/* 内容区尺寸变化：首次定位（右下角），之后把光标收进视口范围 */
 let observer: ResizeObserver | null = null
+
+/* 内容区尺寸：用于判断状态文案是否需要向内侧翻转 */
+const viewport = ref({ width: 0, height: 0 })
 
 function syncViewport(): void {
   const el = layerRef.value
   if (!el) {
     return
   }
+  viewport.value = { width: el.clientWidth, height: el.clientHeight }
   syncBrowserCursorViewport(props.sessionId, el.clientWidth, el.clientHeight)
 }
 
@@ -98,6 +102,13 @@ const rippleStyle = computed(() => ({
   left: `${cursor.value?.x ?? 0}px`,
   top: `${cursor.value?.y ?? 0}px`
 }))
+
+/* 空闲时回到箭头指针：保留上一个动作的图标会让指针看起来像页面自带按钮 */
+const glyphKind = computed(() => (busy.value ? cursor.value?.kind : 'click'))
+
+/* 状态文案靠近右 / 下边缘时向内侧翻转，避免贴边被裁切 */
+const flipX = computed(() => (cursor.value?.x ?? 0) > viewport.value.width - 280)
+const flipY = computed(() => (cursor.value?.y ?? 0) > viewport.value.height - 96)
 </script>
 
 <template>
@@ -121,16 +132,16 @@ const rippleStyle = computed(() => ({
       <span class="cursor-halo"></span>
       <span class="cursor-ring"></span>
       <!-- 指针元素：动作变化时重建，触发一次弹跳 -->
-      <span :key="`${cursor?.kind}-${cursor?.pulse ?? 0}`" class="cursor-glyph">
-        <!-- 移动 / 点击 / 按键 / 标签 / 历史：箭头指针 -->
+      <span :key="`${glyphKind}-${cursor?.pulse ?? 0}`" class="cursor-glyph">
+        <!-- 移动 / 点击 / 按键 / 标签 / 历史 / 空闲：箭头指针 -->
         <svg
           v-if="
             !cursor ||
-            cursor.kind === 'move' ||
-            cursor.kind === 'click' ||
-            cursor.kind === 'press' ||
-            cursor.kind === 'tabs' ||
-            cursor.kind === 'history'
+            glyphKind === 'move' ||
+            glyphKind === 'click' ||
+            glyphKind === 'press' ||
+            glyphKind === 'tabs' ||
+            glyphKind === 'history'
           "
           class="cursor-icon"
           viewBox="0 0 32 40"
@@ -146,7 +157,7 @@ const rippleStyle = computed(() => ({
         </svg>
         <!-- 填写 / 输入：文本光标 -->
         <svg
-          v-else-if="cursor.kind === 'fill' || cursor.kind === 'type'"
+          v-else-if="glyphKind === 'fill' || glyphKind === 'type'"
           class="cursor-icon"
           viewBox="0 0 20 34"
           aria-hidden="true"
@@ -167,7 +178,7 @@ const rippleStyle = computed(() => ({
           />
         </svg>
         <!-- 滚动：滚轮 -->
-        <svg v-else-if="cursor.kind === 'scroll'" class="cursor-icon" viewBox="0 0 26 36" aria-hidden="true">
+        <svg v-else-if="glyphKind === 'scroll'" class="cursor-icon" viewBox="0 0 26 36" aria-hidden="true">
           <rect x="3" y="2.6" width="20" height="30.8" rx="10" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <rect
             x="4.8"
@@ -183,7 +194,7 @@ const rippleStyle = computed(() => ({
         </svg>
         <!-- 读取 / 快照：放大镜 -->
         <svg
-          v-else-if="cursor.kind === 'read' || cursor.kind === 'snapshot'"
+          v-else-if="glyphKind === 'read' || glyphKind === 'snapshot'"
           class="cursor-icon"
           viewBox="0 0 34 34"
           aria-hidden="true"
@@ -201,13 +212,13 @@ const rippleStyle = computed(() => ({
           <path d="M20.6 20.6 L29 29" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
         </svg>
         <!-- 等待：时钟 -->
-        <svg v-else-if="cursor.kind === 'wait'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
+        <svg v-else-if="glyphKind === 'wait'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
           <circle cx="17" cy="17" r="12" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <circle cx="17" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="2.6" />
           <path d="M17 10 V17.5 L22 20.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
         </svg>
         <!-- 导航：地球 -->
-        <svg v-else-if="cursor.kind === 'navigate'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
+        <svg v-else-if="glyphKind === 'navigate'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
           <circle cx="17" cy="17" r="12" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <circle cx="17" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="2.6" />
           <ellipse cx="17" cy="17" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2" />
@@ -223,7 +234,11 @@ const rippleStyle = computed(() => ({
       </span>
       <!-- 状态文案：动作执行中展示，结束后保留数秒再淡出 -->
       <Transition name="cursor-fade">
-        <span v-if="cursor?.status" class="cursor-status" :class="{ busy }">
+        <span
+          v-if="cursor?.status"
+          class="cursor-status"
+          :class="{ busy, 'flip-x': flipX, 'flip-y': flipY }"
+        >
           <span class="status-dot"></span>
           <span class="status-text">{{ cursor.status }}</span>
         </span>
@@ -387,6 +402,17 @@ const rippleStyle = computed(() => ({
 .status-text {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 靠近右 / 下边缘时把胶囊翻到光标内侧，避免贴边被裁切 */
+.cursor-status.flip-x {
+  right: var(--agent-label-x);
+  left: auto;
+}
+
+.cursor-status.flip-y {
+  top: auto;
+  bottom: var(--agent-label-y);
 }
 
 .status-dot {

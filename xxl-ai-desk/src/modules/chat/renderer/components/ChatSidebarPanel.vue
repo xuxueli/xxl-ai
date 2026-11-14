@@ -12,7 +12,7 @@ import SidebarHeader from '@renderer/shell/layout/components/Sidebar/SidebarHead
 import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { DeskTooltip } from '@common/renderer/components'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import ProjectGroup from '@modules/chat/renderer/components/ProjectGroup.vue'
 import type { SessionDTO } from '@modules/chat/shared'
 

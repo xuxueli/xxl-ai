@@ -6,7 +6,7 @@
  * @author xuxueli 2026-11-02
  */
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { LlmTraceDTO } from '@modules/diagnostics/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 

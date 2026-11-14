@@ -3,7 +3,7 @@
  * @author xuxueli 2026-10-25
  */
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 /* 格式化发送时间：ISO 字符串 → 展示文案，非法值返回空串（当天仅时分，跨天补充月日） */
 export function formatTime(iso: string): string {
@@ -32,12 +32,6 @@ export function formatDuration(ms: number): string {
     return `${Math.max(0, Math.round(ms))}ms`
   }
   return `${(ms / 1000).toFixed(1)}s`
-}
-
-/* 上下文用量紧凑展示：小于 1000 显示原数字，其余统一用 K（保留 1 位小数） */
-export function formatCompactTokens(value: number): string {
-  const tokens = Math.max(0, Math.round(value))
-  return tokens < 1000 ? String(tokens) : `${(tokens / 1000).toFixed(1)}K`
 }
 
 /* 完整 token 数字：千分位展示（tooltip 用） */

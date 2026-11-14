@@ -14,7 +14,7 @@ import {
   type BrandingKind
 } from '@modules/settings/shared'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const settings = useSettingsStore()
 

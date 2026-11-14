@@ -10,7 +10,7 @@ import {
   editorThemeVars,
   type EditorThemeId
 } from '@common/renderer/components/CodeEditor/editorThemes'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
 import { parentDir } from '@modules/apps/note/renderer/utils/path'
 import {

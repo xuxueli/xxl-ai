@@ -9,7 +9,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { LAYOUT } from '@common/renderer/config/layout'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type {
   NoteContent,
   NoteEntry,

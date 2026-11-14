@@ -5,7 +5,7 @@
  */
 import { computed } from 'vue'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const settings = useSettingsStore()
 

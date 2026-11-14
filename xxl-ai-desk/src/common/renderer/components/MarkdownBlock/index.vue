@@ -8,7 +8,7 @@ import { ElImageViewer } from 'element-plus'
 import { renderMarkdown } from '@common/renderer/components/MarkdownBlock/useMarkdown'
 import { onCodeBlockClick, restoreCodeBlockState } from '@common/renderer/components/MarkdownBlock/useCodeBlock'
 import { onContentLinkClick } from '@common/renderer/composables/useContentLink'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { renderMermaidBlocks } from '@common/renderer/components/MarkdownBlock/useMermaid'
 
 const props = defineProps<{

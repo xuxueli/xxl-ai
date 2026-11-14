@@ -11,7 +11,7 @@ import { CollapseShell } from '@common/renderer/components'
 import { useCollapseAnimation } from '@common/renderer/composables/useCollapseAnimation'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import FileTreeNode from '@modules/file/renderer/components/file/FileTreeNode.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{

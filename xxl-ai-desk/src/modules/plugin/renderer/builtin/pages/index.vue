@@ -12,7 +12,7 @@ import {
   type BuiltinToolCategoryKey
 } from '@modules/plugin/renderer/builtin/catalog'
 import PluginCenterShell from '@modules/plugin/renderer/components/PluginCenterShell.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 /* 分类 + 其下工具（顺序取自共享目录） */
 const groups = computed(() =>

@@ -12,7 +12,7 @@ import {
   isEditorThemeId,
   type EditorThemeId
 } from '@common/renderer/components/CodeEditor/editorThemes'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import NoteTree from '@modules/apps/note/renderer/components/NoteTree.vue'
 import NoteToolbar from '@modules/apps/note/renderer/components/NoteToolbar.vue'
 import NoteToolbarIcon from '@modules/apps/note/renderer/components/NoteToolbarIcon.vue'

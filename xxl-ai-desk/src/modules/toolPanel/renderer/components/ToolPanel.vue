@@ -6,7 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import { useToolPanelStore, type ToolPanelTab } from '@modules/toolPanel/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { DeskTooltip } from '@common/renderer/components'
 import { FilePanel } from '@modules/file/renderer'
 import {

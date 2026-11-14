@@ -5,7 +5,7 @@
  */
 import { TerminalIcon } from '@common/renderer/components/icons'
 import { DeskTooltip } from '@common/renderer/components'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { useSessionTerminals } from '@modules/terminal/renderer/composables/useSessionTerminals'
 
 const props = defineProps<{

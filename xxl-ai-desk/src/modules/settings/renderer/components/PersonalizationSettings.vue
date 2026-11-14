@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
 import BrandingSettings from '@modules/settings/renderer/components/BrandingSettings.vue'
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const settings = useSettingsStore()
 

@@ -5,7 +5,7 @@
  */
 import { computed } from 'vue'
 import { resolveAgentAvatar } from '@modules/agent/shared'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const props = withDefaults(
   defineProps<{

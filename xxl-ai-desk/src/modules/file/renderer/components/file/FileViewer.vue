@@ -8,7 +8,7 @@ import { ElImageViewer } from 'element-plus'
 import { MarkdownBlock } from '@common/renderer/components'
 import { toLocalFileUrl } from '@common/renderer/utils/localFileUrl'
 import { parentDir } from '@modules/file/renderer/utils/path'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { FileContent } from '@modules/file/shared'
 import {
   editorThemeVars,
@@ -77,6 +77,15 @@ const mediaError = ref('')
 const imageLoadError = ref('')
 /* 图片放大预览弹层可见态 */
 const imageViewerVisible = ref(false)
+/* 图片列表清空（文件被删除 / 目录切换）时关闭弹层，避免残留已失效图片 */
+watch(
+  () => imageUrls.value.length,
+  (length) => {
+    if (length === 0) {
+      imageViewerVisible.value = false
+    }
+  }
+)
 watch(
   () => props.file?.path,
   () => {
@@ -198,17 +207,17 @@ function onSave(): void {
           <pre class="code-pre">{{ file.content }}</pre>
         </div>
       </div>
-      <!-- 图片放大预览：同目录图片可左右切换，点击遮罩或 Esc 关闭（独立于内容分支，避免打断 v-else-if 链） -->
-      <ElImageViewer
-        v-if="imageViewerVisible && imageUrls.length > 0"
-        :url-list="imageUrls"
-        :initial-index="imageIndex"
-        hide-on-click-modal
-        teleported
-        @switch="onImageViewerSwitch"
-        @close="imageViewerVisible = false"
-      />
     </template>
+    <!-- 图片放大预览：独立于内容分支，切换图片 / 加载态变化时不卸载重挂，避免白屏闪烁 -->
+    <ElImageViewer
+      v-if="imageViewerVisible && imageUrls.length > 0"
+      :url-list="imageUrls"
+      :initial-index="imageIndex"
+      hide-on-click-modal
+      teleported
+      @switch="onImageViewerSwitch"
+      @close="imageViewerVisible = false"
+    />
   </div>
 </template>
 

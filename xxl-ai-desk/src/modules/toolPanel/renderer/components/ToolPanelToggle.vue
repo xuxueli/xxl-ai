@@ -8,7 +8,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { SidePanelIcon } from '@common/renderer/components/icons'
 import NavbarIconButton from '@renderer/shell/layout/components/Navbar/NavbarIconButton.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const chat = useChatStore()
 const toolPanel = useToolPanelStore()

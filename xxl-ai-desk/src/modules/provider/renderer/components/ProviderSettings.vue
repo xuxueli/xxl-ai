@@ -6,7 +6,7 @@
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import ProviderEditDialog from '@modules/provider/renderer/components/ProviderEditDialog.vue'
 import type { ProviderDTO } from '@modules/provider/shared'
 

@@ -9,7 +9,7 @@ import { useRouter } from 'vue-router'
 import { useProjectStore } from '@modules/project/renderer'
 import { AgentAvatar, useAgentStore } from '@modules/agent/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const emit = defineEmits<{ example: [text: string] }>()
 

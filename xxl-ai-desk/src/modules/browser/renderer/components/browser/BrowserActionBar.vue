@@ -6,7 +6,7 @@
  * @author xuxueli 2026-11-15
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import {
   actionsOf,
   type BrowserActionRecord

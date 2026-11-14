@@ -7,7 +7,7 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useMcpStore } from '@modules/mcp/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { McpDTO, McpToolMeta } from '@modules/mcp/shared'
 
 const visible = defineModel<boolean>('visible', { default: false })

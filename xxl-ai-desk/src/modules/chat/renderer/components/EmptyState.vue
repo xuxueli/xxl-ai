@@ -6,7 +6,7 @@ let typingPlayed = false
 <script setup lang="ts">
 /* 空态欢迎页：Logo + 标题（本次运行首次进入时逐字展示，之后切换仅淡入） */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { useSettingsStore } from '@modules/settings/renderer'
 
 const settings = useSettingsStore()

@@ -81,6 +81,8 @@ const MAX_RECORDS = 5
 const STATUS_LINGER = 4500
 /* 光标距内容区边缘的最小留白 */
 const EDGE_GAP = 12
+/* 首次定位的内缩：右下角空白处，留出指针（32×40）与光晕的位置，避开页面主内容 */
+const DEFAULT_INSET = 56
 
 /* 会话 ID → 光标状态 */
 const cursors = reactive<Record<string, BrowserCursorState>>({})
@@ -122,8 +124,8 @@ export function syncBrowserCursorViewport(
     }
     const cursor = ensureCursor(sessionId)
     if (!cursor.placed) {
-      cursor.x = Math.round(width / 2)
-      cursor.y = Math.round(height / 2)
+      cursor.x = Math.round(Math.max(width - DEFAULT_INSET, EDGE_GAP))
+      cursor.y = Math.round(Math.max(height - DEFAULT_INSET, EDGE_GAP))
       cursor.placed = true
       cursor.visible = true
       return

@@ -4,7 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const settings = useSettingsStore()
 </script>

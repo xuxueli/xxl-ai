@@ -9,7 +9,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue'
 import { DeskTooltip } from '@common/renderer/components'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ProjectDTO } from '@modules/project/shared'
 import type { SessionDTO } from '@modules/chat/shared'
 

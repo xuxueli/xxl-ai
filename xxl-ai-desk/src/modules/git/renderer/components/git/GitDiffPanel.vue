@@ -4,7 +4,7 @@
  * @author xuxueli 2026-10-31
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const props = defineProps<{
   path: string

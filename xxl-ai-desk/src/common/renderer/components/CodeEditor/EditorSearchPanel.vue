@@ -19,7 +19,7 @@ import {
   replaceNext,
   setSearchQuery
 } from '@codemirror/search'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import DeskTooltip from '@common/renderer/components/DeskTooltip/index.vue'
 
 const props = defineProps<{

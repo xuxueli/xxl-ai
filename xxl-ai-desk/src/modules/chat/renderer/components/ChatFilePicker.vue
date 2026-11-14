@@ -9,7 +9,7 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{

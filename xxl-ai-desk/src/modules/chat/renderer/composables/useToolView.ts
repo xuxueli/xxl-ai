@@ -7,7 +7,7 @@
  * @author xuxueli 2026-10-31
  */
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ToolCallState } from '@modules/chat/renderer/types'
 
 /* 工具展示视图 */

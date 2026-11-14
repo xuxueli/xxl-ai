@@ -8,7 +8,7 @@
  * @author xuxueli 2026-10-31
  */
 import { computed, nextTick, ref, watch } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ChoiceInteractionRequest, InteractionResult } from '@modules/chat/shared'
 
 const props = defineProps<{ request: ChoiceInteractionRequest }>()

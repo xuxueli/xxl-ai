@@ -6,7 +6,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElInput, type FormInstance, type FormRules } from 'element-plus'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { baseName, parentDir, relativeNotePath } from '@modules/apps/note/renderer/utils/path'
 import type { NoteEntry } from '@modules/apps/note/shared'
 

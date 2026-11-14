@@ -7,7 +7,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMcpStore } from '@modules/mcp/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { McpDTO } from '@modules/mcp/shared'
 
 const emit = defineEmits<{

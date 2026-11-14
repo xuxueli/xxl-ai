@@ -9,7 +9,7 @@ import { useProjectStore } from '@modules/project/renderer/store'
 import { useChatStore } from '@modules/chat/renderer'
 import { ProjectMemoryDialog } from '@modules/agent/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ProjectDTO } from '@modules/project/shared'
 
 const project = useProjectStore()

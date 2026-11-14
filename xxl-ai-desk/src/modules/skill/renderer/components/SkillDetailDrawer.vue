@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { useSkillStore } from '@modules/skill/renderer'
 import { MarkdownBlock } from '@common/renderer/components'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { SkillDetail } from '@modules/skill/shared'
 
 const visible = defineModel<boolean>('visible', { default: false })

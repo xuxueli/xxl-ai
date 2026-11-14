@@ -8,7 +8,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { AgentAvatar, AgentEditDrawer, useAgentStore } from '@modules/agent/renderer'
 import { PluginCenterShell } from '@modules/plugin/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { AgentDTO } from '@modules/agent/shared'
 
 const agentStore = useAgentStore()

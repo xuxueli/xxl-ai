@@ -5,7 +5,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { api } from '@common/renderer/api'
 import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'

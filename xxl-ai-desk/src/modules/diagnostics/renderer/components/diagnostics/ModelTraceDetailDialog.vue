@@ -5,7 +5,7 @@
  */
 import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { prettyJson, prettyValue, tracePhaseText, traceStatusText } from '@modules/diagnostics/renderer/utils/diagnosticsDisplay'
 import type { LlmTraceDTO } from '@modules/diagnostics/shared'
 

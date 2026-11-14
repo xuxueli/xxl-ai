@@ -9,7 +9,7 @@ import { toolArgsText, toolView } from '@modules/chat/renderer/composables/useTo
 import { useNow } from '@modules/chat/renderer/composables/useNow'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { formatDuration } from '@modules/chat/renderer/utils/format'
 import type { ToolCallState, UiMessage } from '@modules/chat/renderer/types'
 

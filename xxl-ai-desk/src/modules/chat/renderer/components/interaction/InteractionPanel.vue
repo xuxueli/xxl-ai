@@ -7,7 +7,7 @@
  * @author xuxueli 2026-11-08
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { ChatInteractionPrompt, InteractionResult } from '@modules/chat/shared'
 import PermissionPanel from '@modules/chat/renderer/components/interaction/PermissionPanel.vue'
 import ChoicePanel from '@modules/chat/renderer/components/interaction/ChoicePanel.vue'

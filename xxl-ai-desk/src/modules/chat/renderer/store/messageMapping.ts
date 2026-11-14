@@ -5,7 +5,7 @@
  * @author xuxueli 2026-10-25
  */
 
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { contextTokensOfUsage } from '@common/shared/model'
 import type { UsageLike } from '@common/shared/model'
 import type { MessagePart, ToolCallState, UiMessage } from '@modules/chat/renderer/types'

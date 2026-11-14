@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 import { useChatStore } from '@modules/chat/renderer'
 import { useProjectStore } from '@modules/project/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 export function useTerminalTarget() {
   const chat = useChatStore()

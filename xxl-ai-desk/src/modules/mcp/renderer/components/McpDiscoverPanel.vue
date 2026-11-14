@@ -6,7 +6,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useMcpStore } from '@modules/mcp/renderer'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import McpDiscoverDetailDrawer from '@modules/mcp/renderer/components/McpDiscoverDetailDrawer.vue'
 import type { McpDiscoverDetail, McpDiscoverItem, McpDiscoverSort } from '@modules/mcp/shared'
 

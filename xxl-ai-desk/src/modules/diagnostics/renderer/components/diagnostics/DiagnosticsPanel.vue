@@ -6,7 +6,7 @@
  * @author xuxueli 2026-11-01
  */
 import { ref, watch } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import SessionMessageList from '@modules/diagnostics/renderer/components/diagnostics/SessionMessageList.vue'
 import ModelTraceList from '@modules/diagnostics/renderer/components/diagnostics/ModelTraceList.vue'
 

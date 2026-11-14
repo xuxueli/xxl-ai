@@ -5,7 +5,7 @@
  */
 import DeskTooltip from '@common/renderer/components/DeskTooltip/index.vue'
 import PaletteIcon from '@common/renderer/components/icons/PaletteIcon.vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import {
   EDITOR_THEMES,
   type EditorThemeId

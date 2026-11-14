@@ -5,7 +5,7 @@
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import { DeskTooltip } from '@common/renderer/components'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import {
   buildOutlineTree,
   type OutlineItem,

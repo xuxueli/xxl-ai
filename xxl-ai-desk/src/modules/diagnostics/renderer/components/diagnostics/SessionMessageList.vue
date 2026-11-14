@@ -5,7 +5,7 @@
  */
 import { computed, ref } from 'vue'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { usePagedList } from '@modules/diagnostics/renderer/composables/usePagedList'
 import {
   formatDateTime,

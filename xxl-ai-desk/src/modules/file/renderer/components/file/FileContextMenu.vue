@@ -4,7 +4,7 @@
  * @author xuxueli 2026-10-31
  */
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 const props = defineProps<{
   /* 是否展示菜单 */

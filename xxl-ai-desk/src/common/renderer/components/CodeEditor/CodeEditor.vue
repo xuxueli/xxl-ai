@@ -36,7 +36,7 @@ import {
 } from '@codemirror/language'
 import { highlightSelectionMatches, closeSearchPanel, openSearchPanel, search, searchPanelOpen, searchKeymap } from '@codemirror/search'
 import { tags } from '@lezer/highlight'
-import { i18n, t } from '@renderer/shell/i18n'
+import { i18n, t } from '@common/renderer/i18n'
 import EditorSearchPanel from '@common/renderer/components/CodeEditor/EditorSearchPanel.vue'
 import {
   editorPalette,

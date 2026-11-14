@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { useSkillStore } from '@modules/skill/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import SkillDiscoverDetailDrawer from '@modules/skill/renderer/components/SkillDiscoverDetailDrawer.vue'
 import type { SkillDiscoverItem, SkillDTO } from '@modules/skill/shared'
 

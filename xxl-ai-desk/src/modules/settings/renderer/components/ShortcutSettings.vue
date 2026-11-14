@@ -6,7 +6,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import ShortcutInput from '@modules/settings/renderer/components/ShortcutInput.vue'
 import { QUICK_ACTIONS } from '@common/renderer/config/quickActions'
 import { DEFAULT_SHORTCUTS } from '@common/shared/contracts/quickAction'

@@ -6,7 +6,7 @@
  * @author xuxueli 2026-11-07
  */
 import { computed } from 'vue'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import StatusPopover from '@modules/chat/renderer/components/StatusPopover.vue'
 import { formatLargeTokens } from '@modules/chat/renderer/utils/format'
 import type { ContextBreakdown } from '@common/shared/model'

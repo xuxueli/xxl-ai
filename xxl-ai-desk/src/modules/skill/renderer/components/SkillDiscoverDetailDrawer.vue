@@ -5,7 +5,7 @@
  */
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import { api } from '@common/renderer/api'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import type { SkillDiscoverItem } from '@modules/skill/shared'

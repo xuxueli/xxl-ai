@@ -5,7 +5,7 @@
  */
 
 import { ElMessage } from 'element-plus'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 
 /* 复制反馈持续时间（毫秒） */
 const FEEDBACK_MS = 1500

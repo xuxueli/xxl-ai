@@ -10,7 +10,7 @@ import { useMcpStore } from '@modules/mcp/renderer'
 import { useSkillStore } from '@modules/skill/renderer'
 import { BUILTIN_TOOL_CATEGORIES, type BuiltinToolCategoryKey } from '@modules/plugin/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import {
   AGENT_AVATAR_PRESETS,
   AGENT_DESCRIPTION_MAX_CHARS,

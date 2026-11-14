@@ -10,7 +10,7 @@ import { useSettingsStore } from '@modules/settings/renderer'
 import { scoreSnippet } from '@modules/mcp/renderer/utils/mcpSnippet'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { api } from '@common/renderer/api'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import type { McpDiscoverDetail, McpDiscoverItem } from '@modules/mcp/shared'
 
 const visible = defineModel<boolean>('visible', { default: false })

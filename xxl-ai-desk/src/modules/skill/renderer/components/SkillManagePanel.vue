@@ -7,7 +7,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSkillStore } from '@modules/skill/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
-import { t } from '@renderer/shell/i18n'
+import { t } from '@common/renderer/i18n'
 import SkillGithubInstallDialog from '@modules/skill/renderer/components/SkillGithubInstallDialog.vue'
 import type { SkillDTO, SkillImportResult } from '@modules/skill/shared'
 
