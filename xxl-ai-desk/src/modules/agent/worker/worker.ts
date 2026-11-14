@@ -21,11 +21,12 @@ import {
   clearSessionAbort,
   evictAgent,
   getAgent,
+  hasActiveRuns,
   isSessionAborted,
   resetAgents,
   runPrompt
 } from '@modules/agent/worker/session'
-import { setBrowserOpener, setBrowserActionInvoker, setRuntimePath } from '@modules/agent/worker/tools'
+import { setBrowserActionInvoker, setRuntimePath } from '@modules/agent/worker/tools'
 import {
   closeAllMcpClients,
   listServerTools,
@@ -76,11 +77,6 @@ function post(message: WorkerMessage): void {
 
 /* 人机交互桥：统一经 post 发送请求/取消，等待主进程回传应答 */
 setInteractionSender(post)
-
-/* open_browser 工具：把待打开地址转交主进程，由渲染层在对应会话的浏览器面板打开 */
-setBrowserOpener((sessionId, url, newTab) =>
-  post({ type: 'open-browser', sessionId, url, newTab })
-)
 
 /* 页面动作请求：requestId → 结果结算（主进程经渲染层 webview 执行后回传） */
 const pendingBrowserActions = new Map<string, (result: BrowserActionResult) => void>()
@@ -220,6 +216,9 @@ async function handleRun(input: RunAgentInput): Promise<void> {
     cancelSessionInteractions(input.sessionId)
     evictAgent(input.sessionId)
     post({ type: 'run-error', sessionId: input.sessionId, message: (error as Error).message })
+  } finally {
+    /* 本轮结束：若期间收到过配置重置，且已无运行中的轮次，补做重置 */
+    flushPendingReset()
   }
 }
 
@@ -288,6 +287,36 @@ async function handleMcpTools(
   }
 }
 
+/*
+ * 配置重置：存在运行中的轮次时延后执行，避免多步执行中途被清掉工具 / 交互；
+ * 等全部运行结束后再统一重建，下一轮自然使用新配置。
+ */
+let resetPending = false
+
+/* 立即执行运行时重置 */
+function applyReset(): void {
+  resetPending = false
+  for (const buffer of deltaBuffers.values()) {
+    if (buffer.timer) {
+      clearTimeout(buffer.timer)
+    }
+  }
+  deltaBuffers.clear()
+  cancelAllInteractions()
+  resetAgents()
+  /* 运行时重置：丢弃全部未完成的采集状态 */
+  clearTraceRuns()
+  /* 配置变更/退出：关闭全部 MCP 连接，释放 stdio 子进程 */
+  void closeAllMcpClients()
+}
+
+/* 全部运行结束后补做延后的重置 */
+function flushPendingReset(): void {
+  if (resetPending && !hasActiveRuns()) {
+    applyReset()
+  }
+}
+
 /* 处理来自主进程的请求 */
 function handleRequest(message: WorkerRequest): void {
   switch (message.type) {
@@ -333,21 +362,14 @@ function handleRequest(message: WorkerRequest): void {
     case 'clear-permissions':
       clearSessionPermissions(message.sessionId)
       break
-    case 'reset': {
-      for (const buffer of deltaBuffers.values()) {
-        if (buffer.timer) {
-          clearTimeout(buffer.timer)
-        }
+    case 'reset':
+      /* 执行中的轮次优先跑完：重置延后到全部结束后补做 */
+      if (hasActiveRuns()) {
+        resetPending = true
+      } else {
+        applyReset()
       }
-      deltaBuffers.clear()
-      cancelAllInteractions()
-      resetAgents()
-      /* 运行时重置：丢弃全部未完成的采集状态 */
-      clearTraceRuns()
-      /* 配置变更/退出：关闭全部 MCP 连接，释放 stdio 子进程 */
-      void closeAllMcpClients()
       break
-    }
     case 'shutdown':
       cancelAllInteractions()
       void shutdownWorker()

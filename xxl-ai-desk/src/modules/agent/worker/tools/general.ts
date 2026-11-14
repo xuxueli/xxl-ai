@@ -42,7 +42,7 @@ export async function createGeneralTools(_context: ToolContext): Promise<ToolEnt
         group: 'general',
         readOnly: true,
         permissionModes: ALL_PERMISSIONS,
-        maxOutput: 2000
+        maxOutput: 4000
       },
       tool: getCurrentTime
     }

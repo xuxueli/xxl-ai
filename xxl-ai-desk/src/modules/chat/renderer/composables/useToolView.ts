@@ -99,17 +99,7 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
       return fields > 0 ? t('chat.toolFields', [fields]) : ''
     }
   },
-  hover_browser: { titleKey: 'hoverBrowser', icon: 'View', detail: targetDetail },
   press_browser: { titleKey: 'pressBrowser', icon: 'EditPen', detail: (args) => clip(pick(args, 'key')) },
-  select_browser: {
-    titleKey: 'selectBrowser',
-    icon: 'Finished',
-    detail: (args) => {
-      const target = pick(args, 'ref') || pick(args, 'selector')
-      const value = pick(args, 'value')
-      return clip(value ? `${target} = ${value}` : target)
-    }
-  },
   scroll_browser: {
     titleKey: 'scrollBrowser',
     icon: 'ArrowDown',

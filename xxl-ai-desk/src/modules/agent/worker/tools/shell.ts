@@ -97,7 +97,7 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
             /* 使用设置中配置的 Node / Python 运行环境 */
             env: runtimePath ? { ...process.env, PATH: runtimePath } : process.env,
             timeout: timeout && timeout > 0 ? timeout : 60000,
-            /* 输出最终会被截断到 20k 字符，限制收集上限避免大 buffer 常驻 */
+            /* 输出最终会被截断到 50k 字符，限制收集上限避免大 buffer 常驻 */
             maxBuffer: 1024 * 1024 * 2,
             /* 用户点击终止时同步杀掉子进程，避免长时间占用 */
             signal

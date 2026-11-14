@@ -12,7 +12,11 @@ import { api } from '@common/renderer/api'
 import { t } from '@renderer/shell/i18n'
 import { createBrowserTab } from '@modules/browser/renderer'
 import { normalizeBrowserUrl } from '@modules/browser/shared/browserUrl'
-import { enqueueSessionTask } from '@modules/browser/renderer/composables/browserActionQueue'
+import {
+  cancelSessionTasks,
+  enqueueSessionTask,
+  sessionTaskIds
+} from '@modules/browser/renderer/composables/browserActionQueue'
 import {
   getSessionHost,
   hasSessionHost,
@@ -28,6 +32,7 @@ import {
   findTab,
   pendingNav,
   readyTabs,
+  sleep,
   stateOf,
   webviews,
   type WebviewElement,
@@ -38,12 +43,10 @@ import {
   diagnosticsActiveTab,
   fillActiveTab,
   historyActiveTab,
-  hoverActiveTab,
   pressActiveTab,
   readActiveTab,
   screenshotActiveTab,
   scrollActiveTab,
-  selectActiveTab,
   snapshotActiveTab,
   tabLabel,
   waitActiveTab
@@ -53,6 +56,7 @@ import type { BrowserAction, BrowserActionResult, BrowserTabInfo } from '@module
 /* 事件负载 */
 interface FailLoadEvent extends Event {
   errorCode: number
+  isMainFrame?: boolean
 }
 interface NavigateEvent extends Event {
   url: string
@@ -71,6 +75,9 @@ interface ConsoleMessageEvent extends Event {
 const MAX_TABS = 8
 /* 单标签页诊断上限，避免长期运行无限增长 */
 const MAX_DIAGNOSTICS = 100
+/* 导航等待：轮询间隔 / 最长等待（Agent 需要最终地址，但不无限阻塞） */
+const NAV_POLL_MS = 150
+const NAV_TIMEOUT_MS = 12000
 /* 面板缩放：步长、上下限（1 表示 100%） */
 const ZOOM_STEP = 0.1
 const ZOOM_MIN = 0.25
@@ -139,6 +146,8 @@ registerSessionHostHooks({
 
 /* 释放会话浏览器资源（删除会话时调用） */
 export function disposeBrowserSession(sessionId: string): void {
+  /* 会话删除：先取消挂起动作，避免动作在 webview 销毁后继续写状态 */
+  cancelBrowserActions(sessionId)
   disposeSessionWebviews(sessionId)
   browserStore().remove(sessionId)
   removeWarmSession(sessionId)
@@ -147,7 +156,9 @@ export function disposeBrowserSession(sessionId: string): void {
 /* 清理不在有效会话列表内的浏览器状态（项目级联删除后调用） */
 export function cleanupBrowserSessions(validSessionIds: string[]): void {
   const valid = new Set(validSessionIds)
-  for (const sessionId of Object.keys(browserStore().sessions)) {
+  /* 队列可能先于浏览器状态创建：两类来源都要参与取消，避免已删会话的动作继续执行 */
+  const candidates = new Set([...Object.keys(browserStore().sessions), ...sessionTaskIds()])
+  for (const sessionId of candidates) {
     if (!valid.has(sessionId)) {
       disposeBrowserSession(sessionId)
     }
@@ -204,12 +215,16 @@ async function loadUrl(id: string, url: string): Promise<void> {
 /* 导航到指定 URL：guest 未就绪时先排队，dom-ready 后再 loadURL */
 async function navigate(sessionId: string, id: string, url: string): Promise<void> {
   browserStore().touch(sessionId)
+  /* 开始新导航：先清掉上一页的加载失败记录，避免误判本次导航 */
+  failedLoads.delete(id)
   const view = ensureWebview(id, sessionId)
   const tab = findTab(sessionId, id)
   if (tab) {
     tab.hasPage = true
     /* 立即记录目标地址，标签名/「外部打开」无需等待 did-navigate */
     tab.currentUrl = url
+    /* 从发起导航起即视为加载中：避免加载尚未开始就被误判为“已完成”（did-stop-loading 再落定） */
+    tab.loading = true
   }
   if (!view) {
     /* 宿主尚未挂载：排队，宿主就绪后由 dom-ready 消费 */
@@ -274,8 +289,9 @@ function ensureWebview(id: string, sessionId: string): WebviewElement | null {
     }
   })
   el.addEventListener('did-fail-load', (event) => {
-    /* -3 为用户主动中断，不视为失败 */
-    if ((event as FailLoadEvent).errorCode !== -3) {
+    const failEvent = event as FailLoadEvent
+    /* -3 为用户主动中断；子框架失败不代表主页面导航失败 */
+    if (failEvent.errorCode !== -3 && failEvent.isMainFrame !== false) {
       const current = findTab(sessionId, id)
       if (current) {
         current.loading = false
@@ -372,6 +388,35 @@ async function manageTabs(
   }
 }
 
+/* 会话终止导致的取消结果：统一文案，避免把取消当成页面异常 */
+function cancelledResult(): BrowserActionResult {
+  return { ok: false, error: t('chat.browser.actionCancelled') }
+}
+
+/* 动作与取消信号竞速：终止后立即结束当前动作，不再等页面轮询自然超时 */
+function raceCancel(
+  task: Promise<BrowserActionResult>,
+  signal: AbortSignal
+): Promise<BrowserActionResult> {
+  if (signal.aborted) {
+    return Promise.resolve(cancelledResult())
+  }
+  return new Promise<BrowserActionResult>((resolve) => {
+    const onAbort = (): void => resolve(cancelledResult())
+    signal.addEventListener('abort', onAbort, { once: true })
+    task.then(
+      (result) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(result)
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve({ ok: false, error: (error as Error).message })
+      }
+    )
+  })
+}
+
 /* 统一动作分发：所有 Agent 浏览器工具经此执行（按会话路由、会话内串行） */
 export async function executeBrowserAction(
   sessionId: string,
@@ -380,16 +425,29 @@ export async function executeBrowserAction(
   if (!sessionId) {
     return { ok: false, error: t('chat.browser.noSession') }
   }
-  return enqueueSessionTask(sessionId, () => runBrowserAction(sessionId, action))
+  return enqueueSessionTask(sessionId, (signal) => {
+    if (signal.aborted) {
+      return Promise.resolve(cancelledResult())
+    }
+    return raceCancel(runBrowserAction(sessionId, action, signal), signal)
+  })
+}
+
+/* 终止会话的浏览器动作：用户点击停止、会话删除时调用 */
+export function cancelBrowserActions(sessionId: string): void {
+  cancelSessionTasks(sessionId)
 }
 
 /* 执行单个浏览器动作（内部实现） */
 async function runBrowserAction(
   sessionId: string,
-  action: BrowserAction
+  action: BrowserAction,
+  signal: AbortSignal
 ): Promise<BrowserActionResult> {
   ensureBrowserSession(sessionId)
   switch (action.type) {
+    case 'navigate':
+      return navigateRequested(sessionId, action, signal)
     case 'read':
       return readActiveTab(sessionId, action)
     case 'snapshot':
@@ -398,16 +456,12 @@ async function runBrowserAction(
       return clickActiveTab(sessionId, action)
     case 'fill':
       return fillActiveTab(sessionId, action)
-    case 'hover':
-      return hoverActiveTab(sessionId, action)
     case 'press':
       return pressActiveTab(sessionId, action)
-    case 'select':
-      return selectActiveTab(sessionId, action)
     case 'scroll':
       return scrollActiveTab(sessionId, action)
     case 'wait':
-      return waitActiveTab(sessionId, action)
+      return waitActiveTab(sessionId, action, signal)
     case 'screenshot':
       return screenshotActiveTab(sessionId)
     case 'diagnostics':
@@ -484,38 +538,95 @@ function closeTab(sessionId: string, id: string): void {
   applyVisibility(sessionId)
 }
 
-/* 打开外部请求的地址 */
-async function openRequested(sessionId: string, url: string, newTab: boolean): Promise<void> {
+/* 导航到地址：新建或复用标签页，等待加载落定后返回最终页面信息 */
+async function navigateRequested(
+  sessionId: string,
+  action: { url: string; newTab?: boolean },
+  signal: AbortSignal
+): Promise<BrowserActionResult> {
+  const url = normalizeBrowserUrl(action.url)
+  if (!url) {
+    return { ok: false, error: t('chat.browser.urlRequired') }
+  }
   ensureBrowserSession(sessionId)
   const state = stateOf(sessionId)
+  const newTab = action.newTab === true
+  const reusedTab = newTab && state.tabs.length >= MAX_TABS
   if (newTab) {
     await addTab(sessionId, url)
-    return
+  } else {
+    const blank = state.tabs.find((tab) => !tab.hasPage && !tab.currentUrl)
+    const target = blank ?? activeTabOf(state)
+    if (target) {
+      state.activeId = target.id
+      applyVisibility(sessionId)
+      await nextTick()
+      await navigate(sessionId, target.id, url)
+    } else {
+      await addTab(sessionId, url)
+    }
   }
-  const blank = state.tabs.find((tab) => !tab.hasPage && !tab.currentUrl)
-  if (blank) {
-    state.activeId = blank.id
-    applyVisibility(sessionId)
-    await nextTick()
-    await navigate(sessionId, blank.id, url)
-    return
+  const tab = activeTabOf(stateOf(sessionId))
+  if (!tab) {
+    return { ok: false, error: t('chat.browser.notReady') }
   }
-  const current = activeTabOf(state)
-  if (current) {
-    await navigate(sessionId, current.id, url)
-    return
+  const deadline = Date.now() + NAV_TIMEOUT_MS
+  let latestTitle = tab.title
+  let latestUrl = tab.currentUrl
+  while (Date.now() < deadline) {
+    if (signal.aborted) {
+      return cancelledResult()
+    }
+    const current = findTab(sessionId, tab.id)
+    /* 等待期间标签页被关闭：直接结束，避免返回不存在的页面信息 */
+    if (!current) {
+      return { ok: false, error: t('chat.browser.tabMissing', [tab.id]) }
+    }
+    latestTitle = current.title
+    latestUrl = current.currentUrl
+    const view = webviews.get(tab.id)
+    const currentUrl = view?.getURL() ?? ''
+    if (
+      view &&
+      !current.loading &&
+      !view.isLoading() &&
+      readyTabs.has(tab.id) &&
+      currentUrl &&
+      currentUrl !== 'about:blank'
+    ) {
+      return {
+        ok: true,
+        title: current.title,
+        url: current.currentUrl || currentUrl,
+        loading: false,
+        summary: t(reusedTab ? 'chat.browser.tabLimitReuse' : 'chat.browser.navOpened', [
+          current.currentUrl || currentUrl
+        ])
+      }
+    }
+    /* 明确加载失败：不再等满超时，直接把失败原因回给模型 */
+    const failure = failedLoads.get(tab.id)?.at(-1)
+    if (failure) {
+      return { ok: false, error: t('chat.browser.navFailedDetail', [failure]) }
+    }
+    await sleep(NAV_POLL_MS)
   }
-  await addTab(sessionId, url)
+  return {
+    ok: true,
+    title: latestTitle,
+    url: latestUrl,
+    loading: true,
+    summary: t('chat.browser.navLoading', [latestUrl])
+  }
 }
 
-/* 记录浏览器打开请求（Agent / 页面 window.open）：仅入对应会话，不切换视图 */
+/* 记录浏览器打开请求（页面 window.open）：仅入对应会话，不切换视图 */
 export function openBrowserRequest(sessionId: string, url: string, newTab: boolean): void {
   const value = normalizeBrowserUrl(url)
   if (!value || !sessionId) {
     return
   }
-  ensureBrowserSession(sessionId)
-  void openRequested(sessionId, value, newTab)
+  void executeBrowserAction(sessionId, { type: 'navigate', url: value, newTab })
 }
 
 /* 浏览器面板使用的会话绑定 API */

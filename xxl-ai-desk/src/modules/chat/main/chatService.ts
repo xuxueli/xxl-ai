@@ -9,7 +9,6 @@ import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
 import type {
-  HistoryEntry,
   InteractionResult,
   MessageSource,
   PermissionMode,
@@ -32,6 +31,7 @@ import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/platform/main'
 import { getSkillsDir } from '@common/main/config/paths'
 import { abortAgent, evictAgent, isAgentRunning, prepareAgentRuntime, runAgent } from '@modules/agent/main'
+import { cancelBrowserActionsOf } from '@modules/browser/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
 
 /* 下发到渲染层的对话事件负载（携带会话上下文） */
@@ -86,7 +86,7 @@ function resolveRuntimeTarget(
   language: string
 ): { provider: ProviderDTO; model: string } | { error: string } {
   /* 供应商：会话已指定则必须仍存在且启用；未指定时回退设置默认供应商 */
-  const providerId = session.providerId || settings.providerId
+  const providerId = session.providerId || settings.sessionDefaults.providerId
   const provider = providerId ? getProvider(providerId) : null
   if (!provider) {
     return { error: translate(language, 'runtime.providerMissing') }
@@ -109,8 +109,9 @@ function resolveRuntimeTarget(
   /* 未指定模型：回退设置默认模型，其次供应商首个可对话模型 */
   const sessionModels = provider.models.filter((item) => isSessionModel(item))
   const fallback =
-    settings.modelId && sessionModels.some((item) => item.id === settings.modelId)
-      ? settings.modelId
+    settings.sessionDefaults.modelId &&
+    sessionModels.some((item) => item.id === settings.sessionDefaults.modelId)
+      ? settings.sessionDefaults.modelId
       : (sessionModels[0]?.id ?? '')
   if (!fallback) {
     return { error: translate(language, 'runtime.providerNoModel') }
@@ -542,8 +543,9 @@ export async function sendChat(
 /* 中止指定会话的当前生成 */
 export async function abortChat(sessionId: number): Promise<void> {
   abortRequested.add(sessionId)
-  /* 先移除该会话仍展示的交互面板，再通知运行时代为结算 */
+  /* 先移除该会话仍展示的交互面板与挂起的浏览器动作，再通知运行时代为结算 */
   cancelInteractionsOf(sessionId)
+  cancelBrowserActionsOf(sessionId)
   await abortAgent(sessionId)
 }
 

@@ -15,11 +15,12 @@ export function registerChatIpc(ipc: IpcContext): void {
   setSessionActiveResolver((sessionId) => !isSessionRemoved(sessionId))
   ipc.handle(SESSION_IPC.list, () => listSessions())
   ipc.handle(SESSION_IPC.create, (_event, input) => createSession(input))
-  ipc.handle(SESSION_IPC.update, async (_event, id: number, patch) => {
-    discardSessionRuns(id)
-    await abortChat(id)
+  /* 会话配置变更：只落库并清理运行时缓存，不中止当前轮次；新配置从下一轮生效 */
+  ipc.handle(SESSION_IPC.update, (_event, id: number, patch) => {
+    const session = updateSession(id, patch)
+    /* 本轮仍在执行时 evict 会延后到轮次结束，当前回答不中断、不丢内容 */
     evictAgent(id)
-    return updateSession(id, patch)
+    return session
   })
   ipc.handle(SESSION_IPC.rename, (_event, id: number, title: string) => {
     updateSession(id, { title })

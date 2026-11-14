@@ -144,7 +144,6 @@ export type WorkerRequest =
 /* 运行时进程 → 主进程 */
 export type WorkerMessage =
   | { type: 'event'; sessionId: number; event: HostEvent } /* 流式事件 */
-  | { type: 'open-browser'; sessionId: number; url: string; newTab?: boolean } /* 在右侧「浏览器」面板打开页面（Agent 工具触发） */
   | { type: 'browser-action'; requestId: string; sessionId: number; action: BrowserAction } /* 执行页面动作（跨进程请求渲染层） */
   | { type: 'run-done'; sessionId: number; messages: unknown[] } /* 运行完成（只返回本轮新增消息） */
   | { type: 'run-error'; sessionId: number; message: string } /* 运行失败 */

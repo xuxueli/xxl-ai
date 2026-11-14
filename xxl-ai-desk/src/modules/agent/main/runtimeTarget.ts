@@ -16,7 +16,7 @@ export function resolveAgentTarget(
   session: SessionDTO,
   settings: AppSettings
 ): { provider: ProviderDTO; modelId: string } | null {
-  const providerId = session.providerId || settings.providerId
+  const providerId = session.providerId || settings.sessionDefaults.providerId
   const provider = providerId ? getProvider(providerId) : null
   if (!provider || !provider.enabled) {
     return null
@@ -26,8 +26,9 @@ export function resolveAgentTarget(
   const modelId =
     session.modelId && sessionModels.some((item) => item.id === session.modelId)
       ? session.modelId
-      : settings.modelId && sessionModels.some((item) => item.id === settings.modelId)
-        ? settings.modelId
+      : settings.sessionDefaults.modelId &&
+          sessionModels.some((item) => item.id === settings.sessionDefaults.modelId)
+        ? settings.sessionDefaults.modelId
         : (sessionModels[0]?.id ?? '')
   return modelId ? { provider, modelId } : null
 }

@@ -9,10 +9,26 @@ import { useBrowserSessionStore } from '@modules/browser/renderer'
 import type { BrowserTab } from '@modules/browser/renderer'
 import type { BrowserConsoleEntry } from '@modules/browser/shared'
 
+/* 真实输入事件：鼠标使用视口坐标，键盘使用 DOM keyCode */
+export type WebviewInputEvent =
+  | {
+      type: 'mouseDown' | 'mouseUp' | 'mouseMove'
+      x: number
+      y: number
+      button?: 'left' | 'right' | 'middle'
+      clickCount?: number
+    }
+  | {
+      type: 'keyDown' | 'keyUp' | 'char'
+      keyCode: string
+      modifiers?: Array<'shift' | 'control' | 'alt' | 'meta'>
+    }
+
 /* Electron <webview> 的最小能力声明（渲染进程无官方类型） */
 export interface WebviewElement extends HTMLElement {
   loadURL(url: string): Promise<void>
   getURL(): string
+  isLoading(): boolean
   canGoBack(): boolean
   canGoForward(): boolean
   goBack(): void
@@ -29,6 +45,7 @@ export interface WebviewElement extends HTMLElement {
   stopFindInPage(action: 'clearSelection' | 'keepSelection' | 'activateSelection'): void
   capturePage(): Promise<{ getSize(): { width: number; height: number }; toDataURL(): string }>
   executeJavaScript(code: string): Promise<unknown>
+  sendInputEvent(event: WebviewInputEvent): void
 }
 
 /* 页内查找结果事件（webview 的 found-in-page） */

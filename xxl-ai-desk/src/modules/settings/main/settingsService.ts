@@ -3,21 +3,26 @@
  *   - 读取时逐项回退默认值；保存为部分更新（upsert）。
  */
 
+import { inArray } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { settingTable } from '@modules/settings/main/schema'
 import {
   APPEARANCES,
   THEME_PRESETS,
-  type AppSettings
+  type AppSettings,
+  type SessionDefaults
 } from '@modules/settings/shared/contracts'
-import { DEFAULT_APP_SETTINGS } from '@modules/settings/shared/defaults'
+import { DEFAULT_APP_SETTINGS, DEFAULT_SESSION_DEFAULTS } from '@modules/settings/shared/defaults'
 import { DEFAULT_SHORTCUTS } from '@common/shared/contracts/quickAction'
 import { normalizeReasoningLevel } from '@common/shared/model'
+import { normalizePermissionMode } from '@common/shared/permission'
 
 /* 外观取值集合（用于配置合法性校验） */
 const APPEARANCE_VALUES = new Set<string>(APPEARANCES)
 /* 主题预设集合 */
 const THEME_VALUES = new Set<string>(THEME_PRESETS)
+/* 旧版分散存储的会话默认配置键：合并为 sessionDefaults 后清理 */
+const LEGACY_SESSION_KEYS = ['providerId', 'modelId', 'reasoningLevel', 'permissionMode']
 
 /* 归一化外观：非法值回退默认 */
 function normalizeAppearance(value: string | undefined): AppSettings['appearance'] {
@@ -92,6 +97,36 @@ function readBoolean(map: Map<string, string>, key: BooleanSettingKey): boolean 
   return DEFAULT_APP_SETTINGS[key]
 }
 
+/* 解析新建会话默认配置：优先合并后的 JSON，兼容旧版分散键 */
+function parseSessionDefaults(map: Map<string, string>): SessionDefaults {
+  let stored: Record<string, unknown> = {}
+  const raw = map.get('sessionDefaults')
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        stored = parsed as Record<string, unknown>
+      }
+    } catch {
+      /* 解析失败回退旧版键 / 默认值 */
+    }
+  }
+  return {
+    projectId: Number(stored.projectId) || DEFAULT_SESSION_DEFAULTS.projectId,
+    agentId: Number(stored.agentId) || DEFAULT_SESSION_DEFAULTS.agentId,
+    providerId:
+      Number(stored.providerId) ||
+      Number(map.get('providerId')) ||
+      DEFAULT_SESSION_DEFAULTS.providerId,
+    modelId:
+      typeof stored.modelId === 'string'
+        ? stored.modelId
+        : map.get('modelId') ?? DEFAULT_SESSION_DEFAULTS.modelId,
+    reasoningLevel: normalizeReasoningLevel(stored.reasoningLevel ?? map.get('reasoningLevel')),
+    permissionMode: normalizePermissionMode(stored.permissionMode ?? map.get('permissionMode'))
+  }
+}
+
 /* 读取全部设置（缺省值兜底） */
 export function getSettings(): AppSettings {
   const rows = getDb().select().from(settingTable).all()
@@ -101,9 +136,7 @@ export function getSettings(): AppSettings {
     appearance: normalizeAppearance(map.get('appearance')),
     themePreset: normalizeTheme(map.get('themePreset')),
     language,
-    providerId: Number(map.get('providerId')) || DEFAULT_APP_SETTINGS.providerId,
-    modelId: map.get('modelId') || DEFAULT_APP_SETTINGS.modelId,
-    reasoningLevel: normalizeReasoningLevel(map.get('reasoningLevel')),
+    sessionDefaults: parseSessionDefaults(map),
     appName: map.get('appName') ?? DEFAULT_APP_SETTINGS.appName,
     slogan: map.get('slogan') ?? DEFAULT_APP_SETTINGS.slogan,
     shortcuts: parseShortcuts(map.get('shortcuts')),
@@ -127,6 +160,10 @@ export function saveSettings(patch: Partial<AppSettings>): AppSettings {
       .values({ key, value: text })
       .onConflictDoUpdate({ target: settingTable.key, set: { value: text } })
       .run()
+  }
+  /* 会话默认配置已合并为一条 JSON，顺带清理旧版分散键 */
+  if (patch.sessionDefaults) {
+    db.delete(settingTable).where(inArray(settingTable.key, LEGACY_SESSION_KEYS)).run()
   }
   return getSettings()
 }

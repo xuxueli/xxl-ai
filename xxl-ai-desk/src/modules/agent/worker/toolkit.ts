@@ -53,7 +53,7 @@ export interface ToolEntry {
 }
 
 /* 单次工具结果返回的文本内容上限（字符数，缺省值） */
-export const MAX_OUTPUT = 20000
+export const MAX_OUTPUT = 50000
 
 /* 三档权限均可用（只读工具） */
 export const ALL_PERMISSIONS: PermissionMode[] = ['read-only', 'workspace-write', 'full-access']

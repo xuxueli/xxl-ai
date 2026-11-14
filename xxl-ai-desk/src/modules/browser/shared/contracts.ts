@@ -4,6 +4,10 @@
  *   - 结果统一以 ok/error 表达，避免跨进程异常丢失。
  */
 
+/* 读取网页正文的默认 / 最大字符数（工具与渲染层共用） */
+export const BROWSER_READ_DEFAULT_CHARS = 50000
+export const BROWSER_READ_MAX_CHARS = 80000
+
 /* 表单字段定位与目标值 */
 export interface BrowserFillField {
   /* snapshot 返回的元素引用（与 selector 二选一） */
@@ -16,8 +20,9 @@ export interface BrowserFillField {
   checked?: boolean
 }
 
-/* 浏览器动作：读取、快照、点击、填写、等待、截图、诊断、标签页与历史导航 */
+/* 浏览器动作：导航、读取、快照、点击、填写、等待、截图、诊断、标签页与历史导航 */
 export type BrowserAction =
+  | { type: 'navigate'; url: string; newTab?: boolean } /* 打开网页 */
   | { type: 'read'; selector?: string; maxChars?: number } /* 读取正文 */
   | { type: 'snapshot'; maxNodes?: number } /* 交互元素快照 */
   | {
@@ -28,9 +33,7 @@ export type BrowserAction =
       clickCount?: number
     } /* 点击元素 */
   | { type: 'fill'; fields: BrowserFillField[]; submit?: boolean } /* 填写表单 */
-  | { type: 'hover'; ref?: string; selector?: string } /* 悬停元素 */
   | { type: 'press'; key: string; ref?: string; selector?: string } /* 按键 */
-  | { type: 'select'; ref?: string; selector?: string; value: string } /* 选择下拉选项 */
   | { type: 'scroll'; direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number } /* 滚轮滚动 */
   | { type: 'wait'; selector?: string; text?: string; url?: string; timeoutMs?: number } /* 等待条件 */
   | { type: 'screenshot' } /* 页面截图 */
@@ -100,6 +103,12 @@ export interface BrowserActionRequest {
   action: BrowserAction
 }
 
+/* 会话终止通知（主 → 渲染）：取消该会话挂起的页面动作 */
+export interface BrowserActionCancelRequest {
+  /* 所属会话 ID */
+  sessionId: string
+}
+
 /* 面板快捷键按键信息（主进程拦截后转发渲染层；Esc 不含修饰键） */
 export interface BrowserKeyInput {
   /* 主键（小写） */
@@ -156,4 +165,6 @@ export interface BrowserActionResult {
   missing?: string[]
   /* 动作摘要（click / fill / history） */
   summary?: string
+  /* 页面是否仍在加载（navigate） */
+  loading?: boolean
 }

@@ -216,19 +216,19 @@ export async function createFsWriteTools(context: ToolContext): Promise<ToolEntr
 
   return [
     {
-      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 4000 },
       tool: writeFile
     },
     {
-      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 4000 },
       tool: editFile
     },
     {
-      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 4000 },
       tool: deleteFile
     },
     {
-      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 2000 },
+      meta: { group: 'fs', readOnly: false, permissionModes: WRITE_PERMISSIONS, requiresApproval: true, maxOutput: 4000 },
       tool: moveFile
     }
   ]

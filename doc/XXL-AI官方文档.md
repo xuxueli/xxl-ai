@@ -1425,8 +1425,8 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 | shell | `run_command` | 否 | 工作区 / 完全 | 危险命令拦截 + 越界路径审批 | 20k |
 | browser | `open_browser` / `read_browser` / `snapshot_browser` | 是 | 三档 | Agent 工具开关 | 2k / 51k / 20k |
 | browser | `click_browser` / `fill_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 3k |
-| browser | `hover_browser` / `scroll_browser` | 是 | 三档 | Agent 工具开关 | 2k / 2k |
-| browser | `press_browser` / `select_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k / 2k |
+| browser | `scroll_browser` | 是 | 三档 | Agent 工具开关 | 2k |
+| browser | `press_browser` | 否 | 工作区 / 完全 | Agent 工具开关 | 2k |
 | browser | `wait_browser` / `screenshot_browser` / `inspect_browser` / `browser_tabs` | 是 | 三档 | Agent 工具开关 | 2k / 2k / 8k / 4k |
 | skill | `read_skill` | 是 | 三档 | 技能目录限定（技能库读取放行） | 100k |
 | interaction | `ask_user` | 是 | 三档 | Agent 工具开关 | 4k |
@@ -1800,17 +1800,14 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 4、【体验】数据目录规范化：macOS / Linux 统一至 `~/.config/xxl-ai-desk`，Windows 统一至 `%APPDATA%\xxl-ai-desk`；SKILL默认位置为 「数据目录/skills」；项目默认位置为 「数据目录/projects」（项目表为空时自动创建 `projects/default` 默认项目空间）；笔记默认位置为 「数据目录/notes」；
 - 5、【重构】笔记重构：新增底部状态栏；主题样式升级，选中和未选中内容调整区分度；编辑器左侧显示行号列紧凑调整；编辑器操作组件和快捷键丰富；编辑区与预览区滚动联动；
 - 6、【体验】文件工具：工具栏组件重构；组件样式规范统一；
-- 7、【ING】浏览器：工具栏操作组件丰富、且新支持快捷键；
-  - 浏览器Tool重构丰富，开放Agent使用；
-  - 操作现实鼠标；探索，多鼠标并行操作；
-  - 数据查询，支持并发查询；
-- 8、【ING】输入框宽度兼容性调整，底部组件支持缩放避免布局错乱；
-  - 切换模式，会话中断；
-  - 工具执行时，中断不掉；
-  - 系统设置的项目列表，项目操作下拉框功能调整，依次为 重命名项目、删除项目、查看所在文件夹、（间隔线）、查看长期记忆
-
-
-
+- 7、【优化】终端命令策略优化：过滤无害设备路径（/dev/null 等），避免无效越界与危险判定中断任务。
+- 8、【体验】浏览器：工具栏操作组件丰富、且新支持快捷键；
+- 9、【重构】浏览器Tool重构丰富，开放Agent使用；
+- 10、【修复】会话：输入框宽度兼容性调整，底部组件支持缩放避免布局错乱；会话模式/模型切换，本轮会话不中断、下轮会话生效；
+- 11、【修复】会话轮次多步运行中，偶发中断失败问题修复；
+- 12、【ING】操作现实鼠标；探索，多鼠标并行操作；
+- 13、【ING】升级兼容性问题解决，优化提示并备份旧数据、初始化新数据（sqlite），避免升级后白屏问题；
+- 14、【ING】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
 
 ### v1.5.X Release Notes[ING]
 - 1、【ING】应用中心：
@@ -1825,8 +1822,6 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
   - task：info、step_dag(步骤、验收)、总验收
   - log：log_id、task_id、data、current_step；
   - 唤起：
-- 5、【ING】升级兼容性问题解决，优化提示并备份旧数据、初始化新数据（sqlite），避免升级后白屏问题；
-- 6、【ING】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
 
 
 ### TODO LIST
@@ -1845,6 +1840,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
   - 长程任务：SQLite；“动态规划-分步执行-验收”；失败巡检、延续执行、防止死循环；
   - 会话定制：会话时选择 MCP、SKILL、Agent；
   - 输入框支持输入队列：支持输入会话输入队列功能，上轮对话结束后、自动触发下一轮对话，提升操作效率；
+- 5、云本功能同步：Agent、扩展（SKILL/MCP/内置工具）、会话与记忆、知识库、应用中心、供应商模型；定时任务。
 
 
 ## 八、其他

@@ -8,6 +8,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@common/renderer/api'
+import { useSettingsStore } from '@modules/settings/renderer'
 import type { AgentDTO, AgentMemoryDTO, AgentSaveInput } from '@modules/agent/shared'
 
 export const useAgentStore = defineStore('agent', () => {
@@ -29,26 +30,30 @@ export const useAgentStore = defineStore('agent', () => {
   /* 默认内置 Agent */
   const defaultAgent = computed(() => agents.value.find((item) => item.builtin) ?? null)
 
-  /* 加载 Agent 列表（保留当前选择，失效回落默认 Agent） */
+  /* 加载 Agent 列表（保留当前选择，失效回落上次选择 / 默认 Agent） */
   async function loadAgents(): Promise<void> {
+    const lastId = useSettingsStore().settings.sessionDefaults.agentId
     agents.value = await api.agent.list()
     loaded.value = true
     if (currentId.value && !agents.value.some((item) => item.id === currentId.value)) {
       currentId.value = 0
     }
     if (!currentId.value) {
-      currentId.value = defaultAgent.value?.id ?? agents.value[0]?.id ?? 0
+      const restored = agents.value.find((item) => item.id === lastId)
+      currentId.value = restored?.id ?? defaultAgent.value?.id ?? agents.value[0]?.id ?? 0
     }
   }
 
-  /* 选择当前 Agent */
+  /* 选择当前 Agent（写入新建会话默认配置） */
   function selectAgent(id: number): void {
     currentId.value = id
+    /* 选择失败不回滚界面状态，下次启动回落到已保存值 */
+    void useSettingsStore().saveSessionDefaults({ agentId: id }).catch(() => undefined)
   }
 
   /* 选中默认内置 Agent（新建对话使用） */
   function selectDefaultAgent(): void {
-    currentId.value = defaultAgent.value?.id ?? agents.value[0]?.id ?? 0
+    selectAgent(defaultAgent.value?.id ?? agents.value[0]?.id ?? 0)
   }
 
   /* 保存 Agent（新建或更新）：回读列表以复用主进程排序与会话占用统计 */
@@ -57,7 +62,7 @@ export const useAgentStore = defineStore('agent', () => {
     const payload = JSON.parse(JSON.stringify(input)) as AgentSaveInput
     const saved = await api.agent.save(payload)
     await loadAgents()
-    currentId.value = saved.id
+    selectAgent(saved.id)
     return saved
   }
 
@@ -66,7 +71,7 @@ export const useAgentStore = defineStore('agent', () => {
     await api.agent.remove(id)
     agents.value = agents.value.filter((item) => item.id !== id)
     if (currentId.value === id) {
-      currentId.value = defaultAgent.value?.id ?? agents.value[0]?.id ?? 0
+      selectDefaultAgent()
     }
   }
 

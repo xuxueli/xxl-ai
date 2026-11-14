@@ -9,13 +9,12 @@ import { t } from '@renderer/shell/i18n'
 import {
   buildClickScript,
   buildFillScript,
-  buildHoverScript,
   buildPressScript,
   buildProbeScript,
   buildReadScript,
   buildScrollScript,
-  buildSelectScript,
-  buildSnapshotScript
+  buildSnapshotScript,
+  buildTargetScript
 } from '@modules/browser/renderer/utils/browserScripts'
 import {
   activeTabOf,
@@ -28,7 +27,13 @@ import {
   webviews,
   type WebviewElement
 } from '@modules/browser/renderer/composables/browserState'
-import type { BrowserActionResult, BrowserSnapshotNode, BrowserFillField } from '@modules/browser/shared'
+import {
+  BROWSER_READ_DEFAULT_CHARS,
+  BROWSER_READ_MAX_CHARS,
+  type BrowserActionResult,
+  type BrowserSnapshotNode,
+  type BrowserFillField
+} from '@modules/browser/shared'
 import type { BrowserTab } from '@modules/browser/renderer'
 
 /* 读取 webview 当前地址（未就绪时返回空串，避免抛错中断等待） */
@@ -62,14 +67,18 @@ async function waitForPageReady(
 /* 解析当前可操作的页面：等待标签页创建、导航落定与加载完成 */
 async function resolveActivePage(
   sessionId: string,
-  timeout = 12000
+  timeout = 12000,
+  signal?: AbortSignal
 ): Promise<{ tab: BrowserTab; view: WebviewElement } | BrowserActionResult> {
   const started = Date.now()
   const state = stateOf(sessionId)
-  /* 先等标签页创建 + 宿主挂载 + 导航目标写入（open_browser 的请求由 IPC 异步转达） */
+  /* 先等标签页创建 + 宿主挂载 + 导航目标写入（导航请求由动作桥异步转达） */
   let tab = activeTabOf(state)
   let view = tab ? webviews.get(tab.id) : undefined
   while ((!tab?.hasPage || !view) && Date.now() - started < timeout) {
+    if (signal?.aborted) {
+      return { ok: false, error: t('chat.browser.actionCancelled') }
+    }
     await sleep(120)
     tab = activeTabOf(stateOf(sessionId))
     view = tab ? webviews.get(tab.id) : undefined
@@ -82,6 +91,13 @@ async function resolveActivePage(
   }
   await waitForPageReady(tab, view, Math.max(1000, timeout - (Date.now() - started)))
   return { tab, view }
+}
+
+/* 是否能向 webview 发送真实输入事件：隐藏标签 / 后台宿主只能降级为页面内合成事件 */
+function canSendRealInput(view: WebviewElement): boolean {
+  return (
+    view.getBoundingClientRect().width > 0 && getComputedStyle(view).visibility !== 'hidden'
+  )
 }
 
 /* 动作后等待页面加载结束并留出渲染稳定时间 */
@@ -107,7 +123,10 @@ export async function readActiveTab(
     return page
   }
   const { tab, view } = page
-  const max = Math.min(Math.max(Math.floor(action.maxChars ?? 20000), 1000), 50000)
+  const max = Math.min(
+    Math.max(Math.floor(action.maxChars ?? BROWSER_READ_DEFAULT_CHARS), 1000),
+    BROWSER_READ_MAX_CHARS
+  )
   const script = buildReadScript(action.selector)
   try {
     const raw = (await view.executeJavaScript(script)) as {
@@ -167,7 +186,7 @@ export async function snapshotActiveTab(
   }
 }
 
-/* 点击元素：优先使用快照 ref，其次 CSS 选择器 */
+/* 点击元素：优先使用快照 ref，其次 CSS 选择器；可见页面发送真实鼠标事件 */
 export async function clickActiveTab(
   sessionId: string,
   action: { ref?: string; selector?: string; button?: 'left' | 'right'; clickCount?: number }
@@ -179,11 +198,36 @@ export async function clickActiveTab(
   const { tab, view } = page
   const button = action.button === 'right' ? 'right' : 'left'
   const count = Math.min(Math.max(Math.floor(action.clickCount ?? 1), 1), 3)
-  const script = buildClickScript({ ref: action.ref, selector: action.selector, button, count })
   try {
-    const raw = (await view.executeJavaScript(script)) as { ok?: boolean; error?: string }
-    if (!raw?.ok) {
-      return { ok: false, error: raw?.error || t('chat.browser.clickNotFound') }
+    const target = (await view.executeJavaScript(
+      buildTargetScript({ ref: action.ref, selector: action.selector })
+    )) as { ok?: boolean; error?: string; x?: number; y?: number; width?: number; height?: number }
+    if (!target?.ok) {
+      return { ok: false, error: t('chat.browser.clickNotFound') }
+    }
+    const x = Number(target.x)
+    const y = Number(target.y)
+    /* 隐藏标签页或元素无尺寸时无法命中真实输入：降级为页面内合成点击 */
+    const realInput =
+      canSendRealInput(view) &&
+      Number(target.width ?? 0) > 0 &&
+      Number(target.height ?? 0) > 0 &&
+      Number.isFinite(x) &&
+      Number.isFinite(y)
+    if (realInput) {
+      const targetX = Math.round(x)
+      const targetY = Math.round(y)
+      view.sendInputEvent({ type: 'mouseMove', x: targetX, y: targetY })
+      for (let index = 1; index <= count; index += 1) {
+        view.sendInputEvent({ type: 'mouseDown', x: targetX, y: targetY, button, clickCount: index })
+        view.sendInputEvent({ type: 'mouseUp', x: targetX, y: targetY, button, clickCount: index })
+      }
+    } else {
+      const script = buildClickScript({ ref: action.ref, selector: action.selector, button, count })
+      const raw = (await view.executeJavaScript(script)) as { ok?: boolean; error?: string }
+      if (!raw?.ok) {
+        return { ok: false, error: raw?.error || t('chat.browser.clickNotFound') }
+      }
     }
   } catch (error) {
     return { ok: false, error: t('chat.browser.clickFailed', [(error as Error).message]) }
@@ -270,87 +314,47 @@ async function runInteraction<T>(
   }
 }
 
-/* 悬停元素：派发鼠标移入事件，用于展开悬停菜单 */
-export async function hoverActiveTab(
-  sessionId: string,
-  action: { ref?: string; selector?: string }
-): Promise<BrowserActionResult> {
-  const run = await runInteraction<{ ok?: boolean; error?: string }>(
-    sessionId,
-    buildHoverScript({ ref: action.ref, selector: action.selector }),
-    'chat.browser.hoverFailedDetail'
-  )
-  if (!run.ok) {
-    return run.result
-  }
-  if (!run.raw?.ok) {
-    return {
-      ok: false,
-      error: run.raw?.error === 'missing' ? t('chat.browser.targetMissing') : t('chat.browser.hoverFailed')
-    }
-  }
-  await settlePage(sessionId, run.tab.id, 150)
-  return {
-    ok: true,
-    title: run.tab.title,
-    url: run.tab.currentUrl,
-    summary: t('chat.browser.hovered', [action.ref || action.selector || t('chat.browser.target')])
-  }
-}
-
-/* 按键：向目标元素或当前焦点发送键盘事件 */
+/* 按键：聚焦目标元素后发送真实键盘事件；隐藏页面降级为页面内合成事件 */
 export async function pressActiveTab(
   sessionId: string,
   action: { key: string; ref?: string; selector?: string }
 ): Promise<BrowserActionResult> {
-  const run = await runInteraction<{ ok?: boolean }>(
-    sessionId,
-    buildPressScript({ key: action.key, ref: action.ref, selector: action.selector }),
-    'chat.browser.pressFailed'
-  )
-  if (!run.ok) {
-    return run.result
+  const page = await resolveActivePage(sessionId)
+  if ('ok' in page) {
+    return page
   }
-  if (!run.raw?.ok) {
-    return { ok: false, error: t('chat.browser.targetMissing') }
-  }
-  await settlePage(sessionId, run.tab.id, 150)
-  return {
-    ok: true,
-    title: run.tab.title,
-    url: run.tab.currentUrl,
-    summary: t('chat.browser.pressed', [action.key])
-  }
-}
-
-/* 下拉选择：按 value 或可见文本选中 option */
-export async function selectActiveTab(
-  sessionId: string,
-  action: { ref?: string; selector?: string; value: string }
-): Promise<BrowserActionResult> {
-  const run = await runInteraction<{ ok?: boolean; error?: string; text?: string }>(
-    sessionId,
-    buildSelectScript({ ref: action.ref, selector: action.selector, value: action.value }),
-    'chat.browser.selectFailed'
-  )
-  if (!run.ok) {
-    return run.result
-  }
-  if (!run.raw?.ok) {
-    return {
-      ok: false,
-      error:
-        run.raw?.error === 'option'
-          ? t('chat.browser.optionMissing', [action.value])
-          : t('chat.browser.targetMissing')
+  const { tab, view } = page
+  try {
+    const target = (await view.executeJavaScript(
+      buildTargetScript({ ref: action.ref, selector: action.selector, focus: true })
+    )) as { ok?: boolean }
+    if (!target?.ok) {
+      return { ok: false, error: t('chat.browser.targetMissing') }
     }
+    if (canSendRealInput(view)) {
+      const printable = action.key.length === 1
+      view.sendInputEvent({ type: 'keyDown', keyCode: action.key })
+      if (printable) {
+        view.sendInputEvent({ type: 'char', keyCode: action.key })
+      }
+      view.sendInputEvent({ type: 'keyUp', keyCode: action.key })
+    } else {
+      const raw = (await view.executeJavaScript(
+        buildPressScript({ key: action.key, ref: action.ref, selector: action.selector })
+      )) as { ok?: boolean }
+      if (!raw?.ok) {
+        return { ok: false, error: t('chat.browser.targetMissing') }
+      }
+    }
+  } catch (error) {
+    return { ok: false, error: t('chat.browser.pressFailed', [(error as Error).message]) }
   }
-  await settlePage(sessionId, run.tab.id, 150)
+  await settlePage(sessionId, tab.id, 150)
   return {
     ok: true,
-    title: run.tab.title,
-    url: run.tab.currentUrl,
-    summary: t('chat.browser.selected', [run.raw.text || action.value])
+    title: tab.title,
+    url: tab.currentUrl,
+    summary: t('chat.browser.pressed', [action.key])
   }
 }
 
@@ -381,9 +385,10 @@ export async function scrollActiveTab(
 /* 等待页面条件：选择器 / 文本 / URL，任一命中即返回 */
 export async function waitActiveTab(
   sessionId: string,
-  action: { selector?: string; text?: string; url?: string; timeoutMs?: number }
+  action: { selector?: string; text?: string; url?: string; timeoutMs?: number },
+  signal?: AbortSignal
 ): Promise<BrowserActionResult> {
-  const page = await resolveActivePage(sessionId)
+  const page = await resolveActivePage(sessionId, 12000, signal)
   if ('ok' in page) {
     return page
   }
@@ -395,6 +400,9 @@ export async function waitActiveTab(
   const started = Date.now()
   /* 渲染层轮询：URL 直接在标签页状态判断，选择器/文本在页面内探测，整页跳转不会中断等待 */
   while (Date.now() - started < timeout) {
+    if (signal?.aborted) {
+      return { ok: false, error: t('chat.browser.actionCancelled') }
+    }
     if (action.url && tab.currentUrl.includes(action.url)) {
       return {
         ok: true,

@@ -2,7 +2,8 @@
  * 终端命令策略：危险命令识别与越界路径解析（纯函数，便于单测与复用）。
  *   - 危险命令：命中即拒绝，覆盖删根 / 格式化 / 提权 / 远端脚本直执行等；
  *   - 越界路径：只识别命令中的静态路径（cd、重定向、绝对路径、~、相对 ..），
- *     动态展开（$VAR / 命令替换）不参与判定。
+ *     动态展开（$VAR / 命令替换）不参与判定；
+ *   - 无害设备路径（/dev/null 等）仅丢弃或回显输出，不参与越界与危险判定。
  *
  * @author xuxueli 2026-10-31
  */
@@ -10,6 +11,14 @@
 import { homedir } from 'os'
 import { isAbsolute, join, resolve } from 'path'
 import { outsidePath } from '@modules/agent/worker/sandbox'
+
+/* 无害设备路径：只做输出丢弃 / 回显，不写真实文件，无需越界审批 */
+const HARMLESS_DEVICE_PATHS = new Set(['/dev/null', '/dev/stdin', '/dev/stdout', '/dev/stderr'])
+
+/* 是否为无害设备路径（仅标准输入 / 输出 / 错误三个文件描述符，避免放行任意 fd） */
+function isHarmlessDevice(absPath: string): boolean {
+  return HARMLESS_DEVICE_PATHS.has(absPath) || /^\/dev\/fd\/[012]$/.test(absPath)
+}
 
 /* 危险命令规则：命中即拦截，返回可读原因 */
 const DANGEROUS_RULES: Array<{ pattern: RegExp; reason: string }> = [
@@ -39,8 +48,9 @@ const DANGEROUS_RULES: Array<{ pattern: RegExp; reason: string }> = [
     reason: '需要提权（sudo）'
   },
   {
-    /* 重定向覆盖系统目录 */
-    pattern: />\s*\/(etc|usr|bin|sbin|boot|dev|var|System)\//i,
+    /* 重定向覆盖系统目录（/dev/null 等无害设备除外） */
+    pattern:
+      />\s*\/(etc|usr|bin|sbin|boot|dev|var|System)\/(?!null\b|stdin\b|stdout\b|stderr\b|fd\/[012]\b)/i,
     reason: '覆盖系统目录文件'
   },
   {
@@ -143,7 +153,11 @@ export function findOutsideTargets(command: string, rootDir: string): string[] {
       return
     }
     const abs = absoluteToken(rootDir, token)
-    const outside = abs ? outsidePath(rootDir, abs) : null
+    /* 无害设备路径（/dev/null 等）不产生越界命中 */
+    if (!abs || isHarmlessDevice(abs)) {
+      return
+    }
+    const outside = outsidePath(rootDir, abs)
     if (outside) {
       hits.add(outside)
     }

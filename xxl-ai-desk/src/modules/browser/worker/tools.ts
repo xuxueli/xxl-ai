@@ -2,7 +2,7 @@
  * 浏览器类内置工具：在右侧「浏览器」面板打开、读取与操作页面。
  *   - 打开优先复用当前标签页；new_tab=true 时才新建（仅用户明确要求或需同时保留多页时）；
  *   - 读取 / 快照 / 点击 / 填写 / 等待 / 截图 / 诊断 / 标签页统一经动作桥完成；
- *   - 交互类（悬停 / 按键 / 下拉 / 滚动）见 browserInteract.ts，结果格式化见 browserFormat.ts；
+ *   - 交互类（按键 / 滚动）见 browserInteract.ts，结果格式化见 browserFormat.ts；
  *   - 元素 ref 由 snapshot_browser 生成，点击与填写优先使用 ref，避免猜测 CSS。
  *
  * @author xuxueli 2026-10-31
@@ -20,13 +20,12 @@ import {
   type ToolContext,
   type ToolEntry
 } from '@modules/agent/worker'
-import { getBrowserOpener, runBrowserAction } from '@modules/browser/worker/browserBridgeClient'
+import { BROWSER_READ_DEFAULT_CHARS, BROWSER_READ_MAX_CHARS } from '@modules/browser/shared'
+import { runBrowserAction } from '@modules/browser/worker/browserBridgeClient'
 import { pageHeader, snapshotText } from '@modules/browser/worker/browserFormat'
 import {
-  createHoverBrowserTool,
   createPressBrowserTool,
   createScrollBrowserTool,
-  createSelectBrowserTool,
   type BrowserSchemaBuilder
 } from '@modules/browser/worker/browserInteract'
 
@@ -39,8 +38,8 @@ function createOpenBrowserTool(Schema: SchemaBuilder, context: ToolContext): Age
     name: 'open_browser',
     label: '打开浏览器',
     description: describe(
-      '在右侧浏览器面板打开网页，或刷新 / 后退 / 前进。默认复用当前标签页，new_tab=true 时新开；url 支持完整地址、域名或搜索关键词。',
-      'Open a page in the Browser panel, or reload / go back / go forward. Reuses the current tab by default; new_tab=true opens a new tab. url accepts an address, domain, or search keywords.'
+      '在右侧浏览器面板打开网页，或刷新 / 后退 / 前进。默认复用当前标签页，new_tab=true 时新开；url 支持完整地址、域名或搜索关键词。打开后会等待页面加载并返回最终地址。',
+      'Open a page in the Browser panel, or reload / go back / go forward. Reuses the current tab by default; new_tab=true opens a new tab. Waits for the page to load and returns the final URL.'
     ),
     parameters: Schema.obj({
       action: Schema.opt(
@@ -81,18 +80,14 @@ function createOpenBrowserTool(Schema: SchemaBuilder, context: ToolContext): Age
       if (scheme && scheme !== 'http' && scheme !== 'https') {
         return toolError(tr(context, 'runtime.tool.protocolUnsupported', [scheme]))
       }
-      const opener = getBrowserOpener()
-      if (!opener) {
-        return toolError(tr(context, 'runtime.tool.browserUnavailable'))
-      }
       const newTab = new_tab === true
-      opener(context.sessionId, raw, newTab)
+      const result = await runBrowserAction(context, { type: 'navigate', url: raw, newTab })
+      if (!result.ok) {
+        return toolError(result.error || tr(context, 'runtime.tool.navFailed'))
+      }
       return text(
-        tr(context, 'runtime.tool.openInTab', [
-          newTab ? tr(context, 'runtime.tool.newTab') : tr(context, 'runtime.tool.currentTab'),
-          raw
-        ]),
-        { url: raw, newTab }
+        `${result.summary || tr(context, 'runtime.tool.navDone')}\n${pageHeader(result, context)}`,
+        { url: result.url ?? raw, newTab, loading: Boolean(result.loading) }
       )
     }
   }
@@ -104,16 +99,23 @@ function createReadBrowserTool(Schema: SchemaBuilder, context: ToolContext): Age
     name: 'read_browser',
     label: '读取网页',
     description: describe(
-      '读取右侧「浏览器」当前标签页的标题、地址与正文文本。可选 selector 指定 CSS 选择器，max_chars 限制返回字符数（默认 20000）。页面 loading 时会等待加载完成',
-      'Read the title, URL, and visible text of the current tab in the right-side Browser panel. Optional selector picks a CSS subtree; max_chars limits returned characters (default 20000). Waits for loading to finish.'
+      `读取右侧「浏览器」当前标签页的标题、地址与正文文本。可选 selector 指定 CSS 选择器，max_chars 限制返回字符数（默认 ${BROWSER_READ_DEFAULT_CHARS}，最多 ${BROWSER_READ_MAX_CHARS}）。页面 loading 时会等待加载完成`,
+      `Read the title, URL, and visible text of the current tab in the right-side Browser panel. Optional selector picks a CSS subtree; max_chars limits returned characters (default ${BROWSER_READ_DEFAULT_CHARS}, max ${BROWSER_READ_MAX_CHARS}). Waits for loading to finish.`
     ),
     parameters: Schema.obj({
       selector: Schema.opt(Schema.str({ description: 'CSS 选择器，缺省读取整个页面正文' })),
-      max_chars: Schema.opt(Schema.num({ description: '返回正文字符上限，默认 20000' }))
+      max_chars: Schema.opt(
+        Schema.num({
+          description: `返回正文字符上限，默认 ${BROWSER_READ_DEFAULT_CHARS}，最多 ${BROWSER_READ_MAX_CHARS}`
+        })
+      )
     }),
     execute: async (_toolCallId, params) => {
       const { selector, max_chars } = params as { selector?: string; max_chars?: number }
-      const max = Math.min(Math.max(Math.floor(max_chars ?? MAX_OUTPUT), 1000), 50000)
+      const max = Math.min(
+        Math.max(Math.floor(max_chars ?? BROWSER_READ_DEFAULT_CHARS), 1000),
+        BROWSER_READ_MAX_CHARS
+      )
       const result = await runBrowserAction(context, {
         type: 'read',
         selector: selector?.trim() || undefined,
@@ -222,8 +224,8 @@ function createFillBrowserTool(Schema: SchemaBuilder, context: ToolContext): Age
     name: 'fill_browser',
     label: '填写页面表单',
     description: describe(
-      '批量填写当前页面表单字段（输入框 / 下拉框 / 复选框 / contenteditable）。字段使用 snapshot_browser 的 ref 或 CSS selector；submit=true 时提交所属表单',
-      'Fill multiple form fields in the current page (inputs, selects, checkboxes, contenteditable) using refs from snapshot_browser or CSS selectors. Set submit=true to submit the containing form.'
+      '批量填写当前页面表单字段（输入框 / 下拉框 / 复选框 / contenteditable）。下拉框按 option 的 value 或可见文本匹配；字段使用 snapshot_browser 的 ref 或 CSS selector；submit=true 时提交所属表单',
+      'Fill multiple form fields in the current page (inputs, selects, checkboxes, contenteditable). For selects, value matches the option value or visible text. Use refs from snapshot_browser or CSS selectors. Set submit=true to submit the containing form.'
     ),
     parameters: Schema.obj({
       fields: Schema.arr(
@@ -436,11 +438,11 @@ const BROWSER_TOOL_DEFINITIONS: Array<{
   create: (Schema: SchemaBuilder, context: ToolContext) => AgentTool
 }> = [
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
     create: createOpenBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 51000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 81000 },
     create: createReadBrowserTool
   },
   {
@@ -448,43 +450,35 @@ const BROWSER_TOOL_DEFINITIONS: Array<{
     create: createSnapshotBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 4000 },
     create: createClickBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 3000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 6000 },
     create: createFillBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
-    create: createHoverBrowserTool
-  },
-  {
-    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 4000 },
     create: createPressBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: false, permissionModes: WRITE_PERMISSIONS, maxOutput: 2000 },
-    create: createSelectBrowserTool
-  },
-  {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
     create: createScrollBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
     create: createWaitBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 2000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
     create: createScreenshotBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 8000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 16000 },
     create: createInspectBrowserTool
   },
   {
-    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 4000 },
+    meta: { group: 'browser', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 8000 },
     create: createTabsBrowserTool
   }
 ]

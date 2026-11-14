@@ -4,5 +4,6 @@
  */
 
 export type { BrowserApi } from './api'
+export { BROWSER_READ_DEFAULT_CHARS, BROWSER_READ_MAX_CHARS } from './contracts'
 export type { BrowserAction, BrowserActionRequest, BrowserActionResult, BrowserConsoleEntry, BrowserFillField, BrowserKeyInput, BrowserSnapshotNode, BrowserTabInfo } from './contracts'
 export { BROWSER_IPC } from './ipc'

@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@common/renderer/api'
 import { t } from '@renderer/shell/i18n'
+import { useSettingsStore } from '@modules/settings/renderer'
 import type { ProjectDTO } from '@modules/project/shared'
 
 export const useProjectStore = defineStore('project', () => {
@@ -27,17 +28,24 @@ export const useProjectStore = defineStore('project', () => {
     () => projects.value.find((item) => item.defaultWorkspace) ?? null
   )
 
-  /* 加载项目列表（保留当前选择，失效则清空） */
+  /* 加载项目列表（保留当前选择，失效则回落上次选择 / 清空） */
   async function loadProjects(): Promise<void> {
+    const lastId = useSettingsStore().settings.sessionDefaults.projectId
     projects.value = await api.project.list()
     if (currentId.value && !projects.value.some((item) => item.id === currentId.value)) {
       currentId.value = 0
     }
+    /* 启动时恢复上次选中的项目，供新建对话沿用 */
+    if (!currentId.value && projects.value.some((item) => item.id === lastId)) {
+      currentId.value = lastId
+    }
   }
 
-  /* 选择当前项目 */
+  /* 选择当前项目（写入新建会话默认配置） */
   function selectProject(id: number): void {
     currentId.value = id
+    /* 选择失败不回滚界面状态，下次启动回落到已保存值 */
+    void useSettingsStore().saveSessionDefaults({ projectId: id }).catch(() => undefined)
   }
 
   /* 选中默认项目空间；不存在时回退到名称升序的第一个项目 */
@@ -45,7 +53,7 @@ export const useProjectStore = defineStore('project', () => {
     const target =
       defaultProject.value ??
       [...projects.value].sort((a, b) => a.name.localeCompare(b.name, 'zh'))[0]
-    currentId.value = target?.id ?? 0
+    selectProject(target?.id ?? 0)
   }
 
   /* 项目是否展开 */
@@ -71,7 +79,7 @@ export const useProjectStore = defineStore('project', () => {
     const created = await api.project.create({ dialogTitle: t('project.selectDirTitle') })
     if (created) {
       projects.value = [created, ...projects.value]
-      currentId.value = created.id
+      selectProject(created.id)
       setExpanded(created.id, true)
     }
     return created
@@ -97,7 +105,6 @@ export const useProjectStore = defineStore('project', () => {
       expanded.value = next
     }
     if (currentId.value === id) {
-      currentId.value = 0
       /* 删除当前项目后重新选中默认项目空间，避免界面停在无归属状态 */
       selectDefaultProject()
     }

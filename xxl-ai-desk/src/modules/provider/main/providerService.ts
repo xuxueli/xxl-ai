@@ -291,10 +291,13 @@ export function ensureSeedProviders(): void {
   /* 默认选中首个供应商与模型 */
   const settings = getSettings()
   const first = listProviders()[0]
-  if (first && !settings.providerId) {
+  if (first && !settings.sessionDefaults.providerId) {
     saveSettings({
-      providerId: first.id,
-      modelId: first.models.find((model) => isSessionModel(model))?.id ?? ''
+      sessionDefaults: {
+        ...settings.sessionDefaults,
+        providerId: first.id,
+        modelId: first.models.find((model) => isSessionModel(model))?.id ?? ''
+      }
     })
   }
 }

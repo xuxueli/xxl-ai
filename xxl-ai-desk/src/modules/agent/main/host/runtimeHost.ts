@@ -63,9 +63,6 @@ const pendingSummary = new Map<
   { resolve: (content: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
 >()
 
-/* 右侧「浏览器」面板打开回调（由 ipc.ts 注册，把 URL 转发到对应会话的渲染层标签页） */
-let browserOpener: ((sessionId: number, url: string, newTab: boolean) => void) | null = null
-
 /*
  * 会话有效性判定：由会话域在启动时注入。
  * 已删除会话的迟到事件 / 交互 / 轨迹在转发前直接丢弃，避免重建已删会话的界面资源。
@@ -75,13 +72,6 @@ let sessionActiveResolver: (sessionId: number) => boolean = () => true
 /* 注册会话有效性判定（会话域启动时调用） */
 export function setSessionActiveResolver(resolver: (sessionId: number) => boolean): void {
   sessionActiveResolver = resolver
-}
-
-/* 注册浏览器打开回调（主进程窗口就绪后由 IPC 网关注入） */
-export function setBrowserOpener(
-  opener: (sessionId: number, url: string, newTab: boolean) => void
-): void {
-  browserOpener = opener
 }
 
 /* 启动（或复用）运行时进程 */
@@ -155,14 +145,6 @@ async function handleMessage(message: WorkerMessage): Promise<void> {
         break
       }
       pendingRuns.get(message.sessionId)?.onEvent(message.event)
-      break
-    case 'open-browser':
-      /* 会话已删除：不再为已删会话打开浏览器标签页 */
-      if (!sessionActiveResolver(message.sessionId)) {
-        break
-      }
-      /* Agent 工具请求：转交渲染层，在该会话的浏览器面板打开（newTab 控制是否新建标签页） */
-      browserOpener?.(message.sessionId, message.url, message.newTab === true)
       break
     case 'browser-action':
       /* Agent 工具请求：经渲染层 webview 执行页面动作，结果回传运行时进程 */

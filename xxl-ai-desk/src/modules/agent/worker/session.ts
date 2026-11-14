@@ -54,6 +54,13 @@ export interface AgentRuntimeOptions {
 /* 会话级 Agent 运行时缓存：同一会话复用上下文 */
 const runtimes = new Map<number, Promise<Agent>>()
 
+/*
+ * 正在执行一轮的 Agent：与运行时缓存解耦。
+ * 配置重置 / 缓存清理会清空 runtimes，但终止请求仍必须命中当前运行，
+ * 否则多步执行中会出现「点击终止无反应」。
+ */
+const activeAgents = new Map<number, Agent>()
+
 /* 已请求终止的会话：覆盖「Agent 尚未创建完成就点击终止」的场景 */
 const abortedSessions = new Set<number>()
 
@@ -202,11 +209,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/* 是否用户主动终止 */
-function isAbortError(error: unknown): boolean {
-  return /aborted|cancell?ed/i.test((error as Error)?.message ?? '')
-}
-
 /* 按配置动态加载 Pi Agent，装配模型与内置工具，注入系统提示与历史消息 */
 async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
   const { Agent: AgentClass } = await import('@earendil-works/pi-agent-core')
@@ -300,6 +302,12 @@ export function evictAgent(sessionId: number): void {
 /* 中断会话当前生成：先登记终止标记（Agent 未就绪也不会丢），再中止运行中的 Agent */
 export async function abortAgent(sessionId: number): Promise<void> {
   abortedSessions.add(sessionId)
+  /* 优先命中正在执行的一轮：即使运行时缓存已被重置清理，终止也能立即生效 */
+  const active = activeAgents.get(sessionId)
+  if (active) {
+    active.abort()
+    return
+  }
   const runtime = runtimes.get(sessionId)
   if (runtime) {
     try {
@@ -309,6 +317,11 @@ export async function abortAgent(sessionId: number): Promise<void> {
       /* Agent 创建失败无需中止 */
     }
   }
+}
+
+/* 是否存在正在执行的一轮（配置重置据此延后，避免打断多步执行） */
+export function hasActiveRuns(): boolean {
+  return activeAgents.size > 0
 }
 
 /* 清空全部运行时（退出时） */
@@ -369,6 +382,10 @@ export async function runPrompt(
 ): Promise<RuntimeMessage[]> {
   const tr = (key: string, params?: Array<string | number>): string =>
     translate(language, key, params)
+  /* 登记当前运行：终止请求不再依赖运行时缓存，多步执行中也能立即命中 */
+  if (sessionId) {
+    activeAgents.set(sessionId, agent)
+  }
   /* 采集目标：会话 + 对话来源（记忆生成使用独立目标，互不覆盖） */
   const traceTarget = createTraceTarget(sessionId)
   const unsubscribe = agent.subscribe((event) => {
@@ -457,8 +474,12 @@ export async function runPrompt(
         }
       }
 
-      /* 用户终止：直接结束 */
-      if (thrown && (isAbortError(thrown) || (sessionId && isSessionAborted(sessionId)))) {
+      /*
+       * 用户终止：直接结束。
+       * 仅当会话终止标记存在时才按终止处理；供应商 / 网络错误即使文案含 aborted，
+       * 也应进入重试流程，避免多步执行被偶发误判为「用户主动终止」。
+       */
+      if (thrown && sessionId && isSessionAborted(sessionId)) {
         appendAbortNote(agent, start, tr('runtime.abortNote'))
         sink({ type: 'notice', message: tr('runtime.abortNote') })
         sink({ type: 'done' })
@@ -527,6 +548,9 @@ export async function runPrompt(
     }
   } finally {
     unsubscribe()
+    if (sessionId) {
+      activeAgents.delete(sessionId)
+    }
   }
   return takeNew()
 }

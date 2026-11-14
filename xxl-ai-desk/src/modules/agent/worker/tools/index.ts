@@ -5,6 +5,7 @@
  *   - 同时生成「当前可用工具」提示，随系统指令下发给模型。
  */
 
+import { translate, type AppLanguage } from '@common/shared/i18n'
 import { clipToolResult, MAX_OUTPUT, type ToolContext, type ToolEntry, type ToolGroup } from '@modules/agent/worker/toolkit'
 import type { BuiltinToolSwitches } from '@modules/agent/shared/agentProtocol'
 import { createGeneralTools } from '@modules/agent/worker/tools/general'
@@ -35,16 +36,44 @@ function isGroupEnabled(group: ToolGroup, switches: BuiltinToolSwitches): boolea
   return group === 'skill' ? true : switches[group]
 }
 
-/* 按 meta.maxOutput 统一裁剪工具输出（声明与实现同源，避免各处各自裁剪） */
-function withOutputLimit(entry: ToolEntry): ToolEntry {
+/* 工具执行与终止信号竞速：工具自身未响应 signal 时，点击终止也能立即结束当前步骤 */
+function raceAbort<T>(task: Promise<T>, signal: AbortSignal | undefined, message: string): Promise<T> {
+  if (!signal) {
+    return task
+  }
+  if (signal.aborted) {
+    return Promise.reject(new Error(message))
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(new Error(message))
+    signal.addEventListener('abort', onAbort, { once: true })
+    task.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(error)
+      }
+    )
+  })
+}
+
+/* 统一包装工具执行：终止信号竞速 + 按 meta.maxOutput 裁剪输出 */
+function withExecutionGuards(entry: ToolEntry, language: AppLanguage): ToolEntry {
   const maxOutput = entry.meta.maxOutput ?? MAX_OUTPUT
   const execute = entry.tool.execute
+  const abortedMessage = translate(language, 'runtime.abortNote')
   return {
     meta: entry.meta,
     tool: {
       ...entry.tool,
-      execute: (async (...args: Parameters<typeof execute>) =>
-        clipToolResult(await execute(...args), maxOutput)) as typeof execute
+      execute: (async (...args: Parameters<typeof execute>) => {
+        const [toolCallId, params, signal, onUpdate] = args
+        const task = execute(toolCallId, params, signal, onUpdate)
+        return clipToolResult(await raceAbort(task, signal, abortedMessage), maxOutput)
+      }) as typeof execute
     }
   }
 }
@@ -57,7 +86,7 @@ export async function createBuiltinToolEntries(context: ToolContext): Promise<To
   return groups
     .flat()
     .filter((entry) => entry.meta.permissionModes.includes(context.permissionMode))
-    .map(withOutputLimit)
+    .map((entry) => withExecutionGuards(entry, context.language))
 }
 
 /* 生成可用工具提示：名称 + 读写属性 + 一句话说明，避免模型臆造工具 */
@@ -73,6 +102,6 @@ export function buildToolGuide(entries: ToolEntry[]): string {
 
 /* 运行时 PATH 注入（终端与 MCP stdio 共用） */
 export { setRuntimePath } from '@modules/agent/worker/tools/shell'
-/* 浏览器打开 / 动作回调注入 */
-export { setBrowserOpener, setBrowserActionInvoker } from '@modules/browser/worker'
+/* 浏览器动作回调注入 */
+export { setBrowserActionInvoker } from '@modules/browser/worker'
 export type { ToolContext, ToolEntry, ToolMeta } from '@modules/agent/worker/toolkit'

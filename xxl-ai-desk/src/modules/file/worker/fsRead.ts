@@ -235,11 +235,11 @@ export async function createFsReadTools(context: ToolContext): Promise<ToolEntry
       tool: readFile
     },
     {
-      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 12000 },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 30000 },
       tool: listDirectory
     },
     {
-      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 12000 },
+      meta: { group: 'fs', readOnly: true, permissionModes: ALL_PERMISSIONS, maxOutput: 30000 },
       tool: globFiles
     },
     {

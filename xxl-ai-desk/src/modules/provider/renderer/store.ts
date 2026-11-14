@@ -28,7 +28,7 @@ export const useProviderStore = defineStore('provider', () => {
   async function save(dto: Partial<ProviderDTO>): Promise<ProviderDTO> {
     const saved = await api.provider.save(dto)
     providers.value = await api.provider.list()
-    if (!settings.settings.providerId) {
+    if (!settings.settings.sessionDefaults.providerId) {
       await selectProvider(saved.id)
     }
     return saved
@@ -38,7 +38,7 @@ export const useProviderStore = defineStore('provider', () => {
   async function remove(id: number): Promise<void> {
     await api.provider.remove(id)
     providers.value = await api.provider.list()
-    if (settings.settings.providerId === id) {
+    if (settings.settings.sessionDefaults.providerId === id) {
       await selectProvider(providers.value[0]?.id ?? 0)
     }
   }

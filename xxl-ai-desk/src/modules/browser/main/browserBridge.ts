@@ -4,6 +4,7 @@
  *   - 窗口缺失或渲染层无响应时返回可读错误，避免工具调用永久挂起。
  */
 
+import { t } from '@common/main/i18n'
 import type { BrowserAction, BrowserActionRequest, BrowserActionResult } from '@modules/browser/shared'
 
 /* 动作超时（毫秒）：覆盖 wait_browser 最长 30s 轮询与页面加载余量 */
@@ -11,17 +12,29 @@ const ACTION_TIMEOUT = 60000
 
 /* 渲染层发送函数（由 IPC 网关注入） */
 type ActionSender = (request: BrowserActionRequest) => void
+/* 会话终止取消通知（由 IPC 网关注入） */
+type CancelSender = (sessionId: string) => void
 let sender: ActionSender | null = null
+let cancelSender: CancelSender | null = null
 
-/* 待响应请求：requestId → 结算与超时定时器 */
+/* 待响应请求：requestId → 所属会话、结算与超时定时器 */
 const pending = new Map<
   string,
-  { resolve: (result: BrowserActionResult) => void; timer: ReturnType<typeof setTimeout> }
+  {
+    sessionId: string
+    resolve: (result: BrowserActionResult) => void
+    timer: ReturnType<typeof setTimeout>
+  }
 >()
 
 /* 注册渲染层发送函数（IPC 网关启动时注入） */
 export function setBrowserActionSender(value: ActionSender): void {
   sender = value
+}
+
+/* 注册会话终止取消通知函数（IPC 网关启动时注入） */
+export function setBrowserActionCancelSender(value: CancelSender): void {
+  cancelSender = value
 }
 
 /* 回传渲染层的动作结果（由 IPC 网关调用） */
@@ -45,14 +58,29 @@ export function requestBrowserAction(
     return Promise.resolve({ ok: false, error: '浏览器不可用：窗口尚未就绪' })
   }
   const requestId = `ba_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`
+  const sessionKey = String(sessionId)
   return new Promise<BrowserActionResult>((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(requestId)
       resolve({ ok: false, error: '浏览器动作超时：请确认右侧浏览器已打开页面后重试' })
     }, ACTION_TIMEOUT)
-    pending.set(requestId, { resolve, timer })
-    send({ requestId, sessionId: String(sessionId), action })
+    pending.set(requestId, { sessionId: sessionKey, resolve, timer })
+    send({ requestId, sessionId: sessionKey, action })
   })
+}
+
+/* 会话终止：取消该会话全部挂起动作，并通知渲染层中止正在执行的动作 */
+export function cancelBrowserActionsOf(sessionId: number): void {
+  const sessionKey = String(sessionId)
+  for (const [requestId, entry] of pending) {
+    if (entry.sessionId !== sessionKey) {
+      continue
+    }
+    clearTimeout(entry.timer)
+    pending.delete(requestId)
+    entry.resolve({ ok: false, error: t('runtime.abortNote') })
+  }
+  cancelSender?.(sessionKey)
 }
 
 /* 清空全部待响应请求（窗口销毁/退出时兜底） */

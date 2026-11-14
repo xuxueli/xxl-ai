@@ -19,7 +19,7 @@ import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { useChatUiStore } from '@modules/chat/renderer/store/ui'
 import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
-import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
+import type { PermissionMode } from '@modules/chat/shared'
 
 const router = useRouter()
 const chat = useChatStore()
@@ -186,7 +186,7 @@ onBeforeUnmount(() => {
 })
 
 /* 发送消息：校验模型与项目后交给会话 store 发起生成 */
-async function onSend(text: string, permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE): Promise<void> {
+async function onSend(text: string, permissionMode?: PermissionMode): Promise<void> {
   if (!canChat.value) {
     ElMessage.warning(t('chat.noModel'))
     router.push('/settings')

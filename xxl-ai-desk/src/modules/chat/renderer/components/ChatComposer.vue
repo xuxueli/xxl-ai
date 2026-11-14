@@ -37,8 +37,6 @@ const settings = useSettingsStore()
 const provider = useProviderStore()
 const inputRef = ref()
 const boxRef = ref<HTMLElement | null>(null)
-/* 新建对话草稿权限：会话创建时随会话落库，默认工作区内修改 */
-const draftPermissionMode = ref<PermissionMode>(DEFAULT_PERMISSION_MODE)
 /* 本轮关联文件：仅下一条消息生效，发送后清空 */
 const attachments = ref<FsEntry[]>([])
 /* 文件选择弹框显隐 */
@@ -94,17 +92,17 @@ defineExpose({ editText })
 /* 已存在会话时锁定为所属项目（项目不可改）；新建对话时可自由选择 */
 const locked = computed(() => Boolean(chat.currentId))
 
-/* 当前模型：已生成对话取会话配置，新建对话取默认配置 */
+/* 当前模型：已生成对话取会话配置，新建对话取上次选择 */
 const currentModelId = computed(() =>
-  locked.value ? chat.currentSession?.modelId ?? '' : settings.settings.modelId
+  locked.value ? chat.currentSession?.modelId ?? '' : settings.settings.sessionDefaults.modelId
 )
 const currentModelLabel = computed(() => currentModelId.value || t('settings.selectModel'))
 
-/* 当前供应商：已生成对话取会话配置，新建对话取默认配置 */
+/* 当前供应商：已生成对话取会话配置，新建对话取上次选择 */
 const currentProviderId = computed(() =>
   locked.value
-    ? chat.currentSession?.providerId || settings.settings.providerId
-    : settings.settings.providerId
+    ? chat.currentSession?.providerId || settings.settings.sessionDefaults.providerId
+    : settings.settings.sessionDefaults.providerId
 )
 
 /* 当前模型：结合供应商与模型 ID 定位，避免不同供应商同名模型串位 */
@@ -132,7 +130,7 @@ const showReasoning = computed(() =>
 const currentReasoningLevel = computed<ReasoningLevel>(() =>
   locked.value
     ? chat.currentSession?.reasoningLevel ?? DEFAULT_REASONING_LEVEL
-    : settings.settings.reasoningLevel
+    : settings.settings.sessionDefaults.reasoningLevel
 )
 
 /* 推理等级文案：中英文均展示 Default / Low / High / Max */
@@ -144,11 +142,11 @@ const REASONING_LABEL_KEYS: Record<ReasoningLevel, string> = {
 }
 const currentReasoningLabel = computed(() => t(REASONING_LABEL_KEYS[currentReasoningLevel.value]))
 
-/* 当前权限模式：已生成对话取会话配置，新建对话取草稿（默认工作区内修改） */
+/* 当前权限模式：已生成对话取会话配置，新建对话取全局记忆（上次选择） */
 const currentPermissionMode = computed<PermissionMode>(() =>
   locked.value
     ? chat.currentSession?.permissionMode ?? DEFAULT_PERMISSION_MODE
-    : draftPermissionMode.value
+    : settings.settings.sessionDefaults.permissionMode
 )
 const currentPermissionLabel = computed(() => permissionLabel(currentPermissionMode.value))
 /* 完全权限：入口文案与下拉项均用危险色提示 */
@@ -165,13 +163,9 @@ function permissionLabel(permissionMode: PermissionMode): string {
   return t('chat.permissionWorkspaceWrite')
 }
 
-/* 切换权限：已生成对话落库到会话，新建对话仅改草稿 */
+/* 切换权限：记住全局默认，已生成对话同时落库到会话 */
 async function onPermissionChange(permissionMode: PermissionMode): Promise<void> {
-  if (locked.value) {
-    await chat.updateSessionPermissionMode(permissionMode)
-  } else {
-    draftPermissionMode.value = permissionMode
-  }
+  await chat.updateSessionPermissionMode(permissionMode)
 }
 
 /* 选择模型（命令格式 providerId::modelId）：全局记忆最近选择，并同步当前会话 */

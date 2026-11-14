@@ -1,5 +1,5 @@
 /*
- * 浏览器交互类工具：悬停、按键、下拉选择与滚动。
+ * 浏览器交互类工具：按键与滚动。
  *   - 与读取类工具一致，统一经动作桥转发渲染层执行；
  *   - 交互元素优先使用 snapshot_browser 返回的 ref，selector 兜底。
  *
@@ -18,44 +18,6 @@ export type BrowserSchemaBuilder = Pick<
   typeof SchemaModule,
   'obj' | 'str' | 'opt' | 'num' | 'bool' | 'oneOf' | 'arr'
 >
-
-/* 悬停元素：触发 hover 菜单与提示 */
-export function createHoverBrowserTool(
-  Schema: BrowserSchemaBuilder,
-  context: ToolContext
-): AgentTool {
-  return {
-    name: 'hover_browser',
-    label: '悬停页面元素',
-    description: describe(
-      '将鼠标悬停到页面元素上，用于展开悬停菜单或提示。优先使用 snapshot_browser 返回的 ref，也可传 CSS selector',
-      'Hover over an element to reveal hover menus or tooltips. Prefer the ref from snapshot_browser; a CSS selector also works.'
-    ),
-    parameters: Schema.obj({
-      ref: Schema.opt(Schema.str({ description: 'snapshot_browser 返回的元素 ref' })),
-      selector: Schema.opt(Schema.str({ description: 'CSS 选择器（ref 缺失时使用）' }))
-    }),
-    executionMode: 'sequential',
-    execute: async (_toolCallId, params) => {
-      const { ref, selector } = params as { ref?: string; selector?: string }
-      if (!ref && !selector) {
-        return toolError(tr(context, 'runtime.tool.hoverNeedTarget'))
-      }
-      const result = await runBrowserAction(context, {
-        type: 'hover',
-        ref: ref?.trim() || undefined,
-        selector: selector?.trim() || undefined
-      })
-      if (!result.ok) {
-        return toolError(result.error || tr(context, 'runtime.tool.hoverFailed'))
-      }
-      return text(
-        `${result.summary || tr(context, 'runtime.tool.hovered')}\n${pageHeader(result, context)}`,
-        { url: result.url ?? '', title: result.title ?? '' }
-      )
-    }
-  }
-}
 
 /* 按键：向当前焦点元素或指定元素发送按键 */
 export function createPressBrowserTool(
@@ -92,49 +54,6 @@ export function createPressBrowserTool(
       return text(
         `${result.summary || tr(context, 'runtime.tool.pressed', [key.trim()])}\n${pageHeader(result, context)}`,
         { url: result.url ?? '', title: result.title ?? '', key: key.trim() }
-      )
-    }
-  }
-}
-
-/* 下拉选择：按 option value 或可见文本选择 */
-export function createSelectBrowserTool(
-  Schema: BrowserSchemaBuilder,
-  context: ToolContext
-): AgentTool {
-  return {
-    name: 'select_browser',
-    label: '选择下拉选项',
-    description: describe(
-      '选择 <select> 下拉框选项，value 匹配 option 的 value 或可见文本；元素用 ref 或 CSS selector 定位',
-      'Select an option in a <select> dropdown. value matches the option value or visible text; locate the element with a ref or CSS selector.'
-    ),
-    parameters: Schema.obj({
-      ref: Schema.opt(Schema.str({ description: 'snapshot_browser 返回的元素 ref' })),
-      selector: Schema.opt(Schema.str({ description: 'CSS 选择器（ref 缺失时使用）' })),
-      value: Schema.str({ description: '选项的 value 或可见文本' })
-    }),
-    executionMode: 'sequential',
-    execute: async (_toolCallId, params) => {
-      const { ref, selector, value } = params as { ref?: string; selector?: string; value?: string }
-      if (!ref && !selector) {
-        return toolError(tr(context, 'runtime.tool.selectNeedTarget'))
-      }
-      if (!value?.trim()) {
-        return toolError(tr(context, 'runtime.tool.selectValueRequired'))
-      }
-      const result = await runBrowserAction(context, {
-        type: 'select',
-        ref: ref?.trim() || undefined,
-        selector: selector?.trim() || undefined,
-        value: value.trim()
-      })
-      if (!result.ok) {
-        return toolError(result.error || tr(context, 'runtime.tool.selectFailed'))
-      }
-      return text(
-        `${result.summary || tr(context, 'runtime.tool.selected', [value.trim()])}\n${pageHeader(result, context)}`,
-        { url: result.url ?? '', title: result.title ?? '', value: value.trim() }
       )
     }
   }

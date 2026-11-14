@@ -5,6 +5,7 @@
 
 import type { QuickAction, ShortcutMap } from '@common/shared/contracts/quickAction'
 import type { ReasoningLevel } from '@common/shared/model'
+import type { PermissionMode } from '@common/shared/permission'
 
 /* 外观：浅色 / 深色 / 跟随系统 */
 export const APPEARANCES = ['light', 'dark', 'system'] as const
@@ -30,6 +31,22 @@ export const THEME_PRESETS = [
 ] as const
 export type ThemePreset = (typeof THEME_PRESETS)[number]
 
+/* 新建会话默认配置：统一存为一条 JSON，避免设置表键值碎片化 */
+export interface SessionDefaults {
+  /* 上次选择的项目主键（0 表示未选择） */
+  projectId: number
+  /* 上次选择的 Agent 主键（0 表示未选择） */
+  agentId: number
+  /* 上次选择的供应商主键（0 表示未选择） */
+  providerId: number
+  /* 上次选择的模型 ID */
+  modelId: string
+  /* 上次选择的推理等级 */
+  reasoningLevel: ReasoningLevel
+  /* 上次选择的权限模式 */
+  permissionMode: PermissionMode
+}
+
 /* 应用设置 */
 export interface AppSettings {
   /* 外观：浅色 / 深色 / 跟随系统 */
@@ -38,12 +55,8 @@ export interface AppSettings {
   themePreset: ThemePreset
   /* 界面语言（不支持运行时切换，需重启生效） */
   language: 'zh' | 'en'
-  /* 当前供应商主键（0 表示未选择） */
-  providerId: number
-  /* 当前模型 ID */
-  modelId: string
-  /* 上次选择的推理等级，新建对话沿用 */
-  reasoningLevel: ReasoningLevel
+  /* 新建会话默认配置（项目 / Agent / 模型 / 推理等级 / 权限模式） */
+  sessionDefaults: SessionDefaults
   /* 个性化：应用名称（左上角 Logo 区域）与 Slogan（空态欢迎语） */
   appName: string
   slogan: string

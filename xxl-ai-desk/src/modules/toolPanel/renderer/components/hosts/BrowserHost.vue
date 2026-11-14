@@ -13,6 +13,7 @@ import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
 import { useBrowserSessionStore } from '@modules/browser/renderer'
 import { sectionOfPath } from '@renderer/shell/config/nav'
 import {
+  cancelBrowserActions,
   executeBrowserAction,
   openBrowserRequest
 } from '@modules/browser/renderer'
@@ -91,9 +92,10 @@ function bindHost(sessionId: string, el: Element | ComponentPublicInstance | nul
 /* 事件解绑 */
 let offOpenTab: (() => void) | null = null
 let offActionRequest: (() => void) | null = null
+let offActionCancel: (() => void) | null = null
 
 onMounted(() => {
-  /* 页面 window.open / Agent open_browser：写入对应会话；仅会话首次打开网页时自动展开浏览器工具 */
+  /* 页面 window.open：写入对应会话；仅会话首次打开网页时自动展开浏览器工具（Agent 导航走动作桥） */
   offOpenTab = api.browser.onOpenTab((request) => {
     const target = request.sessionId || currentKey.value
     const sessionState = browser.sessions[target]
@@ -112,6 +114,10 @@ onMounted(() => {
       api.browser.respondAction(request.requestId, result)
     )
   })
+  /* 会话终止：主进程通知取消该会话当前与排队的页面动作 */
+  offActionCancel = api.browser.onActionCancel((request) => {
+    cancelBrowserActions(request.sessionId || currentKey.value)
+  })
 })
 
 onBeforeUnmount(() => {
@@ -119,6 +125,8 @@ onBeforeUnmount(() => {
   offOpenTab = null
   offActionRequest?.()
   offActionRequest = null
+  offActionCancel?.()
+  offActionCancel = null
 })
 </script>
 

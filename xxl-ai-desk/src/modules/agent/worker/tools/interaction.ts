@@ -241,7 +241,7 @@ export async function createInteractionTools(context: ToolContext): Promise<Tool
         group: 'interaction',
         readOnly: true,
         permissionModes: ALL_PERMISSIONS,
-        maxOutput: 4000
+        maxOutput: 8000
       },
       tool: await buildAskUserTool(context)
     }

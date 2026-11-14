@@ -4,6 +4,7 @@
  */
 
 import type {
+  BrowserActionCancelRequest,
   BrowserActionResult,
   BrowserActionRequest,
   BrowserKeyInput,
@@ -13,6 +14,7 @@ import type {
 export interface BrowserApi {
   onOpenTab(cb: (request: BrowserOpenTabRequest) => void): () => void
   onActionRequest(cb: (request: BrowserActionRequest) => void): () => void
+  onActionCancel(cb: (request: BrowserActionCancelRequest) => void): () => void
   respondAction(requestId: string, result: BrowserActionResult): Promise<void>
   onShortcutKey(cb: (input: BrowserKeyInput) => void): () => void
   setPanelActive(active: boolean): Promise<void>

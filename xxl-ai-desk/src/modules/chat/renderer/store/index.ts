@@ -19,7 +19,6 @@ import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { computeSessionMetrics, computeTokenUsage } from '@modules/chat/renderer/utils/sessionMetrics'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import {
-  DEFAULT_PERMISSION_MODE,
   type ChatInteractionCancel,
   type ChatInteractionPrompt,
   type InteractionResult,
@@ -188,10 +187,10 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 新建会话（归属当前选中项目与 Agent，默认工作区内修改权限） */
+  /* 新建会话（归属当前选中项目与 Agent，权限模式沿用上次选择） */
   async function createSession(
     projectId?: number,
-    permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE,
+    permissionMode?: PermissionMode,
     agentId?: number
   ): Promise<SessionDTO> {
     const settings = useSettingsStore()
@@ -199,14 +198,15 @@ export const useChatStore = defineStore('chat', () => {
     const agent = useAgentStore()
     const targetProjectId = projectId ?? project.currentId
     const targetAgentId = agentId ?? agent.currentId ?? agent.defaultAgent?.id ?? 0
+    const defaults = settings.settings.sessionDefaults
     const session = await api.session.create({
       title: NEW_CHAT_TITLE,
       projectId: targetProjectId,
       agentId: targetAgentId,
-      providerId: settings.settings.providerId,
-      modelId: settings.settings.modelId,
-      reasoningLevel: settings.settings.reasoningLevel,
-      permissionMode
+      providerId: defaults.providerId,
+      modelId: defaults.modelId,
+      reasoningLevel: defaults.reasoningLevel,
+      permissionMode: permissionMode ?? defaults.permissionMode
     })
     sessions.value = [session, ...sessions.value]
     currentId.value = session.id
@@ -223,9 +223,15 @@ export const useChatStore = defineStore('chat', () => {
     currentId.value = 0
     messages.value = []
     loading.value = false
-    /* 新建对话默认选中默认项目空间与默认 Agent */
-    useProjectStore().selectDefaultProject()
-    useAgentStore().selectDefaultAgent()
+    /* 新建对话沿用上次选择的项目与 Agent；无有效选择时回落默认 */
+    const project = useProjectStore()
+    const agent = useAgentStore()
+    if (!project.currentId) {
+      project.selectDefaultProject()
+    }
+    if (!agent.currentId) {
+      agent.selectDefaultAgent()
+    }
     /* 确保草稿工具面板状态已创建（含本地持久化恢复） */
     useToolPanelStore().ensure(DRAFT_SESSION_KEY)
   }
@@ -261,10 +267,10 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 选择模型：写入全局默认值（下次新建对话沿用），并同步当前会话配置 */
+  /* 选择模型：写入新建会话默认配置（下次新建对话沿用），并同步当前会话配置 */
   async function selectModel(providerId: number, modelId: string): Promise<void> {
     const settings = useSettingsStore()
-    await settings.saveSettings({ providerId, modelId })
+    await settings.saveSessionDefaults({ providerId, modelId })
     if (!currentId.value) {
       return
     }
@@ -278,7 +284,7 @@ export const useChatStore = defineStore('chat', () => {
 
   /* 切换当前会话的推理等级：同时记住全局默认，新建对话沿用 */
   async function updateSessionReasoningLevel(reasoningLevel: ReasoningLevel): Promise<void> {
-    await useSettingsStore().saveSettings({ reasoningLevel })
+    await useSettingsStore().saveSessionDefaults({ reasoningLevel })
     if (!currentId.value) {
       return
     }
@@ -289,8 +295,9 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 切换当前会话的权限模式 */
+  /* 切换权限模式：记住全局默认（新建对话沿用），并同步当前会话 */
   async function updateSessionPermissionMode(permissionMode: PermissionMode): Promise<void> {
+    await useSettingsStore().saveSessionDefaults({ permissionMode })
     if (!currentId.value) {
       return
     }
@@ -418,8 +425,8 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 发送消息（新建会话时按传入权限创建，默认工作区内修改） */
-  async function send(text: string, permissionMode: PermissionMode = DEFAULT_PERMISSION_MODE): Promise<void> {
+  /* 发送消息（新建会话时按传入权限创建，未传入沿用上次选择） */
+  async function send(text: string, permissionMode?: PermissionMode): Promise<void> {
     const content = text.trim()
     if (!content || streaming.value) {
       return
@@ -506,7 +513,7 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 中断生成 */
+  /* 中断生成：主进程会同步取消该会话的人机交互与浏览器动作 */
   async function abort(): Promise<void> {
     if (currentId.value) {
       await api.chat.abort(currentId.value)

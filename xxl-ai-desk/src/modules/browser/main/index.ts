@@ -3,5 +3,5 @@
  * @author xuxueli 2026-11-07
  */
 
-export { disposeBrowserActions, requestBrowserAction } from './browserBridge'
+export { cancelBrowserActionsOf, disposeBrowserActions, requestBrowserAction } from './browserBridge'
 export { bindBrowserShortcut } from './shortcut'

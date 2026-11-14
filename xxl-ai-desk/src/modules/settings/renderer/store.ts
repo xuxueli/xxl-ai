@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { setLanguage, t } from '@renderer/shell/i18n'
 import { createDefaultSettings } from '@modules/settings/shared'
-import type { AppSettings } from '@modules/settings/shared'
+import type { AppSettings, SessionDefaults } from '@modules/settings/shared'
 import type { RuntimeDetectResult, RuntimeExecInput, UpdateInfo } from '@modules/platform/shared'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -30,6 +30,8 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /* 系统设置子菜单当前分类（UI 选中态，供左侧子菜单与设置页共享），默认模型供应商 */
   const activeTab = ref('providers')
+  /* 新建会话默认配置写入队列：连续切换项目 / Agent / 模型时按序合并，避免相互覆盖 */
+  let sessionDefaultsQueue: Promise<void> = Promise.resolve()
 
   /* 已启用的供应商 */
   /* 应用外观与主题预设到 DOM（Element Plus 深色模式依赖 html.dark） */
@@ -91,6 +93,17 @@ export const useSettingsStore = defineStore('settings', () => {
     const patch: Partial<AppSettings> = {}
     patch[key] = value
     await saveSettings(patch)
+  }
+
+  /* 更新新建会话默认配置：合并后整体写入一条 JSON，避免设置表键值膨胀 */
+  function saveSessionDefaults(patch: Partial<SessionDefaults>): Promise<void> {
+    const next = sessionDefaultsQueue.catch(() => undefined).then(async () => {
+      await saveSettings({
+        sessionDefaults: { ...settings.value.sessionDefaults, ...patch }
+      })
+    })
+    sessionDefaultsQueue = next
+    return next
   }
 
   /* 选择数据目录（系统对话框，取消返回空串） */
@@ -159,7 +172,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /* 切换当前供应商（同步默认模型） */
   async function selectProvider(providerId: number, modelId = ''): Promise<void> {
-    await saveSettings({ providerId, modelId })
+    await saveSessionDefaults({ providerId, modelId })
   }
 
   return {
@@ -173,6 +186,7 @@ export const useSettingsStore = defineStore('settings', () => {
     load,
     saveSettings,
     saveSetting,
+    saveSessionDefaults,
     selectDataDir,
     saveDataDir,
     openDataDir,
