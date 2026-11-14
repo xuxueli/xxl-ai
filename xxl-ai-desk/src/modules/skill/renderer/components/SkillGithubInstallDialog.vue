@@ -248,7 +248,7 @@ watch(visible, (open) => {
 
 .github-path {
   font-family: var(--el-font-family-mono, monospace);
-  font-size: 12px;
+  font-size: var(--desk-font-xs);
   color: var(--desk-text-secondary);
 }
 

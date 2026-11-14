@@ -182,7 +182,7 @@ const statusActive = computed(() =>
   border: 1px solid var(--desk-border);
   border-radius: 5px;
   color: var(--desk-text-tertiary);
-  font-size: 11px;
+  font-size: var(--desk-font-2xs);
   line-height: 16px;
 }
 

@@ -153,7 +153,7 @@ watch(activeKey, async () => {
   border: none;
   background: transparent;
   color: var(--desk-text-tertiary);
-  font-size: 11px;
+  font-size: var(--desk-icon-xs);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -123,7 +123,7 @@ function metaOf(record: BrowserActionRecord): string {
   border: 1px solid var(--desk-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--desk-bg-elevated) 92%, transparent);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  box-shadow: var(--desk-shadow-soft);
   backdrop-filter: blur(6px);
   font-size: var(--desk-font-xs);
   color: var(--desk-text-secondary);

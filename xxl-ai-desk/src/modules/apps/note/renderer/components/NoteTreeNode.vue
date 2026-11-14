@@ -211,7 +211,7 @@ function onActionMenu(event: MouseEvent): void {
 .tree-caret {
   flex-shrink: 0;
   width: 12px;
-  font-size: 11px;
+  font-size: var(--desk-icon-xs);
   color: var(--desk-text-tertiary);
   transition: transform 0.15s ease;
 }

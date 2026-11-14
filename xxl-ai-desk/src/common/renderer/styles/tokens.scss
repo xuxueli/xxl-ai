@@ -71,6 +71,8 @@
   --desk-agent-accent-2: #8b5cf6;
   --desk-agent-accent-deep: #1b4fe0;
   --desk-agent-contrast: #ffffff;
+  /* 浮层阴影固定为黑色，保证在任意网页背景上都可辨识 */
+  --desk-agent-shadow: rgb(0 0 0 / 42%);
 
   /* 气泡与选区 */
   --desk-bubble-user: color-mix(in srgb, var(--theme-brand) 9%, var(--theme-content));
@@ -183,6 +185,8 @@
   --desk-note-outline-width: 240px;
   --desk-panel-header-height: 40px;
   --desk-scrollbar-size: 8px;
+  /* 媒体预览黑底（视频 / 透明图）：固定配色，不随主题变化 */
+  --desk-media-backdrop: #000;
   /* 会话内容列：正文滚动容器两侧对称预留滚动条空间，输入框用 content-gutter 补偿后与其等宽同中心 */
   --desk-chat-width: 880px;
   --desk-chat-gutter: 32px;
@@ -190,6 +194,7 @@
   --desk-radius-sm: 10px;
   --desk-radius: 16px;
   --desk-radius-lg: 22px;
+  --desk-font-2xs: 11px;
   --desk-font-xs: 12px;
   --desk-font-sm: 13px;
   --desk-font-base: 14px;
@@ -200,6 +205,7 @@
   --desk-icon-sm: 14px;
   --desk-icon-md: 16px;
   --desk-icon-lg: 18px;
+  --desk-icon-xl: 34px;
 
   /* 动效：折叠面板过渡（JS 兜底复位时长见 common/renderer/composables/useCollapseAnimation.ts） */
   --desk-motion-collapse: 200ms;

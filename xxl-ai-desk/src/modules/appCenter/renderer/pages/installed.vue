@@ -144,7 +144,7 @@ onMounted(async () => {
 }
 
 .app-empty-icon {
-  font-size: 34px;
+  font-size: var(--desk-icon-xl);
 }
 
 .app-empty-title {

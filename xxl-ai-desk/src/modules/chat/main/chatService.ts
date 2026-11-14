@@ -380,7 +380,7 @@ export async function sendChat(
     /* 会话绑定的 Agent：创建会话时已校验存在，缺失即视为数据异常 */
     const agent = getAgentById(session.agentId)
     if (!agent) {
-      fail(translate(language, 'runtime.agentMissing'))
+      fail(translate(language, 'runtime.error.agentMissing'))
       return
     }
 

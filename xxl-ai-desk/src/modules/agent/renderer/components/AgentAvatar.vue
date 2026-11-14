@@ -49,7 +49,7 @@ const iconStyle = computed(() => ({ fontSize: `${Math.round(props.size * 0.56)}p
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--desk-primary-contrast);
   line-height: 1;
 }
 </style>

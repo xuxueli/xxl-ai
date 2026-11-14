@@ -331,7 +331,7 @@ function onSave(): void {
   max-width: 100%;
   max-height: 100%;
   border-radius: var(--desk-radius-sm);
-  background: #000;
+  background: var(--desk-media-backdrop);
 }
 
 .viewer-media audio {

@@ -408,7 +408,7 @@ body.resizing-vertical {
 
 .markdown-body video {
   max-height: 480px;
-  background: #000;
+  background: var(--desk-media-backdrop);
 }
 
 .markdown-body audio {
@@ -795,12 +795,12 @@ body.resizing-vertical {
 
 .hljs-addition {
   color: var(--code-green);
-  background: rgba(46, 160, 67, 0.15);
+  background: color-mix(in srgb, var(--code-green) 15%, transparent);
 }
 
 .hljs-deletion {
   color: var(--code-red);
-  background: rgba(248, 81, 73, 0.15);
+  background: color-mix(in srgb, var(--code-red) 15%, transparent);
 }
 
 /* --- 聊天代码块：GitHub 风格「语言标签 + 复制按钮」头部 --- */
@@ -881,7 +881,7 @@ body.resizing-vertical {
 }
 
 .markdown-body .code-copy.copied {
-  color: #2da44e;
+  color: var(--code-green);
 }
 
 .markdown-body .code-block pre {

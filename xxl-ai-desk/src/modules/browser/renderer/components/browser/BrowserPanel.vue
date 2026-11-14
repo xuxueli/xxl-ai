@@ -579,7 +579,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--desk-border);
   border-radius: 8px;
   background: var(--desk-bg-elevated);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 16%);
+  box-shadow: var(--desk-shadow-soft);
 }
 
 .find-input {

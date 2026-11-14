@@ -350,7 +350,7 @@ defineExpose({ toggleSearch, insertText, scrollToLine: jump, applyFormat, insert
 }
 
 .note-empty-icon {
-  font-size: 34px;
+  font-size: var(--desk-icon-xl);
   color: var(--desk-text-tertiary);
 }
 

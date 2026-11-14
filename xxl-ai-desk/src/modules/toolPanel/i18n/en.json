@@ -82,7 +82,6 @@
     "maximize": "Maximize",
     "restore": "Restore",
     "close": "Collapse",
-    "loadFailPage": "Failed to load page",
     "emptyTree": "Empty directory",
     "newTab": "New tab",
     "tabLimit": "Tab limit reached for this session; opened in the current tab",

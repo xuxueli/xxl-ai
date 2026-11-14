@@ -66,27 +66,27 @@ function compact(value: string | undefined): string {
 }
 
 /* 卡片节点 → 条目 */
-function toItem(
-  slug: string,
-  name: string,
-  description: string,
-  author: string,
-  category: string,
-  logo: string,
-  remote: boolean,
+function toItem(input: {
+  slug: string
+  name: string
+  description: string
+  author: string
+  category: string
+  logo: string
+  remote: boolean
   stars: number
-): McpDiscoverItem {
+}): McpDiscoverItem {
   return {
     source: 'mcpso',
-    slug,
-    name,
-    description,
-    author,
-    category,
-    remote,
-    stars,
-    detailUrl: `${BASE_URL}/zh/servers/${slug}`,
-    logo
+    slug: input.slug,
+    name: input.name,
+    description: input.description,
+    author: input.author,
+    category: input.category,
+    remote: input.remote,
+    stars: input.stars,
+    detailUrl: `${BASE_URL}/zh/servers/${input.slug}`,
+    logo: input.logo
   }
 }
 
@@ -139,7 +139,18 @@ function parseCards(html: string, page: number): { items: McpDiscoverItem[]; has
     const text = compact(card.text())
     /* 星标数：星形图标所在行文本（如 2.5K / 226） */
     const stars = parseCount(compact(card.find('svg.lucide-star').first().parent().text()))
-    items.push(toItem(slug, name, description, author, category, logo, /远程/.test(text), stars))
+    items.push(
+      toItem({
+        slug,
+        name,
+        description,
+        author,
+        category,
+        logo,
+        remote: /远程/.test(text),
+        stars
+      })
+    )
   })
 
   /* 是否还有下一页：页面存在比当前页更大的 page 链接 */

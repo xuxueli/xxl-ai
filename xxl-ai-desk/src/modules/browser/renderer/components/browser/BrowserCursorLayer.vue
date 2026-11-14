@@ -139,7 +139,7 @@ const rippleStyle = computed(() => ({
           <path
             d="M4 3 L4 30.5 L12 23.5 L17.4 35 L23.2 32.2 L17.8 21 L28.4 20 Z"
             fill="currentColor"
-            stroke="#fff"
+            stroke="var(--desk-agent-contrast)"
             stroke-width="2"
             stroke-linejoin="round"
           />
@@ -154,7 +154,7 @@ const rippleStyle = computed(() => ({
           <path
             d="M10 3 V31 M4.6 3 H15.4 M4.6 31 H15.4"
             fill="none"
-            stroke="#fff"
+            stroke="var(--desk-agent-contrast)"
             stroke-width="5"
             stroke-linecap="round"
           />
@@ -168,7 +168,7 @@ const rippleStyle = computed(() => ({
         </svg>
         <!-- 滚动：滚轮 -->
         <svg v-else-if="cursor.kind === 'scroll'" class="cursor-icon" viewBox="0 0 26 36" aria-hidden="true">
-          <rect x="3" y="2.6" width="20" height="30.8" rx="10" fill="#fff" fill-opacity="0.92" />
+          <rect x="3" y="2.6" width="20" height="30.8" rx="10" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <rect
             x="4.8"
             y="4.4"
@@ -192,30 +192,30 @@ const rippleStyle = computed(() => ({
             cx="14"
             cy="14"
             r="9"
-            fill="color-mix(in srgb, var(--desk-primary) 18%, #fff)"
-            stroke="#fff"
+            fill="color-mix(in srgb, var(--desk-agent-accent) 18%, var(--desk-agent-contrast))"
+            stroke="var(--desk-agent-contrast)"
             stroke-width="5"
           />
           <circle cx="14" cy="14" r="9" fill="none" stroke="currentColor" stroke-width="2.6" />
-          <path d="M20.6 20.6 L29 29" stroke="#fff" stroke-width="6" stroke-linecap="round" />
+          <path d="M20.6 20.6 L29 29" stroke="var(--desk-agent-contrast)" stroke-width="6" stroke-linecap="round" />
           <path d="M20.6 20.6 L29 29" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
         </svg>
         <!-- 等待：时钟 -->
         <svg v-else-if="cursor.kind === 'wait'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
-          <circle cx="17" cy="17" r="12" fill="#fff" fill-opacity="0.92" />
+          <circle cx="17" cy="17" r="12" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <circle cx="17" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="2.6" />
           <path d="M17 10 V17.5 L22 20.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
         </svg>
         <!-- 导航：地球 -->
         <svg v-else-if="cursor.kind === 'navigate'" class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
-          <circle cx="17" cy="17" r="12" fill="#fff" fill-opacity="0.92" />
+          <circle cx="17" cy="17" r="12" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <circle cx="17" cy="17" r="12" fill="none" stroke="currentColor" stroke-width="2.6" />
           <ellipse cx="17" cy="17" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2" />
           <path d="M5.4 17 H28.6" stroke="currentColor" stroke-width="2" />
         </svg>
         <!-- 截图：相机 -->
         <svg v-else class="cursor-icon" viewBox="0 0 34 34" aria-hidden="true">
-          <rect x="4" y="9" width="26" height="18" rx="4" fill="#fff" fill-opacity="0.92" />
+          <rect x="4" y="9" width="26" height="18" rx="4" fill="var(--desk-agent-contrast)" fill-opacity="0.92" />
           <rect x="4" y="9" width="26" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2.6" />
           <circle cx="17" cy="18" r="5" fill="none" stroke="currentColor" stroke-width="2.6" />
           <path d="M12 9 L13.8 5.6 H20.2 L22 9" fill="none" stroke="currentColor" stroke-width="2.4" />
@@ -258,7 +258,7 @@ const rippleStyle = computed(() => ({
   border-radius: 6px;
   background: color-mix(in srgb, var(--desk-agent-accent) 14%, transparent);
   box-shadow:
-    0 0 0 3px #fff,
+    0 0 0 3px var(--desk-agent-contrast),
     0 0 0 8px color-mix(in srgb, var(--desk-agent-accent) 30%, transparent);
   transition: all 160ms ease-out;
 }
@@ -284,7 +284,7 @@ const rippleStyle = computed(() => ({
   height: var(--agent-cursor-height);
   color: var(--desk-agent-accent);
   filter:
-    drop-shadow(0 3px 6px rgb(0 0 0 / 42%))
+    drop-shadow(0 3px 6px var(--desk-agent-shadow))
     drop-shadow(0 0 10px color-mix(in srgb, var(--desk-agent-accent) 55%, transparent));
   opacity: 0.9;
   transition:
@@ -371,13 +371,13 @@ const rippleStyle = computed(() => ({
   gap: 7px;
   max-width: 300px;
   padding: 5px 12px;
-  border: 1px solid rgb(255 255 255 / 55%);
+  border: 1px solid color-mix(in srgb, var(--desk-agent-contrast) 55%, transparent);
   border-radius: 999px;
   background: linear-gradient(135deg, var(--desk-agent-accent) 0%, var(--desk-agent-accent-2) 100%);
   color: var(--desk-agent-contrast);
   box-shadow:
     0 6px 18px color-mix(in srgb, var(--desk-agent-accent-deep) 45%, transparent),
-    0 1px 0 rgb(255 255 255 / 30%) inset;
+    0 1px 0 color-mix(in srgb, var(--desk-agent-contrast) 30%, transparent) inset;
   font-size: var(--desk-font-sm);
   font-weight: 500;
   line-height: 18px;
@@ -395,7 +395,7 @@ const rippleStyle = computed(() => ({
   flex-shrink: 0;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 35%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--desk-agent-contrast) 35%, transparent);
 }
 
 /* 执行中圆点闪烁；结束后保持常亮，表示这是最近一次动作 */

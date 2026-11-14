@@ -150,6 +150,7 @@ modules/{domain}/
 - **本地文件协议放行**：各域通过 `common/main/utils/localFileRoots.ts#registerLocalFileRoot` 登记允许根；`modules/platform` 只做协议 / Range / 路径校验，不感知 project、note 等具体域。
 - **应用设置面板**：appCenter renderer 提供 `appSettings` 注册表；渲染层装配处登记「appId → 设置组件」，appCenter 不反向 import 子应用。
 - **跨域数据**：禁止跨模块读取 `main/schema`；跨域统计 / 级联改为调用所属域 `main/index.ts` 导出的 service 函数。
+- **跨进程纯 Node 工具**：`common/main/utils/*` 中不依赖 Electron / DB / 主进程状态的纯工具（如 `pathGuard`）允许 worker 引用；新增此类文件需在头部注明「主进程与 Agent 运行时共用」，其余 `common/main` 能力仍禁止进入 worker。
 
 ### 1.4 模块边界与职责收拢（硬约束）
 

@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "XXL-AI-Desk",
-    "tagline": "AI Agent desktop client"
+    "name": "XXL-AI-Desk"
   },
   "update": {
     "title": "Update available",

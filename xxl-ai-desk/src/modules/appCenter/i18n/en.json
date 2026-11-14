@@ -1,14 +1,12 @@
 {
   "appCenter": {
     "title": "App Center",
-    "subtitle": "Manage built-in apps. Enabled apps appear in the left icon rail.",
     "myApps": "My Apps",
     "myAppsHint": "Installed apps. Enabled apps appear in the left icon rail.",
     "market": "App Market",
     "marketHint": "Browse and install built-in apps. Install first, then enable them in My Apps.",
     "install": "Install",
     "installed": "Installed",
-    "notInstalled": "Not installed",
     "installSuccess": "\"{0}\" installed. Enable it in My Apps.",
     "open": "Open",
     "settings": "Settings",
