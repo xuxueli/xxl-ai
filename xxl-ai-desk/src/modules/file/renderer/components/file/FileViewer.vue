@@ -200,14 +200,15 @@ function onSave(): void {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-width: 48px;
-  padding: 12px 12px 12px 16px;
+  min-width: 30px;
+  padding: 12px 8px 12px 10px;
   background: var(--desk-code-bg);
   border-right: 1px solid var(--desk-code-border);
   text-align: right;
   color: var(--desk-text-tertiary);
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
-  font-size: var(--desk-font-sm);
+  /* 与 CodeEditor 行号栏保持一致：小字号 + 紧凑间距 */
+  font-size: var(--desk-font-xs);
   line-height: 22px;
   font-variant-numeric: tabular-nums;
   user-select: none;

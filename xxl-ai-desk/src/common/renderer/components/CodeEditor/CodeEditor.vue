@@ -137,8 +137,8 @@ function buildEditorTheme(palette: EditorThemePalette): Extension {
       borderRight: `1px solid ${palette.border}`
     },
     '.cm-lineNumbers .cm-gutterElement': {
-      padding: '0 12px 0 14px',
-      minWidth: '48px',
+      padding: '0 8px 0 10px',
+      minWidth: '30px',
       fontSize: 'var(--desk-font-xs)'
     },
     '.cm-foldGutter .cm-gutterElement': { color: palette.gutterText },
@@ -151,7 +151,11 @@ function buildEditorTheme(palette: EditorThemePalette): Extension {
       borderLeftColor: palette.text,
       borderLeftWidth: '2px'
     },
-    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+    /*
+     * 选区配色：CodeMirror 基础主题的聚焦选区选择器带完整层级（5 个类），
+     * 这里用同等完整的选择器保证优先级不被覆盖，否则聚焦时仍显示默认色。
+     */
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
       backgroundColor: palette.selection
     },
     '.cm-selectionMatch': { backgroundColor: palette.selection },
