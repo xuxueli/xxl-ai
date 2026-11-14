@@ -10,6 +10,8 @@ export interface ProjectDTO {
   name: string
   /* 绑定的本地磁盘目录绝对路径 */
   path: string
+  /* 是否为默认项目空间（按 {数据目录}/projects/default 识别） */
+  defaultWorkspace: boolean
   /* 是否启用项目长期记忆 */
   memoryEnabled: boolean
   /* 记忆生成时间（ISO），未生成过为空串 */

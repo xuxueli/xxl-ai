@@ -26,15 +26,23 @@ const storageDirDirty = computed(
   () => storageDirInput.value.trim() !== store.settings.storageDir
 )
 
-/* 抽屉打开时加载存储目录配置并同步草稿 */
-watch(visible, async (open) => {
-  if (!open) {
-    return
-  }
-  storageDirInput.value = store.settings.storageDir
-  await store.loadSettings()
-  storageDirInput.value = store.settings.storageDir
-})
+/*
+ * 抽屉打开时加载存储目录配置并同步草稿。
+ *   - immediate：组件按需挂载（首次打开才创建），需要立即按当前可见状态加载；
+ *   - 未加载完成前先回填已有配置，避免输入框与「默认目录」占位文案空白。
+ */
+watch(
+  visible,
+  async (open) => {
+    if (!open) {
+      return
+    }
+    storageDirInput.value = store.settings.storageDir
+    await store.loadSettings()
+    storageDirInput.value = store.settings.storageDir
+  },
+  { immediate: true }
+)
 
 /* 错误对象 → 可读文本 */
 function messageOf(error: unknown): string {

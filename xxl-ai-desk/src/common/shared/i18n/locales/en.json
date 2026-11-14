@@ -166,6 +166,8 @@
       "skillGithubExtractTooLarge": "The extracted repository is too large for online install",
       "skillGithubExtractTooManyFiles": "The repository contains too many files for online install",
       "skillCommunityInvalidQuery": "Invalid skills.sh query (try more specific keywords)",
+      "dataDirInvalid": "The data directory must be an absolute path",
+      "dataDirUnwritable": "The data directory is not writable. Choose another folder",
       "noteStorageInvalid": "The note storage folder must be an absolute path",
       "noteStorageUnwritable": "The note storage folder is not writable. Choose another folder",
       "notePathOutside": "Only files inside the note folder can be accessed",

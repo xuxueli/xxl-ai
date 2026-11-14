@@ -39,6 +39,13 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     return root ? (childrenMap.value[root] ?? []) : []
   })
 
+  /* 目标路径是否位于当前项目根目录内（统一分隔符后按前缀判断） */
+  function isUnderRoot(root: string, dir: string): boolean {
+    const base = normalizePath(root).replace(/\/+$/, '')
+    const target = normalizePath(dir)
+    return target === base || target.startsWith(`${base}/`)
+  }
+
   /* 过滤时递归判断节点（或已加载子孙）是否命中 */
   function matchNode(entry: FsEntry, word: string): boolean {
     if (entry.name.toLowerCase().includes(word)) {
@@ -99,7 +106,13 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
   async function loadDir(path: string, force = false): Promise<void> {
     const root = options.root()
     const projectId = options.projectId()
-    if (!root || !projectId || (!force && (childrenMap.value[path] || loadingMap.value[path]))) {
+    if (
+      !root ||
+      !projectId ||
+      /* 会话持久化的展开路径可能来自旧项目（会话 id 复用 / 数据目录切换），越界路径直接忽略 */
+      !isUnderRoot(root, path) ||
+      (!force && (childrenMap.value[path] || loadingMap.value[path]))
+    ) {
       return
     }
     loadingMap.value = { ...loadingMap.value, [path]: true }
@@ -162,9 +175,21 @@ export function useProjectFileTree(options: UseProjectFileTreeOptions) {
     childrenMap.value = {}
     loadingMap.value = {}
     const root = options.root()
-    /* 首次挂载保留会话持久化的展开态与关键字；根目录真正变化时才清空 */
+    /*
+     * 展开态按会话 id 持久化，而会话 id 可能与旧数据复用（数据目录切换 / 数据库重建）。
+     * 这里始终剔除不属于当前项目根目录的路径，避免用旧项目路径触发越界读取。
+     */
+    if (root) {
+      const nextExpanded: Record<string, boolean> = {}
+      for (const [dir, open] of Object.entries(expandedMap.value)) {
+        if (isUnderRoot(root, dir)) {
+          nextExpanded[dir] = open
+        }
+      }
+      expandedMap.value = nextExpanded
+    }
+    /* 根目录真正变化时清空过滤词；同一项目内切换页面保留 */
     if (lastRoot !== undefined && lastRoot !== root) {
-      expandedMap.value = {}
       keyword.value = ''
     }
     lastRoot = root

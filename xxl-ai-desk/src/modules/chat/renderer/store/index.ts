@@ -223,8 +223,8 @@ export const useChatStore = defineStore('chat', () => {
     currentId.value = 0
     messages.value = []
     loading.value = false
-    /* 新建对话默认选中排序第一个项目与默认 Agent */
-    useProjectStore().selectFirstProject()
+    /* 新建对话默认选中默认项目空间与默认 Agent */
+    useProjectStore().selectDefaultProject()
     useAgentStore().selectDefaultAgent()
     /* 确保草稿工具面板状态已创建（含本地持久化恢复） */
     useToolPanelStore().ensure(DRAFT_SESSION_KEY)

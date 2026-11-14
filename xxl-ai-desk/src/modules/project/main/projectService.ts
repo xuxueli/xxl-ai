@@ -3,9 +3,10 @@
  *   - 目录选择对话框与跨域级联由 IPC 层编排，本服务只做项目持久化。
  */
 
-import { basename } from 'path'
+import { basename, join, resolve } from 'path'
 import { eq } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
+import { getProjectsDir } from '@common/main/config/paths'
 import { t } from '@common/main/i18n'
 import { projectTable } from '@modules/project/main/schema'
 import type { ProjectCreateInput, ProjectDTO } from '@modules/project/shared'
@@ -30,12 +31,24 @@ export interface ProjectMemoryEntry extends ProjectMemoryState {
   projectName: string
 }
 
-/* 行记录 → DTO */
+/* 默认项目空间目录 */
+function defaultProjectPath(): string {
+  return join(getProjectsDir(), 'default')
+}
+
+/* 路径归一：Linux 大小写敏感，其它平台按不敏感比较 */
+function normalizePath(value: string): string {
+  const normalized = resolve(value)
+  return process.platform === 'linux' ? normalized : normalized.toLowerCase()
+}
+
+/* 行记录 → DTO；默认项目按目录识别，用户重命名不影响 */
 function toDTO(row: ProjectRow): ProjectDTO {
   return {
     id: row.id,
     name: row.name,
     path: row.path,
+    defaultWorkspace: normalizePath(row.path) === normalizePath(defaultProjectPath()),
     memoryEnabled: row.memoryEnabled === 1,
     memoryUpdateTime: row.memoryUpdateTime,
     addTime: row.addTime,

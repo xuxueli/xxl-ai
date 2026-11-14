@@ -6,6 +6,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '@modules/settings/renderer'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 
 const settings = useSettingsStore()
@@ -29,11 +30,15 @@ async function browseDataDir(): Promise<void> {
   }
 }
 
-/* 保存数据目录（写入配置文件，重启后生效） */
+/* 保存数据目录（写入引导目录配置文件，重启后生效） */
 async function saveDataDir(): Promise<void> {
-  await settings.saveDataDir(dataDirInput.value)
-  dataDirInput.value = settings.dataDir
-  ElMessage.success(t('settings.dataDirSaved'))
+  try {
+    await settings.saveDataDir(dataDirInput.value)
+    dataDirInput.value = settings.dataDir
+    ElMessage.success(t('settings.dataDirSaved'))
+  } catch (error) {
+    ElMessage.error(ipcErrorMessage(error))
+  }
 }
 
 /* 恢复默认数据目录（仅回填输入框，保存后生效） */

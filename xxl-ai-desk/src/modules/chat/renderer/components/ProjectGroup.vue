@@ -1,12 +1,11 @@
 <script setup lang="ts">
 /*
- * 会话侧栏 - 单个项目分组：项目行（重命名 / 显示 / 删除）与其下会话列表。
+ * 会话侧栏 - 单个项目分组：项目行（重命名 / 删除 / 打开所在文件夹）与其下会话列表。
  * @author xuxueli 2026-10-25
  */
-import { computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, type ComponentPublicInstance } from 'vue'
+import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import { useChatStore } from '@modules/chat/renderer'
-import { useSettingsStore } from '@modules/settings/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue'
 import { DeskTooltip } from '@common/renderer/components'
@@ -26,22 +25,54 @@ const props = defineProps<{
 const emit = defineEmits<{ toggle: []; select: [sessionId: number] }>()
 
 const chat = useChatStore()
-const settings = useSettingsStore()
 const projectStore = useProjectStore()
 
+/* 项目行下拉实例：右键项目名与悬浮「...」共用同一菜单 */
+const projectMenu = ref<DropdownInstance>()
 
-/* 「在文件管理器中显示」文案按运行平台区分 */
-const revealLabel = computed(() => {
-  if (settings.platform === 'darwin') {
-    return t('project.revealMac')
-  }
-  if (settings.platform === 'win32') {
-    return t('project.revealWin')
-  }
-  return t('project.revealLinux')
-})
+/* 会话行下拉实例：按会话 id 记录，右键会话名与悬浮「...」共用同一菜单 */
+const sessionMenus = new Map<number, DropdownInstance>()
 
-/* 项目操作下拉：重命名 / 在文件管理器中显示 / 删除 */
+/* 打开项目操作菜单（右键项目名时调用，菜单锚定在行内「...」上） */
+function openProjectMenu(): void {
+  projectMenu.value?.handleOpen()
+}
+
+/* 绑定 / 解绑会话下拉实例 */
+function bindSessionMenu(id: number, el: unknown): void {
+  if (el) {
+    sessionMenus.set(id, el as DropdownInstance)
+  } else {
+    sessionMenus.delete(id)
+  }
+}
+
+/* 会话下拉 ref 绑定函数：按会话 id 缓存，避免每次渲染重建导致 ref 抖动 */
+const sessionMenuRefs = new Map<number, (el: unknown) => void>()
+function sessionMenuRef(id: number): (el: unknown) => void {
+  let binder = sessionMenuRefs.get(id)
+  if (!binder) {
+    binder = (el: unknown): void => bindSessionMenu(id, el)
+    sessionMenuRefs.set(id, binder)
+  }
+  return binder
+}
+
+/* 打开会话操作菜单（右键会话名时调用，菜单锚定在行内「...」上） */
+function openSessionMenu(id: number): void {
+  sessionMenus.get(id)?.handleOpen()
+}
+
+/* 会话操作下拉：重命名 / 删除 */
+function onSessionCommand(session: SessionDTO, command: string): void {
+  if (command === 'rename') {
+    void onRenameSession(session)
+  } else if (command === 'delete') {
+    void onDeleteSession(session.id)
+  }
+}
+
+/* 项目操作下拉：重命名 / 删除 / 打开所在文件夹 */
 function onProjectCommand(command: string): void {
   if (command === 'rename') {
     void onRenameProject()
@@ -136,7 +167,11 @@ async function onDeleteSession(id: number): Promise<void> {
 
 <template>
   <div class="project-group">
-    <SidebarRow :title="project.path" @click="emit('toggle')">
+    <SidebarRow
+      :title="project.path"
+      @click="emit('toggle')"
+      @contextmenu.prevent="openProjectMenu"
+    >
       <template #icon>
         <el-icon class="project-icon">
           <FolderOpened v-if="expanded" />
@@ -146,28 +181,28 @@ async function onDeleteSession(id: number): Promise<void> {
       {{ project.name }}
       <template #actions>
         <span class="project-actions" @click.stop>
+          <DeskTooltip :content="t('project.rename')">
+            <el-icon class="op" @click="onRenameProject">
+              <EditPen />
+            </el-icon>
+          </DeskTooltip>
           <DeskTooltip :content="t('common.actions')">
-            <el-dropdown trigger="click" @command="onProjectCommand">
+            <el-dropdown ref="projectMenu" trigger="click" @command="onProjectCommand">
               <el-icon class="op"><MoreFilled /></el-icon>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="rename">
                     <el-icon><EditPen /></el-icon>{{ t('project.rename') }}
                   </el-dropdown-item>
-                  <el-dropdown-item command="reveal">
-                    <el-icon><FolderOpened /></el-icon>{{ revealLabel }}
-                  </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>
+                  <el-dropdown-item command="delete">
                     <el-icon><Delete /></el-icon>{{ t('project.delete') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="reveal" divided>
+                    <el-icon><FolderOpened /></el-icon>{{ t('project.openFolder') }}
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
-          </DeskTooltip>
-          <DeskTooltip :content="t('project.rename')">
-            <el-icon class="op" @click="onRenameProject">
-              <EditPen />
-            </el-icon>
           </DeskTooltip>
         </span>
       </template>
@@ -181,12 +216,33 @@ async function onDeleteSession(id: number): Promise<void> {
         :indent="16"
         :active="session.id === activeSessionId"
         @click="emit('select', session.id)"
+        @contextmenu.prevent="openSessionMenu(session.id)"
       >
         {{ session.title || t('chat.newChat') }}
         <template #actions>
           <span class="session-actions" @click.stop>
-            <el-icon class="op" @click="onRenameSession(session)"><EditPen /></el-icon>
-            <el-icon class="op" @click="onDeleteSession(session.id)"><Delete /></el-icon>
+            <DeskTooltip :content="t('chat.renameSession')">
+              <el-icon class="op" @click="onRenameSession(session)"><EditPen /></el-icon>
+            </DeskTooltip>
+            <DeskTooltip :content="t('common.actions')">
+              <el-dropdown
+                :ref="sessionMenuRef(session.id)"
+                trigger="click"
+                @command="(command: string) => onSessionCommand(session, command)"
+              >
+                <el-icon class="op"><MoreFilled /></el-icon>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="rename">
+                      <el-icon><EditPen /></el-icon>{{ t('chat.renameSession') }}
+                    </el-dropdown-item>
+                    <el-dropdown-item command="delete">
+                      <el-icon><Delete /></el-icon>{{ t('chat.deleteSession') }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </DeskTooltip>
           </span>
         </template>
       </SidebarRow>

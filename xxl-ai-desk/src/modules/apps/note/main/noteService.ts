@@ -21,7 +21,8 @@ import type {
   NoteSettingsPatch
 } from '../shared/contracts'
 import { getAppConfig, patchAppConfig } from '@modules/appCenter/main'
-import { ensureWritableDir, resolveNoteRoot, type ResolvedNoteRoot } from './notePath'
+import { resolveNoteRoot, type ResolvedNoteRoot } from './notePath'
+import { ensureWritableDir } from '@common/main/config/paths'
 
 /* 文本读取上限（与文件工具保持一致） */
 const MAX_TEXT_BYTES = 10 * 1024 * 1024

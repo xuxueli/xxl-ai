@@ -5,27 +5,13 @@
  * @author xuxueli 2026-11-08
  */
 
-import { mkdirSync, rmSync, writeFileSync } from 'fs'
-import { isAbsolute, join, resolve } from 'path'
-import { getNotesDir } from '@common/main/config/paths'
+import { isAbsolute, resolve } from 'path'
+import { ensureWritableDir, getNotesDir } from '@common/main/config/paths'
 import { t } from '@common/main/i18n'
 
 /* 默认笔记目录：数据目录下的 notes */
 function getDefaultNoteDir(): string {
   return getNotesDir()
-}
-
-/* 确保目录存在且可写：mkdir + 写探针，失败返回 false */
-export function ensureWritableDir(dir: string): boolean {
-  try {
-    mkdirSync(dir, { recursive: true })
-    const probe = join(dir, `.write-test-${process.pid}`)
-    writeFileSync(probe, 'ok', 'utf-8')
-    rmSync(probe, { force: true })
-    return true
-  } catch {
-    return false
-  }
 }
 
 /* 解析后的笔记根目录 */

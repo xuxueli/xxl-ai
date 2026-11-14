@@ -1,11 +1,12 @@
 /* XXL-AI-Desk 主进程入口：窗口、生命周期、IPC 装配 */
 
 import { app, BrowserWindow, nativeImage, shell } from 'electron'
-import { existsSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import './i18n'
 import { BROWSER_IPC } from '@modules/browser/shared'
 import { APP_NAME } from '@common/shared/appInfo'
+import { getCacheDir, getDataDir } from '@common/main/config/paths'
 import { initDatabaseFromModules } from '@main/db'
 import { setMainLanguage } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
@@ -21,6 +22,16 @@ import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
 import { disposeBrowserActions } from '@modules/browser/main'
 import { initLogger } from '@common/main/utils/logger'
+
+/* 业务数据目录：默认系统配置目录，可由 xxl-ai-desk-config.json 切换；必须在 app ready 前设置 */
+const dataDir = getDataDir()
+mkdirSync(dataDir, { recursive: true, mode: 0o700 })
+
+/* 系统缓存目录：Chromium 缓存与本地存储独立存放，避免污染业务数据目录 */
+const cacheDir = getCacheDir()
+mkdirSync(cacheDir, { recursive: true, mode: 0o700 })
+app.setPath('userData', cacheDir)
+app.setPath('sessionData', cacheDir)
 
 /* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null

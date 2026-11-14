@@ -64,7 +64,7 @@
     "selectProvider": "Select provider",
     "selectModel": "Select model",
     "dataDir": "Data directory",
-    "dataDirTip": "Chats, messages, providers and settings are stored in a single SQLite file in this directory. Restart to apply changes.",
+    "dataDirTip": "Chats, messages, providers and settings are stored in a SQLite file in this directory; skills, projects and notes default to skills / projects / notes under it. Restart to apply changes.",
     "dataDirPlaceholder": "Absolute path to the data directory",
     "browse": "Browse",
     "openDir": "Open folder",

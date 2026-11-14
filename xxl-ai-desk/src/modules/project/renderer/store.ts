@@ -22,6 +22,11 @@ export const useProjectStore = defineStore('project', () => {
     () => projects.value.find((item) => item.id === currentId.value) ?? null
   )
 
+  /* 默认项目空间（按内置目录识别） */
+  const defaultProject = computed(
+    () => projects.value.find((item) => item.defaultWorkspace) ?? null
+  )
+
   /* 加载项目列表（保留当前选择，失效则清空） */
   async function loadProjects(): Promise<void> {
     projects.value = await api.project.list()
@@ -35,10 +40,12 @@ export const useProjectStore = defineStore('project', () => {
     currentId.value = id
   }
 
-  /* 选中默认项目：与侧栏默认排序（名称升序）的第一个项目一致 */
-  function selectFirstProject(): void {
-    const first = [...projects.value].sort((a, b) => a.name.localeCompare(b.name, 'zh'))[0]
-    currentId.value = first?.id ?? 0
+  /* 选中默认项目空间；不存在时回退到名称升序的第一个项目 */
+  function selectDefaultProject(): void {
+    const target =
+      defaultProject.value ??
+      [...projects.value].sort((a, b) => a.name.localeCompare(b.name, 'zh'))[0]
+    currentId.value = target?.id ?? 0
   }
 
   /* 项目是否展开 */
@@ -91,6 +98,8 @@ export const useProjectStore = defineStore('project', () => {
     }
     if (currentId.value === id) {
       currentId.value = 0
+      /* 删除当前项目后重新选中默认项目空间，避免界面停在无归属状态 */
+      selectDefaultProject()
     }
   }
 
@@ -113,9 +122,10 @@ export const useProjectStore = defineStore('project', () => {
     currentId,
     expanded,
     currentProject,
+    defaultProject,
     loadProjects,
     selectProject,
-    selectFirstProject,
+    selectDefaultProject,
     isExpanded,
     setExpanded,
     toggleExpanded,

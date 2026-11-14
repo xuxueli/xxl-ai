@@ -9,14 +9,14 @@
 import { execFile, execFileSync } from 'child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 import { delimiter, dirname, isAbsolute, join } from 'path'
-import { getDataDir } from '@common/main/config/paths'
+import { getRuntimeDir } from '@common/main/config/paths'
 import { t } from '@common/main/i18n'
 import { getSettings } from '@modules/settings/main'
 import type { RuntimeDetectResult, RuntimeExecInput } from '@modules/platform/shared'
 
-/* Electron 内置 Node shim 所在目录：随数据目录迁移，避免污染系统 */
+/* Electron 内置 Node shim 所在目录：机器本地运行目录，不随业务数据目录切换 */
 export function getRuntimeBinDir(): string {
-  return join(getDataDir(), 'runtime', 'bin')
+  return join(getRuntimeDir(), 'bin')
 }
 
 /* shim 文件名（Windows 需 .cmd 后缀才能被 shell 作为命令解析） */
@@ -196,7 +196,7 @@ export function buildMcpRuntimePath(basePath: string = process.env.PATH ?? ''): 
 
 /* 终端 shell 包装脚本目录（按设置的优先级重排 PATH） */
 export function getRuntimeShellDir(): string {
-  return join(getDataDir(), 'runtime', 'shell')
+  return join(getRuntimeDir(), 'shell')
 }
 
 /* 执行命令并返回首行输出版本号（python 可能输出到 stderr，一并拼接） */

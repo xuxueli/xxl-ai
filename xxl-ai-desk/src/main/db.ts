@@ -12,6 +12,7 @@ import { DIAGNOSTICS_DDL } from '@modules/diagnostics/main/ddl'
 import { MCP_DDL } from '@modules/mcp/main/ddl'
 import { seedMcpServers } from '@modules/mcp/main/seed'
 import { PROJECT_DDL } from '@modules/project/main/ddl'
+import { ensureDefaultProject } from '@modules/project/main/seed'
 import { PROVIDER_DDL } from '@modules/provider/main/ddl'
 import { SETTINGS_DDL } from '@modules/settings/main/ddl'
 import { SKILL_DDL } from '@modules/skill/main/ddl'
@@ -21,5 +22,5 @@ const DDL = [PROVIDER_DDL, PROJECT_DDL, CHAT_DDL, SETTINGS_DDL, MCP_DDL, SKILL_D
 
 /* 初始化本地数据库（应用就绪后调用） */
 export function initDatabaseFromModules(): void {
-  initDatabase(DDL, [seedMcpServers, seedDefaultAgent])
+  initDatabase(DDL, [seedMcpServers, seedDefaultAgent, ensureDefaultProject])
 }

@@ -64,7 +64,7 @@
     "selectProvider": "选择供应商",
     "selectModel": "选择模型",
     "dataDir": "数据目录",
-    "dataDirTip": "对话、消息、供应商与设置均存于此目录下的 SQLite 单文件；修改后需重启生效。",
+    "dataDirTip": "对话、消息、供应商与设置存于该目录下的 SQLite；SKILL、项目与笔记默认保存在该目录的 skills / projects / notes 下。修改后需重启生效。",
     "dataDirPlaceholder": "数据目录绝对路径",
     "browse": "浏览",
     "openDir": "打开目录",

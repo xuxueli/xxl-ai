@@ -1,21 +1,38 @@
 /*
- * 运行时路径配置（主进程基础设施）：默认数据目录取系统 userData，可在「通用设置」中修改
- * （写入 userData/desk-config.json）；配置独立于 SQLite（避免数据库位置自引用），修改后需重启生效。
+ * 运行时路径配置（主进程基础设施）：业务数据目录默认取系统配置目录，可在「通用设置」中切换
+ * （自定义目录写入固定引导目录下的 xxl-ai-desk-config.json）；配置独立于 SQLite
+ * （避免数据库位置自引用），修改后需重启生效。
+ * 本机运行文件与 Chromium 缓存分别放在本机数据目录、系统缓存目录，业务数据目录只保留用户数据。
  * 供 db / services / agent 共同依赖，避免 db 反向依赖 services。
  */
 
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { homedir } from 'os'
+import { isAbsolute, join, resolve } from 'path'
+import { t } from '@common/main/i18n'
 
-/* 数据目录配置文件固定放在系统默认 userData 下，不受自定义目录影响 */
-function configFile(): string {
-  return join(app.getPath('userData'), 'desk-config.json')
+/* 引导目录：固定位置，不受自定义数据目录影响 */
+function getBootstrapDir(): string {
+  if (process.platform === 'darwin') {
+    return join(homedir(), '.config', 'xxl-ai-desk')
+  }
+  if (process.platform === 'linux') {
+    const xdg = process.env.XDG_CONFIG_HOME?.trim()
+    const root = xdg && isAbsolute(xdg) ? xdg : join(homedir(), '.config')
+    return join(root, 'xxl-ai-desk')
+  }
+  return join(app.getPath('appData'), 'xxl-ai-desk')
 }
 
-/* 数据目录配置（持久化到系统 userData 下的 desk-config.json） */
+/* 数据目录配置文件固定放在引导目录下，避免数据目录自引用 */
+function configFile(): string {
+  return join(getBootstrapDir(), 'xxl-ai-desk-config.json')
+}
+
+/* 数据目录配置（自定义目录为空表示使用默认目录） */
 interface DeskConfig {
-  dataDir?: string /* 自定义数据目录绝对路径（空表示使用默认目录） */
+  dataDir?: string
 }
 
 /* 读取配置文件（容错：不存在或非法时返回空配置） */
@@ -32,20 +49,57 @@ function readConfig(): DeskConfig {
   }
 }
 
-/* 写入配置文件 */
+/* 写入配置文件：仅自定义目录时生成，权限 0600 */
 function writeConfig(config: DeskConfig): void {
-  writeFileSync(configFile(), JSON.stringify(config, null, 2), 'utf-8')
+  mkdirSync(getBootstrapDir(), { recursive: true, mode: 0o700 })
+  writeFileSync(configFile(), JSON.stringify(config, null, 2), { encoding: 'utf-8', mode: 0o600 })
 }
 
-/* 默认运行时数据目录（系统 userData） */
+/* 默认业务数据目录（系统配置目录下的 xxl-ai-desk） */
 export function getDefaultDataDir(): string {
-  return app.getPath('userData')
+  return getBootstrapDir()
+}
+
+/*
+ * 本机数据目录：保存与当前机器绑定、可重建但不宜随缓存清理的运行文件（如 runtime）。
+ * 不参与业务数据备份，也不随业务数据目录切换。
+ */
+export function getLocalDataDir(): string {
+  if (process.platform === 'darwin') {
+    return join(homedir(), 'Library', 'Application Support', 'xxl-ai-desk')
+  }
+  if (process.platform === 'linux') {
+    const xdg = process.env.XDG_DATA_HOME?.trim()
+    const root = xdg && isAbsolute(xdg) ? xdg : join(homedir(), '.local', 'share')
+    return join(root, 'xxl-ai-desk')
+  }
+  const local = process.env.LOCALAPPDATA?.trim()
+  return join(local && isAbsolute(local) ? local : app.getPath('appData'), 'xxl-ai-desk')
+}
+
+/* 系统缓存目录：Electron / Chromium 运行数据，可由系统或用户随时清理 */
+export function getCacheDir(): string {
+  if (process.platform === 'darwin') {
+    return join(homedir(), 'Library', 'Caches', 'xxl-ai-desk')
+  }
+  if (process.platform === 'linux') {
+    const xdg = process.env.XDG_CACHE_HOME?.trim()
+    const root = xdg && isAbsolute(xdg) ? xdg : join(homedir(), '.cache')
+    return join(root, 'xxl-ai-desk')
+  }
+  const local = process.env.LOCALAPPDATA?.trim()
+  return join(local && isAbsolute(local) ? local : app.getPath('appData'), 'xxl-ai-desk', 'cache')
+}
+
+/* 运行环境根目录：Node shim、终端 shell 集成等机器本地文件 */
+export function getRuntimeDir(): string {
+  return join(getLocalDataDir(), 'runtime')
 }
 
 /* 当前运行时数据目录（未配置时回退默认目录） */
 export function getDataDir(): string {
   const configured = readConfig().dataDir?.trim()
-  return configured || getDefaultDataDir()
+  return configured && isAbsolute(configured) ? resolve(configured) : getDefaultDataDir()
 }
 
 /* 数据库文件路径 */
@@ -93,20 +147,36 @@ export function ensureLogDir(): void {
   mkdirSync(getLogDir(), { recursive: true })
 }
 
+/* 确保目录存在且可写：mkdir + 写探针，失败返回 false */
+export function ensureWritableDir(dir: string): boolean {
+  try {
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
+    const probe = join(dir, `.write-test-${process.pid}`)
+    writeFileSync(probe, 'ok', { encoding: 'utf-8', mode: 0o600 })
+    rmSync(probe, { force: true })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /*
- * 保存运行时数据目录：空值或等于默认目录时清除配置。
+ * 保存运行时数据目录：空值或等于默认目录时删除配置文件，恢复默认。
  * 仅持久化配置并创建目录，实际切换在应用重启后生效。
  */
 export function setDataDir(dir: string): string {
   const value = dir.trim()
-  const config = readConfig()
-  if (!value || value === getDefaultDataDir()) {
-    delete config.dataDir
-    writeConfig(config)
+  if (!value || resolve(value) === resolve(getDefaultDataDir())) {
+    rmSync(configFile(), { force: true })
     return getDefaultDataDir()
   }
-  mkdirSync(value, { recursive: true })
-  config.dataDir = value
-  writeConfig(config)
-  return value
+  if (!isAbsolute(value)) {
+    throw new Error(t('runtime.error.dataDirInvalid'))
+  }
+  const target = resolve(value)
+  if (!ensureWritableDir(target)) {
+    throw new Error(t('runtime.error.dataDirUnwritable'))
+  }
+  writeConfig({ dataDir: target })
+  return target
 }

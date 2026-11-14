@@ -7,7 +7,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '@modules/project/renderer/store'
 import { useChatStore } from '@modules/chat/renderer'
-import { useSettingsStore } from '@modules/settings/renderer'
 import { ProjectMemoryDialog } from '@modules/agent/renderer'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
@@ -15,7 +14,6 @@ import type { ProjectDTO } from '@modules/project/shared'
 
 const project = useProjectStore()
 const chat = useChatStore()
-const settings = useSettingsStore()
 
 /* 记忆弹窗 */
 const memoryVisible = ref(false)
@@ -32,17 +30,6 @@ const filteredProjects = computed(() => {
     (item) =>
       item.name.toLowerCase().includes(query) || item.path.toLowerCase().includes(query)
   )
-})
-
-/* 「在文件管理器中显示」文案按运行平台区分 */
-const revealLabel = computed(() => {
-  if (settings.platform === 'darwin') {
-    return t('project.revealMac')
-  }
-  if (settings.platform === 'win32') {
-    return t('project.revealWin')
-  }
-  return t('project.revealLinux')
 })
 
 onMounted(() => {
@@ -232,7 +219,7 @@ function onAction(row: ProjectDTO, command: string): void {
                   {{ t('project.rename') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="reveal">
-                  {{ revealLabel }}
+                  {{ t('project.openFolder') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="delete" divided class="danger-item">
                   {{ t('project.delete') }}
