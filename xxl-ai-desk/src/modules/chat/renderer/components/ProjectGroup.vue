@@ -181,11 +181,6 @@ async function onDeleteSession(id: number): Promise<void> {
       {{ project.name }}
       <template #actions>
         <span class="project-actions" @click.stop>
-          <DeskTooltip :content="t('project.rename')">
-            <el-icon class="op" @click="onRenameProject">
-              <EditPen />
-            </el-icon>
-          </DeskTooltip>
           <DeskTooltip :content="t('common.actions')">
             <el-dropdown ref="projectMenu" trigger="click" @command="onProjectCommand">
               <el-icon class="op"><MoreFilled /></el-icon>
@@ -221,9 +216,6 @@ async function onDeleteSession(id: number): Promise<void> {
         {{ session.title || t('chat.newChat') }}
         <template #actions>
           <span class="session-actions" @click.stop>
-            <DeskTooltip :content="t('chat.renameSession')">
-              <el-icon class="op" @click="onRenameSession(session)"><EditPen /></el-icon>
-            </DeskTooltip>
             <DeskTooltip :content="t('common.actions')">
               <el-dropdown
                 :ref="sessionMenuRef(session.id)"

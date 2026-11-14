@@ -5,6 +5,7 @@
  */
 import { computed, ref, watch, type ComponentPublicInstance } from 'vue'
 import { MarkdownBlock } from '@common/renderer/components'
+import ThinkingTicker from '@modules/chat/renderer/components/ThinkingTicker.vue'
 import { toolArgsText, toolView } from '@modules/chat/renderer/composables/useToolView'
 import { useNow } from '@modules/chat/renderer/composables/useNow'
 import { useChatStore } from '@modules/chat/renderer'
@@ -225,6 +226,11 @@ function toolDetailsText(tool: ToolCallState): string {
           <el-icon class="step-chevron" :class="{ open: thinkingExpanded(index) }">
             <ArrowDown />
           </el-icon>
+          <!-- 思考进行中：标题右侧单行跑马灯，滚动展示最近的思考内容 -->
+          <ThinkingTicker
+            v-if="message.pending && isLastPart(index) && part.text.trim()"
+            :text="part.text"
+          />
         </button>
         <div
           v-show="thinkingExpanded(index)"

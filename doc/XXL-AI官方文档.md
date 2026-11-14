@@ -1810,6 +1810,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 13、【修复】升级兼容性问题解决，优化提示并备份旧数据、初始化新数据（sqlite），避免升级后白屏问题；
 - 14、【新增】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
 - 15、【新增】浏览器操作动作可视化，工具操作时实时展示操作动作以及状态信息；
+- 16、【新增】会话正在思考时，新增思考内容跑马灯展示交互；
 
 ### v1.5.X Release Notes[ING]
 - 1、【ING】应用中心：
