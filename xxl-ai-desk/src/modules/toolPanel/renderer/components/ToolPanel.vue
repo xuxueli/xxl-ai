@@ -7,6 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { useToolPanelStore, type ToolPanelTab } from '@modules/toolPanel/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@renderer/shell/i18n'
+import { DeskTooltip } from '@common/renderer/components'
 import { FilePanel } from '@modules/file/renderer'
 import { GitIcon, GlobeIcon, TerminalIcon } from '@common/renderer/components/icons'
 import { BrowserPanel } from '@modules/browser/renderer'
@@ -125,17 +126,17 @@ function toggleFocus(): void {
         </button>
       </div>
       <div class="tool-actions">
-        <button
-          class="icon-button"
-          :title="panel.mode === 'focus' ? t('panel.restore') : t('panel.maximize')"
-          @click="toggleFocus"
-        >
-          <el-icon v-if="panel.mode === 'focus'"><Minus /></el-icon>
-          <el-icon v-else><FullScreen /></el-icon>
-        </button>
-        <button class="icon-button" :title="t('panel.close')" @click="closePanel">
-          <el-icon><Close /></el-icon>
-        </button>
+        <DeskTooltip :content="panel.mode === 'focus' ? t('panel.restore') : t('panel.maximize')">
+          <button class="icon-button" @click="toggleFocus">
+            <el-icon v-if="panel.mode === 'focus'"><Minus /></el-icon>
+            <el-icon v-else><FullScreen /></el-icon>
+          </button>
+        </DeskTooltip>
+        <DeskTooltip :content="t('panel.close')">
+          <button class="icon-button" @click="closePanel">
+            <el-icon><Close /></el-icon>
+          </button>
+        </DeskTooltip>
       </div>
     </div>
 

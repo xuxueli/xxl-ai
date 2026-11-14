@@ -5,6 +5,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useToolPanelStore } from '@modules/toolPanel/renderer'
+import { DeskTooltip } from '@common/renderer/components'
 import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import { t } from '@renderer/shell/i18n'
@@ -176,15 +177,15 @@ function onDrop(group: 'staged' | 'unstaged'): void {
       >
         <div class="git-group-head">
           <span>{{ t('git.staged') }} ({{ stagedChanges.length }})</span>
-          <button
+          <DeskTooltip
             v-if="stagedFolders.length"
-            class="git-icon-btn"
-            :title="allFoldersExpanded(stagedFolders) ? t('git.collapseAll') : t('git.expandAll')"
-            @click="toggleAllFolders(stagedFolders)"
+            :content="allFoldersExpanded(stagedFolders) ? t('git.collapseAll') : t('git.expandAll')"
           >
-            <CollapseAllIcon v-if="allFoldersExpanded(stagedFolders)" class="git-toggle-icon" />
-            <ExpandAllIcon v-else class="git-toggle-icon" />
-          </button>
+            <button class="git-icon-btn" @click="toggleAllFolders(stagedFolders)">
+              <CollapseAllIcon v-if="allFoldersExpanded(stagedFolders)" class="git-toggle-icon" />
+              <ExpandAllIcon v-else class="git-toggle-icon" />
+            </button>
+          </DeskTooltip>
         </div>
         <div class="git-pane-body">
           <div v-if="!stagedChanges.length" class="git-empty">{{ t('git.noChanges') }}</div>
@@ -211,15 +212,15 @@ function onDrop(group: 'staged' | 'unstaged'): void {
       >
         <div class="git-group-head">
           <span>{{ t('git.changes') }} ({{ unstagedChanges.length }})</span>
-          <button
+          <DeskTooltip
             v-if="unstagedFolders.length"
-            class="git-icon-btn"
-            :title="allFoldersExpanded(unstagedFolders) ? t('git.collapseAll') : t('git.expandAll')"
-            @click="toggleAllFolders(unstagedFolders)"
+            :content="allFoldersExpanded(unstagedFolders) ? t('git.collapseAll') : t('git.expandAll')"
           >
-            <CollapseAllIcon v-if="allFoldersExpanded(unstagedFolders)" class="git-toggle-icon" />
-            <ExpandAllIcon v-else class="git-toggle-icon" />
-          </button>
+            <button class="git-icon-btn" @click="toggleAllFolders(unstagedFolders)">
+              <CollapseAllIcon v-if="allFoldersExpanded(unstagedFolders)" class="git-toggle-icon" />
+              <ExpandAllIcon v-else class="git-toggle-icon" />
+            </button>
+          </DeskTooltip>
         </div>
         <div class="git-pane-body">
           <div v-if="!unstagedChanges.length" class="git-empty">{{ t('git.noChanges') }}</div>

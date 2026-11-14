@@ -53,7 +53,7 @@ export function getDbFile(): string {
   return join(getDataDir(), 'xxl-ai-desk.sqlite')
 }
 
-/* SKILL 技能根目录（统一维护在数据目录下的 skills） */
+/* SKILL 技能根目录（数据目录下的 skills） */
 export function getSkillsDir(): string {
   return join(getDataDir(), 'skills')
 }
@@ -61,6 +61,16 @@ export function getSkillsDir(): string {
 /* 确保 SKILL 技能目录存在 */
 export function ensureSkillsDir(): void {
   mkdirSync(getSkillsDir(), { recursive: true })
+}
+
+/* 项目默认根目录（数据目录下的 projects） */
+export function getProjectsDir(): string {
+  return join(getDataDir(), 'projects')
+}
+
+/* 笔记默认根目录（数据目录下的 notes） */
+export function getNotesDir(): string {
+  return join(getDataDir(), 'notes')
 }
 
 /* 运行时临时目录（下载、解压等一次性文件统一放在这里，不隐藏便于人工清理） */

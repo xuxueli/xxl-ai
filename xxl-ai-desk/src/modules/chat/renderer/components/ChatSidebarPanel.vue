@@ -11,6 +11,7 @@ import { useProjectStore } from '@modules/project/renderer'
 import SidebarHeader from '@renderer/shell/layout/components/Sidebar/SidebarHeader.vue'
 import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import ProjectGroup from '@modules/chat/renderer/components/ProjectGroup.vue'
 import type { SessionDTO } from '@modules/chat/shared'
@@ -120,27 +121,31 @@ async function onSelect(id: number): Promise<void> {
   <div class="project-head">
     <span class="project-label">{{ t('project.label') }}</span>
     <span class="project-head-actions">
-      <el-dropdown trigger="click" popper-class="sort-dropdown" @command="onSortCommand">
-        <el-icon class="project-icon-btn" :title="t('common.actions')"><MoreFilled /></el-icon>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item disabled class="sort-group">
-              {{ t('project.sortBy') }}
-            </el-dropdown-item>
-            <el-dropdown-item command="name">
-              {{ t('project.sortName') }}
-              <el-icon v-if="sortBy === 'name'" class="sort-check"><Check /></el-icon>
-            </el-dropdown-item>
-            <el-dropdown-item command="time">
-              {{ t('project.sortTime') }}
-              <el-icon v-if="sortBy === 'time'" class="sort-check"><Check /></el-icon>
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-      <el-icon class="project-icon-btn" :title="t('project.new')" @click="onCreateProject">
-        <Plus />
-      </el-icon>
+      <DeskTooltip :content="t('common.actions')">
+        <el-dropdown trigger="click" popper-class="sort-dropdown" @command="onSortCommand">
+          <el-icon class="project-icon-btn"><MoreFilled /></el-icon>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled class="sort-group">
+                {{ t('project.sortBy') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="name">
+                {{ t('project.sortName') }}
+                <el-icon v-if="sortBy === 'name'" class="sort-check"><Check /></el-icon>
+              </el-dropdown-item>
+              <el-dropdown-item command="time">
+                {{ t('project.sortTime') }}
+                <el-icon v-if="sortBy === 'time'" class="sort-check"><Check /></el-icon>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </DeskTooltip>
+      <DeskTooltip :content="t('project.new')">
+        <el-icon class="project-icon-btn" @click="onCreateProject">
+          <Plus />
+        </el-icon>
+      </DeskTooltip>
     </span>
   </div>
 

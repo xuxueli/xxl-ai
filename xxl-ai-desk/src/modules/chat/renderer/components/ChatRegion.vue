@@ -17,6 +17,7 @@ import { useProjectStore } from '@modules/project/renderer'
 import { useAgentStore } from '@modules/agent/renderer'
 import { sessionKeyOf } from '@modules/toolPanel/renderer'
 import { useChatUiStore } from '@modules/chat/renderer/store/ui'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
 
@@ -261,14 +262,11 @@ async function onRemoveMessage(message: { id: number }): Promise<void> {
 
     <!-- 输入框区：上翻阅读时在输入框上方悬浮「回到底部」，随输入框增高同步上移 -->
     <div class="chat-footer">
-      <button
-        v-if="hasMessages && !nearBottom"
-        class="scroll-to-bottom"
-        :title="t('chat.scrollToBottom')"
-        @click="goBottom"
-      >
-        <el-icon><ArrowDown /></el-icon>
-      </button>
+      <DeskTooltip v-if="hasMessages && !nearBottom" :content="t('chat.scrollToBottom')" placement="top">
+        <button class="scroll-to-bottom" @click="goBottom">
+          <el-icon><ArrowDown /></el-icon>
+        </button>
+      </DeskTooltip>
 
       <!-- 人机交互占用输入框位置：仅展示当前会话的待响应请求，切换到其它会话即恢复输入 -->
       <InteractionPanel

@@ -6,7 +6,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@common/renderer/api'
+import { DeskTooltip } from '@common/renderer/components'
 import { CollapseAllIcon, ExpandAllIcon } from '@common/renderer/components/icons'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 import PanelResizer from '@renderer/shell/layout/components/PanelResizer/index.vue'
 import NoteTreeNode from '@modules/apps/note/renderer/components/NoteTreeNode.vue'
@@ -83,8 +85,8 @@ const contextMenu = ref<{ entry: NoteEntry; x: number; y: number; visible: boole
 const menuRef = ref<HTMLElement | null>(null)
 const menuPosition = ref({ left: 0, top: 0 })
 
-/* 右键菜单动作 */
-type NoteMenuAction = 'newNote' | 'newFolder' | 'rename' | 'trash' | 'reveal'
+/* 右键菜单动作：目录含新建入口，文件仅重命名 / 复制 / 删除 */
+type NoteMenuAction = 'newNote' | 'newFolder' | 'rename' | 'copy' | 'trash'
 
 /* 右键菜单项 */
 interface NoteMenuItem {
@@ -93,24 +95,25 @@ interface NoteMenuItem {
   icon: string
 }
 
-/* 菜单项：根目录不提供重命名 / 删除 */
+/* 菜单项按目录 / 文件区分 */
 const menuItems = computed<NoteMenuItem[]>(() => {
   const entry = contextMenu.value?.entry
   if (!entry) {
     return []
   }
-  const items: NoteMenuItem[] = [
-    { action: 'newNote', labelKey: 'note.newNote', icon: 'DocumentAdd' },
-    { action: 'newFolder', labelKey: 'note.newFolder', icon: 'FolderAdd' }
-  ]
-  if (entry.path !== store.rootPath) {
-    items.push(
+  if (entry.isDir) {
+    return [
+      { action: 'newNote', labelKey: 'note.newNote', icon: 'DocumentAdd' },
+      { action: 'newFolder', labelKey: 'note.newFolder', icon: 'FolderAdd' },
       { action: 'rename', labelKey: 'note.rename', icon: 'EditPen' },
       { action: 'trash', labelKey: 'note.delete', icon: 'Delete' }
-    )
+    ]
   }
-  items.push({ action: 'reveal', labelKey: 'note.reveal', icon: 'FolderOpened' })
-  return items
+  return [
+    { action: 'rename', labelKey: 'note.rename', icon: 'EditPen' },
+    { action: 'copy', labelKey: 'note.copy', icon: 'CopyDocument' },
+    { action: 'trash', labelKey: 'note.delete', icon: 'Delete' }
+  ]
 })
 
 /* 右键打开菜单：先贴近鼠标，再按菜单实际尺寸向内收拢 */
@@ -142,26 +145,63 @@ function targetDirOf(entry: NoteEntry): string {
 /* 名称弹框目标：新建笔记 / 新建目录 / 重命名 */
 type NoteNameTarget = 'newNote' | 'newFolder' | 'rename'
 
-/* 名称弹框状态 */
+/* 名称弹框状态：新建时携带初始目录，重命名不展示位置选择 */
 const nameDialogVisible = ref(false)
+const nameDialogError = ref('')
 const nameDialogState = ref<{
   target: NoteNameTarget
   title: string
+  placeholder: string
+  requiredMessage: string
   initialValue: string
-  dir: string
+  directory?: string
   entry: NoteEntry | null
 } | null>(null)
 
-/* 打开名称弹框：按目标回填标题与初始名称 */
+/* 弹框初始名称：新建笔记用默认标题、新建目录留空；重命名笔记隐藏 .md 扩展名 */
+function initialNameOf(
+  target: NoteNameTarget,
+  entry: NoteEntry | null,
+  isFolder: boolean
+): string {
+  if (target === 'newNote') {
+    return t('note.untitled')
+  }
+  if (target === 'newFolder') {
+    return ''
+  }
+  const name = entry?.name ?? ''
+  return isFolder ? name : name.replace(/\.md$/i, '')
+}
+
+/* 打开名称弹框：按笔记 / 目录与新建 / 重命名回填标题、提示与初始名称 */
 function openNameDialog(target: NoteNameTarget, dir: string, entry: NoteEntry | null): void {
+  const isFolder = target === 'newFolder' || (target === 'rename' && Boolean(entry?.isDir))
   const titles: Record<NoteNameTarget, string> = {
     newNote: t('note.newNote'),
     newFolder: t('note.newFolder'),
-    rename: t('note.rename')
+    rename: isFolder ? t('note.renameFolder') : t('note.renameNote')
   }
-  const initialValue =
-    target === 'newNote' ? t('note.untitled') : target === 'rename' ? (entry?.name ?? '') : ''
-  nameDialogState.value = { target, title: titles[target], initialValue, dir, entry }
+  const placeholders: Record<NoteNameTarget, string> = {
+    newNote: t('note.noteNamePlaceholder'),
+    newFolder: t('note.folderNamePlaceholder'),
+    rename: t('note.renameNamePlaceholder')
+  }
+  const requiredMessages: Record<NoteNameTarget, string> = {
+    newNote: t('note.noteNameRequired'),
+    newFolder: t('note.folderNameRequired'),
+    rename: t('note.renameNameRequired')
+  }
+  nameDialogState.value = {
+    target,
+    title: titles[target],
+    placeholder: placeholders[target],
+    requiredMessage: requiredMessages[target],
+    initialValue: initialNameOf(target, entry, isFolder),
+    directory: target === 'rename' ? undefined : dir,
+    entry
+  }
+  nameDialogError.value = ''
   nameDialogVisible.value = true
 }
 
@@ -180,26 +220,32 @@ function rename(entry: NoteEntry): void {
   openNameDialog('rename', '', entry)
 }
 
-/* 提交名称：按目标执行对应操作 */
-async function onNameSubmit(name: string): Promise<void> {
+/* 提交名称：成功关闭弹框，失败在弹框内就地提示 */
+async function onNameSubmit(name: string, directory: string): Promise<void> {
   const state = nameDialogState.value
   if (!state) {
     return
   }
-  switch (state.target) {
-    case 'newNote':
-      await store.createNote(state.dir, name)
-      break
-    case 'newFolder':
-      await store.createFolder(state.dir, name)
-      break
-    case 'rename':
-      if (state.entry) {
-        await store.renameEntry(state.entry, name)
-      }
-      break
-    default:
-      break
+  nameDialogError.value = ''
+  try {
+    switch (state.target) {
+      case 'newNote':
+        await store.createNote(directory, name)
+        break
+      case 'newFolder':
+        await store.createFolder(directory, name)
+        break
+      case 'rename':
+        if (state.entry) {
+          await store.renameEntry(state.entry, name)
+        }
+        break
+      default:
+        break
+    }
+    nameDialogVisible.value = false
+  } catch (submitError) {
+    nameDialogError.value = ipcErrorMessage(submitError)
   }
 }
 
@@ -208,9 +254,9 @@ async function trash(entry: NoteEntry): Promise<void> {
   try {
     await ElMessageBox.confirm(
       t('note.deleteConfirm', [entry.name]),
-      t('note.delete'),
+      entry.isDir ? t('note.deleteFolder') : t('note.deleteNote'),
       {
-        confirmButtonText: t('common.confirm'),
+        confirmButtonText: t('common.delete'),
         cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
@@ -226,16 +272,16 @@ async function revealPath(path: string): Promise<void> {
   try {
     await api.shell.reveal(path)
   } catch (revealError) {
-    ElMessage.error(String(revealError))
+    ElMessage.error(ipcErrorMessage(revealError))
   }
 }
 
-/* 右键菜单：在系统中定位 */
-function reveal(entry: NoteEntry): void {
-  void revealPath(entry.path)
+/* 目录快捷“+”：在当前目录下新建笔记 */
+function createNoteIn(entry: NoteEntry): void {
+  createNote(entry.path)
 }
 
-/* 执行菜单动作 */
+/* 执行菜单动作：右键与悬浮“...”共用同一套逻辑 */
 async function onMenuAction(action: NoteMenuAction): Promise<void> {
   const entry = contextMenu.value?.entry
   closeMenu()
@@ -252,11 +298,11 @@ async function onMenuAction(action: NoteMenuAction): Promise<void> {
     case 'rename':
       rename(entry)
       break
+    case 'copy':
+      await store.copyEntry(entry)
+      break
     case 'trash':
       await trash(entry)
-      break
-    case 'reveal':
-      reveal(entry)
       break
     default:
       break
@@ -309,24 +355,33 @@ onBeforeUnmount(() => {
     <div class="note-tree-head">
       <span class="note-tree-title">{{ t('note.title') }}</span>
       <!-- 顺序：新建笔记 → 新建目录 → 展开/折叠全部 → 打开目录 -->
-      <button class="note-icon-btn" :title="t('note.newNote')" @click="createNote(store.rootPath)">
-        <el-icon><DocumentAdd /></el-icon>
-      </button>
-      <button class="note-icon-btn" :title="t('note.newFolder')" @click="createFolder(store.rootPath)">
-        <el-icon><FolderAdd /></el-icon>
-      </button>
-      <button
-        class="note-icon-btn"
-        :title="store.allDirsExpanded ? t('note.collapseAll') : t('note.expandAll')"
-        :disabled="!store.rootPath"
-        @click="store.toggleAllDirs"
+      <DeskTooltip :content="t('note.newNote')">
+        <button class="note-icon-btn" @click="createNote(store.rootPath)">
+          <el-icon><DocumentAdd /></el-icon>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('note.newFolder')">
+        <button class="note-icon-btn" @click="createFolder(store.rootPath)">
+          <el-icon><FolderAdd /></el-icon>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip
+        :content="store.allDirsExpanded ? t('note.collapseAll') : t('note.expandAll')"
       >
-        <CollapseAllIcon v-if="store.allDirsExpanded" class="note-toggle-icon" />
-        <ExpandAllIcon v-else class="note-toggle-icon" />
-      </button>
-      <button class="note-icon-btn" :title="t('note.openDir')" @click="revealPath(store.rootPath)">
-        <el-icon><FolderOpened /></el-icon>
-      </button>
+        <button
+          class="note-icon-btn"
+          :disabled="!store.rootPath"
+          @click="store.toggleAllDirs"
+        >
+          <CollapseAllIcon v-if="store.allDirsExpanded" class="note-toggle-icon" />
+          <ExpandAllIcon v-else class="note-toggle-icon" />
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('note.openDir')">
+        <button class="note-icon-btn" @click="revealPath(store.rootPath)">
+          <el-icon><FolderOpened /></el-icon>
+        </button>
+      </DeskTooltip>
     </div>
     <div class="note-tree-filter">
       <el-input
@@ -354,6 +409,7 @@ onBeforeUnmount(() => {
           :entry="entry"
           :depth="0"
           @context-menu="openMenu"
+          @create-note="createNoteIn"
         />
         <div
           v-if="!store.loading && store.keyword.trim() === '' && rootChildren.length === 0"
@@ -378,7 +434,7 @@ onBeforeUnmount(() => {
         @contextmenu.prevent
       >
         <template v-for="(item, index) in menuItems" :key="item.action">
-          <div v-if="index > 0 && item.action === 'reveal'" class="note-menu-sep"></div>
+          <div v-if="index > 0 && item.action === 'trash'" class="note-menu-sep"></div>
           <button
             class="note-menu-item"
             :class="{ danger: item.action === 'trash' }"
@@ -396,8 +452,13 @@ onBeforeUnmount(() => {
       v-model="nameDialogVisible"
       :title="nameDialogState?.title ?? ''"
       :initial-value="nameDialogState?.initialValue ?? ''"
-      :placeholder="t('note.namePlaceholder')"
+      :root-path="store.rootPath"
+      :directory="nameDialogState?.directory"
+      :placeholder="nameDialogState?.placeholder ?? ''"
+      :required-message="nameDialogState?.requiredMessage ?? ''"
+      :error-message="nameDialogError"
       @submit="onNameSubmit"
+      @clear-error="nameDialogError = ''"
     />
   </div>
 </template>

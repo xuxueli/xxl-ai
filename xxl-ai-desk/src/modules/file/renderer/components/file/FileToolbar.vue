@@ -4,6 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { t } from '@renderer/shell/i18n'
+import { DeskTooltip } from '@common/renderer/components'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import type { OpenWithApp } from '@modules/platform/shared'
 
@@ -43,13 +44,11 @@ const emit = defineEmits<{
   <div class="file-toolbar">
     <div class="file-leading">
       <!-- 文件树折叠 / 展开：位于目录名左侧，控制整个文件树区域显隐 -->
-      <button
-        class="panel-btn tree-toggle"
-        :title="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')"
-        @click="emit('toggle-tree')"
-      >
-        <el-icon><Expand v-if="treeCollapsed" /><Fold v-else /></el-icon>
-      </button>
+      <DeskTooltip :content="treeCollapsed ? t('panel.expandTree') : t('panel.collapseTree')">
+        <button class="panel-btn tree-toggle" @click="emit('toggle-tree')">
+          <el-icon><Expand v-if="treeCollapsed" /><Fold v-else /></el-icon>
+        </button>
+      </DeskTooltip>
       <div class="file-breadcrumb">
         <template v-for="(seg, index) in breadcrumb" :key="index">
           <span v-if="index > 0" class="crumb-sep">›</span>
@@ -59,101 +58,106 @@ const emit = defineEmits<{
     </div>
     <div class="file-actions">
       <!-- 编辑器主题：下拉直接切换，持久化在本地 -->
-      <el-dropdown
-        trigger="click"
-        @command="(command: string) => emit('theme-command', command as EditorThemeId)"
-      >
-        <button class="panel-btn" :title="t('panel.editorTheme')">
-          <el-icon><Brush /></el-icon>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item
-              v-for="option in EDITOR_THEMES"
-              :key="option.id"
-              :command="option.id"
-            >
-              <div class="theme-option">
-                <span :class="{ 'theme-active': option.id === editorTheme }">
-                  {{ t(option.labelKey) }}
-                </span>
-                <el-icon v-if="option.id === editorTheme" class="theme-check">
-                  <Check />
-                </el-icon>
-              </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-      <button
-        v-if="editable"
-        class="panel-btn"
-        :class="{ active: dirty }"
-        :disabled="!dirty || saving"
-        :title="t('panel.saveHint')"
-        @click="emit('save')"
-      >
-        <el-icon><Finished /></el-icon>
-        <span>{{ t('panel.save') }}</span>
-      </button>
-      <button
-        v-if="canPreview"
-        class="panel-btn"
-        :class="{ active: showPreview }"
-        :title="showPreview ? t('panel.code') : t('panel.preview')"
-        @click="emit('toggle-preview')"
-      >
-        <el-icon><Document /></el-icon>
-        <span>{{ showPreview ? t('panel.code') : t('panel.preview') }}</span>
-      </button>
-      <button
-        class="panel-btn"
-        :disabled="!hasFile && !hasRoot"
-        :title="hasFile ? t('panel.openFolder') : t('panel.openProjectFolder')"
-        @click="emit('reveal')"
-      >
-        <el-icon><FolderOpened /></el-icon>
-      </button>
-      <!-- 打开：左半默认应用直接打开，右半下拉选择打开方式 -->
-      <div class="panel-btn open-split" :class="{ disabled: !hasFile }">
-        <button
-          class="open-split-main"
-          :disabled="!hasFile"
-          :title="t('panel.openDefault')"
-          @click="emit('open-default')"
-        >
-          <el-icon><DocumentAdd /></el-icon>
-          <span>{{ t('panel.open') }}</span>
-        </button>
+      <DeskTooltip :content="t('panel.editorTheme')">
         <el-dropdown
           trigger="click"
-          :disabled="!hasFile"
-          @command="(command: string) => emit('open-command', command)"
+          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
         >
-          <button class="open-split-toggle" :disabled="!hasFile" :title="t('panel.open')">
-            <el-icon class="chevron"><ArrowDown /></el-icon>
+          <button class="panel-btn">
+            <el-icon><Brush /></el-icon>
           </button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="default">
-                <el-icon><Document /></el-icon>{{ t('panel.openDefault') }}
-              </el-dropdown-item>
               <el-dropdown-item
-                v-for="app in openApps"
-                :key="app.path"
-                :command="`app:${app.path}`"
+                v-for="option in EDITOR_THEMES"
+                :key="option.id"
+                :command="option.id"
               >
-                <el-icon><Monitor /></el-icon>{{ app.name }}
-              </el-dropdown-item>
-              <el-dropdown-item command="folder" divided>
-                <el-icon><FolderOpened /></el-icon>{{ t('panel.openFolder') }}
-              </el-dropdown-item>
-              <el-dropdown-item command="copy" divided>
-                <el-icon><CopyDocument /></el-icon>{{ t('panel.copyPath') }}
+                <div class="theme-option">
+                  <span :class="{ 'theme-active': option.id === editorTheme }">
+                    {{ t(option.labelKey) }}
+                  </span>
+                  <el-icon v-if="option.id === editorTheme" class="theme-check">
+                    <Check />
+                  </el-icon>
+                </div>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+      </DeskTooltip>
+      <DeskTooltip v-if="editable" :content="t('panel.saveHint')">
+        <button
+          class="panel-btn"
+          :class="{ active: dirty }"
+          :disabled="!dirty || saving"
+          @click="emit('save')"
+        >
+          <el-icon><Finished /></el-icon>
+          <span>{{ t('panel.save') }}</span>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip
+        v-if="canPreview"
+        :content="showPreview ? t('panel.code') : t('panel.preview')"
+      >
+        <button
+          class="panel-btn"
+          :class="{ active: showPreview }"
+          @click="emit('toggle-preview')"
+        >
+          <el-icon><Document /></el-icon>
+          <span>{{ showPreview ? t('panel.code') : t('panel.preview') }}</span>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="hasFile ? t('panel.openFolder') : t('panel.openProjectFolder')">
+        <button
+          class="panel-btn"
+          :disabled="!hasFile && !hasRoot"
+          @click="emit('reveal')"
+        >
+          <el-icon><FolderOpened /></el-icon>
+        </button>
+      </DeskTooltip>
+      <!-- 打开：左半默认应用直接打开，右半下拉选择打开方式 -->
+      <div class="panel-btn open-split" :class="{ disabled: !hasFile }">
+        <DeskTooltip :content="t('panel.openDefault')">
+          <button class="open-split-main" :disabled="!hasFile" @click="emit('open-default')">
+            <el-icon><DocumentAdd /></el-icon>
+            <span>{{ t('panel.open') }}</span>
+          </button>
+        </DeskTooltip>
+        <DeskTooltip :content="t('panel.open')">
+          <el-dropdown
+            trigger="click"
+            :disabled="!hasFile"
+            @command="(command: string) => emit('open-command', command)"
+          >
+            <button class="open-split-toggle" :disabled="!hasFile">
+              <el-icon class="chevron"><ArrowDown /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="default">
+                  <el-icon><Document /></el-icon>{{ t('panel.openDefault') }}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  v-for="app in openApps"
+                  :key="app.path"
+                  :command="`app:${app.path}`"
+                >
+                  <el-icon><Monitor /></el-icon>{{ app.name }}
+                </el-dropdown-item>
+                <el-dropdown-item command="folder" divided>
+                  <el-icon><FolderOpened /></el-icon>{{ t('panel.openFolder') }}
+                </el-dropdown-item>
+                <el-dropdown-item command="copy" divided>
+                  <el-icon><CopyDocument /></el-icon>{{ t('panel.copyPath') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </DeskTooltip>
       </div>
     </div>
   </div>

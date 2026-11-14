@@ -9,6 +9,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@renderer/shell/i18n'
+import { DeskTooltip } from '@common/renderer/components'
 import ChatFilePicker from '@modules/chat/renderer/components/ChatFilePicker.vue'
 import SessionStatusBar from '@modules/chat/renderer/components/SessionStatusBar.vue'
 import { relativeToRoot } from '@modules/chat/renderer/utils/path'
@@ -282,28 +283,30 @@ function onKeydown(event: KeyboardEvent): void {
             <Document v-else />
           </el-icon>
           <span class="composer-file-name">{{ file.name }}</span>
-          <button
-            type="button"
-            class="composer-file-remove"
-            :title="t('chat.attachRemove')"
-            @click="removeAttachment(file.path)"
-          >
-            <el-icon><Close /></el-icon>
-          </button>
+          <DeskTooltip :content="t('chat.attachRemove')" placement="top">
+            <button
+              type="button"
+              class="composer-file-remove"
+              @click="removeAttachment(file.path)"
+            >
+              <el-icon><Close /></el-icon>
+            </button>
+          </DeskTooltip>
         </span>
       </div>
       <div class="composer-bar">
         <div class="composer-left">
           <!-- 关联项目文件：弹出项目文件树，多选后随下一条消息发送 -->
-          <button
-            type="button"
-            class="attach-trigger"
-            :title="t('chat.attachFile')"
-            :disabled="disabled"
-            @click="openFilePicker"
-          >
-            <el-icon><Plus /></el-icon>
-          </button>
+          <DeskTooltip :content="t('chat.attachFile')" placement="top">
+            <button
+              type="button"
+              class="attach-trigger"
+              :disabled="disabled"
+              @click="openFilePicker"
+            >
+              <el-icon><Plus /></el-icon>
+            </button>
+          </DeskTooltip>
 
           <!-- 权限选择器：仅可查看 / 工作区内修改 / 完全权限，默认工作区内修改 -->
           <el-dropdown

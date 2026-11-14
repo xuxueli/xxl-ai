@@ -8,6 +8,7 @@
  * @author xuxueli 2026-11-07
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import type { UiMessage } from '@modules/chat/renderer/types'
 
@@ -259,35 +260,38 @@ onBeforeUnmount(() => {
       @keydown="onInputKeydown"
     />
     <span v-if="countText" class="search-count">{{ countText }}</span>
-    <button
-      class="search-action"
-      :title="t('chat.searchPrev')"
-      :aria-label="t('chat.searchPrev')"
-      :disabled="matches.length === 0"
-      @mousedown.prevent
-      @click="step(-1)"
-    >
-      <el-icon><ArrowUp /></el-icon>
-    </button>
-    <button
-      class="search-action"
-      :title="t('chat.searchNext')"
-      :aria-label="t('chat.searchNext')"
-      :disabled="matches.length === 0"
-      @mousedown.prevent
-      @click="step(1)"
-    >
-      <el-icon><ArrowDown /></el-icon>
-    </button>
-    <button
-      class="search-action"
-      :title="t('chat.searchClose')"
-      :aria-label="t('chat.searchClose')"
-      @mousedown.prevent
-      @click="close"
-    >
-      <el-icon><Close /></el-icon>
-    </button>
+    <DeskTooltip :content="t('chat.searchPrev')" placement="top">
+      <button
+        class="search-action"
+        :aria-label="t('chat.searchPrev')"
+        :disabled="matches.length === 0"
+        @mousedown.prevent
+        @click="step(-1)"
+      >
+        <el-icon><ArrowUp /></el-icon>
+      </button>
+    </DeskTooltip>
+    <DeskTooltip :content="t('chat.searchNext')" placement="top">
+      <button
+        class="search-action"
+        :aria-label="t('chat.searchNext')"
+        :disabled="matches.length === 0"
+        @mousedown.prevent
+        @click="step(1)"
+      >
+        <el-icon><ArrowDown /></el-icon>
+      </button>
+    </DeskTooltip>
+    <DeskTooltip :content="t('chat.searchClose')" placement="top">
+      <button
+        class="search-action"
+        :aria-label="t('chat.searchClose')"
+        @mousedown.prevent
+        @click="close"
+      >
+        <el-icon><Close /></el-icon>
+      </button>
+    </DeskTooltip>
   </div>
 </template>
 

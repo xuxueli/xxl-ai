@@ -9,6 +9,7 @@ import { useChatStore } from '@modules/chat/renderer'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { useProjectStore } from '@modules/project/renderer'
 import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import type { ProjectDTO } from '@modules/project/shared'
 import type { SessionDTO } from '@modules/chat/shared'
@@ -145,25 +146,29 @@ async function onDeleteSession(id: number): Promise<void> {
       {{ project.name }}
       <template #actions>
         <span class="project-actions" @click.stop>
-          <el-dropdown trigger="click" @command="onProjectCommand">
-            <el-icon class="op" :title="t('common.actions')"><MoreFilled /></el-icon>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="rename">
-                  <el-icon><EditPen /></el-icon>{{ t('project.rename') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="reveal">
-                  <el-icon><FolderOpened /></el-icon>{{ revealLabel }}
-                </el-dropdown-item>
-                <el-dropdown-item command="delete" divided>
-                  <el-icon><Delete /></el-icon>{{ t('project.delete') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <el-icon class="op" :title="t('project.rename')" @click="onRenameProject">
-            <EditPen />
-          </el-icon>
+          <DeskTooltip :content="t('common.actions')">
+            <el-dropdown trigger="click" @command="onProjectCommand">
+              <el-icon class="op"><MoreFilled /></el-icon>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="rename">
+                    <el-icon><EditPen /></el-icon>{{ t('project.rename') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="reveal">
+                    <el-icon><FolderOpened /></el-icon>{{ revealLabel }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>
+                    <el-icon><Delete /></el-icon>{{ t('project.delete') }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </DeskTooltip>
+          <DeskTooltip :content="t('project.rename')">
+            <el-icon class="op" @click="onRenameProject">
+              <EditPen />
+            </el-icon>
+          </DeskTooltip>
         </span>
       </template>
     </SidebarRow>

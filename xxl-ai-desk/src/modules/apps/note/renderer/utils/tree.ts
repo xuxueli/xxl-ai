@@ -15,7 +15,8 @@ export function matchesNoteEntry(
   if (!word) {
     return true
   }
-  if (entry.name.toLowerCase().includes(word)) {
+  const name = entry.isDir ? entry.name : entry.name.replace(/\.md$/i, '')
+  if (name.toLowerCase().includes(word)) {
     return true
   }
   const children = childrenMap[entry.path]

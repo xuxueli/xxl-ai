@@ -9,12 +9,10 @@ export interface NoteSettings {
   storageDir: string
   /* 实际生效的存储目录 */
   resolvedStorageDir: string
-  /* 默认存储目录（安装目录下 note） */
+  /* 默认存储目录（数据目录下的 notes） */
   defaultStorageDir: string
   /* 图片资源目录（{resolvedStorageDir}/resource/image） */
   imageDir: string
-  /* 默认目录不可写而回退到数据目录 */
-  storageFallback: boolean
 }
 
 /* 设置更新入参 */

@@ -4,6 +4,7 @@
  * @author xuxueli 2026-11-08
  */
 import { computed, ref } from 'vue'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import {
   buildOutlineTree,
@@ -73,16 +74,20 @@ const rows = computed<OutlineRow[]>(() => {
       class="outline-row"
       :style="{ paddingLeft: `${4 + row.depth * 14}px` }"
     >
-      <button
+      <DeskTooltip
         v-if="row.expandable"
-        class="outline-caret"
-        :class="{ open: !row.collapsed }"
-        :title="row.collapsed ? t('note.outlineExpand') : t('note.outlineCollapse')"
-        type="button"
-        @click="toggle(row.key)"
+        :content="row.collapsed ? t('note.outlineExpand') : t('note.outlineCollapse')"
+        placement="top"
       >
-        <el-icon><CaretRight /></el-icon>
-      </button>
+        <button
+          class="outline-caret"
+          :class="{ open: !row.collapsed }"
+          type="button"
+          @click="toggle(row.key)"
+        >
+          <el-icon><CaretRight /></el-icon>
+        </button>
+      </DeskTooltip>
       <span v-else class="outline-caret is-placeholder"></span>
       <button
         class="outline-item"

@@ -8,6 +8,7 @@ import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { LAYOUT } from '@common/renderer/config/layout'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 import type {
   NoteContent,
@@ -32,8 +33,7 @@ const EMPTY_SETTINGS: NoteSettings = {
   storageDir: '',
   resolvedStorageDir: '',
   defaultStorageDir: '',
-  imageDir: '',
-  storageFallback: false
+  imageDir: ''
 }
 
 /* 界面偏好存储键 */
@@ -74,7 +74,7 @@ function readUi(): NoteUiState {
 
 /* 错误对象 → 可读文本 */
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  return ipcErrorMessage(error)
 }
 
 export const useNoteStore = defineStore('note', () => {
@@ -451,57 +451,54 @@ export const useNoteStore = defineStore('note', () => {
     }
   }
 
-  /* 新建笔记 */
-  async function createNote(dir: string | undefined, name: string): Promise<NoteEntry | null> {
-    try {
-      const entry = await api.note.createNote(dir, name)
-      const parent = dir || rootPath.value
-      /* 展开目录树，确保新建结果可见（树可能已被用户收起） */
-      treeCollapsed.value = false
-      expanded.value = { ...expanded.value, [parent]: true }
-      await loadChildren(parent)
-      await openNote(entry.path)
-      return entry
-    } catch (createError) {
-      ElMessage.error(messageOf(createError))
-      return null
-    }
+  /* 新建笔记：失败直接抛出，由弹框就地展示错误 */
+  async function createNote(dir: string | undefined, name: string): Promise<NoteEntry> {
+    const entry = await api.note.createNote(dir, name)
+    const parent = dir || rootPath.value
+    /* 展开目录树，确保新建结果可见（树可能已被用户收起） */
+    treeCollapsed.value = false
+    expanded.value = { ...expanded.value, [parent]: true }
+    await loadChildren(parent)
+    await openNote(entry.path)
+    return entry
   }
 
-  /* 新建目录 */
-  async function createFolder(dir: string | undefined, name: string): Promise<NoteEntry | null> {
-    try {
-      const entry = await api.note.createFolder(dir, name)
-      const parent = dir || rootPath.value
-      /* 展开目录树，确保新建结果可见（树可能已被用户收起） */
-      treeCollapsed.value = false
-      expanded.value = { ...expanded.value, [parent]: true }
-      await loadChildren(parent)
-      return entry
-    } catch (createError) {
-      ElMessage.error(messageOf(createError))
-      return null
-    }
+  /* 新建目录：失败直接抛出，由弹框就地展示错误 */
+  async function createFolder(dir: string | undefined, name: string): Promise<NoteEntry> {
+    const entry = await api.note.createFolder(dir, name)
+    const parent = dir || rootPath.value
+    /* 展开目录树，确保新建结果可见（树可能已被用户收起） */
+    treeCollapsed.value = false
+    expanded.value = { ...expanded.value, [parent]: true }
+    await loadChildren(parent)
+    return entry
   }
 
-  /* 重命名笔记 / 目录 */
-  async function renameEntry(entry: NoteEntry, name: string): Promise<NoteEntry | null> {
+  /* 重命名笔记 / 目录：失败直接抛出，由弹框就地展示错误 */
+  async function renameEntry(entry: NoteEntry, name: string): Promise<NoteEntry> {
     if (!(await save())) {
-      return null
+      throw new Error(t('note.saveFailed', [error.value]))
     }
+    const renamed = await api.note.rename(entry.path, name)
+    if (current.value && isUnder(current.value.path, entry.path)) {
+      const path = current.value.path.replace(entry.path, renamed.path)
+      const loadedNote = await api.note.read(path)
+      current.value = loadedNote
+      draft.value = loadedNote.content
+      selectedPath.value = loadedNote.path
+    }
+    await refresh()
+    return renamed
+  }
+
+  /* 复制笔记 / 目录：在同级目录生成副本并刷新该目录 */
+  async function copyEntry(entry: NoteEntry): Promise<NoteEntry | null> {
     try {
-      const renamed = await api.note.rename(entry.path, name)
-      if (current.value && isUnder(current.value.path, entry.path)) {
-        const path = current.value.path.replace(entry.path, renamed.path)
-        const loadedNote = await api.note.read(path)
-        current.value = loadedNote
-        draft.value = loadedNote.content
-        selectedPath.value = loadedNote.path
-      }
-      await refresh()
-      return renamed
-    } catch (renameError) {
-      ElMessage.error(messageOf(renameError))
+      const copied = await api.note.copy(entry.path)
+      await loadChildren(parentDir(copied.path))
+      return copied
+    } catch (copyError) {
+      ElMessage.error(messageOf(copyError))
       return null
     }
   }
@@ -621,6 +618,7 @@ export const useNoteStore = defineStore('note', () => {
     createNote,
     createFolder,
     renameEntry,
+    copyEntry,
     moveEntry,
     trashEntry,
     pickImages,

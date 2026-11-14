@@ -6,6 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
+import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { t } from '@renderer/shell/i18n'
 import { useNoteStore } from '@modules/apps/note/renderer/store'
 import { useAppCenterStore } from '@modules/appCenter/renderer'
@@ -37,7 +38,7 @@ watch(visible, async (open) => {
 
 /* 错误对象 → 可读文本 */
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  return ipcErrorMessage(error)
 }
 
 /* 切换启用：保存失败时开关保持原值 */
@@ -145,10 +146,6 @@ async function openDir(path: string): Promise<void> {
           {{ t('note.defaultDir', [store.settings.defaultStorageDir]) }}
         </div>
       </div>
-
-      <div v-if="store.settings.storageFallback" class="setting-alert">
-        {{ t('note.storageFallback') }}
-      </div>
     </div>
 
     <template #footer>
@@ -215,16 +212,6 @@ async function openDir(path: string): Promise<void> {
   color: var(--desk-text-tertiary);
   font-size: var(--desk-font-xs);
   word-break: break-all;
-}
-
-.setting-alert {
-  padding: 8px 12px;
-  border: 1px solid var(--desk-border);
-  border-radius: 8px;
-  background: var(--desk-bg-elevated);
-  color: var(--desk-warning, var(--desk-text-secondary));
-  font-size: var(--desk-font-xs);
-  line-height: 1.5;
 }
 
 .setting-footer {

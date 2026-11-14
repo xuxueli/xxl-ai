@@ -8,6 +8,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '@common/renderer/api'
 import { GitIcon } from '@common/renderer/components/icons'
+import { DeskTooltip } from '@common/renderer/components'
 import { ipcErrorMessage } from '@common/renderer/utils/ipcError'
 import { normalizePath, parentDir } from '@modules/file/renderer'
 import { t } from '@renderer/shell/i18n'
@@ -280,13 +281,11 @@ function openProjectFolder(): void {
           <span v-if="status.ahead" class="git-track">↑{{ status.ahead }}</span>
           <span v-if="status.behind" class="git-track">↓{{ status.behind }}</span>
         </div>
-        <button
-          class="panel-btn"
-          :title="t('panel.openProjectFolder')"
-          @click="openProjectFolder"
-        >
-          <el-icon><FolderOpened /></el-icon>
-        </button>
+        <DeskTooltip :content="t('panel.openProjectFolder')">
+          <button class="panel-btn" @click="openProjectFolder">
+            <el-icon><FolderOpened /></el-icon>
+          </button>
+        </DeskTooltip>
       </div>
 
       <!-- 左：变更树；右：差异 -->

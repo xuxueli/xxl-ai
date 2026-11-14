@@ -5,3 +5,4 @@
 
 export { default as MarkdownBlock } from '@common/renderer/components/MarkdownBlock/index.vue'
 export { default as CodeEditor } from '@common/renderer/components/CodeEditor/CodeEditor.vue'
+export { default as DeskTooltip } from '@common/renderer/components/DeskTooltip/index.vue'

@@ -19,3 +19,11 @@ export function baseName(path: string): string {
 export function isUnder(path: string, dir: string): boolean {
   return path === dir || path.startsWith(`${dir}/`) || path.startsWith(`${dir}\\`)
 }
+
+/* 相对笔记根目录的展示路径（根目录返回空串，不在根目录下时返回空串） */
+export function relativeNotePath(root: string, target: string): string {
+  if (!root || !isUnder(target, root)) {
+    return ''
+  }
+  return target.slice(root.length).replace(/^[\\/]+/, '').split('\\').join('/')
+}

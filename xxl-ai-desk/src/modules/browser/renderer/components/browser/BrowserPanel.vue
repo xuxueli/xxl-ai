@@ -7,6 +7,7 @@
  */
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { t } from '@renderer/shell/i18n'
+import { DeskTooltip } from '@common/renderer/components'
 import { useBrowserSessionStore } from '@modules/browser/renderer'
 import { useBrowserPanel } from '@modules/browser/renderer/composables/browserRuntime'
 import { GlobeIcon } from '@common/renderer/components/icons'
@@ -114,31 +115,37 @@ onBeforeUnmount(() => {
         @click="selectTab(tab.id)"
       >
         <span class="tab-title">{{ tabLabel(tab) }}</span>
-        <button class="tab-close" :title="t('panel.closeTab')" @click.stop="closeTab(tab.id)">
-          <el-icon><Close /></el-icon>
-        </button>
+        <DeskTooltip :content="t('panel.closeTab')" placement="top">
+          <button class="tab-close" @click.stop="closeTab(tab.id)">
+            <el-icon><Close /></el-icon>
+          </button>
+        </DeskTooltip>
       </div>
-      <button class="tab-add" :title="t('panel.newTab')" @click="addTab()">
-        <el-icon><Plus /></el-icon>
-      </button>
+      <DeskTooltip :content="t('panel.newTab')">
+        <button class="tab-add" @click="addTab()">
+          <el-icon><Plus /></el-icon>
+        </button>
+      </DeskTooltip>
     </div>
 
     <!-- 地址栏工具条 -->
     <div class="browser-toolbar">
-      <button class="nav-btn" :disabled="!activeTab?.canBack" :title="t('panel.goBack')" @click="back">
-        <el-icon><ArrowLeft /></el-icon>
-      </button>
-      <button class="nav-btn" :disabled="!activeTab?.canForward" :title="t('panel.goForward')" @click="forward">
-        <el-icon><ArrowRight /></el-icon>
-      </button>
-      <button
-        class="nav-btn"
-        :title="activeTab?.loading ? t('panel.stop') : t('panel.reload')"
-        @click="reloadOrStop"
-      >
-        <el-icon v-if="activeTab?.loading"><Close /></el-icon>
-        <el-icon v-else><Refresh /></el-icon>
-      </button>
+      <DeskTooltip :content="t('panel.goBack')">
+        <button class="nav-btn" :disabled="!activeTab?.canBack" @click="back">
+          <el-icon><ArrowLeft /></el-icon>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('panel.goForward')">
+        <button class="nav-btn" :disabled="!activeTab?.canForward" @click="forward">
+          <el-icon><ArrowRight /></el-icon>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="activeTab?.loading ? t('panel.stop') : t('panel.reload')">
+        <button class="nav-btn" @click="reloadOrStop">
+          <el-icon v-if="activeTab?.loading"><Close /></el-icon>
+          <el-icon v-else><Refresh /></el-icon>
+        </button>
+      </DeskTooltip>
 
       <div class="address">
         <input
@@ -153,31 +160,30 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 在系统浏览器中打开当前页 -->
-      <button
-        class="nav-btn"
-        :disabled="!activeTab?.hasPage"
-        :title="t('panel.openExternal')"
-        @click="openExternal"
-      >
-        <el-icon><TopRight /></el-icon>
-      </button>
+      <DeskTooltip :content="t('panel.openExternal')">
+        <button class="nav-btn" :disabled="!activeTab?.hasPage" @click="openExternal">
+          <el-icon><TopRight /></el-icon>
+        </button>
+      </DeskTooltip>
 
       <!-- 更多操作：页面操作与开发者工具 -->
-      <el-dropdown trigger="click" @command="onMore">
-        <button class="nav-btn" :title="t('common.actions')">
-          <el-icon><MoreFilled /></el-icon>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="copy" :disabled="!activeTab?.hasPage">
-              <el-icon><CopyDocument /></el-icon>{{ t('panel.copyUrl') }}
-            </el-dropdown-item>
-            <el-dropdown-item command="devtools" divided :disabled="!activeTab?.hasPage">
-              <el-icon><Tools /></el-icon>{{ t('panel.openDevTools') }}
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <DeskTooltip :content="t('common.actions')">
+        <el-dropdown trigger="click" @command="onMore">
+          <button class="nav-btn">
+            <el-icon><MoreFilled /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="copy" :disabled="!activeTab?.hasPage">
+                <el-icon><CopyDocument /></el-icon>{{ t('panel.copyUrl') }}
+              </el-dropdown-item>
+              <el-dropdown-item command="devtools" divided :disabled="!activeTab?.hasPage">
+                <el-icon><Tools /></el-icon>{{ t('panel.openDevTools') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </DeskTooltip>
     </div>
 
     <!-- 内容区：webview 由壳级宿主层覆盖；此处只保留锚点、空态与加载条 -->

@@ -177,6 +177,7 @@
       "noteNameDuplicate": "A note or folder with the same name already exists",
       "noteRootDelete": "The note root folder cannot be deleted",
       "noteRootMove": "The note root folder cannot be moved",
+      "noteRootCopy": "The note root folder cannot be copied",
       "noteMoveIntoSelf": "Cannot move an item into itself or its subfolder",
       "noteImageType": "Unsupported image format",
       "noteImageTooLarge": "The image exceeds the 20 MB limit",
@@ -325,7 +326,8 @@
       "cancelled": "Interaction cancelled; the user provided no input."
     },
     "note": {
-      "untitled": "Untitled note"
+      "untitled": "Untitled note",
+      "copySuffix": "copy"
     }
   }
 }

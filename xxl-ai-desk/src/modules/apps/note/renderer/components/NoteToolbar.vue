@@ -4,6 +4,7 @@
  * @author xuxueli 2026-11-08
  */
 import { computed, ref } from 'vue'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import { EDITOR_THEMES, type EditorThemeId } from '@common/renderer/components/CodeEditor/editorThemes'
 import NoteOutline from '@modules/apps/note/renderer/components/NoteOutline.vue'
@@ -65,13 +66,11 @@ function toggleOutline(): void {
   <div class="note-toolbar">
     <!-- 左侧：笔记树展示 / 隐藏 -->
     <div class="toolbar-side toolbar-left">
-      <button
-        class="toolbar-btn"
-        :title="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')"
-        @click="store.toggleTree"
-      >
-        <el-icon><Expand v-if="store.treeCollapsed" /><Fold v-else /></el-icon>
-      </button>
+      <DeskTooltip :content="store.treeCollapsed ? t('note.treeExpand') : t('note.treeCollapse')">
+        <button class="toolbar-btn" @click="store.toggleTree">
+          <el-icon><Expand v-if="store.treeCollapsed" /><Fold v-else /></el-icon>
+        </button>
+      </DeskTooltip>
     </div>
 
     <!-- 居中：编辑 / 分屏 / 预览 -->
@@ -83,57 +82,59 @@ function toggleOutline(): void {
 
     <!-- 右侧：查找 / 插图 / 主题 / 文章目录 -->
     <div class="toolbar-side toolbar-right">
-      <button class="toolbar-btn" :title="t('note.findReplace')" @click="emit('find')">
-        <el-icon><Search /></el-icon>
-      </button>
-      <button
-        class="toolbar-btn"
-        :title="t('note.insertImage')"
-        :disabled="!store.current"
-        @click="emit('insert-image')"
-      >
-        <el-icon><PictureRounded /></el-icon>
-      </button>
+      <DeskTooltip :content="t('note.findReplace')">
+        <button class="toolbar-btn" @click="emit('find')">
+          <el-icon><Search /></el-icon>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('note.insertImage')">
+        <button class="toolbar-btn" :disabled="!store.current" @click="emit('insert-image')">
+          <el-icon><PictureRounded /></el-icon>
+        </button>
+      </DeskTooltip>
 
       <!-- 编辑器主题：与文件工具一致，选择后持久化 -->
-      <el-dropdown
-        trigger="click"
-        @command="(command: string) => emit('theme-command', command as EditorThemeId)"
-      >
-        <button class="toolbar-btn" :title="t('note.theme')">
-          <el-icon><Brush /></el-icon>
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item
-              v-for="option in EDITOR_THEMES"
-              :key="option.id"
-              :command="option.id"
-            >
-              <div class="theme-option">
-                <span :class="{ 'theme-active': isThemeActive(option.id) }">
-                  {{ t(option.labelKey) }}
-                </span>
-                <el-icon v-if="isThemeActive(option.id)" class="theme-check">
-                  <Check />
-                </el-icon>
-              </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <DeskTooltip :content="t('note.theme')">
+        <el-dropdown
+          trigger="click"
+          @command="(command: string) => emit('theme-command', command as EditorThemeId)"
+        >
+          <button class="toolbar-btn">
+            <el-icon><Brush /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="option in EDITOR_THEMES"
+                :key="option.id"
+                :command="option.id"
+              >
+                <div class="theme-option">
+                  <span :class="{ 'theme-active': isThemeActive(option.id) }">
+                    {{ t(option.labelKey) }}
+                  </span>
+                  <el-icon v-if="isThemeActive(option.id)" class="theme-check">
+                    <Check />
+                  </el-icon>
+                </div>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </DeskTooltip>
 
       <!-- 文章目录：浮动展示当前笔记标题，仅再次点击图标关闭 -->
-      <button
-        ref="outlineButtonRef"
-        class="toolbar-btn"
-        :class="{ active: outlineVisible }"
-        :title="t('note.outline')"
-        :disabled="!store.current"
-        @click="toggleOutline"
-      >
-        <el-icon><Notebook /></el-icon>
-      </button>
+      <DeskTooltip :content="t('note.outline')">
+        <button
+          ref="outlineButtonRef"
+          class="toolbar-btn"
+          :class="{ active: outlineVisible }"
+          :disabled="!store.current"
+          @click="toggleOutline"
+        >
+          <el-icon><Notebook /></el-icon>
+        </button>
+      </DeskTooltip>
     </div>
   </div>
 

@@ -20,6 +20,7 @@ import {
   setSearchQuery
 } from '@codemirror/search'
 import { t } from '@renderer/shell/i18n'
+import DeskTooltip from '@common/renderer/components/DeskTooltip/index.vue'
 
 const props = defineProps<{
   /* 宿主编辑器实例：查询、跳转与替换都直接作用于该实例 */
@@ -174,39 +175,42 @@ defineExpose({ refreshCount: scheduleCount })
     />
     <div class="editor-search-actions">
       <span class="editor-search-count">{{ countText }}</span>
-      <button
-        class="editor-search-icon-button"
-        type="button"
-        :title="t('editor.previous')"
-        :aria-label="t('editor.previous')"
-        @click="step(false)"
-      >
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 10l4-4 4 4" />
-        </svg>
-      </button>
-      <button
-        class="editor-search-icon-button"
-        type="button"
-        :title="t('editor.next')"
-        :aria-label="t('editor.next')"
-        @click="step(true)"
-      >
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 6l4 4 4-4" />
-        </svg>
-      </button>
-      <button
-        class="editor-search-icon-button"
-        type="button"
-        :title="t('editor.close')"
-        :aria-label="t('editor.close')"
-        @click="close"
-      >
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path d="M4 4l8 8M12 4l-8 8" />
-        </svg>
-      </button>
+      <DeskTooltip :content="t('editor.previous')" placement="top">
+        <button
+          class="editor-search-icon-button"
+          type="button"
+          :aria-label="t('editor.previous')"
+          @click="step(false)"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 10l4-4 4 4" />
+          </svg>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('editor.next')" placement="top">
+        <button
+          class="editor-search-icon-button"
+          type="button"
+          :aria-label="t('editor.next')"
+          @click="step(true)"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6l4 4 4-4" />
+          </svg>
+        </button>
+      </DeskTooltip>
+      <DeskTooltip :content="t('editor.close')" placement="top">
+        <button
+          class="editor-search-icon-button"
+          type="button"
+          :aria-label="t('editor.close')"
+          @click="close"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      </DeskTooltip>
     </div>
 
     <!-- 替换行 -->

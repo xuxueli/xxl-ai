@@ -17,7 +17,7 @@ export const LAYOUT = {
   fileTree: { defaultWidth: 240, minWidth: 150, contentMinWidth: 150 },
   /* 笔记应用：左侧笔记树默认/最小宽度 */
   note: {
-    treeDefaultWidth: 240,
+    treeDefaultWidth: 260,
     treeMinWidth: 150
   }
 } as const

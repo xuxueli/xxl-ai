@@ -6,6 +6,7 @@
  * @author xuxueli 2026-10-31
  */
 import { computed } from 'vue'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import type { PermissionInteractionRequest, InteractionResult } from '@modules/chat/shared'
 
@@ -61,12 +62,11 @@ function deny(): void {
         {{ t('chat.interaction.permission.deny') }}
       </el-button>
       <div class="footer-actions">
-        <el-button
-          :title="t('chat.interaction.permission.sessionTip')"
-          @click="allow(true)"
-        >
-          {{ t('chat.interaction.permission.session') }}
-        </el-button>
+        <DeskTooltip :content="t('chat.interaction.permission.sessionTip')" placement="top">
+          <el-button @click="allow(true)">
+            {{ t('chat.interaction.permission.session') }}
+          </el-button>
+        </DeskTooltip>
         <el-button type="primary" @click="allow(false)">
           {{ t('chat.interaction.permission.once') }}
         </el-button>

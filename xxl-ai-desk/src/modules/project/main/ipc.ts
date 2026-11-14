@@ -3,7 +3,9 @@
  * @author xuxueli 2026-11-07
  */
 
+import { mkdirSync } from 'fs'
 import { dialog, shell } from 'electron'
+import { getProjectsDir } from '@common/main/config/paths'
 import type { IpcContext } from '@common/main/ipc'
 import { t } from '@common/main/i18n'
 import { PROJECT_IPC } from '../shared/ipc'
@@ -20,8 +22,11 @@ export function registerProjectIpc(ipc: IpcContext): void {
   ipc.handle(PROJECT_IPC.create, async (_event, input) => {
     let path = input?.path?.trim() ?? ''
     if (!path) {
+      const defaultPath = getProjectsDir()
+      mkdirSync(defaultPath, { recursive: true })
       const result = await dialog.showOpenDialog({
         title: input?.dialogTitle || t('runtime.dialog.selectFolderTitle'),
+        defaultPath,
         properties: ['openDirectory', 'createDirectory']
       })
       if (result.canceled || result.filePaths.length === 0) {

@@ -4,6 +4,7 @@
  * @author xuxueli 2026-10-25
  */
 import { TerminalIcon } from '@common/renderer/components/icons'
+import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@renderer/shell/i18n'
 import { useSessionTerminals } from '@modules/terminal/renderer/composables/useSessionTerminals'
 
@@ -40,9 +41,11 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
           <span class="terminal-tab-name">{{ tab.title }}</span>
           <el-icon class="terminal-tab-close" @click.stop="disposeTab(tab.id)"><Close /></el-icon>
         </button>
-        <button class="icon-button terminal-new" :title="t('toolPanel.newTerminal')" @click="openTerminal">
-          <el-icon><Plus /></el-icon>
-        </button>
+        <DeskTooltip :content="t('toolPanel.newTerminal')">
+          <button class="icon-button terminal-new" @click="openTerminal">
+            <el-icon><Plus /></el-icon>
+          </button>
+        </DeskTooltip>
       </div>
     </div>
     <!-- 终端画布：每个标签一个 xterm 容器，仅展示当前激活标签 -->

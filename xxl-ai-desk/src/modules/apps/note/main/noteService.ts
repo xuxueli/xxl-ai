@@ -7,7 +7,7 @@
  */
 
 import { randomBytes } from 'crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, cpSync, statSync, writeFileSync } from 'fs'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path'
 import { shell } from 'electron'
 import { t } from '@common/main/i18n'
@@ -65,8 +65,7 @@ export function getNoteSettings(): NoteSettings {
     storageDir: configured,
     resolvedStorageDir: resolved.root,
     defaultStorageDir: resolved.defaultDir,
-    imageDir: join(resolved.root, 'resource', 'image'),
-    storageFallback: resolved.fallback
+    imageDir: join(resolved.root, 'resource', 'image')
   }
 }
 
@@ -178,6 +177,22 @@ export function listNotes(dir?: string): NoteEntry[] {
     }
     throw error
   }
+}
+
+/* 列出全部笔记目录（含根目录，供新建时选择位置） */
+export function listNoteDirs(): NoteEntry[] {
+  const root = resolvedRoot().root
+  const dirs: NoteEntry[] = [toEntry(root, root)]
+  const walk = (dir: string): void => {
+    for (const entry of listNotes(dir)) {
+      if (entry.isDir) {
+        dirs.push(entry)
+        walk(entry.path)
+      }
+    }
+  }
+  walk(root)
+  return dirs
 }
 
 /* 读取笔记内容 */
@@ -298,6 +313,22 @@ export function moveNote(source: string, targetDir: string): NoteEntry {
     throw new Error(t('runtime.error.noteNameDuplicate'))
   }
   renameSync(target, next)
+  return toEntry(root, next)
+}
+
+/* 复制笔记 / 目录：同一目录下生成副本，根目录禁止复制 */
+export function copyNote(source: string): NoteEntry {
+  const root = resolvedRoot().root
+  const target = notePathOf(source)
+  assertNotResource(target)
+  if (resolve(target) === resolve(root)) {
+    throw new Error(t('runtime.error.noteRootCopy'))
+  }
+  const info = statSync(target)
+  const ext = info.isDirectory() ? '' : extname(target)
+  const stem = basename(target, ext)
+  const next = uniquePath(dirname(target), `${stem}-${t('runtime.note.copySuffix')}`, ext)
+  cpSync(target, next, { recursive: info.isDirectory() })
   return toEntry(root, next)
 }
 
