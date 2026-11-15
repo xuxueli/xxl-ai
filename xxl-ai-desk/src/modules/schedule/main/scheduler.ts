@@ -8,7 +8,7 @@
 
 import log from 'electron-log/main'
 import { powerMonitor } from 'electron'
-import { nextRunTimes } from '@modules/schedule/shared'
+import type { ScheduledTaskDTO } from '@modules/schedule/shared'
 import { getScheduledTask, listScheduledTasks } from './scheduledTaskService'
 import { startScheduledRun } from './runner'
 import { disposeKeepAwake, syncKeepAwake } from './keepAwake'
@@ -30,45 +30,51 @@ function clearTaskTimer(taskId: number): void {
   }
 }
 
-/* 按当前规则挂载下一个计时器：停用 / 无未来触发时间时只清理不挂载 */
-function armTask(taskId: number): void {
-  clearTaskTimer(taskId)
-  const task = getScheduledTask(taskId)
-  if (!task || !task.enabled) {
+/* 按任务快照挂载下一个计时器：停用 / 无未来触发时间时只清理 */
+function armTaskTimer(task: ScheduledTaskDTO): void {
+  clearTaskTimer(task.id)
+  if (!task.enabled || !task.nextRunAt) {
     return
   }
-  const next = nextRunTimes(task.scheduleExpression, 1)[0]
-  if (!next) {
-    return
-  }
-  const delay = new Date(next).getTime() - Date.now()
+  const delay = new Date(task.nextRunAt).getTime() - Date.now()
   if (delay <= 0) {
     return
   }
   /* 超过 setTimeout 上限：先挂到上限，到点后重新计算剩余时间 */
   if (delay > MAX_TIMER_DELAY) {
     timers.set(
-      taskId,
+      task.id,
       setTimeout(() => {
-        timers.delete(taskId)
-        armTask(taskId)
+        timers.delete(task.id)
+        armTask(task.id)
       }, MAX_TIMER_DELAY)
     )
     return
   }
   timers.set(
-    taskId,
+    task.id,
     setTimeout(() => {
-      timers.delete(taskId)
+      timers.delete(task.id)
       try {
-        startScheduledRun(taskId, 'schedule')
+        startScheduledRun(task.id, 'schedule')
       } catch (error) {
         /* 单次触发失败不终止调度：下一周期继续，错误写入运行结果或日志 */
-        log.error(`[schedule] 任务触发失败 task=${taskId}`, error)
+        log.error(`[schedule] 任务触发失败 task=${task.id}`, error)
       }
-      armTask(taskId)
+      /* 运行结果与上次会话已变化，重新读取后再排下一轮 */
+      armTask(task.id)
     }, delay)
   )
+}
+
+/* 读取任务并挂载计时器：保存 / 启停 / 删除后调用 */
+function armTask(taskId: number): void {
+  const task = getScheduledTask(taskId)
+  if (!task) {
+    clearTaskTimer(taskId)
+    return
+  }
+  armTaskTimer(task)
 }
 
 /* 系统唤醒：重新对齐触发时间并同步休眠策略 */
@@ -88,7 +94,7 @@ function clearAllTimers(): void {
 export function rescheduleAll(): void {
   clearAllTimers()
   for (const task of listScheduledTasks()) {
-    armTask(task.id)
+    armTaskTimer(task)
   }
 }
 

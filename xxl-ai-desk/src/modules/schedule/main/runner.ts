@@ -41,16 +41,22 @@ function buildSessionTitle(taskName: string, at: Date): string {
   return `${taskName} · ${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`
 }
 
-/* 复用条件：上次会话仍存在、归属该任务且当前未在生成 */
-function reusableSessionId(task: ScheduledTaskDTO): number {
+/* 复用结果：sessionId=0 表示需新建；busy 表示复用会话正在生成 */
+interface ReusableSession {
+  sessionId: number
+  busy: boolean
+}
+
+/* 复用条件：上次会话仍存在、归属该任务；是否空闲单独标记 */
+function reusableSessionOf(task: ScheduledTaskDTO): ReusableSession {
   if (task.sessionMode !== 'reuse' || !task.lastSessionId) {
-    return 0
+    return { sessionId: 0, busy: false }
   }
   const session = getSession(task.lastSessionId)
   if (!session || session.triggerType !== 'schedule' || session.scheduleTaskId !== task.id) {
-    return 0
+    return { sessionId: 0, busy: false }
   }
-  return isAgentRunning(session.id) ? -1 : session.id
+  return { sessionId: session.id, busy: isAgentRunning(session.id) }
 }
 
 /* 异步执行一轮任务，并在结束时写入运行结果 */
@@ -134,10 +140,11 @@ export function startScheduledRun(
     return settleWithoutRun(task, reason, manual ? 'failed' : 'skipped', source)
   }
 
-  let sessionId = reusableSessionId(task)
-  if (sessionId < 0) {
+  const reusable = reusableSessionOf(task)
+  if (reusable.busy) {
     return settleWithoutRun(task, t('runtime.error.scheduleSessionBusy'), 'skipped', source)
   }
+  let sessionId = reusable.sessionId
 
   const startedAt = new Date()
   if (!sessionId) {

@@ -5,5 +5,4 @@
 
 export { abortChat, discardSessionRuns, sendChat } from './chatService'
 export type { ChatEventPayload } from './chatService'
-export { broadcastSessionChanged } from './sessionEvents'
 export { countSessionsByAgents, createSession, deleteSession, getSession, isSessionRemoved, listMessages, listNewProjectMessages, listSessionIdsByAgent, listSessionIdsByProject, listSessionMessagePage, updateSession } from './sessionService'

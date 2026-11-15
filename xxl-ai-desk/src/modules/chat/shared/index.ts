@@ -11,7 +11,7 @@ export { isRuntimeSource } from './messageSource'
 export type { MessageSource } from './messageSource'
 export { hasVisiblePart, messageStatusOf, normalizeMessageStatus } from './messageStatus'
 export type { MessageStatus, MessageStatusSource } from './messageStatus'
-export { CHAT_IPC } from './ipc'
+export { CHAT_IPC, SESSION_IPC } from './ipc'
 export {
   DEFAULT_PERMISSION_MODE,
   SESSION_SUMMARY_MAX_CHARS,

@@ -9,7 +9,6 @@ import { createSession, deleteMessages, deleteSession, getSession, isSessionRemo
 import { abortChat, discardSessionRuns, respondInteraction, sendChat } from './chatService'
 import { evictAgent, clearSessionPermissions, setInteractionAutoResolver, setSessionActiveResolver } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
-import { setSessionChangedSender } from './sessionEvents'
 
 export function registerChatIpc(ipc: IpcContext): void {
   /* 会话删除后，运行时迟到的流式事件 / 交互 / 浏览器 / 轨迹统一丢弃 */
@@ -18,8 +17,6 @@ export function registerChatIpc(ipc: IpcContext): void {
   setInteractionAutoResolver((sessionId) =>
     getSession(sessionId)?.triggerType === 'schedule' ? { status: 'denied' } : null
   )
-  /* 后台创建会话（定时任务）时通知渲染层刷新侧栏 */
-  setSessionChangedSender((sessionId) => ipc.send(SESSION_IPC.changed, { sessionId }))
   ipc.handle(SESSION_IPC.list, () => listSessions())
   ipc.handle(SESSION_IPC.create, (_event, input) => {
     /* 触发来源只允许主进程写入：渲染层新建会话固定为用户手动 */

@@ -24,7 +24,7 @@ import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
 import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
-import { disposeScheduleScheduler } from '@modules/schedule/main'
+import { disposeScheduleScheduler, startScheduleScheduler } from '@modules/schedule/main'
 import { bindBrowserShortcut } from '@modules/browser/main'
 import { initLogger } from '@common/main/utils/logger'
 import { createMainWindow } from '@main/window'
@@ -104,6 +104,8 @@ async function bootstrap(): Promise<void> {
     })
 
     createWindow()
+    /* 窗口就绪后再启动调度：到点触发的会话事件有渲染层可接 */
+    startScheduleScheduler()
 
     /* macOS 点击 Dock 图标且无窗口时重新建窗 */
     app.on('activate', () => {

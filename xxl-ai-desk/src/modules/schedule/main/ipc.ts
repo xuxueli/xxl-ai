@@ -12,8 +12,8 @@ import {
   SCHEDULE_MAX_CONCURRENCY_MAX,
   SCHEDULE_MAX_CONCURRENCY_MIN
 } from '@modules/settings/shared'
-import { abortChat, broadcastSessionChanged } from '@modules/chat/main'
-import { CHAT_IPC } from '@modules/chat/shared'
+import { abortChat } from '@modules/chat/main'
+import { CHAT_IPC, SESSION_IPC } from '@modules/chat/shared'
 import { SCHEDULE_IPC } from '../shared/ipc'
 import type { ScheduleConfigDTO, ScheduledTaskInput } from '../shared/contracts'
 import {
@@ -26,7 +26,7 @@ import {
 } from './scheduledTaskService'
 import { configureScheduleRuntime, startScheduledRun } from './runner'
 import { isTaskRunning } from './runState'
-import { rescheduleTask, startScheduleScheduler } from './scheduler'
+import { rescheduleTask } from './scheduler'
 import { syncKeepAwake } from './keepAwake'
 
 export function registerScheduleIpc(ipc: IpcContext): void {
@@ -34,7 +34,7 @@ export function registerScheduleIpc(ipc: IpcContext): void {
   configureScheduleRuntime({
     emitChatEvent: (payload) => ipc.send(CHAT_IPC.event, payload),
     notifyScheduleChanged: (taskId) => ipc.send(SCHEDULE_IPC.changed, { taskId }),
-    notifySessionChanged: (sessionId) => broadcastSessionChanged(sessionId)
+    notifySessionChanged: (sessionId) => ipc.send(SESSION_IPC.changed, { sessionId })
   })
 
   /* 任务配置变化：重排调度并通知页面刷新 */
@@ -93,6 +93,4 @@ export function registerScheduleIpc(ipc: IpcContext): void {
     syncKeepAwake()
     return getScheduleConfig()
   })
-
-  startScheduleScheduler()
 }
