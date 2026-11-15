@@ -37,8 +37,8 @@ export const NAV_SECTIONS: Record<Exclude<SectionKey, 'home'>, NavSection> = {
     entryPath: '/schedule/tasks',
     items: [
       { key: 'tasks', labelKey: 'schedule.nav.tasks', icon: 'AlarmClock', path: '/schedule/tasks' },
-      { key: 'runs', labelKey: 'schedule.nav.runs', icon: 'Clock', path: '/schedule/runs' },
-      { key: 'settings', labelKey: 'schedule.nav.settings', icon: 'Setting', path: '/schedule/settings' }
+      { key: 'logs', labelKey: 'schedule.nav.logs', icon: 'Clock', path: '/schedule/logs' },
+      { key: 'dispatch', labelKey: 'schedule.nav.dispatch', icon: 'Setting', path: '/schedule/dispatch' }
     ]
   },
   apps: {

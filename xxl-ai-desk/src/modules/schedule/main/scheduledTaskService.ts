@@ -21,12 +21,14 @@ import {
 } from '@modules/schedule/shared'
 import type {
   ScheduleConfigDTO,
-  ScheduleSessionMode,
   ScheduleRunStatus,
+  ScheduleSessionBlockPolicy,
+  ScheduleSessionMode,
   ScheduledTaskDTO,
   ScheduledTaskInput
 } from '@modules/schedule/shared'
 import { scheduledTaskTable } from './schema'
+import { clearRunLogs } from './runLog'
 import { isTaskRunning } from './runState'
 
 type ScheduledTaskRow = typeof scheduledTaskTable.$inferSelect
@@ -34,6 +36,17 @@ type ScheduledTaskRow = typeof scheduledTaskTable.$inferSelect
 /* 会话设置方式归一：非法值回退「复用上次会话」 */
 function normalizeSessionMode(value: unknown): ScheduleSessionMode {
   return value === 'new' ? 'new' : 'reuse'
+}
+
+/* 会话阻塞策略归一：非法值回退「本次调度忽略」 */
+function normalizeSessionBlockPolicy(value: unknown): ScheduleSessionBlockPolicy {
+  return value === 'force' ? 'force' : 'skip'
+}
+
+/* 任务超时归一：0 表示不限时，其余取整到 >=1 分钟 */
+function normalizeTimeoutMinutes(value: unknown): number {
+  const minutes = Math.floor(Number(value))
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : 0
 }
 
 /* 运行结果归一：只保留已知结果，其余视为未运行 */
@@ -83,6 +96,8 @@ function toDTO(row: ScheduledTaskRow): ScheduledTaskDTO {
     permissionMode: normalizePermissionMode(row.permissionMode),
     scheduleExpression,
     sessionMode: normalizeSessionMode(row.sessionMode),
+    sessionBlockPolicy: normalizeSessionBlockPolicy(row.sessionBlockPolicy),
+    timeoutMinutes: normalizeTimeoutMinutes(row.timeoutMinutes),
     enabled,
     lastRunAt: row.lastRunAt,
     lastRunStatus: normalizeRunStatus(row.lastRunStatus),
@@ -96,14 +111,20 @@ function toDTO(row: ScheduledTaskRow): ScheduledTaskDTO {
   }
 }
 
-/* 全部定时任务（最近更新优先） */
+/*
+ * 任务名称自然排序：中文按拼音、数字按数值比较（如「任务2」排在「任务10」之前）。
+ * 同名时按主键升序，保证顺序稳定。
+ */
+const taskNameCollator = new Intl.Collator('zh-Hans', { numeric: true, sensitivity: 'base' })
+
+/* 全部定时任务（任务名称自然排序） */
 export function listScheduledTasks(): ScheduledTaskDTO[] {
   return getDb()
     .select()
     .from(scheduledTaskTable)
     .all()
     .map(toDTO)
-    .sort((a, b) => b.updateTime.localeCompare(a.updateTime))
+    .sort((a, b) => taskNameCollator.compare(a.name, b.name) || a.id - b.id)
 }
 
 /* 单个定时任务 */
@@ -135,6 +156,7 @@ export function saveScheduledTask(input: ScheduledTaskInput): ScheduledTaskDTO {
   if (input.id && !existing) {
     throw new Error(t('runtime.error.scheduleTaskMissing'))
   }
+  const sessionMode = normalizeSessionMode(input.sessionMode)
 
   const record = {
     name,
@@ -146,7 +168,11 @@ export function saveScheduledTask(input: ScheduledTaskInput): ScheduledTaskDTO {
     reasoningLevel: normalizeReasoningLevel(input.reasoningLevel ?? DEFAULT_REASONING_LEVEL),
     permissionMode: normalizePermissionMode(input.permissionMode ?? DEFAULT_PERMISSION_MODE),
     scheduleExpression,
-    sessionMode: normalizeSessionMode(input.sessionMode),
+    sessionMode,
+    /* 阻塞策略只对「复用上次会话」生效：新建模式统一存默认值，避免切换后残留旧策略 */
+    sessionBlockPolicy:
+      sessionMode === 'new' ? 'skip' : normalizeSessionBlockPolicy(input.sessionBlockPolicy),
+    timeoutMinutes: normalizeTimeoutMinutes(input.timeoutMinutes),
     enabled: (input.enabled ?? true) ? 1 : 0,
     lastRunAt: existing?.lastRunAt ?? '',
     lastRunStatus: existing?.lastRunStatus ?? '',
@@ -200,12 +226,13 @@ export function setScheduledTaskEnabled(id: number, enabled: boolean): void {
     .run()
 }
 
-/* 删除任务配置（历史会话由会话域保留） */
+/* 删除任务配置：运行日志一并清理，历史会话由会话域保留 */
 export function deleteScheduledTask(id: number): void {
   if (!id) {
     return
   }
   getDb().delete(scheduledTaskTable).where(eq(scheduledTaskTable.id, id)).run()
+  clearRunLogs({ taskId: id })
 }
 
 /* 写入最近一次运行结果 */
@@ -233,11 +260,12 @@ export function markScheduledRun(
     .run()
 }
 
-/* 定时任务设置：休眠开关与最大并发数 */
+/* 定时调度设置：休眠开关、最大并发数与巡检间隔 */
 export function getScheduleConfig(): ScheduleConfigDTO {
   const settings = getSettings()
   return {
     keepAwake: settings.scheduleKeepAwake,
-    maxConcurrency: settings.scheduleMaxConcurrency
+    maxConcurrency: settings.scheduleMaxConcurrency,
+    watchdogInterval: settings.scheduleWatchdogInterval
   }
 }

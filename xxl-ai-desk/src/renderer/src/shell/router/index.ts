@@ -32,14 +32,14 @@ const router = createRouter({
       component: () => import('@modules/schedule/renderer/pages/tasks.vue')
     },
     {
-      path: '/schedule/runs',
-      name: 'schedule-runs',
-      component: () => import('@modules/schedule/renderer/pages/runs.vue')
+      path: '/schedule/logs',
+      name: 'schedule-logs',
+      component: () => import('@modules/schedule/renderer/pages/logs.vue')
     },
     {
-      path: '/schedule/settings',
-      name: 'schedule-settings',
-      component: () => import('@modules/schedule/renderer/pages/settings.vue')
+      path: '/schedule/dispatch',
+      name: 'schedule-dispatch',
+      component: () => import('@modules/schedule/renderer/pages/dispatch.vue')
     },
     {
       path: '/settings',

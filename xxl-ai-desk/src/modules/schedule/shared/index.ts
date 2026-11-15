@@ -1,5 +1,5 @@
 /*
- * schedule 模块跨进程公共契约出口。
+ * 定时任务域跨进程公共契约出口。
  * @author xuxueli 2026-11-15
  */
 
@@ -7,11 +7,18 @@ export type { ScheduleApi } from './api'
 export { SCHEDULE_CONFIG_DEFAULT } from './contracts'
 export type {
   ScheduleConfigDTO,
-  ScheduleSessionMode,
+  ScheduleLogClearInput,
+  ScheduleLogDTO,
+  ScheduleLogQuery,
+  ScheduleLogStatus,
+  ScheduleLogTrigger,
   ScheduleRunStartDTO,
   ScheduleRunStatus,
+  ScheduleSessionBlockPolicy,
+  ScheduleSessionMode,
   ScheduledTaskDTO,
-  ScheduledTaskInput
+  ScheduledTaskInput,
+  ScheduleWatchdogStatusDTO
 } from './contracts'
 export { SCHEDULE_IPC } from './ipc'
 export { SCHEDULE_MIN_GAP_SECONDS, validateScheduleFields } from './validate'

@@ -42,9 +42,13 @@ export type BrandingKind = 'logo' | 'background'
 export const BACKGROUND_OPACITY_MIN = 0.1
 export const BACKGROUND_OPACITY_MAX = 0.6
 
-/* 定时任务最大并发数范围：主进程归一化与任务设置页共用 */
+/* 定时任务最大并发数范围：主进程归一化与调度设置页共用 */
 export const SCHEDULE_MAX_CONCURRENCY_MIN = 1
 export const SCHEDULE_MAX_CONCURRENCY_MAX = 500
+
+/* 定时任务巡检间隔范围（秒）：主进程归一化与调度设置页共用 */
+export const SCHEDULE_WATCHDOG_MIN = 30
+export const SCHEDULE_WATCHDOG_MAX = 600
 
 /* 品牌资源：主进程解析后的绝对路径，空串表示使用内置资源 */
 export interface BrandingAssets {
@@ -99,6 +103,8 @@ export interface AppSettings {
   scheduleKeepAwake: boolean
   /* 定时任务：最大并发运行数 */
   scheduleMaxConcurrency: number
+  /* 定时任务：巡检间隔（秒），检测计时器与运行超时 */
+  scheduleWatchdogInterval: number
 }
 
 /* 快捷操作类型由 common 契约统一提供 */

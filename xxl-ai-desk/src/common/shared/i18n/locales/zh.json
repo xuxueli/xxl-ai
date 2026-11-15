@@ -211,7 +211,12 @@
       "scheduleConcurrencyLimit": "已达到最大并发任务数（{0}），本次已跳过",
       "scheduleConcurrencyFull": "已达到最大并发任务数（{0}），请稍后重试",
       "scheduleConcurrencyRange": "最大并发任务数需在 {0} ~ {1} 之间",
-      "scheduleRunFailed": "任务运行失败，请查看会话详情"
+      "scheduleWatchdogRange": "任务巡检间隔需在 {0} ~ {1} 秒之间",
+      "scheduleRunFailed": "任务运行失败，请查看会话详情",
+      "scheduleRunMissed": "计划触发时刻已错过（系统休眠或计时器延迟），本次已跳过并重排",
+      "scheduleRunStale": "运行状态异常丢失，已强制结算本轮",
+      "scheduleRunTimeoutStuck": "运行超时且未能正常终止，已强制结算本轮",
+      "scheduleRunInterrupted": "应用退出导致本轮中断"
     },
     "dialog": {
       "selectFolderTitle": "选择项目目录",
@@ -232,6 +237,7 @@
     "retry": "[异常] 第 {0} 次请求异常：{1}。已记录，继续重试。",
     "final": "[异常] 连续异常 {0} 次，已结束：{1}",
     "sessionMissing": "会话不存在",
+    "sessionBusy": "当前会话正在生成，请等待本轮结束或先停止生成",
     "projectMissing": "会话未绑定项目或项目已被删除，请先选择项目后再发送",
     "providerMissing": "模型供应商不存在或已被删除，请在会话中重新选择模型",
     "providerDisabled": "供应商「{0}」已停用，请在会话中重新选择模型",
@@ -347,7 +353,8 @@
       "rejected": "用户已拒绝。",
       "selected": "用户选择：{0}",
       "noSelection": "用户未选择任何选项。",
-      "cancelled": "交互已取消，用户未提供信息。"
+      "cancelled": "交互已取消，用户未提供信息。",
+      "autoDecision": "当前为定时任务无人值守会话，无人可作答：请基于已有信息自行决策并继续执行。"
     },
     "note": {
       "untitled": "未命名笔记",

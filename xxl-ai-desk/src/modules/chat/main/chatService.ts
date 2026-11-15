@@ -9,6 +9,7 @@ import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
 import type {
+  ChatEvent,
   InteractionResult,
   MessageSource,
   PermissionMode,
@@ -35,8 +36,8 @@ import { abortAgent, evictAgent, isAgentRunning, prepareAgentRuntime, runAgent }
 import { cancelBrowserActionsOf } from '@modules/browser/main'
 import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
 
-/* 下发到渲染层的对话事件负载（携带会话上下文） */
-export type ChatEventPayload = { sessionId: number } & HostEvent
+/* 下发到渲染层的对话事件负载：流式事件（含轮次开始）或运行时事件 */
+export type ChatEventPayload = ChatEvent | ({ sessionId: number } & HostEvent)
 
 /* 流式草稿落库间隔（毫秒）：把已生成但尚未结束的回复定期写入，进程异常时保留已输出内容 */
 const DRAFT_PERSIST_INTERVAL = 3000
@@ -294,9 +295,11 @@ export async function sendChat(
   const { sessionId, text } = input
   /* 本轮发送时刻：失败轮次回写时用户提问仍取此刻，避免与错误提示显示为同一时间 */
   const startedAt = Date.now()
+  const settings = getSettings()
+  const language = settings.language
   /* 同一会话已有运行中的一轮：直接下发提示，不落库错误轮次 */
   if (isAgentRunning(sessionId)) {
-    emit({ sessionId, type: 'error', message: '当前会话正在生成，请等待本轮结束或先停止生成' })
+    emit({ sessionId, type: 'error', message: translate(language, 'runtime.sessionBusy') })
     return
   }
   /* 新一轮开始：清除上一轮的终止/丢弃标记 */
@@ -314,8 +317,6 @@ export async function sendChat(
   let roundUsage: { used: number; window: number } | null = null
   /* 本轮最后一次上下文分项：结束时写入会话表 */
   let roundBreakdown: ContextBreakdown | null = null
-  const settings = getSettings()
-  const language = settings.language
   /* 本轮已完成的运行时消息快照（checkpoint 回传） */
   let roundSnapshot: unknown[] = []
   /* 当前流式回复的草稿片段：只有正文 / 思考，不含未完成的工具调用 */
@@ -451,6 +452,11 @@ export async function sendChat(
      * 用户已发送的内容与后续消息快照都能在重载后恢复。
      */
     turnId = startTurn(sessionId, text, startedAt)
+    /*
+     * 轮次开始：手动发送与定时任务统一走此事件。
+     * 渲染层发起的轮次已本地占位（streamingIds 去重）；主进程发起的轮次据此补建消息并接入流式。
+     */
+    emit({ sessionId, type: 'turn-start', userText: text, startedAt })
 
     /* 会话引用的供应商/模型若已删除或停用，直接提示用户重新选择，不做静默切换 */
     const target = resolveRuntimeTarget(session, settings, language)
@@ -615,6 +621,10 @@ export async function sendChat(
     if (draftTimer !== null) {
       clearTimeout(draftTimer)
       draftTimer = null
+    }
+    /* 用户主动终止本轮：广播终止事件，供定时任务运行器区分「已终止」与「成功」 */
+    if (abortRequested.has(sessionId) && !isSessionRemoved(sessionId)) {
+      emit({ sessionId, type: 'aborted' })
     }
     abortRequested.delete(sessionId)
     discardedSessions.delete(sessionId)

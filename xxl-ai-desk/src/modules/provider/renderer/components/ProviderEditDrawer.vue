@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /*
- * 设置 - 供应商编辑弹窗：基础信息、请求头、模型多行编辑与远程模型查询。
+ * 设置 - 供应商编辑抽屉：基础信息、请求头、模型多行编辑与远程模型查询。
  * @author xuxueli 2026-10-25
  */
 import { computed, ref, watch } from 'vue'
@@ -60,7 +60,7 @@ const headersText = ref('{}')
 /* 请求 Header 示例（含花括号，放模板文本避免 i18n 占位符解析冲突） */
 const headersExample = '{"x-opencode-session":"{session}"}'
 
-/* 弹窗标题：编辑 / 新增 */
+/* 抽屉标题：编辑 / 新增 */
 const title = computed(() =>
   props.provider ? t('settings.editProvider') : t('settings.addProvider')
 )
@@ -81,14 +81,12 @@ function resetForm(): void {
         apiKey: '',
         enabled: true
       }
-  modelRows.value =
-    row && row.models.length > 0
-      ? row.models.map((model) => ({
-          id: model.id,
-          contextWindow: model.contextWindow,
-          type: model.type ?? DEFAULT_MODEL_TYPE
-        }))
-      : [createModelRow()]
+  /* 编辑时按已保存模型回填（允许为空）；新增时给一行空输入便于填写 */
+  modelRows.value = row ? row.models.map((model) => ({
+    id: model.id,
+    contextWindow: model.contextWindow,
+    type: model.type ?? DEFAULT_MODEL_TYPE
+  })) : [createModelRow()]
   remoteModels.value = []
   headersText.value = JSON.stringify(row?.headers ?? {}, null, 2)
 }
@@ -104,12 +102,9 @@ function addModelRow(): void {
   modelRows.value.push(createModelRow())
 }
 
-/* 移除一行模型（保留至少一行） */
+/* 移除一行模型（允许删空：模型列表可以为空） */
 function removeModelRow(index: number): void {
   modelRows.value.splice(index, 1)
-  if (modelRows.value.length === 0) {
-    modelRows.value.push(createModelRow())
-  }
 }
 
 /* 解析请求 Header：要求 JSON 对象，非字符串值统一转字符串 */
@@ -166,9 +161,18 @@ async function queryRemoteModels(): Promise<void> {
   }
 }
 
-/* 提交供应商表单：模型去重、校验请求 Header 后保存 */
+/* 提交供应商表单：校验基础字段、模型去重与请求 Header 后保存（模型可为空） */
 async function submit(): Promise<void> {
-  /* 按模型 ID 去重；空 ID 丢弃，非法窗口回退默认值 */
+  /* 名称 / 地址缺失分别提示，避免笼统提示掩盖真实原因 */
+  if (!form.value.name.trim()) {
+    ElMessage.warning(t('settings.providerNameRequired'))
+    return
+  }
+  if (!form.value.baseUrl.trim()) {
+    ElMessage.warning(t('settings.baseUrlRequired'))
+    return
+  }
+  /* 按模型 ID 去重；空行丢弃，非法窗口回退默认值 */
   const models = [
     ...new Map(
       modelRows.value
@@ -184,10 +188,6 @@ async function submit(): Promise<void> {
         .map((item) => [item.id, item])
     ).values()
   ]
-  if (!form.value.name || !form.value.baseUrl || models.length === 0) {
-    ElMessage.warning(t('settings.providerTip'))
-    return
-  }
   const headers = parseHeaders()
   if (!headers) {
     ElMessage.error(t('settings.headersInvalid'))
@@ -196,8 +196,8 @@ async function submit(): Promise<void> {
 
   await provider.save({
     id: props.provider?.id,
-    name: form.value.name,
-    baseUrl: form.value.baseUrl,
+    name: form.value.name.trim(),
+    baseUrl: form.value.baseUrl.trim(),
     apiKey: form.value.apiKey,
     enabled: form.value.enabled,
     headers,
@@ -209,12 +209,11 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     v-model="visible"
-    class="settings-dialog"
+    class="settings-drawer"
     :title="title"
-    width="760px"
-    align-center
+    size="640px"
     append-to-body
   >
     <el-form label-position="top">
@@ -295,10 +294,12 @@ async function submit(): Promise<void> {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
-      <el-button type="primary" @click="submit">{{ t('common.save') }}</el-button>
+      <div class="drawer-footer">
+        <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="submit">{{ t('common.save') }}</el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>
 
 <style scoped lang="scss">
@@ -307,6 +308,24 @@ async function submit(): Promise<void> {
   font-size: var(--desk-font-sm);
   color: var(--desk-text-tertiary);
   font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* 抽屉正文禁止横向滚动：模型行已按弹性宽度收敛 */
+:global(.settings-drawer .el-drawer__body) {
+  overflow-x: hidden;
+  padding-top: 12px;
+}
+
+/* 标题与正文之间收紧留白 */
+:global(.settings-drawer .el-drawer__header) {
+  margin-bottom: 8px;
+  padding-bottom: 0;
+}
+
+.drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* 模型动态多行编辑器 */

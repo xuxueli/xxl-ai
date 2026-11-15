@@ -1,5 +1,5 @@
 /*
- * 定时任务 · 任务列表：筛选、编辑抽屉、立即运行与跳转运行记录。
+ * 定时任务 · 任务列表：筛选、编辑抽屉、立即运行与跳转运行日志。
  * @author xuxueli 2026-11-15
  */
 <script setup lang="ts">
@@ -43,21 +43,15 @@ function onEdit(task: ScheduledTaskDTO): void {
   editorVisible.value = true
 }
 
-/* 进入运行记录并定位当前任务 */
-function onOpenRuns(task: ScheduledTaskDTO): void {
-  void router.push({ path: '/schedule/runs', query: { taskId: String(task.id) } })
+/* 进入运行日志并定位当前任务 */
+function onOpenLogs(task: ScheduledTaskDTO): void {
+  void router.push({ path: '/schedule/logs', query: { taskId: String(task.id) } })
 }
 
-/* 立即运行：创建 / 复用实例会话，运行结果可在「运行记录」中查看 */
+/* 立即运行：创建 / 复用实例会话，运行结果可在「运行日志」中查看 */
 async function onRun(task: ScheduledTaskDTO): Promise<void> {
   try {
-    const sessionId = await schedule.runNow(task.id)
-    if (!sessionId) {
-      /* 未运行原因由主进程写入任务运行结果，直接回显更准确 */
-      const latest = schedule.tasks.find((item) => item.id === task.id)
-      ElMessage.warning(latest?.lastError || t('schedule.invalidTip'))
-      return
-    }
+    await schedule.runNow(task.id)
     ElMessage.success(t('schedule.runStarted'))
   } catch (error) {
     ElMessage.error(t('schedule.runNowFailed', [ipcErrorMessage(error)]))
@@ -76,7 +70,7 @@ async function onRun(task: ScheduledTaskDTO): Promise<void> {
           <ScheduleTable
             @create="onCreate"
             @edit="onEdit"
-            @open="onOpenRuns"
+            @open="onOpenLogs"
             @run="onRun"
           />
         </div>

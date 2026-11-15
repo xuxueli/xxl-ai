@@ -32,7 +32,11 @@ import {
   permissionModeOptions,
   reasoningLevelOptions
 } from '@common/renderer/utils/sessionOptions'
-import type { ScheduledTaskDTO, ScheduleSessionMode } from '@modules/schedule/shared'
+import type {
+  ScheduledTaskDTO,
+  ScheduleSessionBlockPolicy,
+  ScheduleSessionMode
+} from '@modules/schedule/shared'
 
 const visible = defineModel<boolean>('visible', { default: false })
 const props = defineProps<{ draft: ScheduledTaskDTO | null }>()
@@ -56,6 +60,8 @@ interface FormState {
   permissionMode: PermissionMode
   scheduleExpression: string
   sessionMode: ScheduleSessionMode
+  sessionBlockPolicy: ScheduleSessionBlockPolicy
+  timeoutMinutes: number
   enabled: boolean
 }
 
@@ -71,10 +77,20 @@ const form = ref<FormState>({
   permissionMode: DEFAULT_PERMISSION_MODE,
   scheduleExpression: SCHEDULE_DEFAULT_EXPRESSION,
   sessionMode: 'reuse',
+  sessionBlockPolicy: 'skip',
+  timeoutMinutes: 0,
   enabled: true
 })
 
 const saving = ref(false)
+
+/* 任务超时模式：不限时 / 自定义分钟数（切换自定义时给一个可用默认值） */
+const timeoutMode = computed<'none' | 'custom'>({
+  get: () => (form.value.timeoutMinutes > 0 ? 'custom' : 'none'),
+  set: (mode) => {
+    form.value.timeoutMinutes = mode === 'custom' ? form.value.timeoutMinutes || 30 : 0
+  }
+})
 
 /* 抽屉标题 */
 const title = computed(() =>
@@ -111,6 +127,8 @@ function resetForm(): void {
     permissionMode: draft?.permissionMode ?? defaults.permissionMode,
     scheduleExpression: draft?.scheduleExpression ?? SCHEDULE_DEFAULT_EXPRESSION,
     sessionMode: draft?.sessionMode ?? 'reuse',
+    sessionBlockPolicy: draft?.sessionBlockPolicy ?? 'skip',
+    timeoutMinutes: draft?.timeoutMinutes ?? 0,
     enabled: draft?.enabled ?? true
   }
   normalizeProviderAndModel()
@@ -183,6 +201,8 @@ async function onSave(): Promise<void> {
       permissionMode: form.value.permissionMode,
       scheduleExpression,
       sessionMode: form.value.sessionMode,
+      sessionBlockPolicy: form.value.sessionBlockPolicy,
+      timeoutMinutes: form.value.timeoutMinutes,
       enabled: form.value.enabled
     })
     ElMessage.success(t('schedule.saved'))
@@ -225,13 +245,54 @@ async function onSave(): Promise<void> {
           <el-form-item :label="t('schedule.fields.schedule')" required>
             <ScheduleRuleEditor v-model="form.scheduleExpression" />
           </el-form-item>
-          <el-form-item :label="t('schedule.sessionMode.label')">
-            <el-radio-group v-model="form.sessionMode">
-              <el-radio-button value="new">{{ t('schedule.sessionMode.new') }}</el-radio-button>
-              <el-radio-button value="reuse">{{ t('schedule.sessionMode.reuse') }}</el-radio-button>
-            </el-radio-group>
-            <div class="form-tip">{{ t('schedule.sessionMode.reuseTip') }}</div>
-          </el-form-item>
+          <div class="form-grid">
+            <el-form-item :label="t('schedule.sessionMode.label')">
+              <el-radio-group v-model="form.sessionMode" class="form-radio-group">
+                <el-radio-button value="new">{{ t('schedule.sessionMode.new') }}</el-radio-button>
+                <el-radio-button value="reuse">{{ t('schedule.sessionMode.reuse') }}</el-radio-button>
+              </el-radio-group>
+              <div class="form-tip">{{ t('schedule.sessionMode.reuseTip') }}</div>
+            </el-form-item>
+            <el-form-item
+              v-if="form.sessionMode === 'reuse'"
+              :label="t('schedule.sessionBlockPolicy.label')"
+            >
+              <el-radio-group v-model="form.sessionBlockPolicy" class="form-radio-group">
+                <el-radio-button value="skip">
+                  {{ t('schedule.sessionBlockPolicy.skip') }}
+                </el-radio-button>
+                <el-radio-button value="force">
+                  {{ t('schedule.sessionBlockPolicy.force') }}
+                </el-radio-button>
+              </el-radio-group>
+              <div class="form-tip">
+                {{ t(`schedule.sessionBlockPolicy.${form.sessionBlockPolicy}Tip`) }}
+              </div>
+            </el-form-item>
+            <el-form-item :label="t('schedule.fields.timeout')" class="form-item-wide">
+              <div class="timeout-row">
+                <el-radio-group v-model="timeoutMode" class="form-radio-group">
+                  <el-radio-button value="none">
+                    {{ t('schedule.fields.timeoutNone') }}
+                  </el-radio-button>
+                  <el-radio-button value="custom">
+                    {{ t('schedule.fields.timeoutCustom') }}
+                  </el-radio-button>
+                </el-radio-group>
+                <template v-if="timeoutMode === 'custom'">
+                  <el-input-number
+                    v-model="form.timeoutMinutes"
+                    :min="1"
+                    :step="1"
+                    controls-position="right"
+                    class="timeout-input"
+                  />
+                  <span class="timeout-unit">{{ t('schedule.fields.minutes') }}</span>
+                </template>
+              </div>
+              <div class="form-tip">{{ t('schedule.fields.timeoutTip') }}</div>
+            </el-form-item>
+          </div>
         </el-form>
       </section>
 
@@ -268,6 +329,7 @@ async function onSave(): Promise<void> {
                   :value="item.value"
                 />
               </el-select>
+              <div class="form-tip">{{ t('schedule.fields.permissionTip') }}</div>
             </el-form-item>
             <el-form-item :label="t('schedule.fields.provider')">
               <el-select v-model="form.providerId" style="width: 100%" @change="onProviderChange">
@@ -361,6 +423,39 @@ async function onSave(): Promise<void> {
   font-size: var(--desk-font-xs);
   color: var(--desk-text-tertiary);
   line-height: 1.5;
+}
+
+/* 单选框占满整行，保证提示文案换行显示在按钮下方 */
+.form-radio-group {
+  width: 100%;
+}
+
+/* 需要整行展示的表单项（如任务超时） */
+.form-item-wide {
+  grid-column: 1 / -1;
+}
+
+/* 超时配置：模式、分钟数与单位同一行 */
+.timeout-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 超时模式按内容宽度排布，与同行的分钟输入框保持一行 */
+.timeout-row .form-radio-group {
+  width: auto;
+  flex: none;
+}
+
+.timeout-input {
+  width: 120px;
+}
+
+.timeout-unit {
+  font-size: var(--desk-font-sm);
+  color: var(--desk-text-secondary);
 }
 
 .switch-row {

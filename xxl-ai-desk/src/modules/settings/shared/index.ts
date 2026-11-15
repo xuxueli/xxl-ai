@@ -9,6 +9,8 @@ export {
   BACKGROUND_OPACITY_MIN,
   SCHEDULE_MAX_CONCURRENCY_MAX,
   SCHEDULE_MAX_CONCURRENCY_MIN,
+  SCHEDULE_WATCHDOG_MAX,
+  SCHEDULE_WATCHDOG_MIN,
   THEME_PRESETS
 } from './contracts'
 export type { AppSettings, BrandingAssets, BrandingKind, SessionDefaults } from './contracts'

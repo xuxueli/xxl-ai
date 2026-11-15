@@ -162,6 +162,9 @@ function formatResult(
   if (result.status === 'cancelled') {
     return text(tr(context, 'runtime.hitl.cancelled'), details)
   }
+  if (result.status === 'auto') {
+    return text(tr(context, 'runtime.hitl.autoDecision'), details)
+  }
   const values = Array.isArray(result.value) ? result.value : [result.value]
   const clean = values
     .map((item) => String(item).trim().slice(0, MAX_OTHER))
@@ -223,8 +226,8 @@ async function buildAskUserTool(context: ToolContext): Promise<AgentTool> {
           .content.map((block) => (block.type === 'text' ? block.text : ''))
           .join('\n')
         parts.push(total > 1 ? `「${request.title}」\n${content}` : content)
-        /* 用户拒绝 / 取消：停止后续问题，避免继续打扰 */
-        if (result.status !== 'submitted') {
+        /* 用户拒绝 / 取消：停止后续问题，避免继续打扰；无人值守自动决策时继续下一题 */
+        if (result.status !== 'submitted' && result.status !== 'auto') {
           break
         }
       }

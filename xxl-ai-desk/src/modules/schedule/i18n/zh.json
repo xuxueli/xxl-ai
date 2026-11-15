@@ -3,19 +3,19 @@
     "title": "定时任务",
     "nav": {
       "tasks": "任务列表",
-      "runs": "运行记录",
-      "settings": "任务设置"
+      "logs": "运行日志",
+      "dispatch": "调度设置"
     },
     "tip": {
-      "tasks": "按触发规则定时启动会话；点击任务可查看对应运行记录。",
-      "runs": "查看定时任务的运行实例与触发时间；点击「查看会话」进入对话详情。",
-      "settings": "配置定时任务的运行策略：电脑休眠与最大并发任务数。"
+      "tasks": "按触发规则定时启动会话；行内「运行日志」可查看对应触发记录。",
+      "logs": "查看每次触发（含失败跳过）的运行日志与触发时间；点击「查看会话」进入对话详情。",
+      "dispatch": "配置定时任务的调度策略：电脑休眠、最大并发任务数与任务巡检间隔。"
     },
     "sessionBadge": "定时任务会话",
     "new": "新建定时任务",
     "editTitle": "编辑定时任务",
     "empty": "暂无定时任务",
-    "emptyTip": "创建后按触发规则定时启动会话，运行记录即会话历史。",
+    "emptyTip": "创建后按触发规则定时启动会话；运行结果可在会话与运行日志中查看。",
     "searchPlaceholder": "搜索任务名称或指令",
     "allProjects": "全部项目",
     "allAgents": "全部 Agent",
@@ -25,29 +25,37 @@
     "total": "共 {0} 个任务",
     "status": {
       "enabled": "已启用",
-      "disabled": "已停用",
-      "running": "运行中",
-      "failed": "上次失败",
-      "invalid": "引用失效"
+      "disabled": "已停用"
     },
-    "runStatus": {
+    "logStatus": {
+      "running": "进行中",
       "success": "成功",
-      "failed": "失败",
-      "skipped": "已跳过"
+      "skip": "失败跳过",
+      "failed": "失败"
+    },
+    "runTrigger": {
+      "schedule": "定时触发",
+      "manual": "立即运行"
     },
     "columns": {
       "task": "任务",
       "session": "会话属性",
       "schedule": "调度",
       "status": "状态",
-      "lastRun": "上次运行",
       "actions": "操作"
     },
     "sessionMode": {
       "label": "会话设置方式",
       "new": "每次新建会话",
       "reuse": "复用上次会话",
-      "reuseTip": "复用的会话已删除或不存在时自动新建；复用会话正在生成时本次跳过。"
+      "reuseTip": "复用的会话已删除或不存在时自动新建。"
+    },
+    "sessionBlockPolicy": {
+      "label": "会话阻塞策略",
+      "skip": "本次调度忽略",
+      "force": "强制调度执行",
+      "skipTip": "复用会话执行中则跳过本次调度。",
+      "forceTip": "复用会话执行中则终止后重新触发。"
     },
     "fields": {
       "name": "任务名称",
@@ -61,6 +69,12 @@
       "model": "模型",
       "reasoning": "推理等级",
       "permission": "权限模式",
+      "permissionTip": "定时运行无人值守，越界写入 / 命令会被自动拒绝；需要更大范围请在任务中选择「完全权限」。",
+      "timeout": "任务超时",
+      "timeoutNone": "不限时",
+      "timeoutCustom": "自定义",
+      "timeoutTip": "超过设定时长后由巡检主动终止本轮；不限时则不自动终止。",
+      "minutes": "分钟",
       "enabled": "启用任务"
     },
     "section": {
@@ -136,40 +150,51 @@
     },
     "actions": {
       "runNow": "立即运行",
-      "runs": "运行记录"
+      "logs": "运行日志",
+      "clearLogs": "日志清理"
     },
-    "deleteConfirm": "确定删除定时任务「{0}」？历史会话将保留。",
+    "deleteConfirm": "确定删除定时任务「{0}」？历史会话将保留，运行日志将一并清理。",
     "deleted": "定时任务已删除",
     "saved": "定时任务已保存",
     "runStarted": "任务已开始运行",
     "openSession": "查看会话",
-    "never": "尚未运行",
     "nextRun": "下次 {0}",
     "nextRunNone": "未安排",
-    "invalidTip": "关联的项目或 Agent 已失效，请编辑任务后重试。",
     "runNowFailed": "任务启动失败：{0}",
     "projectRequired": "请选择项目",
     "agentRequired": "请选择 Agent",
     "modelRequired": "请选择模型",
-    "runs": {
+    "logs": {
       "taskFilter": "任务",
-      "startDate": "开始日期",
-      "endDate": "结束日期",
+      "rangeFilter": "触发时间",
+      "rangeStart": "开始日期",
+      "rangeEnd": "结束日期",
       "task": "任务",
+      "triggerType": "触发方式",
+      "status": "状态",
       "session": "会话",
-      "project": "项目",
-      "agent": "Agent",
       "triggeredAt": "触发时间",
-      "empty": "暂无运行记录",
+      "empty": "暂无运行日志",
       "unknownTask": "任务已删除",
-      "count": "共 {0} 条记录"
+      "deletedSession": "会话已删除",
+      "clearTitle": "清理运行日志",
+      "clearTip": "按任务与触发时间范围删除运行日志；删除后不可恢复，历史会话不受影响。请至少选择任务或时间范围。",
+      "clearSubmit": "清理",
+      "clearRequired": "请至少选择任务或时间范围",
+      "clearDone": "已清理 {0} 条运行日志",
+      "clearNone": "没有符合条件的运行日志"
     },
-    "settings": {
+    "dispatch": {
       "keepAwake": "保持电脑不睡眠",
       "keepAwakeDesc": "开启后阻止电脑进入睡眠（屏幕仍可关闭），避免定时任务被挂起中断；合盖或手动睡眠仍会暂停任务。",
       "maxConcurrency": "最大并发任务数",
       "maxConcurrencyDesc": "同时运行的定时任务上限（{0} ~ {1}）；达到上限后的触发将记为已跳过。",
-      "saved": "任务设置已保存"
+      "watchdogInterval": "任务巡检间隔",
+      "watchdogIntervalDesc": "每隔多少秒巡检一次任务：校正计时器、终止超时运行（{0} ~ {1} 秒）。",
+      "watchdogLastRun": "上次巡检时间：{0}",
+      "watchdogNextRun": "下次巡检时间：{0}",
+      "watchdogNeverRun": "尚未执行",
+      "saved": "调度设置已保存"
     },
     "seed": {
       "dailyNews": {

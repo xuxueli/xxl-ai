@@ -14,6 +14,9 @@ export const scheduleApi: ScheduleApi = {
   setEnabled: (id: number, enabled: boolean) =>
     ipcRenderer.invoke(SCHEDULE_IPC.setEnabled, id, enabled),
   runNow: (id: number) => ipcRenderer.invoke(SCHEDULE_IPC.runNow, id),
+  logs: (query) => ipcRenderer.invoke(SCHEDULE_IPC.logs, query),
+  clearLogs: (input) => ipcRenderer.invoke(SCHEDULE_IPC.clearLogs, input),
+  watchdog: () => ipcRenderer.invoke(SCHEDULE_IPC.watchdog),
   getConfig: () => ipcRenderer.invoke(SCHEDULE_IPC.getConfig),
   saveConfig: (patch) => ipcRenderer.invoke(SCHEDULE_IPC.saveConfig, patch),
   onChanged: (callback) => {

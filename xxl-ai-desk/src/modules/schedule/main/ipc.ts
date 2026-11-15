@@ -1,5 +1,5 @@
 /*
- * 定时任务域 IPC 注册：任务 CRUD、立即运行与休眠开关。
+ * 定时任务域 IPC 注册：任务 CRUD、立即运行、运行日志与休眠开关。
  *   - 调度重排与休眠同步在这里统一编排，服务层保持纯数据职责；
  *   - 流式事件复用对话域 CHAT_IPC.event，渲染层无需新增订阅协议。
  * @author xuxueli 2026-11-15
@@ -10,23 +10,28 @@ import { t } from '@common/main/i18n'
 import { saveSettings } from '@modules/settings/main'
 import {
   SCHEDULE_MAX_CONCURRENCY_MAX,
-  SCHEDULE_MAX_CONCURRENCY_MIN
+  SCHEDULE_MAX_CONCURRENCY_MIN,
+  SCHEDULE_WATCHDOG_MAX,
+  SCHEDULE_WATCHDOG_MIN
 } from '@modules/settings/shared'
-import { abortChat } from '@modules/chat/main'
 import { CHAT_IPC, SESSION_IPC } from '@modules/chat/shared'
 import { SCHEDULE_IPC } from '../shared/ipc'
-import type { ScheduleConfigDTO, ScheduledTaskInput } from '../shared/contracts'
+import type {
+  ScheduleConfigDTO,
+  ScheduleLogClearInput,
+  ScheduleLogQuery,
+  ScheduledTaskInput
+} from '../shared/contracts'
 import {
   deleteScheduledTask,
   getScheduleConfig,
-  getScheduledTask,
   listScheduledTasks,
   saveScheduledTask,
   setScheduledTaskEnabled
 } from './scheduledTaskService'
-import { configureScheduleRuntime, startScheduledRun } from './runner'
-import { isTaskRunning } from './runState'
-import { rescheduleTask } from './scheduler'
+import { configureScheduleRuntime, startScheduledRun, stopScheduledRun } from './runner'
+import { clearRunLogs, listRunLogs } from './runLog'
+import { getWatchdogStatus, rescheduleTask, resyncWatchdog } from './scheduler'
 import { syncKeepAwake } from './keepAwake'
 
 export function registerScheduleIpc(ipc: IpcContext): void {
@@ -54,15 +59,17 @@ export function registerScheduleIpc(ipc: IpcContext): void {
     publishTaskChange(id)
   })
   ipc.handle(SCHEDULE_IPC.remove, async (_event, id: number) => {
-    const task = getScheduledTask(id)
-    /* 删除运行中的任务：先终止当前实例，再移除配置；历史会话保留 */
-    if (task && isTaskRunning(id) && task.lastSessionId) {
-      await abortChat(task.lastSessionId)
-    }
+    /* 删除运行中的任务：先终止当前实例并清理运行态，再移除配置；历史会话与运行日志保留 */
+    await stopScheduledRun(id)
     deleteScheduledTask(id)
     publishTaskChange(id)
   })
   ipc.handle(SCHEDULE_IPC.runNow, (_event, id: number) => startScheduledRun(id, 'manual'))
+  ipc.handle(SCHEDULE_IPC.logs, (_event, query: ScheduleLogQuery) => listRunLogs(query ?? {}))
+  ipc.handle(SCHEDULE_IPC.clearLogs, (_event, input: ScheduleLogClearInput) =>
+    clearRunLogs(input ?? {})
+  )
+  ipc.handle(SCHEDULE_IPC.watchdog, () => getWatchdogStatus())
   ipc.handle(SCHEDULE_IPC.getConfig, () => getScheduleConfig())
   ipc.handle(SCHEDULE_IPC.saveConfig, (_event, patch: Partial<ScheduleConfigDTO>) => {
     /*
@@ -84,13 +91,32 @@ export function registerScheduleIpc(ipc: IpcContext): void {
         )
       }
     }
+    if (patch.watchdogInterval !== undefined) {
+      const value = Number(patch.watchdogInterval)
+      if (
+        !Number.isInteger(value) ||
+        value < SCHEDULE_WATCHDOG_MIN ||
+        value > SCHEDULE_WATCHDOG_MAX
+      ) {
+        throw new Error(
+          t('runtime.error.scheduleWatchdogRange', [SCHEDULE_WATCHDOG_MIN, SCHEDULE_WATCHDOG_MAX])
+        )
+      }
+    }
     saveSettings({
       ...(patch.keepAwake === undefined ? {} : { scheduleKeepAwake: patch.keepAwake }),
       ...(patch.maxConcurrency === undefined
         ? {}
-        : { scheduleMaxConcurrency: patch.maxConcurrency })
+        : { scheduleMaxConcurrency: patch.maxConcurrency }),
+      ...(patch.watchdogInterval === undefined
+        ? {}
+        : { scheduleWatchdogInterval: patch.watchdogInterval })
     })
     syncKeepAwake()
+    /* 巡检间隔变化立即生效：重建巡检链 */
+    if (patch.watchdogInterval !== undefined) {
+      resyncWatchdog()
+    }
     return getScheduleConfig()
   })
 }

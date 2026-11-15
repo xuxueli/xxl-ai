@@ -5,7 +5,8 @@
 
 import type { IpcContext } from '@common/main/ipc'
 import { CHAT_IPC, SESSION_IPC } from '../shared/ipc'
-import { createSession, deleteMessages, deleteSession, getSession, isSessionRemoved, listMessages, listSessions, updateSession } from './sessionService'
+import { createSession, deleteMessages, deleteSession, isSessionRemoved, listMessages, listSessions, updateSession } from './sessionService'
+import { resolveUnattendedInteraction } from './interactionPolicy'
 import { abortChat, discardSessionRuns, respondInteraction, sendChat } from './chatService'
 import { evictAgent, clearSessionPermissions, setInteractionAutoResolver, setSessionActiveResolver } from '@modules/agent/main'
 import { clearTraces } from '@modules/diagnostics/main'
@@ -13,9 +14,9 @@ import { clearTraces } from '@modules/diagnostics/main'
 export function registerChatIpc(ipc: IpcContext): void {
   /* 会话删除后，运行时迟到的流式事件 / 交互 / 浏览器 / 轨迹统一丢弃 */
   setSessionActiveResolver((sessionId) => !isSessionRemoved(sessionId))
-  /* 定时任务会话无人值守：交互请求直接拒绝，避免工具调用永久挂起 */
-  setInteractionAutoResolver((sessionId) =>
-    getSession(sessionId)?.triggerType === 'schedule' ? { status: 'denied' } : null
+  /* 定时任务会话无人值守：交互请求直接结算，避免工具调用永久挂起 */
+  setInteractionAutoResolver((sessionId, request) =>
+    resolveUnattendedInteraction(sessionId, request)
   )
   ipc.handle(SESSION_IPC.list, () => listSessions())
   ipc.handle(SESSION_IPC.create, (_event, input) => {

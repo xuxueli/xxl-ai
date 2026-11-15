@@ -19,6 +19,7 @@ import { createChatStream } from '@modules/chat/renderer/store/stream'
 import { computeSessionMetrics, computeTokenUsage } from '@modules/chat/renderer/utils/sessionMetrics'
 import { NEW_CHAT_TITLE } from '@modules/settings/shared'
 import {
+  type ChatEvent,
   type ChatInteractionCancel,
   type ChatInteractionPrompt,
   type InteractionResult,
@@ -41,6 +42,8 @@ export const useChatStore = defineStore('chat', () => {
   const bootstrapping = ref(true)
   /* 对话事件监听解绑函数（避免重复绑定） */
   let unbind: (() => void) | null = null
+  /* 主进程发起的流式轮次（定时任务 / 立即运行）：本窗口没有发送动作，按事件补建消息 */
+  const externalStreams = new Set<number>()
 
   /* 正在生成的会话集合（响应式）：支持多会话并发生成、互不阻塞 */
   const streamingIds = ref<Record<number, boolean>>({})
@@ -162,6 +165,12 @@ export const useChatStore = defineStore('chat', () => {
         return
       }
       const stored = await api.session.messages(id)
+      /* 读取期间主进程可能刚好开始了定时轮次：优先使用实时缓存，避免丢失进行中的流 */
+      const liveAfterLoad = stream.liveMessagesOf(id)
+      if (streamingIds.value[id] && liveAfterLoad) {
+        messages.value = liveAfterLoad
+        return
+      }
       const list = mapStoredMessages(stored)
       /* 生成中但无内存缓存（如应用重启后）：补一个占位助手消息，使后续增量继续流入 */
       const targetId = stream.targetIdOf(id)
@@ -241,6 +250,7 @@ export const useChatStore = defineStore('chat', () => {
     await api.session.remove(id)
     /* 清理该会话的生成缓存、流式状态与人机交互队列 */
     stream.discard(id)
+    externalStreams.delete(id)
     delete streamingIds.value[id]
     clearSessionInteractions(id)
     sessions.value = sessions.value.filter((item) => item.id !== id)
@@ -376,12 +386,127 @@ export const useChatStore = defineStore('chat', () => {
     interactions.value = next
   }
 
+  /*
+   * 外部轮次开始：本窗口未发起发送（定时任务 / 立即运行），按事件补建用户消息与占位助手消息，
+   * 并接入流式状态机，使思考 / 工具 / 正文与手动对话一致地实时渲染。
+   * 复用会话已有历史：本轮消息追加在历史之后，不能让生成期间的界面只剩本轮两条。
+   */
+  function startExternalRound(event: ChatEvent): void {
+    const sessionId = event.sessionId
+    /* 本窗口发起的轮次已在 send() 中占位并登记，忽略重复事件 */
+    if (streamingIds.value[sessionId]) {
+      return
+    }
+    const startedAt = event.startedAt ?? Date.now()
+    const addTime = new Date(startedAt).toISOString()
+    /* 已有消息（正在查看且已完成加载的会话 / 生成中的内存缓存）：保留历史，仅追加本轮 */
+    const shown =
+      currentId.value === sessionId && !loading.value
+        ? messages.value
+        : stream.liveMessagesOf(sessionId)
+    /* 有历史就接着写；没有则先放本轮两条，稍后按库补齐 */
+    const list: UiMessage[] = shown && shown.length > 0 ? [...shown] : []
+    const hasHistory = list.length > 0
+    const userMessage: UiMessage = {
+      id: nextLocalMessageId(),
+      role: 'user',
+      content: event.userText ?? '',
+      parts: [],
+      addTime
+    }
+    const assistantMessage: UiMessage = {
+      id: nextLocalMessageId(),
+      role: 'assistant',
+      content: '',
+      parts: [],
+      addTime,
+      startedAt,
+      pending: true
+    }
+    list.push(userMessage, assistantMessage)
+    externalStreams.add(sessionId)
+    streamingIds.value[sessionId] = true
+    stream.setLiveMessages(sessionId, list)
+    stream.beginRound(sessionId, assistantMessage.id, list)
+    /* 正在查看该会话：立即展示，后续增量按事件刷新 */
+    if (currentId.value === sessionId) {
+      messages.value = list
+    }
+    /* 无内存历史（未打开过该会话）：补读库内历史，避免进入会话时只剩本轮两条 */
+    if (!hasHistory) {
+      void loadExternalHistory(sessionId, list)
+    }
+  }
+
+  /*
+   * 补齐外部轮次的历史：用户消息在 turn-start 之前已落库，
+   * 因此历史只取最后一条用户消息之前的部分，再拼到本轮消息之前。
+   */
+  async function loadExternalHistory(sessionId: number, round: UiMessage[]): Promise<void> {
+    try {
+      const stored = await api.session.messages(sessionId)
+      /* 读取期间轮次已结束或缓存被替换：放弃补齐，避免写回已失效的消息数组 */
+      if (stream.liveMessagesOf(sessionId) !== round) {
+        return
+      }
+      let end = stored.length
+      for (let index = stored.length - 1; index >= 0; index -= 1) {
+        if (stored[index].role === 'user') {
+          end = index
+          break
+        }
+      }
+      const history = mapStoredMessages(stored.slice(0, end))
+      if (history.length === 0) {
+        return
+      }
+      /* 历史拼到本轮之前：缓存与界面共用同一数组，后续增量继续写入助理占位消息 */
+      const merged = [...history, ...round]
+      stream.setLiveMessages(sessionId, merged)
+      if (currentId.value === sessionId) {
+        messages.value = merged
+      }
+    } catch (error) {
+      /* 历史补齐失败不阻断本轮流式：保留已展示的本轮内容并提示 */
+      ElMessage.error(t('chat.loadMessagesFailed', [(error as Error).message]))
+    }
+  }
+
+  /*
+   * 外部轮次结束：落定缓冲并按库回读真实消息；非当前会话直接释放内存缓存。
+   * 与手动发送的收尾保持一致（手动路径在 send() 的 finally 中完成）。
+   */
+  async function finishExternalRound(sessionId: number): Promise<void> {
+    if (!externalStreams.delete(sessionId)) {
+      return
+    }
+    const assistantId = stream.targetIdOf(sessionId)
+    if (!assistantId) {
+      return
+    }
+    stream.flush(sessionId)
+    if (currentId.value === sessionId) {
+      await reloadStoredMessages(sessionId, assistantId)
+    }
+    stream.completeRound(sessionId, assistantId)
+    try {
+      await loadSessions()
+    } catch {
+      /* 会话列表刷新失败不覆盖当前对话界面 */
+    }
+  }
+
   /* 绑定事件监听（幂等） */
   function bind(): void {
     if (unbind) {
       return
     }
     unbind = api.chat.onEvent((event) => {
+      /* 轮次开始：本窗口发起的忽略，主进程发起的补建消息并接入流式 */
+      if (event.type === 'turn-start') {
+        startExternalRound(event)
+        return
+      }
       /* usage 事件实时同步会话分项：落库在主进程按轮完成，这里只更新当前列表视图 */
       if (event.type === 'usage') {
         const session = sessions.value.find((item) => item.id === event.sessionId)
@@ -396,6 +521,10 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
       stream.handleEvent(event)
+      /* 轮次结束：外部轮次收尾，回读落库结果与真实消息 id */
+      if (event.type === 'done' || event.type === 'error') {
+        void finishExternalRound(event.sessionId)
+      }
     })
     api.chat.onInteraction(onInteraction)
     api.chat.onInteractionCancel(onInteractionCancel)

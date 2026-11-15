@@ -3,11 +3,16 @@
  * @author xuxueli 2026-11-15
  */
 
+import type { PageResult } from '@common/shared/contracts/pagination'
 import type {
   ScheduleConfigDTO,
+  ScheduleLogClearInput,
+  ScheduleLogDTO,
+  ScheduleLogQuery,
   ScheduleRunStartDTO,
   ScheduledTaskDTO,
-  ScheduledTaskInput
+  ScheduledTaskInput,
+  ScheduleWatchdogStatusDTO
 } from './contracts'
 
 export interface ScheduleApi {
@@ -21,7 +26,13 @@ export interface ScheduleApi {
   setEnabled(id: number, enabled: boolean): Promise<void>
   /* 立即运行：返回本次实例会话 ID（长轮次后台继续） */
   runNow(id: number): Promise<ScheduleRunStartDTO>
-  /* 任务设置 */
+  /* 运行日志（分页，含被跳过的触发） */
+  logs(query: ScheduleLogQuery): Promise<PageResult<ScheduleLogDTO>>
+  /* 清理运行日志：按任务与触发时间范围删除，返回删除条数 */
+  clearLogs(input: ScheduleLogClearInput): Promise<number>
+  /* 巡检运行状态（上次 / 下次巡检时间） */
+  watchdog(): Promise<ScheduleWatchdogStatusDTO>
+  /* 调度设置 */
   getConfig(): Promise<ScheduleConfigDTO>
   saveConfig(patch: Partial<ScheduleConfigDTO>): Promise<ScheduleConfigDTO>
   /* 任务或运行状态变化通知 */

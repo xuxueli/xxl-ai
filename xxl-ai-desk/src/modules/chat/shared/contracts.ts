@@ -6,8 +6,9 @@
 export interface ChatEvent {
   /* 所属会话主键 */
   sessionId: number
-  /* 事件类型：delta 增量文本 / thinking 思考 / tool_start / tool_end / usage 上下文用量 / notice 非致命提示 / error 致命错误 / done / aborted */
+  /* 事件类型：turn-start 轮次开始 / delta 增量文本 / thinking 思考 / tool_start / tool_end / usage 上下文用量 / notice 非致命提示 / error 致命错误 / done / aborted */
   type:
+    | 'turn-start'
     | 'delta'
     | 'thinking'
     | 'tool_start'
@@ -17,6 +18,10 @@ export interface ChatEvent {
     | 'error'
     | 'done'
     | 'aborted'
+  /* 用户提问正文（turn-start） */
+  userText?: string
+  /* 提问发生时刻毫秒时间戳（turn-start） */
+  startedAt?: number
   /* 增量文本（delta / thinking） */
   text?: string
   /* 工具名（tool_start / tool_end） */
@@ -98,10 +103,12 @@ export interface PermissionInteractionRequest extends InteractionBase {
 /* 一次人机交互请求：按 kind 区分，字段随类型必填 */
 export type InteractionRequest = ChoiceInteractionRequest | PermissionInteractionRequest
 
-/* 人机交互结果：提交 / 拒绝 / 取消（终止、会话删除、应用退出） */
+/* 人机交互结果：提交 / 拒绝 / 自动决策（无人值守） / 取消（终止、会话删除、应用退出） */
 export type InteractionResult =
   | { status: 'submitted'; value: string | string[]; remember?: boolean }
   | { status: 'denied' }
+  /* 无人值守会话：不伪造用户选择，交回模型自行决策 */
+  | { status: 'auto' }
   | { status: 'cancelled' }
 
 /* 交互请求推送载荷（主 → 渲染） */

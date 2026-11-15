@@ -102,8 +102,8 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
   --el-font-size-base: var(--desk-font-base);
 }
 
-/* 供应商弹窗（可能被 teleport 到 body，用 :global 命中），字号与左侧菜单一致 */
-:global(.settings-dialog) {
+/* 供应商编辑抽屉（可能被 teleport 到 body，用 :global 命中），字号与左侧菜单一致 */
+:global(.settings-drawer) {
   font-size: var(--desk-font-base);
   --el-font-size-base: var(--desk-font-base);
 }

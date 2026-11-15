@@ -101,13 +101,13 @@ export function createChatStream(context: ChatStreamContext) {
     buffer.timer = setTimeout(() => flushBuffers(sessionId), FLUSH_INTERVAL)
   }
 
-  /* 开始一轮生成：登记目标消息并重置缓冲 */
-  function beginRound(sessionId: number, assistantId: number): void {
+  /* 开始一轮生成：登记目标消息并重置缓冲；list 为该会话自己的消息数组（后台会话独立） */
+  function beginRound(sessionId: number, assistantId: number, list?: UiMessage[]): void {
     streamTargets.set(sessionId, assistantId)
     const buffer = bufferOf(sessionId)
     buffer.delta = ''
     buffer.thinking = ''
-    liveMessages.set(sessionId, context.messages.value)
+    liveMessages.set(sessionId, list ?? context.messages.value)
   }
 
   /*

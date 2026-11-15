@@ -9,6 +9,9 @@ export const SCHEDULE_IPC = {
   remove: 'desk:schedule:remove',
   setEnabled: 'desk:schedule:set-enabled',
   runNow: 'desk:schedule:run-now',
+  logs: 'desk:schedule:logs',
+  clearLogs: 'desk:schedule:clear-logs',
+  watchdog: 'desk:schedule:watchdog',
   getConfig: 'desk:schedule:get-config',
   saveConfig: 'desk:schedule:save-config',
   changed: 'desk:schedule:changed'

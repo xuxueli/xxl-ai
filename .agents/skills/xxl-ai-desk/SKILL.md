@@ -194,7 +194,7 @@ modules/{domain}/
 | Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
-| 定时任务调度（规则 / 实例会话 / 休眠 / 并发） | `modules/schedule/{shared,main,preload,renderer}`；任务表 `desk_scheduled_task`，运行实例复用 `desk_session` |
+| 定时任务调度（规则 / 实例会话 / 休眠 / 并发 / 运行日志 / 巡检） | `modules/schedule/{shared,main,preload,renderer}`；`main/{scheduler,runner,runLog,runState}.ts` 分别负责计时器与巡检、运行编排、运行日志、进程内运行态；任务表 `desk_scheduled_task`，运行日志 `desk_scheduled_log`，运行实例复用 `desk_session` |
 | IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
 | preload 能力片段 | `modules/{domain}/preload/index.ts`，由 `src/preload/index.ts` 聚合 |
 | DeskApi 类型聚合 | `src/preload/deskApi.ts` |
@@ -229,7 +229,12 @@ modules/{domain}/
 - **Agent 是能力编排实体**：`desk_agent` 保存指令、`skill_ids / mcp_ids` 与工具分类开关；会话装配只能取 Agent 已选资源，Agent 保存后由 `agent/main/ipc.ts` 清理绑定会话运行时，下一轮重新装配。
 - **项目记忆按项目维度**：`desk_project.memory_enabled` 控制注入，记忆正文与游标随 `desk_project` 行保存；记忆内容变更后清理项目下会话运行时，禁止在会话表另存一份记忆。
 - **上下文分项只存会话级**：`desk_session.context_breakdown` 是唯一来源，`desk_message.data` 只保存 Pi 原始消息；分项为估算值，删除消息时清空，下一轮重新采集，禁止把 UI 派生字段塞回消息对象。
-- **定时会话标记只由主进程写入**：`desk_session.trigger_type / schedule_task_id` 仅在调度域创建实例会话时设置，渲染层新建会话固定为 `manual`；定时会话的越界审批由运行时自动拒绝，不进入渲染层交互队列。
+- **定时会话标记只由主进程写入**：`desk_session.trigger_type / schedule_task_id` 仅在调度域创建实例会话时设置，渲染层新建会话固定为 `manual`；定时会话的交互由主进程自动结算（权限拒绝 / 提问自行决策），不进入渲染层交互队列。
+- **调度「至多一次 + 阻塞策略」**：同一任务串行；复用会话进行中时按任务 `session_block_policy` 处理——`skip` 跳过本次调度并记「失败跳过」，`force` 终止进行中会话后按原计划时刻重新触发。所有触发（含失败跳过）写 `desk_scheduled_log`，`(task_id, slot_at)` 唯一（立即运行的 `slot_at` 为空，不参与唯一），禁止在任务表用 `last_*` 表达「跳过」。
+- **巡检是全局唯一兜底**：单链 `setTimeout` + 10s 存活看护，任何异常必须续排、链丢失必须自愈；间隔取 `desk_setting.scheduleWatchdogInterval`（30~600s，默认 60）。任务超时取任务字段 `timeout_minutes`（0 不限时），不得改回全局常量。
+- **运行态不落库**：运行中标记、开始时刻、待强制调度请求只在 `schedule/main/runState.ts`（进程内），应用退出自然清空；`desk_scheduled_log` 只做触发追溯（启动时把遗留 `running` 结算为失败；不自动裁剪，由日志页「日志清理」按任务 + 时间范围删除，删除任务时级联清理），`desk_scheduled_task.last_*` 只表达真实运行结果，三者职责分离。
+- **主进程发起的轮次统一 `turn-start`**：`sendChat` 每轮下发 `turn-start`（`userText` / `startedAt`），手动与定时共用；渲染层以 `streamingIds` 去重，外部轮次补建消息并接入 `createChatStream`，复用会话先补齐历史，禁止另建定时专用流式通道。
+- **无人值守交互在主进程结算**：唯一实现在 `chat/main/interactionPolicy.ts#resolveUnattendedInteraction`，按 `request.kind` 返回 `denied`（权限审批）/ `auto`（`ask_user`）；agent 侧只经 `setInteractionAutoResolver` 回调，禁止反向依赖 chat，worker 收到 `auto` 回填 `runtime.hitl.autoDecision` 并继续后续问题。
 - **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
@@ -497,6 +502,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 | 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层在输入框位置内联展示审批面板（按会话隔离），回传 `allow`（可 `remember`）/ `deny` |
 | MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
 | 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 权限/工具约束 |
+| 定时任务运行 / 无人值守 | `modules/schedule/main/{runner,runLog,runState}.ts` + `modules/chat/main/interactionPolicy.ts` | 会话选择与阻塞策略在 `runner`；运行日志与进程内运行态分离；定时会话交互在主进程按 `kind` 自动结算 |
 | 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按权限 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_PERMISSIONS` / `WRITE_PERMISSIONS` / `describe` / `toolError` / `createGuard` |
 | 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
 | 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
@@ -537,6 +543,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 - **内联而非弹窗**：权限审批与 `ask_user` 统一占用输入框位置展示（`InteractionPanel`），不再使用全局模态对话框；`App.vue` 不挂交互宿主。
 - **按会话隔离**：交互队列按 `sessionId` 分组，只展示当前会话的请求；其它会话的请求留在各自队列，切回时再展示，禁止跨会话抢占输入区。
+- **无人值守自动结算**：`trigger_type='schedule'` 的会话在推送渲染层前由 `chat/main/interactionPolicy.ts` 直接给出结果——权限审批 `denied`、`ask_user` `auto`（交回模型自行决策），禁止把定时会话的请求塞进渲染层队列，也禁止把两类交互统一成一种结果。
 - **标题与配色固定**：权限审批标题固定「权限审批申请」、淡红色系；`ask_user` 标题固定「用户确认」、黄色系；两类共用同一卡片布局。
 - **多问题**：`ask_user` 支持 `questions` 数组（1~10 个），由 worker 逐题发起并回传；契约使用 `round` / `total`，渲染层在左下角展示 `1/N`。
 - **取消只走显式路径**：用户终止、删除会话、运行时重置 / 退出才取消交互；运行期间后台摘要、长期记忆或配置刷新触发的 `evict` 必须延后到本轮结束（`runtimeHost.pendingEvictions`），禁止取消正在等待的审批。
@@ -580,6 +587,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 - [ ] 通道 `desk:{module}:{action}`；时间 ISO；布尔归一。
 - [ ] 上下文分项只存 `desk_session.context_breakdown`；`desk_message.data` 未被写入 UI 派生字段；删除消息后分项已清空。
+- [ ] 定时调度：`desk_scheduled_log` 承担触发追溯（`(task_id, slot_at)` 唯一，`slot_at` 为空不参与），`last_*` 只写真实运行结果，运行态只在 `schedule/main/runState.ts`，未把「跳过」写回任务表；日志不自动裁剪，清理入口与删除任务级联均已闭环。
 - [ ] 内置应用仅在 `appCenter` 注册表登记；安装 / 启用 / 配置统一走 `desk_app_setting`；应用页隐藏外壳子菜单、顶栏取应用名、启用后图标栏出现入口。
 
 ### 7.4 渲染、i18n 与界面
@@ -597,6 +605,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后已清理关联会话运行时；默认与占用中的 Agent 未被删除。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
 - [ ] 人机交互按会话隔离并占用输入框位置；权限 / 用户确认标题与配色固定；多问题使用 `round` / `total`；后台 `evict` 已延后到本轮结束，未误取消审批。
+- [ ] 定时会话的交互在主进程按 `kind` 自动结算（权限 `denied` / 提问 `auto`），未进入渲染层交互队列；`turn-start` 外部轮次已接入流式并以 `streamingIds` 去重。
 - [ ] 技能库读写不触发审批；`read_skill` 仍只认已启用技能；未新增脆弱的 shell 只读命令白名单。
 
 ### 7.6 交付与验证

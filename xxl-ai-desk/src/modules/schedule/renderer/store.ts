@@ -1,7 +1,7 @@
 /*
- * 定时任务状态：列表、筛选、休眠开关与运行触发。
+ * 定时任务状态：列表、筛选、休眠开关、运行触发与运行日志。
  *   - 只经 api.schedule 访问能力；
- *   - 运行实例不在本地维护，页面按 chat.sessions 过滤。
+ *   - 运行日志由主进程分页返回（含被跳过的触发）。
  * @author xuxueli 2026-11-15
  */
 
@@ -9,14 +9,18 @@ import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
 import { api } from '@common/renderer/api'
 import { SCHEDULE_CONFIG_DEFAULT } from '@modules/schedule/shared'
+import { dayRangeBounds } from '@modules/schedule/renderer/utils/time'
 import type {
   ScheduleConfigDTO,
+  ScheduleLogClearInput,
+  ScheduleLogDTO,
   ScheduledTaskDTO,
-  ScheduledTaskInput
+  ScheduledTaskInput,
+  ScheduleWatchdogStatusDTO
 } from '@modules/schedule/shared'
 
-/* 状态筛选值 */
-type ScheduleStatusFilter = 'all' | 'enabled' | 'disabled' | 'running' | 'failed' | 'invalid'
+/* 状态筛选值：只表达任务自身启停状态 */
+type ScheduleStatusFilter = 'all' | 'enabled' | 'disabled'
 
 /* 列表筛选条件 */
 interface ScheduleFilters {
@@ -26,17 +30,40 @@ interface ScheduleFilters {
   status: ScheduleStatusFilter
 }
 
+/* 运行日志默认分页大小 */
+const SCHEDULE_LOG_PAGE_SIZE = 10
+
 export const useScheduleStore = defineStore('schedule', () => {
-  /* 任务列表（主进程已按更新时间倒序） */
+  /* 任务列表（主进程已按任务名称自然排序） */
   const tasks = ref<ScheduledTaskDTO[]>([])
-  /* 列表是否已加载 */
-  const loaded = ref(false)
   /* 列表加载中 */
   const loading = ref(false)
-  /* 任务设置（休眠 / 最大并发数） */
+  /* 调度设置（休眠 / 最大并发数） */
   const config = ref<ScheduleConfigDTO>({ ...SCHEDULE_CONFIG_DEFAULT })
   /* 设置保存中 */
   const configSaving = ref(false)
+  /* 巡检运行状态（上次 / 下次巡检时间） */
+  const watchdogStatus = ref<ScheduleWatchdogStatusDTO>({
+    interval: SCHEDULE_CONFIG_DEFAULT.watchdogInterval,
+    lastRunAt: '',
+    nextRunAt: ''
+  })
+  /* 运行日志（当前页） */
+  const logs = ref<ScheduleLogDTO[]>([])
+  /* 运行日志总数 */
+  const logTotal = ref(0)
+  /* 运行日志页码（从 1 开始） */
+  const logPage = ref(1)
+  /* 运行日志分页大小 */
+  const logPageSize = ref(SCHEDULE_LOG_PAGE_SIZE)
+  /* 运行日志筛选：任务主键，0 表示全部 */
+  const logTaskId = ref(0)
+  /* 运行日志触发时间范围：本地 YYYY-MM-DD，首尾日期均包含；null 表示不限 */
+  const logRangeDates = ref<[string, string] | null>(null)
+  /* 运行日志是否已加载：变更事件只在日志页打开后刷新它 */
+  const logsLoaded = ref(false)
+  /* 运行日志加载中 */
+  const logsLoading = ref(false)
   /* 筛选条件 */
   const filters = reactive<ScheduleFilters>({
     keyword: '',
@@ -45,7 +72,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     status: 'all'
   })
 
-  /* 变更事件解绑函数与订阅计数：任务列表 / 运行记录切换时避免相互解绑 */
+  /* 变更事件解绑函数与订阅计数：列表 / 日志页切换时避免相互解绑 */
   let unbindChanged: (() => void) | null = null
   let bindCount = 0
 
@@ -68,15 +95,6 @@ export const useScheduleStore = defineStore('schedule', () => {
       if (filters.status === 'disabled' && task.enabled) {
         return false
       }
-      if (filters.status === 'running' && !task.running) {
-        return false
-      }
-      if (filters.status === 'failed' && task.lastRunStatus !== 'failed') {
-        return false
-      }
-      if (filters.status === 'invalid' && !task.invalidReason) {
-        return false
-      }
       return true
     })
   })
@@ -86,15 +104,65 @@ export const useScheduleStore = defineStore('schedule', () => {
     loading.value = true
     try {
       tasks.value = await api.schedule.list()
-      loaded.value = true
     } finally {
       loading.value = false
     }
   }
 
-  /* 加载任务设置 */
+  /* 加载运行日志：按当前任务筛选、时间范围与分页参数查询 */
+  async function loadLogs(page = logPage.value, pageSize = logPageSize.value): Promise<void> {
+    logPage.value = page
+    logPageSize.value = pageSize
+    logsLoading.value = true
+    try {
+      const result = await api.schedule.logs({
+        taskId: logTaskId.value || undefined,
+        ...dayRangeBounds(logRangeDates.value),
+        page,
+        pageSize
+      })
+      logs.value = result.items
+      logTotal.value = result.total
+      logsLoaded.value = true
+      /* 当前页被裁剪（删除 / 数据收缩）时回退到最后一页 */
+      const lastPage = Math.max(1, Math.ceil(result.total / pageSize))
+      if (result.total > 0 && page > lastPage) {
+        await loadLogs(lastPage, pageSize)
+      }
+    } finally {
+      logsLoading.value = false
+    }
+  }
+
+  /* 清理运行日志：按任务 + 时间范围删除后回到第一页，返回删除条数 */
+  async function clearLogs(input: ScheduleLogClearInput): Promise<number> {
+    const deleted = await api.schedule.clearLogs(input)
+    await loadLogs(1)
+    return deleted
+  }
+
+  /* 更新日志筛选：只传需变更的维度，统一回到第一页 */
+  async function filterLogs(patch: {
+    taskId?: number
+    dates?: [string, string] | null
+  }): Promise<void> {
+    if (patch.taskId !== undefined) {
+      logTaskId.value = patch.taskId
+    }
+    if (patch.dates !== undefined) {
+      logRangeDates.value = patch.dates
+    }
+    await loadLogs(1)
+  }
+
+  /* 加载调度设置 */
   async function loadConfig(): Promise<void> {
     config.value = await api.schedule.getConfig()
+  }
+
+  /* 加载巡检运行状态（上次 / 下次巡检时间） */
+  async function loadWatchdogStatus(): Promise<void> {
+    watchdogStatus.value = await api.schedule.watchdog()
   }
 
   /* 保存任务（新增 / 编辑） */
@@ -123,7 +191,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     return result.sessionId
   }
 
-  /* 保存任务设置 */
+  /* 保存调度设置 */
   async function saveConfig(patch: Partial<ScheduleConfigDTO>): Promise<void> {
     configSaving.value = true
     try {
@@ -141,6 +209,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
     unbindChanged = api.schedule.onChanged(() => {
       void loadTasks()
+      /* 日志页打开时才刷新日志，避免任务页每次变更都多查一次 */
+      if (logsLoaded.value) {
+        void loadLogs()
+      }
     })
   }
 
@@ -164,14 +236,25 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   return {
     tasks,
-    loaded,
     loading,
     config,
     configSaving,
+    watchdogStatus,
+    logs,
+    logTotal,
+    logPage,
+    logPageSize,
+    logTaskId,
+    logRangeDates,
+    logsLoading,
     filters,
     filteredTasks,
     loadTasks,
     loadConfig,
+    loadWatchdogStatus,
+    loadLogs,
+    clearLogs,
+    filterLogs,
     saveTask,
     removeTask,
     setEnabled,

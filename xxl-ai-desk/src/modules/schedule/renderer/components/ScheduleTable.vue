@@ -1,5 +1,5 @@
 /*
- * 定时任务列表：状态、调度、上次运行与行内操作。
+ * 定时任务列表：任务、会话属性、调度、状态与行内操作。
  * @author xuxueli 2026-11-15
  */
 <script setup lang="ts">
@@ -77,12 +77,7 @@ async function onDelete(task: ScheduledTaskDTO): Promise<void> {
   >
     <el-table-column :label="t('schedule.columns.task')" min-width="220">
       <template #default="{ row }">
-        <div class="task-name-row">
-          <span class="task-name">{{ row.name }}</span>
-          <el-tag size="small" type="info">
-            {{ row.sessionMode === 'reuse' ? t('schedule.sessionMode.reuse') : t('schedule.sessionMode.new') }}
-          </el-tag>
-        </div>
+        <span class="task-name">{{ row.name }}</span>
         <div class="task-prompt">{{ row.prompt }}</div>
       </template>
     </el-table-column>
@@ -107,37 +102,13 @@ async function onDelete(task: ScheduledTaskDTO): Promise<void> {
       </template>
     </el-table-column>
 
-    <el-table-column :label="t('schedule.columns.status')" width="150">
+    <el-table-column :label="t('schedule.columns.status')" width="120">
       <template #default="{ row }">
         <div class="status-cell" @click.stop>
           <el-switch
             :model-value="row.enabled"
-            :disabled="row.running"
             @change="(value: string | number | boolean) => onToggle(row, value)"
           />
-          <el-tag v-if="row.running" size="small" type="primary">
-            {{ t('schedule.status.running') }}
-          </el-tag>
-          <el-tooltip v-else-if="row.invalidReason" :content="row.invalidReason" placement="top">
-            <el-tag size="small" type="danger">{{ t('schedule.status.invalid') }}</el-tag>
-          </el-tooltip>
-          <el-tag v-else-if="row.lastRunStatus === 'failed'" size="small" type="danger">
-            {{ t('schedule.status.failed') }}
-          </el-tag>
-          <span v-else class="meta-line muted">
-            {{ row.enabled ? t('schedule.status.enabled') : t('schedule.status.disabled') }}
-          </span>
-        </div>
-      </template>
-    </el-table-column>
-
-    <el-table-column :label="t('schedule.columns.lastRun')" min-width="160">
-      <template #default="{ row }">
-        <div class="meta-line">
-          {{ formatDateTime(row.lastRunAt) || t('schedule.never') }}
-        </div>
-        <div v-if="row.lastRunStatus" class="meta-line muted">
-          {{ t(`schedule.runStatus.${row.lastRunStatus}`) }}
         </div>
       </template>
     </el-table-column>
@@ -145,16 +116,11 @@ async function onDelete(task: ScheduledTaskDTO): Promise<void> {
     <el-table-column :label="t('schedule.columns.actions')" width="260" align="center">
       <template #default="{ row }">
         <div class="row-actions" @click.stop>
-          <el-button
-            text
-            type="primary"
-            :disabled="row.running || Boolean(row.invalidReason)"
-            @click="emit('run', row)"
-          >
+          <el-button text type="primary" @click="emit('run', row)">
             {{ t('schedule.actions.runNow') }}
           </el-button>
           <el-button text type="primary" @click="emit('open', row)">
-            {{ t('schedule.actions.runs') }}
+            {{ t('schedule.actions.logs') }}
           </el-button>
           <el-button text type="primary" @click="emit('edit', row)">
             {{ t('common.edit') }}
@@ -184,14 +150,8 @@ async function onDelete(task: ScheduledTaskDTO): Promise<void> {
   display: none;
 }
 
-.task-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
 .task-name {
+  display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

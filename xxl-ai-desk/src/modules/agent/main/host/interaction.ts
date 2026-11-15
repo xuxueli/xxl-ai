@@ -9,7 +9,7 @@
 
 import { BrowserWindow } from 'electron'
 import { CHAT_IPC } from '@modules/chat/shared'
-import type { ChatInteractionPrompt, InteractionResult } from '@modules/chat/shared'
+import type { ChatInteractionPrompt, InteractionRequest, InteractionResult } from '@modules/chat/shared'
 
 /* 请求回传器：由运行时入口注入，把结果写回 worker */
 type InteractionResponder = (requestId: string, result: InteractionResult) => void
@@ -21,7 +21,10 @@ const pending = new Map<string, { sessionId: number; respond: InteractionRespond
  * 自动结算器：无人值守会话（如定时任务）在推送渲染层前直接给出结果；
  * 返回 null 表示仍需人工处理。由会话域注册，避免 agent 反向依赖 chat。
  */
-type InteractionAutoResolver = (sessionId: number) => InteractionResult | null
+type InteractionAutoResolver = (
+  sessionId: number,
+  request: InteractionRequest
+) => InteractionResult | null
 let autoResolver: InteractionAutoResolver | null = null
 
 /* 注册 / 注销自动结算器 */
@@ -43,7 +46,7 @@ function closePrompt(requestId: string): void {
 /* 接收运行时交互请求：窗口缺失时直接按拒绝结算，避免工具悬挂 */
 export function openInteraction(prompt: ChatInteractionPrompt, respond: InteractionResponder): void {
   /* 无人值守会话：立即按预定结果结算，不进入等待队列 */
-  const autoResult = autoResolver?.(prompt.sessionId)
+  const autoResult = autoResolver?.(prompt.sessionId, prompt.request)
   if (autoResult) {
     respond(prompt.requestId, autoResult)
     return

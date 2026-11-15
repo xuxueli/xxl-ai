@@ -3,19 +3,19 @@
     "title": "Scheduled tasks",
     "nav": {
       "tasks": "Task list",
-      "runs": "Run records",
-      "settings": "Task settings"
+      "logs": "Run log",
+      "dispatch": "Dispatch settings"
     },
     "tip": {
-      "tasks": "Sessions are triggered by schedule rules. Click a task to view its run records.",
-      "runs": "Review run instances and trigger times; open a session for details.",
-      "settings": "Configure sleep behavior and the maximum number of concurrent tasks."
+      "tasks": "Sessions are triggered by schedule rules. Use \"Run log\" in a row to view its trigger history.",
+      "logs": "Review every trigger (including failed skips); open a session for details.",
+      "dispatch": "Configure the dispatch policy: sleep behavior, maximum concurrent tasks and the task watchdog interval."
     },
     "sessionBadge": "Scheduled task session",
     "new": "New scheduled task",
     "editTitle": "Edit scheduled task",
     "empty": "No scheduled tasks",
-    "emptyTip": "Tasks trigger sessions by schedule rules; the session history is the run history.",
+    "emptyTip": "Once created, sessions are triggered by the schedule rule; results are available in the session and run log.",
     "searchPlaceholder": "Search task name or prompt",
     "allProjects": "All projects",
     "allAgents": "All Agents",
@@ -25,29 +25,37 @@
     "total": "{0} tasks",
     "status": {
       "enabled": "Enabled",
-      "disabled": "Disabled",
-      "running": "Running",
-      "failed": "Last run failed",
-      "invalid": "Invalid reference"
+      "disabled": "Disabled"
     },
-    "runStatus": {
+    "runTrigger": {
+      "schedule": "Scheduled",
+      "manual": "Run now"
+    },
+    "logStatus": {
+      "running": "In progress",
       "success": "Success",
-      "failed": "Failed",
-      "skipped": "Skipped"
+      "skip": "Failed skip",
+      "failed": "Failed"
     },
     "columns": {
       "task": "Task",
       "session": "Session",
       "schedule": "Schedule",
       "status": "Status",
-      "lastRun": "Last run",
       "actions": "Actions"
     },
     "sessionMode": {
       "label": "Session mode",
       "new": "New session each run",
       "reuse": "Reuse last session",
-      "reuseTip": "If the reused session was deleted or no longer exists, a new one is created. If it is generating, this run is skipped."
+      "reuseTip": "If the reused session was deleted or no longer exists, a new one is created."
+    },
+    "sessionBlockPolicy": {
+      "label": "Session blocking policy",
+      "skip": "Skip this run",
+      "force": "Force run",
+      "skipTip": "Reused session running: skip this run.",
+      "forceTip": "Reused session running: stop it and rerun."
     },
     "fields": {
       "name": "Task name",
@@ -61,6 +69,12 @@
       "model": "Model",
       "reasoning": "Reasoning",
       "permission": "Permission",
+      "permissionTip": "Scheduled runs are unattended: out-of-workspace writes and commands are denied automatically. Select \"Full access\" if the task needs a wider scope.",
+      "timeout": "Task timeout",
+      "timeoutNone": "No limit",
+      "timeoutCustom": "Custom",
+      "timeoutTip": "The watchdog stops this run once it exceeds the limit. With no limit, runs are never stopped automatically.",
+      "minutes": "minutes",
       "enabled": "Enable task"
     },
     "section": {
@@ -136,40 +150,50 @@
     },
     "actions": {
       "runNow": "Run now",
-      "runs": "Run records"
+      "logs": "Run log",
+      "clearLogs": "Clear log"
     },
-    "deleteConfirm": "Delete scheduled task \"{0}\"? Session history will be kept.",
+    "deleteConfirm": "Delete scheduled task \"{0}\"? Session history will be kept and its run log will be deleted.",
     "deleted": "Scheduled task deleted",
     "saved": "Scheduled task saved",
     "runStarted": "Task started",
     "openSession": "Open session",
-    "never": "Never run",
     "nextRun": "Next {0}",
     "nextRunNone": "Not scheduled",
-    "invalidTip": "The linked project or Agent is no longer available. Edit the task and try again.",
     "runNowFailed": "Failed to start task: {0}",
     "projectRequired": "Select a project",
     "agentRequired": "Select an Agent",
     "modelRequired": "Select a model",
-    "runs": {
+    "logs": {
       "taskFilter": "Task",
-      "startDate": "Start date",
-      "endDate": "End date",
+      "rangeFilter": "Triggered at",
+      "rangeStart": "Start date",
+      "rangeEnd": "End date",
       "task": "Task",
+      "triggerType": "Trigger",
+      "status": "Status",
       "session": "Session",
-      "project": "Project",
-      "agent": "Agent",
       "triggeredAt": "Triggered at",
-      "empty": "No run records",
+      "empty": "No run log yet",
       "unknownTask": "Task deleted",
-      "count": "{0} records"
+      "deletedSession": "Session deleted",
+      "clearTitle": "Clear run log",
+      "clearTip": "Delete run logs by task and trigger time range. Deletion cannot be undone; session history is not affected. Select at least a task or a time range.",
+      "clearSubmit": "Clear",
+      "clearRequired": "Select at least a task or a time range",
+      "clearDone": "Deleted {0} run log(s)",
+      "clearNone": "No matching run log"
     },
-    "settings": {
+    "dispatch": {
       "keepAwake": "Prevent computer sleep",
       "keepAwakeDesc": "Prevent the computer from sleeping (the display may still turn off) so scheduled tasks are not suspended. Closing the lid or sleeping manually still pauses them.",
       "maxConcurrency": "Maximum concurrent tasks",
       "maxConcurrencyDesc": "Upper limit of simultaneously running tasks ({0} ~ {1}). Triggers beyond the limit are recorded as skipped.",
-      "saved": "Task settings saved"
+      "watchdogInterval": "Task watchdog interval",
+      "watchdogIntervalDesc": "How often (in seconds) to check tasks: correct timers and stop runs that exceed their timeout ({0} ~ {1} seconds).",
+      "watchdogLastRun": "Last check: {0}",
+      "watchdogNextRun": "Next check: {0}",
+      "saved": "Dispatch settings saved"
     },
     "seed": {
       "dailyNews": {

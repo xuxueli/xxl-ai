@@ -7,13 +7,13 @@ import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@common/renderer/i18n'
-import ProviderEditDialog from '@modules/provider/renderer/components/ProviderEditDialog.vue'
+import ProviderEditDrawer from '@modules/provider/renderer/components/ProviderEditDrawer.vue'
 import type { ProviderDTO } from '@modules/provider/shared'
 
 const provider = useProviderStore()
 
-/* 编辑弹窗显隐与当前编辑项（null 表示新增） */
-const dialogVisible = ref(false)
+/* 编辑抽屉显隐与当前编辑项（null 表示新增） */
+const drawerVisible = ref(false)
 const editingProvider = ref<ProviderDTO | null>(null)
 
 /* 搜索：按名称或接口地址过滤 */
@@ -29,16 +29,16 @@ const filteredProviders = computed(() => {
   )
 })
 
-/* 打开新增弹窗 */
+/* 打开新增抽屉 */
 function openAdd(): void {
   editingProvider.value = null
-  dialogVisible.value = true
+  drawerVisible.value = true
 }
 
-/* 打开编辑弹窗 */
+/* 打开编辑抽屉 */
 function openEdit(row: ProviderDTO): void {
   editingProvider.value = row
-  dialogVisible.value = true
+  drawerVisible.value = true
 }
 
 /* 删除供应商（二次确认） */
@@ -132,7 +132,7 @@ async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
       </template>
     </el-table>
 
-    <ProviderEditDialog v-model:visible="dialogVisible" :provider="editingProvider" />
+    <ProviderEditDrawer v-model:visible="drawerVisible" :provider="editingProvider" />
   </div>
 </template>
 

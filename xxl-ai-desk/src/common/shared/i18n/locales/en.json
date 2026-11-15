@@ -211,7 +211,12 @@
       "scheduleConcurrencyLimit": "Maximum concurrent tasks ({0}) reached. This run was skipped.",
       "scheduleConcurrencyFull": "Maximum concurrent tasks ({0}) reached. Try again later.",
       "scheduleConcurrencyRange": "Maximum concurrent tasks must be between {0} and {1}.",
-      "scheduleRunFailed": "Task run failed. Check the session for details."
+      "scheduleWatchdogRange": "The task watchdog interval must be between {0} and {1} seconds.",
+      "scheduleRunFailed": "Task run failed. Check the session for details.",
+      "scheduleRunMissed": "The scheduled time was missed (system sleep or timer delay). This run was skipped and rescheduled.",
+      "scheduleRunStale": "The run state was lost unexpectedly and has been force-settled.",
+      "scheduleRunTimeoutStuck": "The run timed out and could not be stopped cleanly; it has been force-settled.",
+      "scheduleRunInterrupted": "The run was interrupted because the app exited."
     },
     "dialog": {
       "selectFolderTitle": "Select project folder",
@@ -232,6 +237,7 @@
     "retry": "[Error] Attempt {0} failed: {1}. Recorded; retrying.",
     "final": "[Error] Failed {0} consecutive times; stopped: {1}",
     "sessionMissing": "Session not found",
+    "sessionBusy": "This session is still generating. Wait for the current turn to finish or stop it first.",
     "projectMissing": "This session is not bound to a project or its project was deleted. Select a project before sending.",
     "providerMissing": "The model provider was deleted. Select another model in this session.",
     "providerDisabled": "Provider \"{0}\" is disabled. Select another model in this session.",
@@ -347,7 +353,8 @@
       "rejected": "User declined.",
       "selected": "User selected: {0}",
       "noSelection": "User did not select any option.",
-      "cancelled": "Interaction cancelled; the user provided no input."
+      "cancelled": "Interaction cancelled; the user provided no input.",
+      "autoDecision": "This is an unattended scheduled session with no user available: decide on your own with the information you have and continue."
     },
     "note": {
       "untitled": "Untitled note",

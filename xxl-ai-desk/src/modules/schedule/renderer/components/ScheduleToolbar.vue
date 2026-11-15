@@ -58,9 +58,6 @@ const agent = useAgentStore()
         <el-option :label="t('schedule.allStatus')" value="all" />
         <el-option :label="t('schedule.status.enabled')" value="enabled" />
         <el-option :label="t('schedule.status.disabled')" value="disabled" />
-        <el-option :label="t('schedule.status.running')" value="running" />
-        <el-option :label="t('schedule.status.failed')" value="failed" />
-        <el-option :label="t('schedule.status.invalid')" value="invalid" />
       </el-select>
       <el-button text class="filter-reset" @click="schedule.resetFilters()">
         <el-icon><Refresh /></el-icon>
