@@ -24,7 +24,8 @@ import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, saveSessionContextBreakdown, updateSession } from './sessionService'
+import { appendTurnMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, replaceTurnMessages, saveSessionContextBreakdown, startTurn, updateSession } from './sessionService'
+import type { TurnMessageInput } from './sessionService'
 import { maybeCompressSession } from './sessionSummaryService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
@@ -36,6 +37,9 @@ import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
 
 /* 下发到渲染层的对话事件负载（携带会话上下文） */
 export type ChatEventPayload = { sessionId: number } & HostEvent
+
+/* 流式草稿落库间隔（毫秒）：把已生成但尚未结束的回复定期写入，进程异常时保留已输出内容 */
+const DRAFT_PERSIST_INTERVAL = 3000
 
 /* 已请求终止的会话：终止轮次不再展示/落库「调用失败」提示 */
 const abortRequested = new Set<number>()
@@ -120,34 +124,49 @@ function resolveRuntimeTarget(
 }
 
 /*
- * 失败轮次落库：追加「用户提问 + 错误提示助手消息」，完整历史不重写。
- * 用户提问取本轮发送时刻，错误提示取失败时刻：长轮次失败时两者不应显示为同一时间。
+ * 运行时消息 → 落库行：data 保存 Pi 原始消息 JSON，content 只保留正文预览。
+ * skipPrompt=true 时跳过本轮原始提问（主进程在发送时已单独落库）。
  */
-function persistFailureRound(
+function serializeRuntimeMessages(messages: unknown[], skipPrompt: boolean): TurnMessageInput[] {
+  const list =
+    skipPrompt && (messages[0] as { role?: string } | undefined)?.role === 'user'
+      ? messages.slice(1)
+      : messages
+  return list
+    .filter((message) => (message as { role?: string }).role !== 'system')
+    .map((message) => {
+      const role = (message as { role?: string }).role ?? ''
+      const content = contentToText(message)
+      /* 来源只做持久化字段，不写回 Agent 原始消息 JSON */
+      const { source: sourceFlag, ...raw } = message as {
+        role?: string
+        source?: MessageSource
+      } & Record<string, unknown>
+      return {
+        role,
+        content,
+        data: JSON.stringify(raw),
+        timestamp: messageDisplayTime(raw),
+        source: sourceFlag ?? null
+      }
+    })
+}
+
+/*
+ * 失败轮次补齐错误提示：用户提问在发送时已落库，这里只向本轮追加助手提示，
+ * 已完成的消息快照保持不变。
+ */
+function persistFailureTip(
   sessionId: number,
-  text: string,
+  turnId: number,
   tip: string,
-  startedAt: number
+  failedAt = Date.now()
 ): void {
   /* 会话已删除或结果已丢弃：不再写入 */
   if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
     return
   }
-  const failedAt = Date.now()
-  appendMessages(sessionId, [
-    {
-      role: 'user',
-      content: text,
-      /* content 必须是数组（Pi 消息格式），否则下一轮会因无法迭代而报错 */
-      data: JSON.stringify({
-        role: 'user',
-        content: [{ type: 'text', text }],
-        timestamp: startedAt
-      }),
-      timestamp: startedAt,
-      /* 真实用户提问：其自增 id 将作为本轮 turnId */
-      turnStart: true
-    },
+  appendTurnMessages(sessionId, turnId, [
     {
       role: 'assistant',
       content: tip,
@@ -163,11 +182,10 @@ function persistFailureRound(
   ])
 }
 
-/* 应用退出导致本轮中断：落库用户提问与终止备注，不标记为异常失败 */
-function persistInterruptedRound(
+/* 应用退出导致本轮中断：追加终止备注，已完成的消息已由快照落库 */
+function persistInterruptedTip(
   sessionId: number,
-  text: string,
-  startedAt: number,
+  turnId: number,
   language: AppSettings['language']
 ): void {
   if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
@@ -175,18 +193,7 @@ function persistInterruptedRound(
   }
   const endedAt = Date.now()
   const note = translate(language, 'runtime.interruptedNote')
-  appendMessages(sessionId, [
-    {
-      role: 'user',
-      content: text,
-      data: JSON.stringify({
-        role: 'user',
-        content: [{ type: 'text', text }],
-        timestamp: startedAt
-      }),
-      timestamp: startedAt,
-      turnStart: true
-    },
+  appendTurnMessages(sessionId, turnId, [
     {
       role: 'assistant',
       content: note,
@@ -301,16 +308,95 @@ export async function sendChat(
   let contextReady = false
   /* 本轮是否已完整落库；异常兜底据此避免重复追加失败轮次 */
   let committed = false
+  /* 本轮轮次 ID：用户提问落库后回填，助手 / 工具消息统一挂到该轮次 */
+  let turnId = 0
   /* 本轮最后一次上下文用量：对话结束后用于判断是否触发会话压缩 */
   let roundUsage: { used: number; window: number } | null = null
   /* 本轮最后一次上下文分项：结束时写入会话表 */
   let roundBreakdown: ContextBreakdown | null = null
   const settings = getSettings()
   const language = settings.language
+  /* 本轮已完成的运行时消息快照（checkpoint 回传） */
+  let roundSnapshot: unknown[] = []
+  /* 当前流式回复的草稿片段：只有正文 / 思考，不含未完成的工具调用 */
+  const draftParts: Array<{ type: 'text' | 'thinking'; text: string }> = []
+  let draftTimer: ReturnType<typeof setTimeout> | null = null
+  /* 追加流式片段：同类型相邻合并，保持发生顺序 */
+  const appendDraft = (type: 'text' | 'thinking', text: string): void => {
+    if (!text) {
+      return
+    }
+    const last = draftParts[draftParts.length - 1]
+    if (last && last.type === type) {
+      last.text += text
+      return
+    }
+    draftParts.push({ type, text })
+  }
+  /* 草稿消息：与 Pi 正文 / 思考块同构，不含工具调用（避免中断后上下文出现半截工具调用） */
+  const draftMessage = (): unknown => ({
+    role: 'assistant',
+    content: draftParts.map((part) =>
+      part.type === 'text'
+        ? { type: 'text', text: part.text }
+        : { type: 'thinking', thinking: part.text }
+    ),
+    timestamp: startedAt
+  })
+  /*
+   * 消息快照落库：运行时每完成一条消息回传本轮全部新增消息，
+   * 这里按快照覆盖本轮助手 / 工具消息，进程异常时数据库保留最近一次完整内容。
+   */
+  const persistRound = (): void => {
+    if (
+      !turnId ||
+      discardedSessions.has(sessionId) ||
+      isSessionRemoved(sessionId) ||
+      !getSession(sessionId)
+    ) {
+      return
+    }
+    const messages = draftParts.length > 0 ? [...roundSnapshot, draftMessage()] : roundSnapshot
+    try {
+      replaceTurnMessages(sessionId, turnId, serializeRuntimeMessages(messages, true))
+    } catch (error) {
+      /* 快照落库失败不阻断本轮：结束时还会按最终结果再写一次 */
+      log.warn(`[chat] 轮次快照落库失败 session=${sessionId}`, error)
+    }
+  }
+  /* 流式过程中定期落库草稿：长回复在执行中途异常时也能恢复已输出内容 */
+  const scheduleDraftPersist = (): void => {
+    if (draftTimer !== null) {
+      return
+    }
+    draftTimer = setTimeout(() => {
+      draftTimer = null
+      persistRound()
+    }, DRAFT_PERSIST_INTERVAL)
+  }
+  const persistCheckpoint = (messages: unknown[]): void => {
+    /* 快照已包含刚完成的消息，草稿内容不再重复落库 */
+    roundSnapshot = messages
+    draftParts.length = 0
+    persistRound()
+  }
   const emitEvent = (event: HostEvent): void => {
     /* 会话已删除：迟到的流式/错误事件一律丢弃，避免渲染层重建已删会话状态 */
     if (isSessionRemoved(sessionId)) {
       return
+    }
+    /* 快照事件只用于落库，不转发渲染层 */
+    if (event.type === 'checkpoint') {
+      persistCheckpoint(event.messages)
+      return
+    }
+    /* 记录流式草稿：长回复中途异常时仍能恢复已输出内容 */
+    if (event.type === 'delta') {
+      appendDraft('text', event.text)
+      scheduleDraftPersist()
+    } else if (event.type === 'thinking') {
+      appendDraft('thinking', event.text)
+      scheduleDraftPersist()
     }
     /* 记录上下文用量，供本轮结束后的压缩判定与会话分项写入使用 */
     if (event.type === 'usage') {
@@ -334,13 +420,18 @@ export async function sendChat(
         : event
     emit({ sessionId, ...payload })
   }
-  /* 失败兜底：把「用户提问 + 可读错误提示」落库并下发，避免重载/切换会话后提示丢失 */
+  /* 失败兜底：把可读错误提示落到本轮并下发，避免重载/切换会话后提示丢失 */
   const fail = (raw: string): void => {
     const tip = contextReady ? describeError(raw, providerName, modelId, language) : raw
     /* 失败前已产生用量：仍保留最近一次分项，避免面板回退成无数据 */
     saveSessionContextBreakdown(sessionId, roundBreakdown)
-    if (!committed) {
-      persistFailureRound(sessionId, text, tip, startedAt)
+    if (!committed && turnId) {
+      /* 先把已输出的草稿落库，再追加可读错误提示 */
+      if (draftParts.length > 0) {
+        persistRound()
+      }
+      persistFailureTip(sessionId, turnId, tip, Date.now())
+      committed = true
     }
     emitEvent({ type: 'error', message: tip })
   }
@@ -355,6 +446,11 @@ export async function sendChat(
     if (!session.title.trim()) {
       updateSession(sessionId, { title: text.slice(0, 24) })
     }
+    /*
+     * 提问先落库，再进入模型执行：长轮次或进程异常退出时，
+     * 用户已发送的内容与后续消息快照都能在重载后恢复。
+     */
+    turnId = startTurn(sessionId, text, startedAt)
 
     /* 会话引用的供应商/模型若已删除或停用，直接提示用户重新选择，不做静默切换 */
     const target = resolveRuntimeTarget(session, settings, language)
@@ -467,9 +563,12 @@ export async function sendChat(
     }
     const result = await runAgent(runInput, emitEvent)
     if (!result.ok) {
-      /* 应用退出导致的中断：保留提问与终止备注，不写异常失败 */
+      /* 应用退出导致的中断：已完成消息已在库中，补写草稿后追加终止备注 */
       if (result.interrupted) {
-        persistInterruptedRound(sessionId, text, startedAt, settings.language)
+        if (draftParts.length > 0) {
+          persistRound()
+        }
+        persistInterruptedTip(sessionId, turnId, settings.language)
         committed = true
         return
       }
@@ -486,30 +585,8 @@ export async function sendChat(
     if (discardedSessions.has(sessionId) || !getSession(sessionId)) {
       return
     }
-    /* 落库：只追加本轮新增消息，完整历史始终由数据库持有 */
-    /* 真实用户消息（含运行中追加）均为轮次头，其自增 id 由落库层回填为 turnId */
-    const serialized = result.messages
-      .filter((message) => (message as { role?: string }).role !== 'system')
-      .map((message) => {
-        const role = (message as { role?: string }).role ?? ''
-        const content = contentToText(message)
-        /* 来源只做持久化字段，不写回 Agent 原始消息 JSON */
-        const { source: sourceFlag, ...raw } = message as {
-          role?: string
-          source?: MessageSource
-        } & Record<string, unknown>
-        const source = sourceFlag ?? null
-        const turnStart = role === 'user' && source === null
-        return {
-          role,
-          content,
-          data: JSON.stringify(raw),
-          timestamp: messageDisplayTime(raw),
-          turnStart,
-          source
-        }
-      })
-    appendMessages(sessionId, serialized)
+    /* 最终落库：按本轮完整快照覆盖助手 / 工具消息（用户提问行保持不变） */
+    replaceTurnMessages(sessionId, turnId, serializeRuntimeMessages(result.messages, true))
     committed = true
     /* 会话只保留最近一次分项：不写入消息原始数据，切会话 / 重启后由会话表还原 */
     saveSessionContextBreakdown(sessionId, roundBreakdown)
@@ -534,7 +611,11 @@ export async function sendChat(
     evictAgent(sessionId)
     fail((error as Error).message)
   } finally {
-    /* 本轮结束：清理会话级标记，避免长期累积 */
+    /* 本轮结束：清理会话级标记与草稿定时器，避免长期累积 */
+    if (draftTimer !== null) {
+      clearTimeout(draftTimer)
+      draftTimer = null
+    }
     abortRequested.delete(sessionId)
     discardedSessions.delete(sessionId)
   }

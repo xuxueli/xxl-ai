@@ -30,6 +30,7 @@ interface HistoryMessage {
   content?: unknown
   stopReason?: string
   errorMessage?: string
+  toolCallId?: string
 }
 
 /* 消息内容块 */
@@ -75,9 +76,41 @@ function stripThinking(message: HistoryMessage, language: string): HistoryMessag
   return kept.length === blocks.length ? message : { ...message, content: kept }
 }
 
+/*
+ * 断点恢复保护：剔除没有对应工具结果的工具调用。
+ * 进程异常中断时可能只落了工具调用、还没落工具结果，直接回传会被供应商拒绝。
+ */
+function stripUnpairedToolCalls(input: HistoryEntry[]): HistoryEntry[] {
+  const resolved = new Set<string>()
+  for (const entry of input) {
+    const message = entry.message
+    if (message?.role === 'toolResult' && typeof message.toolCallId === 'string') {
+      resolved.add(message.toolCallId)
+    }
+  }
+  return input.flatMap((entry) => {
+    const message = entry.message
+    if (!message || message.role !== 'assistant' || !Array.isArray(message.content)) {
+      return [entry]
+    }
+    const blocks = message.content as Array<{ type?: string; id?: string }>
+    const kept = blocks.filter(
+      (block) => block.type !== 'toolCall' || (typeof block.id === 'string' && resolved.has(block.id))
+    )
+    if (kept.length === blocks.length) {
+      return [entry]
+    }
+    /* 工具调用全部悬空且没有其它内容：整条不进入上下文 */
+    if (kept.length === 0) {
+      return []
+    }
+    return [{ ...entry, message: { ...message, content: kept } }]
+  })
+}
+
 /* 按消息条数与字符上限裁剪历史；keepAll=true 时跳过窗口限制（摘要后的全部增量） */
 export function trimHistory(input: HistoryEntry[], language: string, keepAll: boolean): unknown[] {
-  const cleaned = input
+  const cleaned = stripUnpairedToolCalls(input)
     .map((entry) => ({
       message: stripThinking(entry.message as HistoryMessage, language),
       source: entry.source

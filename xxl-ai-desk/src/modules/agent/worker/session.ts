@@ -388,6 +388,10 @@ export async function runPrompt(
   }
   /* 采集目标：会话 + 对话来源（记忆生成使用独立目标，互不覆盖） */
   const traceTarget = createTraceTarget(sessionId)
+  /* 本轮新增消息起点：每条消息结束即回传完整快照，供主进程增量落库 */
+  const start = (agent.state.messages as RuntimeMessage[]).length
+  const takeNew = (): RuntimeMessage[] =>
+    (agent.state.messages as RuntimeMessage[]).slice(start)
   const unsubscribe = agent.subscribe((event) => {
     switch (event.type) {
       case 'message_update': {
@@ -437,6 +441,8 @@ export async function runPrompt(
             ...breakdown
           })
         }
+        /* 消息已完整结束：回传本轮快照，主进程立即落库（进程异常时已产生内容不丢） */
+        sink({ type: 'checkpoint', messages: takeNew() })
         break
       }
       default:
@@ -446,9 +452,6 @@ export async function runPrompt(
 
   let failures = 0
   let first = true
-  const start = (agent.state.messages as RuntimeMessage[]).length
-  const takeNew = (): RuntimeMessage[] =>
-    (agent.state.messages as RuntimeMessage[]).slice(start)
   try {
     while (true) {
       if (sessionId && isSessionAborted(sessionId)) {
