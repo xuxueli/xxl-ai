@@ -138,11 +138,7 @@ export function skipRunLog(input: {
 }
 
 /* 日志筛选条件：任务 + 触发时间范围，均省略时返回 undefined（不限条件） */
-function logCondition(filter: {
-  taskId?: number
-  startTime?: string
-  endTime?: string
-}): SQL | undefined {
+function logCondition(filter: ScheduleLogClearInput): SQL | undefined {
   const conditions = []
   if (filter.taskId) {
     conditions.push(eq(scheduledLogTable.taskId, filter.taskId))
