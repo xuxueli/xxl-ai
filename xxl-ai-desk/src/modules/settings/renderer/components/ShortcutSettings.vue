@@ -62,7 +62,7 @@ function resetShortcuts(): void {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 /* 快捷键：快捷操作快捷键配置 */
 .shortcuts {

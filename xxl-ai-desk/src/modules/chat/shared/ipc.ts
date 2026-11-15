@@ -10,7 +10,8 @@ export const SESSION_IPC = {
   rename: 'desk:session:rename',
   remove: 'desk:session:remove',
   messages: 'desk:session:messages',
-  deleteMessages: 'desk:session:delete-messages'
+  deleteMessages: 'desk:session:delete-messages',
+  changed: 'desk:session:changed'
 } as const
 
 export const CHAT_IPC = {

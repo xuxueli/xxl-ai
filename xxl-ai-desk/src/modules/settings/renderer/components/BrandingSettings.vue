@@ -138,7 +138,7 @@ function formatOpacity(value: number): string {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 /* 品牌资源分区：单列纵向排列，与上方个性化表单保持同一宽度 */
 .branding {

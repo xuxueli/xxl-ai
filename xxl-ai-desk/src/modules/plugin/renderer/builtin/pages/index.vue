@@ -39,11 +39,10 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
 </script>
 
 <template>
-  <PluginCenterShell>
-    <template #header>
-      <div class="desk-page-tip">{{ t('plugin.builtinTool.intro') }}</div>
-    </template>
-
+  <PluginCenterShell
+    :title="t('plugin.builtin')"
+    :description="t('plugin.builtinTool.intro')"
+  >
     <div class="builtin-body">
       <section v-for="group in groups" :key="group.key" class="tool-group">
         <div class="group-head" @click="toggleGroup(group.key)">
@@ -92,7 +91,7 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
 .builtin-body {
   padding: 0 28px 32px;
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .tool-group {

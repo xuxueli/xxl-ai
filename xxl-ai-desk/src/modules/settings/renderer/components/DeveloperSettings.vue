@@ -30,7 +30,7 @@ const developerMode = computed({
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 .developer {
   margin-top: 28px;

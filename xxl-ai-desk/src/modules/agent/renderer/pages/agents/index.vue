@@ -73,11 +73,7 @@ function formatTime(iso: string): string {
 </script>
 
 <template>
-  <PluginCenterShell>
-    <template #header>
-      <div class="desk-page-tip">{{ t('agent.manageTip') }}</div>
-    </template>
-
+  <PluginCenterShell :title="t('plugin.agent')" :description="t('agent.manageTip')">
     <div class="agent-body">
       <div class="panel-toolbar">
         <div class="toolbar-title">{{ t('agent.listTitle') }}</div>
@@ -168,7 +164,7 @@ function formatTime(iso: string): string {
 .agent-body {
   padding: 0 28px 32px;
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .panel-toolbar {

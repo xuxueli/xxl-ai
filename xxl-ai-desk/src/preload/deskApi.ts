@@ -15,6 +15,7 @@ import type { GitApi } from '@modules/git/shared'
 import type { McpApi } from '@modules/mcp/shared'
 import type { ProjectApi } from '@modules/project/shared'
 import type { ProviderApi } from '@modules/provider/shared'
+import type { ScheduleApi } from '@modules/schedule/shared'
 import type { SettingsApi } from '@modules/settings/shared'
 import type { SkillApi } from '@modules/skill/shared'
 import type { TerminalApi } from '@modules/terminal/shared'
@@ -35,6 +36,7 @@ export interface DeskApi {
   browser: BrowserApi
   mcp: McpApi
   skill: SkillApi
+  schedule: ScheduleApi
   diagnostics: DiagnosticsApi
   note: NoteApi
   appCenter: AppCenterApi

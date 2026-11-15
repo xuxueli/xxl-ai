@@ -80,12 +80,11 @@ const statusActive = computed(() =>
 
     <div class="app-actions">
       <template v-if="mode === 'market'">
-        <el-button v-if="building" size="small" disabled>
+        <el-button v-if="building" disabled>
           {{ t('appCenter.availability.building') }}
         </el-button>
         <el-button
           v-else-if="app.installed"
-          size="small"
           type="danger"
           plain
           :loading="busy"
@@ -93,15 +92,15 @@ const statusActive = computed(() =>
         >
           {{ t('appCenter.uninstall') }}
         </el-button>
-        <el-button v-else size="small" type="primary" :loading="busy" @click="emit('install')">
+        <el-button v-else type="primary" :loading="busy" @click="emit('install')">
           {{ t('appCenter.install') }}
         </el-button>
       </template>
       <template v-else>
-        <el-button size="small" @click="emit('settings')">
+        <el-button @click="emit('settings')">
           {{ t('appCenter.settings') }}
         </el-button>
-        <el-button size="small" type="primary" :disabled="!app.enabled" @click="emit('open')">
+        <el-button type="primary" :disabled="!app.enabled" @click="emit('open')">
           {{ t('appCenter.open') }}
         </el-button>
       </template>

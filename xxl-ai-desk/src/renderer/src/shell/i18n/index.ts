@@ -20,6 +20,8 @@ import zhPlugin from '@modules/plugin/i18n/zh.json'
 import enPlugin from '@modules/plugin/i18n/en.json'
 import zhProject from '@modules/project/i18n/zh.json'
 import enProject from '@modules/project/i18n/en.json'
+import zhSchedule from '@modules/schedule/i18n/zh.json'
+import enSchedule from '@modules/schedule/i18n/en.json'
 import zhSettings from '@modules/settings/i18n/zh.json'
 import enSettings from '@modules/settings/i18n/en.json'
 import zhToolPanel from '@modules/toolPanel/i18n/zh.json'
@@ -38,6 +40,7 @@ registerMessages({
     ...zhGit,
     ...zhPlugin,
     ...zhProject,
+    ...zhSchedule,
     ...zhSettings,
     ...zhToolPanel
   },
@@ -52,6 +55,7 @@ registerMessages({
     ...enGit,
     ...enPlugin,
     ...enProject,
+    ...enSchedule,
     ...enSettings,
     ...enToolPanel
   }

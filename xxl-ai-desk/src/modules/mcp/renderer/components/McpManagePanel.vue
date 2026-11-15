@@ -189,7 +189,7 @@ async function onDelete(row: McpDTO): Promise<void> {
   padding: 0 28px 32px;
   /* 与「设置 → 模型供应商」列表保持一致的字号 */
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .panel-toolbar {

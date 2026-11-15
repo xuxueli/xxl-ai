@@ -213,7 +213,16 @@ async function onDeleteSession(id: number): Promise<void> {
         @click="emit('select', session.id)"
         @contextmenu.prevent="openSessionMenu(session.id)"
       >
-        {{ session.title || t('chat.newChat') }}
+        <span class="session-label">
+          <span class="session-title">{{ session.title || t('chat.newChat') }}</span>
+          <el-icon
+            v-if="session.triggerType === 'schedule'"
+            class="schedule-session-icon"
+            :title="t('schedule.sessionBadge')"
+          >
+            <AlarmClock />
+          </el-icon>
+        </span>
         <template #actions>
           <span class="session-actions" @click.stop>
             <DeskTooltip :content="t('common.actions')">
@@ -267,6 +276,29 @@ async function onDeleteSession(id: number): Promise<void> {
 .session-empty {
   padding: 6px 12px;
   font-size: var(--desk-font-xs);
+  color: var(--desk-text-tertiary);
+}
+
+/* 会话标题与定时标记：标题过长时省略，闹钟始终可见 */
+.session-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.session-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 定时任务会话标记：标题后追加闹钟，不改变行高 */
+.schedule-session-icon {
+  flex-shrink: 0;
+  font-size: var(--desk-icon-sm);
   color: var(--desk-text-tertiary);
 }
 

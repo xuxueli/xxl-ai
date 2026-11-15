@@ -223,7 +223,7 @@ function showDetectResult(result: RuntimeDetectResult): void {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 /* 命令运行环境（Node / Python 路径） */
 .runtime {

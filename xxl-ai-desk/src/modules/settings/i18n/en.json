@@ -4,6 +4,11 @@
     "back": "Back to chat",
     "general": "General",
     "personalization": "Personalization",
+    "pageTip": {
+      "general": "Appearance, theme, language and shortcuts.",
+      "personalization": "App name, slogan and branding assets.",
+      "runtime": "Data directory, command runtime and developer mode."
+    },
     "appearance": "Appearance",
     "appearanceLight": "Light",
     "appearanceDark": "Dark",
@@ -52,7 +57,6 @@
     "backgroundPickTitle": "Choose a background image",
     "imageFilter": "Image files",
     "providers": "Model providers",
-    "providerListTitle": "Provider list",
     "providerName": "Name",
     "baseUrl": "Base URL",
     "baseUrlPlaceholder": "e.g. https://api.deepseek.com/v1",
@@ -79,6 +83,8 @@
     "addProvider": "Add provider",
     "editProvider": "Edit provider",
     "providerTip": "Uses the OpenAI-compatible protocol; works with DeepSeek / Ollama / vLLM, etc.",
+    "providerFilterPlaceholder": "Search provider name or base URL",
+    "providerFilterEmpty": "No matching providers",
     "currentModel": "Default model",
     "selectProvider": "Select provider",
     "selectModel": "Select model",

@@ -15,6 +15,7 @@ export { CHAT_IPC } from './ipc'
 export {
   DEFAULT_PERMISSION_MODE,
   SESSION_SUMMARY_MAX_CHARS,
-  normalizePermissionMode
+  normalizePermissionMode,
+  normalizeSessionTriggerType
 } from './session'
 export type { PermissionMode, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from './session'

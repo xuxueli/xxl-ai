@@ -10,6 +10,8 @@ import {
   APPEARANCES,
   BACKGROUND_OPACITY_MAX,
   BACKGROUND_OPACITY_MIN,
+  SCHEDULE_MAX_CONCURRENCY_MAX,
+  SCHEDULE_MAX_CONCURRENCY_MIN,
   THEME_PRESETS,
   type AppSettings,
   type BrandingKind,
@@ -110,6 +112,21 @@ type BooleanSettingKey = {
   [K in keyof AppSettings]: AppSettings[K] extends boolean ? K : never
 }[keyof AppSettings]
 
+/*
+ * 归一化定时任务最大并发数：取整并限制在共享范围内，非法值回退默认。
+ * 这里只做读取侧防御（历史脏数据 / 越界配置），不替代 IPC 保存时的越界拒绝。
+ */
+function normalizeScheduleMaxConcurrency(value: string | undefined): number {
+  const parsed = Number(value)
+  if (value === undefined || value.trim() === '' || !Number.isFinite(parsed)) {
+    return DEFAULT_APP_SETTINGS.scheduleMaxConcurrency
+  }
+  return Math.min(
+    SCHEDULE_MAX_CONCURRENCY_MAX,
+    Math.max(SCHEDULE_MAX_CONCURRENCY_MIN, Math.round(parsed))
+  )
+}
+
 /* 读取布尔配置：显式 true/false 优先，缺省或非法值回退默认值 */
 function readBoolean(map: Map<string, string>, key: BooleanSettingKey): boolean {
   const value = map.get(key)
@@ -170,7 +187,9 @@ export function getSettings(): AppSettings {
     runtimeNodePath: map.get('runtimeNodePath') ?? DEFAULT_APP_SETTINGS.runtimeNodePath,
     runtimePythonPath: map.get('runtimePythonPath') ?? DEFAULT_APP_SETTINGS.runtimePythonPath,
     updateAutoCheck: readBoolean(map, 'updateAutoCheck'),
-    developerMode: readBoolean(map, 'developerMode')
+    developerMode: readBoolean(map, 'developerMode'),
+    scheduleKeepAwake: readBoolean(map, 'scheduleKeepAwake'),
+    scheduleMaxConcurrency: normalizeScheduleMaxConcurrency(map.get('scheduleMaxConcurrency'))
   }
 }
 

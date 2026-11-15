@@ -18,9 +18,12 @@ import {
   DEFAULT_REASONING_LEVEL,
   REASONING_LEVELS,
   isReasoningModel,
-  isSessionModel,
   type ReasoningLevel
 } from '@common/shared/model'
+import {
+  PERMISSION_LABEL_KEYS,
+  REASONING_LABEL_KEYS
+} from '@common/renderer/utils/sessionOptions'
 import type { FsEntry } from '@modules/file/shared'
 
 const props = defineProps<{ streaming: boolean; disabled?: boolean }>()
@@ -111,16 +114,6 @@ const currentModel = computed(() => {
   return providerItem?.models.find((item) => item.id === currentModelId.value) ?? null
 })
 
-/* 模型选择器只展示通用 / 对话模型，嵌入与文生图模型不进入会话 */
-const chatProviders = computed(() =>
-  provider.enabledProviders
-    .map((item) => ({
-      ...item,
-      models: item.models.filter((model) => isSessionModel(model))
-    }))
-    .filter((item) => item.models.length > 0)
-)
-
 /* 推理等级只对对话模型展示 */
 const showReasoning = computed(() =>
   Boolean(currentModel.value && isReasoningModel(currentModel.value))
@@ -134,12 +127,6 @@ const currentReasoningLevel = computed<ReasoningLevel>(() =>
 )
 
 /* 推理等级文案：中英文均展示 Default / Low / High / Max */
-const REASONING_LABEL_KEYS: Record<ReasoningLevel, string> = {
-  default: 'chat.reasoningDefault',
-  low: 'chat.reasoningLow',
-  high: 'chat.reasoningHigh',
-  max: 'chat.reasoningMax'
-}
 const currentReasoningLabel = computed(() => t(REASONING_LABEL_KEYS[currentReasoningLevel.value]))
 
 /* 当前权限模式：已生成对话取会话配置，新建对话取全局记忆（上次选择） */
@@ -148,20 +135,9 @@ const currentPermissionMode = computed<PermissionMode>(() =>
     ? chat.currentSession?.permissionMode ?? DEFAULT_PERMISSION_MODE
     : settings.settings.sessionDefaults.permissionMode
 )
-const currentPermissionLabel = computed(() => permissionLabel(currentPermissionMode.value))
+const currentPermissionLabel = computed(() => t(PERMISSION_LABEL_KEYS[currentPermissionMode.value]))
 /* 完全权限：入口文案与下拉项均用危险色提示 */
 const fullAccess = computed(() => currentPermissionMode.value === 'full-access')
-
-/* 权限模式文案 */
-function permissionLabel(permissionMode: PermissionMode): string {
-  if (permissionMode === 'read-only') {
-    return t('chat.permissionReadOnly')
-  }
-  if (permissionMode === 'full-access') {
-    return t('chat.permissionFullAccess')
-  }
-  return t('chat.permissionWorkspaceWrite')
-}
 
 /* 切换权限：记住全局默认，已生成对话同时落库到会话 */
 async function onPermissionChange(permissionMode: PermissionMode): Promise<void> {
@@ -363,15 +339,15 @@ function onKeydown(event: KeyboardEvent): void {
                 <el-dropdown-item command="__new_provider__">
                   + {{ t('settings.addProvider') }}
                 </el-dropdown-item>
-                <template v-for="provider in chatProviders" :key="provider.id">
+                <template v-for="item in provider.sessionProviders" :key="item.id">
                   <el-dropdown-item class="provider-group" disabled>
-                    {{ provider.name }}
+                    {{ item.name }}
                   </el-dropdown-item>
                   <el-dropdown-item
-                    v-for="model in provider.models"
-                    :key="`${provider.id}::${model.id}`"
+                    v-for="model in item.models"
+                    :key="`${item.id}::${model.id}`"
                     class="model-choice"
-                    :command="`${provider.id}::${model.id}`"
+                    :command="`${item.id}::${model.id}`"
                   >
                     {{ model.id }}
                   </el-dropdown-item>

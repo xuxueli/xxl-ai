@@ -399,6 +399,10 @@ export const useChatStore = defineStore('chat', () => {
     })
     api.chat.onInteraction(onInteraction)
     api.chat.onInteractionCancel(onInteractionCancel)
+    /* 后台（定时任务）创建 / 变更会话：刷新列表，保留当前会话与交互队列 */
+    api.session.onChanged(() => {
+      void reloadSessions()
+    })
   }
 
   /* 发送失败：提示并在当前流式助手气泡内追加可读错误 */

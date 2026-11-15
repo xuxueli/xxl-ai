@@ -302,7 +302,7 @@ onUnmounted(() => {
 .discover-panel {
   padding: 0 28px 32px;
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .panel-toolbar {

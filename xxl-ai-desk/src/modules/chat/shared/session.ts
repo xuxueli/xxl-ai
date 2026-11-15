@@ -14,6 +14,15 @@ export type { PermissionMode } from '@common/shared/permission'
 /* 会话摘要固定长度上限（字符） */
 export const SESSION_SUMMARY_MAX_CHARS = 2000
 
+/* 会话触发来源：用户手动对话 / 定时任务调度 */
+export const SESSION_TRIGGER_TYPES = ['manual', 'schedule'] as const
+export type SessionTriggerType = (typeof SESSION_TRIGGER_TYPES)[number]
+
+/* 触发来源归一：非法值一律回退用户手动，避免历史脏数据影响侧栏标记 */
+export function normalizeSessionTriggerType(value: unknown): SessionTriggerType {
+  return value === 'schedule' ? 'schedule' : 'manual'
+}
+
 /* 会话（归属某项目，并绑定一个 Agent） */
 export interface SessionDTO {
   /* 主键 */
@@ -32,6 +41,10 @@ export interface SessionDTO {
   reasoningLevel: ReasoningLevel
   /* 权限模式（仅可查看 / 工作区内修改 / 完全权限） */
   permissionMode: PermissionMode
+  /* 触发来源：用户手动对话 / 定时任务调度 */
+  triggerType: SessionTriggerType
+  /* 定时任务触发时的来源任务 ID（0 表示非定时任务会话） */
+  scheduleTaskId: number
   /* 最近一次模型响应的上下文分项估算（旧会话为 null） */
   contextBreakdown: ContextBreakdown | null
   /* 创建时间（ISO） */

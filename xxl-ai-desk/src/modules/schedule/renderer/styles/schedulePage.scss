@@ -1,0 +1,20 @@
+/*
+ * 定时任务页面骨架：任务列表 / 运行记录 / 任务设置三页共用。
+ *   - 整页固定高度，正文区独立滚动，避免外层滚动条与页面争抢；
+ *   - 正文左右留白由各页自带容器负责（列表与设置宽度不同）。
+ * @author xuxueli 2026-11-15
+ */
+
+.schedule-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-size: var(--desk-font-base);
+  --el-font-size-base: var(--desk-font-base);
+}
+
+.schedule-body {
+  flex: 1;
+  min-height: 0;
+}

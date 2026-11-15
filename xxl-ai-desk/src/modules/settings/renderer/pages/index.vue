@@ -7,6 +7,7 @@
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@modules/settings/renderer'
 import { t } from '@common/renderer/i18n'
+import { PageHeading } from '@common/renderer/components'
 import GeneralSettings from '@modules/settings/renderer/components/GeneralSettings.vue'
 import DataDirSettings from '@modules/settings/renderer/components/DataDirSettings.vue'
 import CommandRuntimeSettings from '@modules/settings/renderer/components/CommandRuntimeSettings.vue'
@@ -32,29 +33,56 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
         <el-tabs v-model="settings.activeTab" class="settings-tabs">
           <el-tab-pane :label="t('settings.general')" name="general">
             <div class="settings-pane settings-pane-narrow">
-              <GeneralSettings />
+              <PageHeading
+                :title="t('settings.general')"
+                :description="t('settings.pageTip.general')"
+                :inset="false"
+              />
+              <div class="settings-tab-body"><GeneralSettings /></div>
             </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.personalization')" name="personalization">
             <div class="settings-pane settings-pane-narrow">
-              <PersonalizationSettings />
+              <PageHeading
+                :title="t('settings.personalization')"
+                :description="t('settings.pageTip.personalization')"
+                :inset="false"
+              />
+              <div class="settings-tab-body"><PersonalizationSettings /></div>
             </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.providers')" name="providers">
-            <ProviderSettings />
+            <PageHeading
+              :title="t('settings.providers')"
+              :description="t('settings.providerTip')"
+              :inset="false"
+            />
+            <div class="settings-tab-body"><ProviderSettings /></div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.projects')" name="projects">
-            <ProjectSettings />
+            <PageHeading
+              :title="t('settings.projects')"
+              :description="t('project.settingsTip')"
+              :inset="false"
+            />
+            <div class="settings-tab-body"><ProjectSettings /></div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.runtimeTab')" name="runtime">
             <div class="settings-pane settings-pane-narrow">
-              <DataDirSettings />
-              <CommandRuntimeSettings />
-              <DeveloperSettings />
+              <PageHeading
+                :title="t('settings.runtimeTab')"
+                :description="t('settings.pageTip.runtime')"
+                :inset="false"
+              />
+              <div class="settings-tab-body">
+                <DataDirSettings class="settings-first" />
+                <CommandRuntimeSettings />
+                <DeveloperSettings />
+              </div>
             </div>
           </el-tab-pane>
           <el-tab-pane :label="t('settings.about')" name="about">
-            <div class="settings-pane settings-pane-half">
+            <div class="settings-pane settings-pane-half settings-about-pane">
               <AboutSettings />
             </div>
           </el-tab-pane>
@@ -71,13 +99,13 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
   height: 100%;
   /* 字号与左侧菜单保持一致（14px），统一按钮与主要文案 */
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 /* 供应商弹窗（可能被 teleport 到 body，用 :global 命中），字号与左侧菜单一致 */
 :global(.settings-dialog) {
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .settings-body {
@@ -98,7 +126,24 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
 .settings-inner {
   box-sizing: border-box;
   width: 100%;
-  padding: 28px 28px 48px;
+  padding: 0 28px 48px;
+}
+
+/* 关于我们无标题区，单独保留顶部留白 */
+.settings-about-pane {
+  padding-top: 16px;
+}
+
+/* 标题区分隔线与正文之间的间距：与任务列表正文保持一致 */
+.settings-tab-body {
+  padding-top: 16px;
+}
+
+/* 运行设置首个区块不再重复绘制顶部分割线 */
+.settings-tab-body :deep(.settings-first) {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 /* 保证百分比宽度基于完整正文区域计算 */
@@ -120,10 +165,4 @@ if (typeof route.query.tab === 'string' && route.query.tab) {
   margin: 0 auto;
 }
 
-/* 独立子菜单首个分区不重复画顶部分隔线 */
-.settings-pane > :first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
 </style>

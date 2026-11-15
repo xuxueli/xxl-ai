@@ -24,6 +24,7 @@ import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
 import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
+import { disposeScheduleScheduler } from '@modules/schedule/main'
 import { bindBrowserShortcut } from '@modules/browser/main'
 import { initLogger } from '@common/main/utils/logger'
 import { createMainWindow } from '@main/window'
@@ -153,6 +154,8 @@ if (!gotLock) {
     /* 先阻塞退出，等待运行时进程优雅关闭后再统一清理并真正退出 */
     event.preventDefault()
     quitting = true
+    /* 先停调度，避免退出过程中再触发新任务，再回收运行时与终端 */
+    disposeScheduleScheduler()
     void disposeAgentRuntime().finally(() => {
       disposeAllTerminals()
       disposeAllFsWatch()

@@ -14,6 +14,8 @@ export interface SessionApi {
   remove(id: number): Promise<void>
   messages(sessionId: number): Promise<StoredMessage[]>
   removeMessages(sessionId: number, ids: number[]): Promise<void>
+  /* 会话新增 / 更新后的列表变更通知（定时任务后台创建会话等） */
+  onChanged(cb: (payload: { sessionId: number }) => void): () => void
 }
 
 export interface ChatApi {

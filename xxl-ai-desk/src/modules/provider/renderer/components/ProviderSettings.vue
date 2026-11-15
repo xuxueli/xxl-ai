@@ -3,7 +3,7 @@
  * 设置 - 供应商管理：列表展示、启用切换、新增/编辑与删除。
  * @author xuxueli 2026-10-25
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProviderStore } from '@modules/provider/renderer'
 import { t } from '@common/renderer/i18n'
@@ -15,6 +15,19 @@ const provider = useProviderStore()
 /* 编辑弹窗显隐与当前编辑项（null 表示新增） */
 const dialogVisible = ref(false)
 const editingProvider = ref<ProviderDTO | null>(null)
+
+/* 搜索：按名称或接口地址过滤 */
+const keyword = ref('')
+const filteredProviders = computed(() => {
+  const query = keyword.value.trim().toLowerCase()
+  if (!query) {
+    return provider.providers
+  }
+  return provider.providers.filter(
+    (item) =>
+      item.name.toLowerCase().includes(query) || item.baseUrl.toLowerCase().includes(query)
+  )
+})
 
 /* 打开新增弹窗 */
 function openAdd(): void {
@@ -51,15 +64,23 @@ async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
 
 <template>
   <div>
-    <div class="settings-block-title">{{ t('settings.providerListTitle') }}</div>
     <div class="provider-toolbar">
-      <span class="settings-block-tip">{{ t('settings.providerTip') }}</span>
+      <el-input
+        v-model="keyword"
+        class="provider-search"
+        clearable
+        :placeholder="t('settings.providerFilterPlaceholder')"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
       <el-button type="primary" @click="openAdd">
         <el-icon><Plus /></el-icon>
         {{ t('settings.addProvider') }}
       </el-button>
     </div>
-    <el-table :data="provider.providers" style="width: 100%">
+    <el-table :data="filteredProviders" style="width: 100%">
       <el-table-column prop="name" :label="t('settings.providerName')" min-width="140" />
       <el-table-column
         prop="baseUrl"
@@ -105,7 +126,9 @@ async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
         </template>
       </el-table-column>
       <template #empty>
-        <el-empty :description="t('common.empty')" />
+        <el-empty
+          :description="keyword ? t('settings.providerFilterEmpty') : t('common.empty')"
+        />
       </template>
     </el-table>
 
@@ -114,14 +137,16 @@ async function toggleProvider(row: ProviderDTO, value: boolean): Promise<void> {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
-
 .provider-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+}
+
+.provider-search {
+  width: 280px;
 }
 
 /* 模型列表：单行展示、溢出省略，悬浮 tooltip 查看全部 */

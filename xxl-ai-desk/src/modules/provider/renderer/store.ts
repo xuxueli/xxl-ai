@@ -18,6 +18,13 @@ export const useProviderStore = defineStore('provider', () => {
   /* 已启用的供应商 */
   const enabledProviders = computed(() => providers.value.filter((item) => item.enabled))
 
+  /* 会话可选供应商：启用的供应商 + 通用 / 对话模型（新建对话与定时任务共用） */
+  const sessionProviders = computed(() =>
+    enabledProviders.value
+      .map((item) => ({ ...item, models: item.models.filter((model) => isSessionModel(model)) }))
+      .filter((item) => item.models.length > 0)
+  )
+
   /* 加载供应商列表 */
   async function load(): Promise<void> {
     providers.value = await api.provider.list()
@@ -58,5 +65,5 @@ export const useProviderStore = defineStore('provider', () => {
     return api.provider.remoteModels(input)
   }
 
-  return { providers, loaded, enabledProviders, load, save, remove, queryRemoteModels, selectProvider }
+  return { providers, loaded, enabledProviders, sessionProviders, load, save, remove, queryRemoteModels, selectProvider }
 })

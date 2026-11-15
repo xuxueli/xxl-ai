@@ -325,27 +325,6 @@ body.resizing-vertical {
   font-size: var(--desk-icon-xs);
 }
 
-/* --- 二级页面顶部说明区 --- */
-/* 扩展中心 / 应用中心等子菜单正文顶部：统一高度，说明文案垂直居中，下方分隔线与正文衔接 */
-.desk-page-header {
-  flex-shrink: 0;
-  height: var(--desk-page-header-height);
-  padding: 0 28px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--desk-border);
-}
-
-/* 说明文案：限单行，避免长文案把顶部区域撑高 */
-.desk-page-tip {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--desk-text-tertiary);
-  font-size: var(--desk-font-xs);
-}
-
 /* --- 滚动条 --- */
 ::-webkit-scrollbar {
   width: var(--desk-scrollbar-size);
@@ -989,6 +968,12 @@ html.dark .el-button--primary {
   --el-table-text-color: var(--desk-text);
   --el-table-row-hover-bg-color: color-mix(in srgb, var(--desk-primary) 6%, transparent);
   --el-table-border-color: var(--desk-border);
+}
+
+/* --- 表格空状态：清除空文本 60px 行高与 50% 宽度约束，避免文案与按钮之间出现大段留白 --- */
+.el-table__empty-text {
+  width: 100%;
+  line-height: normal;
 }
 
 /* --- 主按钮：浅品牌底 + 明确边框，兼顾可点击感与克制感 --- */

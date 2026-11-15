@@ -17,6 +17,7 @@ import { mcpApi } from '@modules/mcp/preload'
 import { projectApi } from '@modules/project/preload'
 import { providerApi } from '@modules/provider/preload'
 import { settingsApi } from '@modules/settings/preload'
+import { scheduleApi } from '@modules/schedule/preload'
 import { skillApi } from '@modules/skill/preload'
 import { terminalApi } from '@modules/terminal/preload'
 import type { DeskApi } from './deskApi'
@@ -37,6 +38,7 @@ const api: DeskApi = {
   browser: browserApi,
   mcp: mcpApi,
   skill: skillApi,
+  schedule: scheduleApi,
   diagnostics: diagnosticsApi,
   note: noteApi,
   appCenter: appCenterApi

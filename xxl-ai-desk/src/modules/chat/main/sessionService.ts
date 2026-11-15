@@ -3,7 +3,7 @@
  *   - 消息按轮次追加落库，历史完整保存在数据库。
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNull } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from 'drizzle-orm'
 import { getDb } from '@common/main/db'
 import { t } from '@common/main/i18n'
 import { messageTable, sessionTable } from '@modules/chat/main/schema'
@@ -17,7 +17,8 @@ import {
   DEFAULT_PERMISSION_MODE,
   messageStatusOf,
   normalizeMessageStatus,
-  normalizePermissionMode
+  normalizePermissionMode,
+  normalizeSessionTriggerType
 } from '@modules/chat/shared'
 import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
 
@@ -35,6 +36,8 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     modelId: row.modelId,
     reasoningLevel: normalizeReasoningLevel(row.reasoningLevel),
     permissionMode: normalizePermissionMode(row.permissionMode),
+    triggerType: normalizeSessionTriggerType(row.triggerType),
+    scheduleTaskId: row.scheduleTaskId,
     contextBreakdown: parseContextBreakdown(row.contextBreakdown),
     addTime: row.addTime,
     updateTime: row.updateTime
@@ -128,6 +131,8 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     modelId: input.modelId || '',
     reasoningLevel: normalizeReasoningLevel(input.reasoningLevel ?? DEFAULT_REASONING_LEVEL),
     permissionMode: normalizePermissionMode(input.permissionMode ?? DEFAULT_PERMISSION_MODE),
+    triggerType: normalizeSessionTriggerType(input.triggerType),
+    scheduleTaskId: input.scheduleTaskId ?? 0,
     summary: '',
     summaryLastMessageId: 0,
     summaryUpdateTime: '',
@@ -407,13 +412,12 @@ export function listSessionMessagePage(
   return { items, total }
 }
 
-/* 追加消息输入：turnStart 标记本轮真实用户提问，source 标记运行时注入来源 */
-interface AppendMessageInput {
+/* 轮次消息输入：正文已归一化，data 为 Pi 原始消息 JSON */
+export interface TurnMessageInput {
   role: string
   content: string
   data: string
   timestamp?: number
-  turnStart?: boolean
   source?: MessageSource | null
 }
 
@@ -430,48 +434,112 @@ function statusOfData(role: string, data: string): MessageStatus | '' {
   }
 }
 
+/* 消息落库时间：优先取运行时时间戳，缺失时用当前时间 */
+function addTimeOf(timestamp: number | undefined, now: string): string {
+  return typeof timestamp === 'number' && Number.isFinite(timestamp)
+    ? new Date(timestamp).toISOString()
+    : now
+}
+
+/* 事务句柄：与 getDb() 返回的 Drizzle 实例保持一致 */
+type Db = ReturnType<typeof getDb>
+type DbTx = Parameters<Parameters<Db['transaction']>[0]>[0]
+
+/* 向指定轮次写入消息（轮次 ID 固定，不切分新轮次） */
+function insertTurnMessages(
+  tx: DbTx,
+  sessionId: number,
+  turnId: number,
+  messages: TurnMessageInput[]
+): void {
+  const now = new Date().toISOString()
+  for (const message of messages) {
+    tx.insert(messageTable)
+      .values({
+        sessionId,
+        turnId,
+        role: message.role,
+        source: message.source ?? null,
+        status: statusOfData(message.role, message.data),
+        content: message.content,
+        data: message.data,
+        addTime: addTimeOf(message.timestamp, now)
+      })
+      .run()
+  }
+}
+
 /*
- * 追加本轮新增消息（完整历史由数据库持有；消息自带时间戳时按各自时间落库）。
- * 真实用户提问插入后取其自增 id 作为本轮 turnId，后续消息统一挂到该轮次。
+ * 立即落库本轮用户提问：返回轮次 ID（即该消息自增主键），
+ * 后续助手 / 工具消息统一挂到该轮次；发送后即持久化，进程异常也不会丢失提问。
  */
-export function appendMessages(sessionId: number, messages: AppendMessageInput[]): void {
-  if (!sessionId || messages.length === 0) {
+export function startTurn(sessionId: number, text: string, timestamp: number): number {
+  const db = getDb()
+  const now = new Date().toISOString()
+  const addTime = addTimeOf(timestamp, now)
+  return db.transaction((tx) => {
+    const inserted = tx
+      .insert(messageTable)
+      .values({
+        sessionId,
+        turnId: 0,
+        role: 'user',
+        source: null,
+        status: '',
+        content: text,
+        data: JSON.stringify({
+          role: 'user',
+          content: [{ type: 'text', text }],
+          timestamp
+        }),
+        addTime
+      })
+      .run()
+    const turnId = Number(inserted.lastInsertRowid)
+    tx.update(messageTable).set({ turnId }).where(eq(messageTable.id, turnId)).run()
+    return turnId
+  })
+}
+
+/*
+ * 覆盖指定轮次的助手 / 工具消息（用户提问行保持不变）。
+ * 运行时每完成一条消息回传快照，主进程据此幂等重写本轮内容：
+ * 进程异常退出时数据库始终保留最近一次完整快照。
+ */
+export function replaceTurnMessages(
+  sessionId: number,
+  turnId: number,
+  messages: TurnMessageInput[]
+): void {
+  if (!sessionId || !turnId) {
     return
   }
   const db = getDb()
-  const now = new Date().toISOString()
-  /* 模型跑一轮可能跨越较长时间：用户提问取发送时刻，助手回复取结束时刻，均来自运行时时间戳 */
-  const addTimeOf = (timestamp: number | undefined): string =>
-    typeof timestamp === 'number' && Number.isFinite(timestamp)
-      ? new Date(timestamp).toISOString()
-      : now
   db.transaction((tx) => {
-    let turnId = 0
-    for (const message of messages) {
-      /* 非轮次头消息必须已归属某一轮：避免静默写入 turn_id = 0 的孤儿消息 */
-      if (!message.turnStart && turnId === 0) {
-        throw new Error(t('runtime.error.messageTurnMissing'))
-      }
-      const inserted = tx
-        .insert(messageTable)
-        .values({
-          sessionId,
-          turnId: message.turnStart ? 0 : turnId,
-          role: message.role,
-          source: message.source ?? null,
-          status: statusOfData(message.role, message.data),
-          content: message.content,
-          data: message.data,
-          addTime: addTimeOf(message.timestamp)
-        })
-        .run()
-      /* 轮次头：以自增主键回填 turn_id，使该轮后续消息统一归组 */
-      if (message.turnStart) {
-        turnId = Number(inserted.lastInsertRowid)
-        tx.update(messageTable).set({ turnId }).where(eq(messageTable.id, turnId)).run()
-      }
-    }
+    /* 保留轮次头（用户提问）本身，其余消息按最新快照重建 */
+    tx.delete(messageTable)
+      .where(
+        and(
+          eq(messageTable.sessionId, sessionId),
+          eq(messageTable.turnId, turnId),
+          ne(messageTable.id, turnId)
+        )
+      )
+      .run()
+    insertTurnMessages(tx, sessionId, turnId, messages)
   })
+}
+
+/* 向指定轮次追加消息（失败 / 终止备注等） */
+export function appendTurnMessages(
+  sessionId: number,
+  turnId: number,
+  messages: TurnMessageInput[]
+): void {
+  if (!sessionId || !turnId || messages.length === 0) {
+    return
+  }
+  getDb().transaction((tx) => insertTurnMessages(tx, sessionId, turnId, messages))
 }
 
 /* 删除指定的会话消息（按消息ID），与前端渲染保持一致 */

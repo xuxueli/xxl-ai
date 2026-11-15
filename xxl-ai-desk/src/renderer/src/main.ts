@@ -5,6 +5,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import {
+  AlarmClock,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
@@ -81,6 +82,7 @@ const app = createApp(App)
 
 /* 按需注册图标（避免全量引入整套图标，减小打包体积） */
 const icons = {
+  AlarmClock,
   ArrowDown,
   ArrowLeft,
   ArrowRight,

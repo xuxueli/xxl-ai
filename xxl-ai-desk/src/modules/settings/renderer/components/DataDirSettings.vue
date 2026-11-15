@@ -90,7 +90,7 @@ function onRelaunch(): void {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 /* 运行时数据目录 */
 .data-dir {

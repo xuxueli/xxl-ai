@@ -7,6 +7,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { t } from '@common/renderer/i18n'
+import { PageHeading } from '@common/renderer/components'
 import AppCard from '@modules/appCenter/renderer/components/AppCard.vue'
 import { appSettingsOf, useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
 
@@ -61,9 +62,10 @@ onMounted(async () => {
 
 <template>
   <div class="app-page">
-    <div class="desk-page-header">
-      <div class="desk-page-tip">{{ t('appCenter.myAppsHint') }}</div>
-    </div>
+    <PageHeading
+      :title="t('appCenter.myApps')"
+      :description="t('appCenter.myAppsHint')"
+    />
 
     <el-scrollbar class="app-page-body">
       <div v-if="store.installedApps.length > 0" class="app-grid">
@@ -83,7 +85,7 @@ onMounted(async () => {
         <el-icon class="app-empty-icon"><Grid /></el-icon>
         <div class="app-empty-title">{{ t('appCenter.emptyInstalled') }}</div>
         <div class="app-empty-tip">{{ t('appCenter.emptyInstalledTip') }}</div>
-        <el-button type="primary" size="small" @click="router.push('/apps/market')">
+        <el-button type="primary" @click="router.push('/apps/market')">
           {{ t('appCenter.goMarket') }}
         </el-button>
       </div>

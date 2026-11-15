@@ -1,8 +1,11 @@
-<script setup lang="ts">
 /*
- * 扩展中心外壳：统一顶部 TAB / 说明区与可滚动正文，供 MCP / SKILL / 内置工具 / Agent 子页复用。
+ * 扩展中心外壳：统一顶部标题 / 说明区（可选 TAB）与可滚动正文，供 MCP / SKILL / 内置工具 / Agent 子页复用。
+ *   - 无 TAB 页：标题 + 说明 + 分隔线；
+ *   - 有 TAB 页：TAB 行占据标题位置，选中下划线压住分隔线。
  * @author xuxueli 2026-10-25
  */
+<script setup lang="ts">
+import { PageHeading } from '@common/renderer/components'
 import { t } from '@common/renderer/i18n'
 
 export interface PluginTabItem {
@@ -12,29 +15,41 @@ export interface PluginTabItem {
   labelKey: string
 }
 
-withDefaults(defineProps<{ tabs?: PluginTabItem[]; active?: string }>(), {
-  tabs: () => [],
-  active: ''
-})
+withDefaults(
+  defineProps<{
+    /* 正文主标题（有 TAB 时不展示） */
+    title?: string
+    /* 辅助说明（可选） */
+    description?: string
+    tabs?: PluginTabItem[]
+    active?: string
+  }>(),
+  { title: '', description: '', tabs: () => [], active: '' }
+)
 const emit = defineEmits<{ 'update:active': [key: string] }>()
 </script>
 
 <template>
   <div class="plugin-center">
-    <div class="desk-page-header plugin-center-header">
-      <div v-if="tabs.length > 0" class="plugin-tab-bar">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="plugin-tab-item"
-          :class="{ active: tab.key === active }"
-          @click="emit('update:active', tab.key)"
-        >
-          {{ t(tab.labelKey) }}
-        </button>
-      </div>
-      <slot name="header"></slot>
-    </div>
+    <PageHeading
+      :title="title"
+      :description="description"
+      :class="{ 'plugin-center-tabs-heading': tabs.length > 0 }"
+    >
+      <template v-if="tabs.length > 0" #title>
+        <div class="plugin-tab-bar">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            class="plugin-tab-item"
+            :class="{ active: tab.key === active }"
+            @click="emit('update:active', tab.key)"
+          >
+            {{ t(tab.labelKey) }}
+          </button>
+        </div>
+      </template>
+    </PageHeading>
 
     <div class="plugin-center-body">
       <slot></slot>
@@ -51,16 +66,13 @@ const emit = defineEmits<{ 'update:active': [key: string] }>()
   background: var(--desk-bg);
 }
 
-.plugin-center-header {
-  gap: 22px;
-}
-
-/* TAB 行占满顶部区域高度，激活下划线正好压在分隔线上 */
+/* TAB 行占据标题位置：下划线直接压在标题区分隔线上 */
+/* 高度 = 标题行 20px + 间距 4px + 说明行 16px + 分隔线间距 8px，与有说明的标题区等高 */
 .plugin-tab-bar {
   display: flex;
   align-items: stretch;
   gap: 22px;
-  height: 100%;
+  height: 48px;
 }
 
 .plugin-tab-item {
@@ -94,6 +106,11 @@ const emit = defineEmits<{ 'update:active': [key: string] }>()
   height: 2px;
   border-radius: 2px;
   background: var(--desk-primary);
+}
+
+/* 有 TAB 时标题区分隔线紧贴 TAB 行，由选中下划线覆盖 */
+.plugin-center-tabs-heading :deep(.page-heading-divider) {
+  margin-top: 0;
 }
 
 .plugin-center-body {

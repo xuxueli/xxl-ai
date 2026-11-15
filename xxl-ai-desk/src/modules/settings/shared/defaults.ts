@@ -42,7 +42,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   runtimeNodePath: '',
   runtimePythonPath: '',
   updateAutoCheck: true,
-  developerMode: false
+  developerMode: false,
+  scheduleKeepAwake: false,
+  scheduleMaxConcurrency: 10
 }
 
 /* 生成一份可安全修改的默认设置副本（含嵌套 shortcuts） */

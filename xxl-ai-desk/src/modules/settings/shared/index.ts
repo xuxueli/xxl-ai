@@ -4,6 +4,12 @@
  */
 
 export type { SettingsApi } from './api'
-export { BACKGROUND_OPACITY_MAX, BACKGROUND_OPACITY_MIN, THEME_PRESETS } from './contracts'
+export {
+  BACKGROUND_OPACITY_MAX,
+  BACKGROUND_OPACITY_MIN,
+  SCHEDULE_MAX_CONCURRENCY_MAX,
+  SCHEDULE_MAX_CONCURRENCY_MIN,
+  THEME_PRESETS
+} from './contracts'
 export type { AppSettings, BrandingAssets, BrandingKind, SessionDefaults } from './contracts'
-export { NEW_CHAT_TITLE, createDefaultSettings } from './defaults'
+export { DEFAULT_APP_SETTINGS, NEW_CHAT_TITLE, createDefaultSettings } from './defaults'

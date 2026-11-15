@@ -76,7 +76,7 @@ function restorePersonalization(): void {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
+@use '@common/renderer/styles/settingsBlock.scss';
 
 /* 说明与字段行的间距，与运行设置保持一致 */
 .app-info-tip {

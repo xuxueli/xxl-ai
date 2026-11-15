@@ -146,24 +146,20 @@ function onAction(row: ProjectDTO, command: string): void {
 
 <template>
   <div class="project-settings">
-    <div class="settings-block-title">{{ t('project.listTitle') }}</div>
-    <div class="panel-toolbar">
-      <div class="settings-block-tip">{{ t('project.settingsTip') }}</div>
-      <div class="panel-actions">
-        <el-input
-          v-model="keyword"
-          class="project-search"
-          :placeholder="t('project.filterPlaceholder')"
-          clearable
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button type="primary" @click="onCreate">
-          <el-icon><Plus /></el-icon>{{ t('project.new') }}
-        </el-button>
-      </div>
+    <div class="project-toolbar">
+      <el-input
+        v-model="keyword"
+        class="project-search"
+        :placeholder="t('project.filterPlaceholder')"
+        clearable
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <el-button type="primary" @click="onCreate">
+        <el-icon><Plus /></el-icon>{{ t('project.new') }}
+      </el-button>
     </div>
 
     <el-table :data="filteredProjects" class="project-table" style="width: 100%" row-key="id">
@@ -250,27 +246,18 @@ function onAction(row: ProjectDTO, command: string): void {
 </template>
 
 <style scoped lang="scss">
-@use '../../../../common/renderer/styles/settingsBlock.scss';
-
 .project-settings {
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
-.panel-toolbar {
+.project-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
-}
-
-.panel-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
 }
 
 .project-search {

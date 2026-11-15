@@ -4,6 +4,11 @@
     "back": "返回会话",
     "general": "常规",
     "personalization": "个性化",
+    "pageTip": {
+      "general": "外观、主题、语言与快捷键。",
+      "personalization": "应用名称、Slogan 与品牌资源。",
+      "runtime": "数据目录、命令运行环境与开发者模式。"
+    },
     "appearance": "外观",
     "appearanceLight": "浅色",
     "appearanceDark": "深色",
@@ -52,7 +57,6 @@
     "backgroundPickTitle": "选择背景图片",
     "imageFilter": "图片文件",
     "providers": "模型供应商",
-    "providerListTitle": "供应商列表",
     "providerName": "名称",
     "baseUrl": "接口地址",
     "baseUrlPlaceholder": "如 https://api.deepseek.com/v1",
@@ -79,6 +83,8 @@
     "addProvider": "添加供应商",
     "editProvider": "编辑供应商",
     "providerTip": "统一按 OpenAI 兼容协议接入，支持 DeepSeek / Ollama / vLLM 等服务",
+    "providerFilterPlaceholder": "搜索供应商名称或接口地址",
+    "providerFilterEmpty": "没有匹配的供应商",
     "currentModel": "默认模型",
     "selectProvider": "选择供应商",
     "selectModel": "选择模型",

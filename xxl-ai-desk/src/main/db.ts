@@ -16,10 +16,11 @@ import { PROJECT_DDL } from '@modules/project/main/ddl'
 import { ensureDefaultProject } from '@modules/project/main/seed'
 import { PROVIDER_DDL } from '@modules/provider/main/ddl'
 import { SETTINGS_DDL } from '@modules/settings/main/ddl'
+import { SCHEDULE_DDL } from '@modules/schedule/main/ddl'
 import { SKILL_DDL } from '@modules/skill/main/ddl'
 
 /* 各领域建表片段按依赖顺序拼接 */
-const DDL = [PROVIDER_DDL, PROJECT_DDL, CHAT_DDL, SETTINGS_DDL, MCP_DDL, SKILL_DDL, AGENT_DDL, DIAGNOSTICS_DDL, APP_CENTER_DDL].join('\n')
+const DDL = [PROVIDER_DDL, PROJECT_DDL, CHAT_DDL, SETTINGS_DDL, MCP_DDL, SKILL_DDL, AGENT_DDL, DIAGNOSTICS_DDL, APP_CENTER_DDL, SCHEDULE_DDL].join('\n')
 
 /* 初始化本地数据库（应用就绪后调用）：返回旧库备份重建结果 */
 export function initDatabaseFromModules(): DatabaseInitResult {

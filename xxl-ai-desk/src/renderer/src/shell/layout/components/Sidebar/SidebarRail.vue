@@ -16,6 +16,7 @@ const appCenter = useAppCenterStore()
 /* 固定入口：顶部功能组 + 底部系统设置组 */
 const TOP_ENTRIES: Array<{ key: Exclude<SectionKey, 'settings'>; labelKey: string }> = [
   { key: 'home', labelKey: 'chat.title' },
+  { key: 'schedule', labelKey: 'schedule.title' },
   { key: 'plugin', labelKey: 'plugin.title' },
   { key: 'apps', labelKey: 'appCenter.title' }
 ]

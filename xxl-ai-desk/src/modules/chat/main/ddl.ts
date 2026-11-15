@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS desk_session (
   model_id      TEXT NOT NULL DEFAULT '',
   reasoning_level TEXT NOT NULL DEFAULT 'default',
   permission_mode TEXT NOT NULL DEFAULT 'workspace-write',
+  trigger_type    TEXT NOT NULL DEFAULT 'manual',
+  schedule_task_id INTEGER NOT NULL DEFAULT 0,
   summary       TEXT NOT NULL DEFAULT '',
   summary_last_message_id INTEGER NOT NULL DEFAULT 0,
   summary_update_time     TEXT NOT NULL DEFAULT '',
@@ -22,6 +24,7 @@ CREATE TABLE IF NOT EXISTS desk_session (
 );
 CREATE INDEX IF NOT EXISTS i_desk_session_project ON desk_session (project_id);
 CREATE INDEX IF NOT EXISTS i_desk_session_agent ON desk_session (agent_id);
+CREATE INDEX IF NOT EXISTS i_desk_session_schedule_task ON desk_session (schedule_task_id);
 CREATE TABLE IF NOT EXISTS desk_message (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id INTEGER NOT NULL,

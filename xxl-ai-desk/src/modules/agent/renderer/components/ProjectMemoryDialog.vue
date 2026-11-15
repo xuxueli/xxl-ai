@@ -109,7 +109,7 @@ watch(
 }
 
 :global(.agent-memory-dialog) {
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
   max-width: calc(100vw - 48px);
 }
 </style>

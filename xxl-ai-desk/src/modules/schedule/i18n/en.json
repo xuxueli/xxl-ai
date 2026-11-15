@@ -1,0 +1,175 @@
+{
+  "schedule": {
+    "title": "Scheduled tasks",
+    "nav": {
+      "tasks": "Task list",
+      "runs": "Run records",
+      "settings": "Task settings"
+    },
+    "tip": {
+      "tasks": "Sessions are triggered by schedule rules. Click a task to view its run records.",
+      "runs": "Review run instances and trigger times; open a session for details.",
+      "settings": "Configure sleep behavior and the maximum number of concurrent tasks."
+    },
+    "sessionBadge": "Scheduled task session",
+    "new": "New scheduled task",
+    "editTitle": "Edit scheduled task",
+    "empty": "No scheduled tasks",
+    "emptyTip": "Tasks trigger sessions by schedule rules; the session history is the run history.",
+    "searchPlaceholder": "Search task name or prompt",
+    "allProjects": "All projects",
+    "allAgents": "All Agents",
+    "allStatus": "All statuses",
+    "allTasks": "All tasks",
+    "reset": "Reset",
+    "total": "{0} tasks",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "running": "Running",
+      "failed": "Last run failed",
+      "invalid": "Invalid reference"
+    },
+    "runStatus": {
+      "success": "Success",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "columns": {
+      "task": "Task",
+      "session": "Session",
+      "schedule": "Schedule",
+      "status": "Status",
+      "lastRun": "Last run",
+      "actions": "Actions"
+    },
+    "sessionMode": {
+      "label": "Session mode",
+      "new": "New session each run",
+      "reuse": "Reuse last session",
+      "reuseTip": "If the reused session was deleted or no longer exists, a new one is created. If it is generating, this run is skipped."
+    },
+    "fields": {
+      "name": "Task name",
+      "namePlaceholder": "e.g. Daily project review",
+      "prompt": "Task prompt",
+      "promptPlaceholder": "Content sent to the Agent on each run",
+      "schedule": "Schedule rule",
+      "project": "Project",
+      "agent": "Agent",
+      "provider": "Provider",
+      "model": "Model",
+      "reasoning": "Reasoning",
+      "permission": "Permission",
+      "enabled": "Enable task"
+    },
+    "section": {
+      "session": "Session"
+    },
+    "rule": {
+      "triggerTip": "Click to configure the schedule rule",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "interval": "Interval",
+        "custom": "Custom"
+      },
+      "time": "Time",
+      "weekdays": "Weekday",
+      "monthDays": "Day",
+      "intervalEvery": "Every",
+      "unit": {
+        "minute": "minutes",
+        "hour": "hours"
+      },
+      "weekLabel": "{0}",
+      "nextRuns": "Next runs",
+      "previewEmpty": "This rule has no future run",
+      "invalid": "Invalid schedule rule, please reconfigure",
+      "fields": {
+        "year": "Year",
+        "month": "Month",
+        "day": "Day",
+        "weekday": "Weekday",
+        "hour": "Hour",
+        "minute": "Minute",
+        "second": "Second"
+      },
+      "mode": {
+        "any": "Any",
+        "values": "Specific",
+        "range": "Range",
+        "step": "Step"
+      },
+      "rangeSeparator": "to",
+      "stepPrefix": "From",
+      "stepUnit": "every",
+      "fieldRange": "{0} to {1}",
+      "fieldStep": "from {0} every {1}",
+      "dayLast": "Last day",
+      "separator": ", ",
+      "weekday": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      },
+      "desc": {
+        "dailyAt": "Daily at {0}",
+        "weeklyAt": "Weekly on {0} at {1}",
+        "monthlyAt": "Monthly on day {0} at {1}",
+        "monthlyAndWeekly": "Monthly on day {0} and weekly on {1} at {2}",
+        "yearPart": "{0}",
+        "monthPart": "month {0}",
+        "dayPart": "day {0}",
+        "weekdayPart": "weekly on {0}",
+        "everyNMinutes": "Every {0} minutes",
+        "everyNHours": "Every {0} hours",
+        "everyMinute": "Every minute",
+        "everySecond": "Every second",
+        "custom": "{0}"
+      }
+    },
+    "actions": {
+      "runNow": "Run now",
+      "runs": "Run records"
+    },
+    "deleteConfirm": "Delete scheduled task \"{0}\"? Session history will be kept.",
+    "deleted": "Scheduled task deleted",
+    "saved": "Scheduled task saved",
+    "runStarted": "Task started",
+    "openSession": "Open session",
+    "never": "Never run",
+    "nextRun": "Next {0}",
+    "nextRunNone": "Not scheduled",
+    "invalidTip": "The linked project or Agent is no longer available. Edit the task and try again.",
+    "runNowFailed": "Failed to start task: {0}",
+    "projectRequired": "Select a project",
+    "agentRequired": "Select an Agent",
+    "modelRequired": "Select a model",
+    "runs": {
+      "taskFilter": "Task",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "task": "Task",
+      "session": "Session",
+      "project": "Project",
+      "agent": "Agent",
+      "triggeredAt": "Triggered at",
+      "empty": "No run records",
+      "unknownTask": "Task deleted",
+      "count": "{0} records"
+    },
+    "settings": {
+      "keepAwake": "Keep computer awake",
+      "keepAwakeDesc": "Keep the system awake (display may still sleep) so scheduled tasks are not suspended.",
+      "maxConcurrency": "Maximum concurrent tasks",
+      "maxConcurrencyDesc": "Upper limit of simultaneously running tasks ({0} ~ {1}). Triggers beyond the limit are recorded as skipped.",
+      "saved": "Task settings saved"
+    }
+  }
+}

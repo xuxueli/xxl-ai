@@ -22,6 +22,7 @@ import { registerBrowserIpc } from '@modules/browser/main/ipc'
 import { registerMcpIpc } from '@modules/mcp/main/ipc'
 import { registerSkillIpc } from '@modules/skill/main/ipc'
 import { registerDiagnosticsIpc } from '@modules/diagnostics/main/ipc'
+import { registerScheduleIpc } from '@modules/schedule/main/ipc'
 import { countSessionsByAgents, listSessionIdsByAgent, listSessionIdsByProject } from '@modules/chat/main'
 
 /* 注册全部 IPC 处理器 */
@@ -43,4 +44,5 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   registerMcpIpc(ipc)
   registerSkillIpc(ipc)
   registerDiagnosticsIpc(ipc)
+  registerScheduleIpc(ipc)
 }

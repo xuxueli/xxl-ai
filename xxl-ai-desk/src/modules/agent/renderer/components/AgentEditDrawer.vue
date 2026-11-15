@@ -277,7 +277,7 @@ watch([visible, () => props.draft], ([opened]) => {
   padding-bottom: 12px;
   overflow-x: hidden;
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 /* 抽屉正文禁止横向滚动：超长内容用省略号与悬浮提示表达 */

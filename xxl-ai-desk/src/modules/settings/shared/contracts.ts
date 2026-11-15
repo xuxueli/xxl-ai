@@ -42,6 +42,10 @@ export type BrandingKind = 'logo' | 'background'
 export const BACKGROUND_OPACITY_MIN = 0.1
 export const BACKGROUND_OPACITY_MAX = 0.6
 
+/* 定时任务最大并发数范围：主进程归一化与任务设置页共用 */
+export const SCHEDULE_MAX_CONCURRENCY_MIN = 1
+export const SCHEDULE_MAX_CONCURRENCY_MAX = 500
+
 /* 品牌资源：主进程解析后的绝对路径，空串表示使用内置资源 */
 export interface BrandingAssets {
   logoPath: string
@@ -91,6 +95,10 @@ export interface AppSettings {
   updateAutoCheck: boolean
   /* 开发者模式：开启后记录模型通讯 trace，并在工具面板展示「会话日志」 */
   developerMode: boolean
+  /* 定时任务：保持系统不休眠（允许屏幕休眠） */
+  scheduleKeepAwake: boolean
+  /* 定时任务：最大并发运行数 */
+  scheduleMaxConcurrency: number
 }
 
 /* 快捷操作类型由 common 契约统一提供 */

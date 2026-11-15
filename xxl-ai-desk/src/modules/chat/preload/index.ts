@@ -15,7 +15,13 @@ export const sessionApi: SessionApi = {
   remove: (id: number) => ipcRenderer.invoke(SESSION_IPC.remove, id),
   messages: (sessionId: number) => ipcRenderer.invoke(SESSION_IPC.messages, sessionId),
   removeMessages: (sessionId: number, ids: number[]) =>
-    ipcRenderer.invoke(SESSION_IPC.deleteMessages, sessionId, ids)
+    ipcRenderer.invoke(SESSION_IPC.deleteMessages, sessionId, ids),
+  onChanged: (callback) => {
+    const listener = (_event: unknown, payload: Parameters<typeof callback>[0]): void =>
+      callback(payload)
+    ipcRenderer.on(SESSION_IPC.changed, listener)
+    return () => ipcRenderer.removeListener(SESSION_IPC.changed, listener)
+  }
 }
 
 export const chatApi: ChatApi = {

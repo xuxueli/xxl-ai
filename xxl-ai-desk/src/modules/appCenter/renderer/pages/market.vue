@@ -6,6 +6,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { t } from '@common/renderer/i18n'
+import { PageHeading } from '@common/renderer/components'
 import AppCard from '@modules/appCenter/renderer/components/AppCard.vue'
 import { useAppCenterStore, type AppItem } from '@modules/appCenter/renderer'
 import { APP_CATEGORIES, type AppAvailability, type AppCategory } from '@modules/appCenter/shared'
@@ -126,9 +127,10 @@ onMounted(async () => {
 
 <template>
   <div class="app-page">
-    <div class="desk-page-header">
-      <div class="desk-page-tip">{{ t('appCenter.marketHint') }}</div>
-    </div>
+    <PageHeading
+      :title="t('appCenter.market')"
+      :description="t('appCenter.marketHint')"
+    />
 
     <el-scrollbar class="app-page-body">
       <div class="panel-toolbar">

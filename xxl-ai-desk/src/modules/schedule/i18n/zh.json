@@ -1,0 +1,175 @@
+{
+  "schedule": {
+    "title": "定时任务",
+    "nav": {
+      "tasks": "任务列表",
+      "runs": "运行记录",
+      "settings": "任务设置"
+    },
+    "tip": {
+      "tasks": "按触发规则定时启动会话；点击任务可查看对应运行记录。",
+      "runs": "查看定时任务的运行实例与触发时间；点击「查看会话」进入对话详情。",
+      "settings": "配置定时任务的运行策略：电脑休眠与最大并发任务数。"
+    },
+    "sessionBadge": "定时任务会话",
+    "new": "新建定时任务",
+    "editTitle": "编辑定时任务",
+    "empty": "暂无定时任务",
+    "emptyTip": "创建后按触发规则定时启动会话，运行记录即会话历史。",
+    "searchPlaceholder": "搜索任务名称或指令",
+    "allProjects": "全部项目",
+    "allAgents": "全部 Agent",
+    "allStatus": "全部状态",
+    "allTasks": "全部任务",
+    "reset": "重置",
+    "total": "共 {0} 个任务",
+    "status": {
+      "enabled": "已启用",
+      "disabled": "已停用",
+      "running": "运行中",
+      "failed": "上次失败",
+      "invalid": "引用失效"
+    },
+    "runStatus": {
+      "success": "成功",
+      "failed": "失败",
+      "skipped": "已跳过"
+    },
+    "columns": {
+      "task": "任务",
+      "session": "会话属性",
+      "schedule": "调度",
+      "status": "状态",
+      "lastRun": "上次运行",
+      "actions": "操作"
+    },
+    "sessionMode": {
+      "label": "会话设置方式",
+      "new": "每次新建会话",
+      "reuse": "复用上次会话",
+      "reuseTip": "复用的会话已删除或不存在时自动新建；复用会话正在生成时本次跳过。"
+    },
+    "fields": {
+      "name": "任务名称",
+      "namePlaceholder": "例如：每日项目巡检",
+      "prompt": "任务指令",
+      "promptPlaceholder": "每个周期发送给 Agent 的内容",
+      "schedule": "触发规则",
+      "project": "项目",
+      "agent": "Agent",
+      "provider": "供应商",
+      "model": "模型",
+      "reasoning": "推理等级",
+      "permission": "权限模式",
+      "enabled": "启用任务"
+    },
+    "section": {
+      "session": "会话属性"
+    },
+    "rule": {
+      "triggerTip": "点击设置触发规则",
+      "frequency": {
+        "daily": "每天",
+        "weekly": "每周",
+        "monthly": "每月",
+        "interval": "间隔",
+        "custom": "自定义"
+      },
+      "time": "时间",
+      "weekdays": "星期",
+      "monthDays": "日期",
+      "intervalEvery": "每隔",
+      "unit": {
+        "minute": "分钟",
+        "hour": "小时"
+      },
+      "weekLabel": "周{0}",
+      "nextRuns": "未来触发时间",
+      "previewEmpty": "该规则没有未来触发时间",
+      "invalid": "触发规则不合法，请重新设置",
+      "fields": {
+        "year": "年",
+        "month": "月",
+        "day": "日",
+        "weekday": "周",
+        "hour": "时",
+        "minute": "分",
+        "second": "秒"
+      },
+      "mode": {
+        "any": "不限",
+        "values": "指定",
+        "range": "区间",
+        "step": "步长"
+      },
+      "rangeSeparator": "至",
+      "stepPrefix": "从",
+      "stepUnit": "每",
+      "fieldRange": "{0} 至 {1}",
+      "fieldStep": "从 {0} 起每 {1}",
+      "dayLast": "最后一天",
+      "separator": "、",
+      "weekday": {
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六",
+        "7": "日"
+      },
+      "desc": {
+        "dailyAt": "每天 {0}",
+        "weeklyAt": "每周{0} {1}",
+        "monthlyAt": "每月 {0} {1}",
+        "monthlyAndWeekly": "每月 {0} 且每周{1} {2}",
+        "yearPart": "{0} 年",
+        "monthPart": "{0} 月",
+        "dayPart": "{0}",
+        "weekdayPart": "每周{0}",
+        "everyNMinutes": "每 {0} 分钟",
+        "everyNHours": "每 {0} 小时",
+        "everyMinute": "每分钟",
+        "everySecond": "每秒",
+        "custom": "{0}"
+      }
+    },
+    "actions": {
+      "runNow": "立即运行",
+      "runs": "运行记录"
+    },
+    "deleteConfirm": "确定删除定时任务「{0}」？历史会话将保留。",
+    "deleted": "定时任务已删除",
+    "saved": "定时任务已保存",
+    "runStarted": "任务已开始运行",
+    "openSession": "查看会话",
+    "never": "尚未运行",
+    "nextRun": "下次 {0}",
+    "nextRunNone": "未安排",
+    "invalidTip": "关联的项目或 Agent 已失效，请编辑任务后重试。",
+    "runNowFailed": "任务启动失败：{0}",
+    "projectRequired": "请选择项目",
+    "agentRequired": "请选择 Agent",
+    "modelRequired": "请选择模型",
+    "runs": {
+      "taskFilter": "任务",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "task": "任务",
+      "session": "会话",
+      "project": "项目",
+      "agent": "Agent",
+      "triggeredAt": "触发时间",
+      "empty": "暂无运行记录",
+      "unknownTask": "任务已删除",
+      "count": "共 {0} 条记录"
+    },
+    "settings": {
+      "keepAwake": "保持电脑不休眠",
+      "keepAwakeDesc": "开启后保持系统不休眠（允许屏幕休眠），避免定时任务被系统挂起中断。",
+      "maxConcurrency": "最大并发任务数",
+      "maxConcurrencyDesc": "同时运行的定时任务上限（{0} ~ {1}）；达到上限后的触发将记为已跳过。",
+      "saved": "任务设置已保存"
+    }
+  }
+}

@@ -17,6 +17,18 @@ type InteractionResponder = (requestId: string, result: InteractionResult) => vo
 /* 待响应交互：requestId → 会话与回传器 */
 const pending = new Map<string, { sessionId: number; respond: InteractionResponder }>()
 
+/*
+ * 自动结算器：无人值守会话（如定时任务）在推送渲染层前直接给出结果；
+ * 返回 null 表示仍需人工处理。由会话域注册，避免 agent 反向依赖 chat。
+ */
+type InteractionAutoResolver = (sessionId: number) => InteractionResult | null
+let autoResolver: InteractionAutoResolver | null = null
+
+/* 注册 / 注销自动结算器 */
+export function setInteractionAutoResolver(next: InteractionAutoResolver | null): void {
+  autoResolver = next
+}
+
 /* 取当前窗口：优先聚焦窗口，其次首个窗口 */
 function activeWindow(): BrowserWindow | null {
   const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -30,6 +42,12 @@ function closePrompt(requestId: string): void {
 
 /* 接收运行时交互请求：窗口缺失时直接按拒绝结算，避免工具悬挂 */
 export function openInteraction(prompt: ChatInteractionPrompt, respond: InteractionResponder): void {
+  /* 无人值守会话：立即按预定结果结算，不进入等待队列 */
+  const autoResult = autoResolver?.(prompt.sessionId)
+  if (autoResult) {
+    respond(prompt.requestId, autoResult)
+    return
+  }
   const window = activeWindow()
   if (!window) {
     respond(prompt.requestId, { status: 'denied' })

@@ -177,7 +177,7 @@ async function onRefresh(): Promise<void> {
       </div>
     </div>
 
-    <el-table :data="skill.visibleSkills" style="width: 100%" row-key="id">
+    <el-table :data="skill.visibleSkills" style="width: 100%" row-key="id" class="skill-table">
       <el-table-column
         :label="t('plugin.skillCenter.name')"
         min-width="140"
@@ -269,7 +269,7 @@ async function onRefresh(): Promise<void> {
   padding: 0 28px 32px;
   /* 与 MCP 管理列表保持一致的字号 */
   font-size: var(--desk-font-base);
-  --el-font-size-base: 14px;
+  --el-font-size-base: var(--desk-font-base);
 }
 
 .panel-toolbar {
@@ -278,6 +278,11 @@ async function onRefresh(): Promise<void> {
   justify-content: space-between;
   gap: 16px;
   margin: 4px 0 14px;
+}
+
+/* 去掉表格底部自带的 1px 间隔线，避免正文末尾出现多余分隔 */
+.skill-table :deep(.el-table__inner-wrapper::before) {
+  display: none;
 }
 
 .panel-search {
