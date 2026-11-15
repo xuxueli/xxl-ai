@@ -148,9 +148,11 @@ async function onClear(): Promise<void> {
       ...dayRangeBounds(clearDates.value)
     })
     clearVisible.value = false
-    ElMessage.success(
-      deleted ? t('schedule.logs.clearDone', [deleted]) : t('schedule.logs.clearNone')
-    )
+    if (deleted) {
+      ElMessage.success(t('schedule.logs.clearDone', [deleted]))
+    } else {
+      ElMessage.info(t('schedule.logs.clearNone'))
+    }
   } catch (error) {
     ElMessage.error(ipcErrorMessage(error))
   } finally {
