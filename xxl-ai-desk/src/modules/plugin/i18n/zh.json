@@ -52,7 +52,7 @@
       "noTools": "暂无可用工具",
       "readOnly": "只读",
       "emptyTitle": "还没有 MCP 服务",
-      "emptyTip": "支持手动新建，或从市场浏览安装社区 MCP 服务；保存后下一轮对话生效",
+      "emptyTip": "支持手动新建，或从市场浏览安装社区 MCP 服务；保存后下一轮会话生效",
       "browseDiscover": "从市场里浏览",
       "discoverSearch": "搜索 MCP 服务器…",
       "discoverEmpty": "没有找到匹配的 MCP 服务",

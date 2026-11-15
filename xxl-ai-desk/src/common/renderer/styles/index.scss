@@ -256,7 +256,7 @@ body.resizing-vertical {
 /* --- 工具条：工具面板二级工具条与笔记工具栏共用（文件 / Git / 终端 / 浏览器 / 诊断 / 笔记） --- */
 .desk-toolbar {
   flex-shrink: 0;
-  height: 38px;
+  height: var(--desk-toolbar-height);
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -284,14 +284,14 @@ body.resizing-vertical {
 .desk-toolbar-divider {
   flex-shrink: 0;
   width: 1px;
-  height: 14px;
+  height: 12px;
   margin: 0 4px;
   background: var(--desk-border);
 }
 
 .desk-toolbar-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: 7px;
@@ -325,6 +325,27 @@ body.resizing-vertical {
   font-size: var(--desk-icon-xs);
 }
 
+/* --- 二级页面顶部说明区 --- */
+/* 扩展中心 / 应用中心等子菜单正文顶部：统一高度，说明文案垂直居中，下方分隔线与正文衔接 */
+.desk-page-header {
+  flex-shrink: 0;
+  height: var(--desk-page-header-height);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--desk-border);
+}
+
+/* 说明文案：限单行，避免长文案把顶部区域撑高 */
+.desk-page-tip {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--desk-text-tertiary);
+  font-size: var(--desk-font-xs);
+}
+
 /* --- 滚动条 --- */
 ::-webkit-scrollbar {
   width: var(--desk-scrollbar-size);
@@ -332,12 +353,12 @@ body.resizing-vertical {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--desk-border);
+  background: var(--desk-scrollbar-thumb);
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--desk-text-tertiary);
+  background: var(--desk-scrollbar-thumb-hover);
 }
 
 /* --- 文本选区：全应用统一配色，预览区 / 表单等原生选区与编辑器保持一致 --- */

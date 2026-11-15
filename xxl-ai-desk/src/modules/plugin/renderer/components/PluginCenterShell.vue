@@ -21,7 +21,7 @@ const emit = defineEmits<{ 'update:active': [key: string] }>()
 
 <template>
   <div class="plugin-center">
-    <div class="plugin-center-header">
+    <div class="desk-page-header plugin-center-header">
       <div v-if="tabs.length > 0" class="plugin-tab-bar">
         <button
           v-for="tab in tabs"
@@ -52,20 +52,22 @@ const emit = defineEmits<{ 'update:active': [key: string] }>()
 }
 
 .plugin-center-header {
-  flex-shrink: 0;
-  padding: 18px 28px 0;
-  border-bottom: 1px solid var(--desk-border);
+  gap: 22px;
 }
 
+/* TAB 行占满顶部区域高度，激活下划线正好压在分隔线上 */
 .plugin-tab-bar {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 22px;
+  height: 100%;
 }
 
 .plugin-tab-item {
   position: relative;
-  padding: 0 0 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
   border: none;
   background: transparent;
   font-size: var(--desk-font-base);

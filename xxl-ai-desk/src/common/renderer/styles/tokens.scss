@@ -183,8 +183,16 @@
   --desk-rail-width: 44px;
   --desk-sidebar-width: 240px;
   --desk-note-outline-width: 240px;
-  --desk-panel-header-height: 40px;
+  /* 工具面板主 Tab 行与右侧目录标题栏 */
+  --desk-panel-header-height: 36px;
+  /* 二级页面顶部说明区（扩展中心 / 应用中心等）：统一高度，避免各页标题区高低不一 */
+  --desk-page-header-height: 44px;
+  /* 工具面板所有工具条统一高度：主 Tab 行 / 工具条 / 浏览器标签栏 / 笔记工具栏共用 */
+  --desk-toolbar-height: 32px;
   --desk-scrollbar-size: 8px;
+  /* 滚动条滑块：默认与描边同色，悬停加深；编辑器与预览等主题容器可各自覆盖 */
+  --desk-scrollbar-thumb: var(--desk-border);
+  --desk-scrollbar-thumb-hover: var(--desk-text-tertiary);
   /* 媒体预览黑底（视频 / 透明图）：固定配色，不随主题变化 */
   --desk-media-backdrop: #000;
   /* 会话内容列：正文滚动容器两侧对称预留滚动条空间，输入框用 content-gutter 补偿后与其等宽同中心 */

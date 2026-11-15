@@ -434,14 +434,15 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-/* 标签页栏：左侧标签横向滚动，右侧新建固定 */
+/* 标签页栏：左侧标签横向滚动，右侧新建固定；与其它工具条等高，用弱描边分出层次 */
 .tab-bar {
   flex-shrink: 0;
-  height: 34px;
+  height: var(--desk-toolbar-height);
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 0 8px;
+  border-bottom: 1px solid var(--desk-border-soft);
   background: var(--desk-bg-elevated);
 }
 
@@ -461,7 +462,7 @@ onBeforeUnmount(() => {
   gap: 4px;
   flex-shrink: 0;
   max-width: 168px;
-  height: 26px;
+  height: 24px;
   padding: 0 4px 0 8px;
   border-radius: 7px;
   color: var(--desk-text-secondary);
@@ -526,8 +527,8 @@ onBeforeUnmount(() => {
 }
 
 .tab-add {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   font-size: var(--desk-icon-sm);
   border-radius: 7px;
 }
@@ -539,7 +540,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   align-items: center;
-  height: 28px;
+  height: 24px;
   margin: 0 4px;
   padding: 0 4px 0 10px;
   border-radius: 7px;

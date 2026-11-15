@@ -94,7 +94,7 @@ const { tabs, activeId, setContainer, activate, openTerminal, disposeTab } = use
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  height: 26px;
+  height: 24px;
   padding: 0 8px;
   border: none;
   border-radius: 7px;

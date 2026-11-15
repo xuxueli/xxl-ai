@@ -61,8 +61,8 @@ onMounted(async () => {
 
 <template>
   <div class="app-page">
-    <div class="app-page-header">
-      <div class="page-tip">{{ t('appCenter.myAppsHint') }}</div>
+    <div class="desk-page-header">
+      <div class="desk-page-tip">{{ t('appCenter.myAppsHint') }}</div>
     </div>
 
     <el-scrollbar class="app-page-body">
@@ -104,19 +104,6 @@ onMounted(async () => {
   flex-direction: column;
   overflow: hidden;
   background: var(--desk-bg);
-}
-
-.app-page-header {
-  flex-shrink: 0;
-  padding: 18px 28px 0;
-  border-bottom: 1px solid var(--desk-border);
-}
-
-.page-tip {
-  padding-bottom: 16px;
-  color: var(--desk-text-tertiary);
-  font-size: var(--desk-font-xs);
-  line-height: 1.6;
 }
 
 .app-page-body {

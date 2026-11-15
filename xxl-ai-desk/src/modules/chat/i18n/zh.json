@@ -1,8 +1,8 @@
 {
   "chat": {
-    "title": "对话",
-    "newChat": "新对话",
-    "newChatAction": "新建对话",
+    "title": "会话",
+    "newChat": "新会话",
+    "newChatAction": "新建会话",
     "sessions": "会话",
     "recentSessions": "最近会话",
     "inputPlaceholder": "随心输入，Enter 发送 / Shift+Enter 换行",
@@ -32,7 +32,7 @@
       "usageUnknown": "~{0}",
       "systemPrompt": "系统提示词",
       "toolDefinitions": "工具定义",
-      "messages": "对话与输出"
+      "messages": "会话与输出"
     },
     "duration": {
       "hour": "{0}小时{1}分",
@@ -117,8 +117,8 @@
     "deleteConfirm": "确定删除该会话及其全部消息？",
     "deleteConfirmRunning": "该会话正在生成，删除将立即中止本轮并清空全部消息，且不可恢复。确定删除？",
     "deleteMessage": "删除消息",
-    "deleteMessageConfirm": "确定删除该消息？删除后将同步从对话上下文中移除。",
-    "deleteMessageRunning": "当前对话正在生成，请先停止生成再删除消息",
+    "deleteMessageConfirm": "确定删除该消息？删除后将同步从会话上下文中移除。",
+    "deleteMessageRunning": "当前会话正在生成，请先停止生成再删除消息",
     "editAndRetry": "编辑后重答",
     "noModel": "尚未配置模型，请前往设置添加供应商与模型",
     "goSettings": "前往设置",

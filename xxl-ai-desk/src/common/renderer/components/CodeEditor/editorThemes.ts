@@ -75,7 +75,7 @@ const AUTO_PALETTE: EditorThemePalette = {
   background: 'var(--desk-surface-content)',
   text: 'var(--desk-code-text)',
   gutterBg: 'var(--desk-surface-panel)',
-  gutterText: 'var(--desk-text-tertiary)',
+  gutterText: 'var(--theme-text-tertiary)',
   border: 'var(--desk-border-soft)',
   activeLine: 'color-mix(in srgb, var(--desk-primary) 6%, transparent)',
   activeGutter: 'color-mix(in srgb, var(--desk-primary) 8%, transparent)',
@@ -328,6 +328,14 @@ export function editorPalette(id: string | undefined): EditorThemePalette {
  */
 export function editorThemeVars(id: string | undefined): Record<string, string> {
   const palette = editorPalette(id)
+  /*
+   * auto：预览容器沿用应用皮肤自身的语义变量即可。
+   * 不能把 AUTO_PALETTE 的 var(...) 引用原样覆盖回去（如 --desk-code-text: var(--desk-code-text)），
+   * 否则会形成自引用循环，导致预览内的文字、边框、滚动条等变量全部失效。
+   */
+  if (!id || id === 'auto') {
+    return {}
+  }
   /* 在编辑器底色上叠一层文字色，得到与主题同色相的浅底 */
   const tint = (color: string, percent: number): string =>
     `color-mix(in srgb, ${color} ${percent}%, ${palette.background})`
@@ -341,6 +349,9 @@ export function editorThemeVars(id: string | undefined): Record<string, string> 
     '--desk-text-tertiary': palette.gutterText,
     '--desk-border': palette.border,
     '--desk-border-strong': tint(palette.text, 16),
+    /* 滚动条：在主题容器内单独给色，避免沿用应用外壳的浅描边导致滑块不可见 */
+    '--desk-scrollbar-thumb': tint(palette.text, 22),
+    '--desk-scrollbar-thumb-hover': tint(palette.text, 40),
     /* 强调色：链接 / 引用 / 表格等统一取编辑器主题的链接色 */
     '--desk-primary': palette.link,
     '--desk-primary-soft': tint(palette.link, 10),

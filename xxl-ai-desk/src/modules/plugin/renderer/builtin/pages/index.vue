@@ -41,7 +41,7 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
 <template>
   <PluginCenterShell>
     <template #header>
-      <div class="page-tip">{{ t('plugin.builtinTool.intro') }}</div>
+      <div class="desk-page-tip">{{ t('plugin.builtinTool.intro') }}</div>
     </template>
 
     <div class="builtin-body">
@@ -88,14 +88,6 @@ function toggleGroup(key: BuiltinToolCategoryKey): void {
 </template>
 
 <style scoped lang="scss">
-/* 说明区：位于中心外壳 header 内 */
-.page-tip {
-  padding-bottom: 16px;
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
-  line-height: 1.6;
-}
-
 /* 正文：在外壳滚动区内补充左右与底部间距 */
 .builtin-body {
   padding: 0 28px 32px;

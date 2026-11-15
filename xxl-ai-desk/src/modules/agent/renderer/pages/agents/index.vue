@@ -75,7 +75,7 @@ function formatTime(iso: string): string {
 <template>
   <PluginCenterShell>
     <template #header>
-      <div class="page-tip">{{ t('agent.manageTip') }}</div>
+      <div class="desk-page-tip">{{ t('agent.manageTip') }}</div>
     </template>
 
     <div class="agent-body">
@@ -165,14 +165,6 @@ function formatTime(iso: string): string {
 </template>
 
 <style scoped lang="scss">
-/* 说明区：位于中心外壳 header 内 */
-.page-tip {
-  padding-bottom: 16px;
-  font-size: var(--desk-font-xs);
-  color: var(--desk-text-tertiary);
-  line-height: 1.6;
-}
-
 .agent-body {
   padding: 0 28px 32px;
   font-size: var(--desk-font-base);

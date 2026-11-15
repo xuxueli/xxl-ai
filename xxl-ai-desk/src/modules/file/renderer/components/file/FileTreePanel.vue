@@ -184,7 +184,8 @@ function onContextMenu(entry: FsEntry, position: { x: number; y: number }): void
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--desk-border);
-  background: var(--desk-sidebar);
+  /* 与左侧「项目 / 会话」列表同一表面（--desk-surface-panel ≡ --desk-surface-sidebar） */
+  background: var(--desk-surface-panel);
 }
 
 .tree-filter {

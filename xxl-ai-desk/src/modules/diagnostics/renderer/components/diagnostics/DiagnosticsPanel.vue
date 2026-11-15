@@ -68,13 +68,13 @@ watch(
 .diagnostics-tabs :deep(.el-tabs__header) {
   margin: 0;
   padding: 0 8px;
-  height: 38px;
+  height: var(--desk-toolbar-height);
   background: var(--desk-bg-elevated);
 }
 
 .diagnostics-tabs :deep(.el-tabs__item) {
-  height: 38px;
-  line-height: 38px;
+  height: var(--desk-toolbar-height);
+  line-height: var(--desk-toolbar-height);
   font-size: var(--desk-font-sm);
   color: var(--desk-text-secondary);
 }

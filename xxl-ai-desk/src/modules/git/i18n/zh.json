@@ -1,7 +1,7 @@
 {
   "git": {
     "tab": "Git",
-    "noProject": "请先在对话中选择一个项目",
+    "noProject": "请先在会话中选择一个项目",
     "notRepo": "当前项目不是 Git 仓库",
     "detached": "游离 HEAD",
     "refresh": "刷新",

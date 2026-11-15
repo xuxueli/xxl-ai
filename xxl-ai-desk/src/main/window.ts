@@ -73,6 +73,8 @@ export function createMainWindow(): BrowserWindow {
     height,
     minWidth,
     minHeight,
+    /* 宽高按网页内容区计算，避免 Windows / Linux 标题栏吃掉布局所需高度 */
+    useContentSize: true,
     show: false,
     autoHideMenuBar: true,
     title: APP_NAME,

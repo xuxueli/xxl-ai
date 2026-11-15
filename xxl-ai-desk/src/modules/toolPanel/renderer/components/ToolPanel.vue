@@ -201,7 +201,7 @@ function toggleFocus(): void {
 }
 
 .tool-panel-header {
-  height: var(--desk-panel-header-height);
+  height: var(--desk-toolbar-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -224,8 +224,8 @@ function toggleFocus(): void {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 10px;
+  height: 24px;
+  padding: 0 9px;
   border: none;
   border-radius: 7px;
   background: transparent;
@@ -250,8 +250,8 @@ function toggleFocus(): void {
 }
 
 .tool-tab-icon {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 
 .tool-actions {
@@ -259,6 +259,13 @@ function toggleFocus(): void {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+}
+
+/* 头部操作按钮跟随工具条高度收敛，避免 30px 的通用图标按钮撑满 32px 行 */
+.tool-actions .icon-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
 }
 
 /* 聚焦模式下保持按钮高亮，提示当前面板已放大 */
