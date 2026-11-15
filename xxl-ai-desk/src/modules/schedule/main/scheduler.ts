@@ -351,7 +351,7 @@ export function getWatchdogStatus(): ScheduleWatchdogStatusDTO {
 
 /*
  * 巡检看护：极简存活检查，不接触业务数据。
- * 巡检链意外丢失（未在途运行且没有已排计时器）或长时间未触发时重新拉起，
+ * 巡检链意外丢失（未在途运行且没有已排计时器）时重新拉起，
  * 保证全局唯一的兜底通道不会永久中断。
  */
 function guardWatchdog(): void {

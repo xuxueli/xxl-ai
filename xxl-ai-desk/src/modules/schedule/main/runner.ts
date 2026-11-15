@@ -164,11 +164,16 @@ function forceRestart(task: ScheduledTaskDTO, slotAt: string): ScheduleRunStartD
   setPendingForce(task.id, slotAt)
   log.warn(`[schedule] 会话阻塞策略=强制调度，终止进行中会话 task=${task.id} session=${sessionId}`)
   void (async () => {
-    if (sessionId && isAgentRunning(sessionId)) {
-      await abortChat(sessionId)
-    }
-    if (!isTaskRunning(task.id)) {
-      runPendingForce(task.id)
+    try {
+      if (sessionId && isAgentRunning(sessionId)) {
+        await abortChat(sessionId)
+      }
+      if (!isTaskRunning(task.id)) {
+        runPendingForce(task.id)
+      }
+    } catch (error) {
+      /* 终止失败只记日志：待本轮自然收尾时仍会消费强制调度请求 */
+      log.error(`[schedule] 强制调度终止会话失败 task=${task.id}`, error)
     }
   })()
   return { sessionId: 0 }
