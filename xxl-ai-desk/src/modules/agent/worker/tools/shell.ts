@@ -21,7 +21,7 @@ import {
   type ToolEntry
 } from '@modules/agent/worker/toolkit'
 import { detectDangerousCommand, findOutsideTargets } from '@modules/agent/worker/tools/shellPolicy'
-import { guardPath, protectedPathOf } from '@modules/agent/worker/sandbox'
+import { guardPaths } from '@modules/agent/worker/sandbox'
 
 /* 运行时 PATH（主进程随每轮对话下发，供命令使用设置的 Node / Python 环境） */
 let runtimePath: string | undefined
@@ -68,27 +68,20 @@ export async function createShellTools(context: ToolContext): Promise<ToolEntry[
           isError: true
         }
       }
-      /* 越界路径：先全量检查敏感目录，再与文件工具共用权限闸门 */
-      const outsideTargets = findOutsideTargets(command, rootDir)
-      const sensitiveTarget = outsideTargets.find((target) => protectedPathOf(target))
-      if (sensitiveTarget) {
-        return toolError(tr(context, 'runtime.tool.protectedPath', [sensitiveTarget]))
-      }
-      for (const outside of outsideTargets) {
-        const outcome = await guardPath({
-          sessionId: context.sessionId,
-          rootDir,
-          target: outside,
-          action: 'command',
-          tool: 'run_command',
-          language: context.language,
-          permissionMode: context.permissionMode,
-          command,
-          trustedRoots
-        })
-        if (!outcome.allowed) {
-          return toolError(outcome.reason ?? tr(context, 'runtime.tool.commandBlocked', [outside]))
-        }
+      /* 越界路径：一次工具调用的多个目标合并为一次审批（敏感目录由闸门统一拦截） */
+      const outcome = await guardPaths({
+        sessionId: context.sessionId,
+        rootDir,
+        targets: findOutsideTargets(command, rootDir),
+        action: 'command',
+        tool: 'run_command',
+        language: context.language,
+        permissionMode: context.permissionMode,
+        command,
+        trustedRoots
+      })
+      if (!outcome.allowed) {
+        return toolError(outcome.reason ?? tr(context, 'runtime.tool.commandBlocked', [outcome.abs]))
       }
       return new Promise<ReturnType<typeof text>>((resolvePromise) => {
         exec(

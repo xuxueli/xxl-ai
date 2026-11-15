@@ -486,7 +486,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 | 会话压缩 | `modules/chat/main/sessionSummaryService.ts` + `modules/agent/worker/summary.ts` | 摘要存 `desk_session.summary*`；无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 时异步压缩 |
 | 上下文分项 | `modules/agent/worker/session.ts` + `modules/chat/main/sessionService.ts` | 每次响应用估算值（CJK 1 token/字、其余 4 字符/token）回传；存 `desk_session.context_breakdown`，每轮更新，删除消息时清空 |
 | 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写 / 命令类需「工作区内修改」及以上权限；是否进入「内置工具」页见 §6.1 |
-| 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, permissionMode, trustedRoots })`，越界返回拦截错误 |
+| 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, permissionMode, trustedRoots })`（多目标用 `guardPaths({ targets: [...] })`），越界返回拦截错误 |
 | 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层在输入框位置内联展示审批面板（按会话隔离），回传 `allow`（可 `remember`）/ `deny` |
 | MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
 | 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 权限/工具约束 |
@@ -521,7 +521,8 @@ shell/layout/index.vue（app-wrapper，纵向）
   - 「启用」只决定提示词注入与 `read_skill` 是否可用（使用权限）；
   - 禁止用「是否启用」限制 `read_file` / `list_directory` / 技能库读取。
 - **技能根目录由主进程每轮下发**（`RunAgentInput.skillsDir`）；工具侧禁止自行推断或拼接技能目录。
-- **越界审批只走统一闸门**：`guardPath` → `hitl` → 主进程 → 渲染层；新增文件 / 命令工具必须复用 `createGuard` / `guardPath`，禁止自写路径判断。
+- **越界审批只走统一闸门**：`guardPath` / `guardPaths` → `hitl` → 主进程 → 渲染层；新增文件 / 命令工具必须复用 `createGuard` / `guardPath` / `guardPaths`，禁止自写路径判断。
+- **一次调用一次审批**：同一次工具调用的多个越界目标必须合并为一张卡片（`guardPaths({ targets })`），一次应答覆盖全部目标；禁止按目标逐个弹卡。目标为磁盘根目录时在卡片内标注「全盘」并提示扫描耗时。
 - **`run_command` 的路径识别只防误操作，不是安全边界**：动态展开（`$VAR`、命令替换）、解释器（`python -c`、`sh -c`）无法覆盖；不要为它叠加脆弱的「只读命令白名单」或其它启发式解析。
 - **会话信任粒度**：`sessionTrusted` 仅在 `workspace-write` 的越界审批中生效，为会话级全量放行；后续扩展必须收敛为「目录 + 动作」粒度，避免一次授权放大到全部读写命令。
 

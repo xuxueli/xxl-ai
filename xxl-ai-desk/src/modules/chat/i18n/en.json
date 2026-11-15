@@ -154,6 +154,8 @@
         "sessionTip": "Do not ask again for any out-of-project access in this session",
         "once": "Allow once",
         "session": "Allow all for session",
+        "wholeDisk": "entire disk",
+        "wholeDiskHint": "This path is the filesystem root, so the command scans the entire disk and may take a while.",
         "deny": "Deny"
       }
     },

@@ -58,7 +58,8 @@ export interface InteractionOption {
 export interface InteractionPermission {
   tool: string
   action: 'read' | 'write' | 'command'
-  abs: string
+  /* 本次工具调用涉及的越界目标（规范化绝对路径，已去重；一次应答覆盖全部） */
+  paths: string[]
   root: string
   /* 本次执行的完整命令（仅 action=command），供用户审批时查看 */
   command?: string

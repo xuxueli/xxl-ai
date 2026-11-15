@@ -101,16 +101,10 @@ function blocked(
   }
 }
 
-/*
- * 路径闸门：
- *   - 读取：全局放行（仅可查看即「全局读」）；
- *   - 写入 / 命令：按权限模式判断放行范围，越界写入转人工审批。
- * 返回 allowed=false 时，reason 为可直接回填给模型的拦截说明。
- */
-export async function guardPath(options: {
+/* 路径闸门基础参数：单目标与多目标共用 */
+interface PathGateOptions {
   sessionId: number
   rootDir: string
-  target?: string
   action: PathAction
   tool: string
   /* 应用语言：拦截文案使用对应语言 */
@@ -121,34 +115,54 @@ export async function guardPath(options: {
   command?: string
   /* 完全信任根目录（如技能库）：读 / 写 / 命令均直接放行 */
   trustedRoots?: string[]
-}): Promise<{ allowed: boolean; abs: string; reason?: string }> {
+}
+
+/*
+ * 路径闸门：
+ *   - 读取：全局放行（仅可查看即「全局读」）；
+ *   - 写入 / 命令：按权限模式判断放行范围，越界写入转人工审批；
+ *   - 同一次工具调用的多个越界目标合并为一次审批，一次应答覆盖全部目标。
+ * targets 为本次调用的越界候选目标（空值取项目目录）。
+ * 返回 allowed=false 时，reason 为可直接回填给模型的拦截说明。
+ */
+export async function guardPaths(
+  options: PathGateOptions & { targets: string[] }
+): Promise<{ allowed: boolean; abs: string; reason?: string }> {
   const root = canonicalize(options.rootDir)
-  const abs = canonicalize(resolveTarget(options.rootDir, options.target))
+  const targets = (options.targets.length > 0 ? options.targets : ['']).map((item) =>
+    canonicalize(resolveTarget(options.rootDir, item))
+  )
   const language = options.language ?? 'zh'
 
   /* 全局读：所有权限模式下读取项目外路径均直接放行 */
   if (options.action === 'read') {
-    return { allowed: true, abs }
+    return { allowed: true, abs: targets[0] }
   }
-  /* 仅可查看：先于信任目录判断，禁止任何写入或命令 */
-  if (options.permissionMode === 'read-only') {
-    return blocked(language, abs, options.rootDir, options.action, 'runtime.tool.permissionReadOnly')
+  /* 需要人工审批的越界目标（去重后随一次交互提交） */
+  const pending: string[] = []
+  for (const abs of targets) {
+    /* 仅可查看：先于信任目录判断，禁止任何写入或命令 */
+    if (options.permissionMode === 'read-only') {
+      return blocked(language, abs, options.rootDir, options.action, 'runtime.tool.permissionReadOnly')
+    }
+    /* 完全信任目录（技能库）：写 / 命令全部放行，不弹审批 */
+    if ((options.trustedRoots ?? []).some((item) => isWithinRoot(item, abs))) {
+      continue
+    }
+    /* 兜底拦截：系统 / 用户敏感目录即使完全权限也不允许写入 */
+    if (protectedPathOf(abs)) {
+      return blocked(language, abs, options.rootDir, options.action, 'runtime.tool.protectedPath')
+    }
+    /* 项目目录 / 系统临时目录（或完全权限）与已整体授权：直接放行 */
+    if (withinWriteScope(root, abs, options.permissionMode) || sessionTrusted.has(options.sessionId)) {
+      continue
+    }
+    if (!pending.includes(abs)) {
+      pending.push(abs)
+    }
   }
-  /* 完全信任目录（技能库）：写 / 命令全部放行，不弹审批 */
-  if ((options.trustedRoots ?? []).some((item) => isWithinRoot(item, abs))) {
-    return { allowed: true, abs }
-  }
-  /* 兜底拦截：系统 / 用户敏感目录即使完全权限也不允许写入 */
-  if (protectedPathOf(abs)) {
-    return blocked(language, abs, options.rootDir, options.action, 'runtime.tool.protectedPath')
-  }
-  /* 项目目录 / 系统临时目录（或完全权限）：直接放行 */
-  if (withinWriteScope(root, abs, options.permissionMode)) {
-    return { allowed: true, abs }
-  }
-  /* 会话已授权全部越界访问：不再重复询问 */
-  if (sessionTrusted.has(options.sessionId)) {
-    return { allowed: true, abs }
+  if (pending.length === 0) {
+    return { allowed: true, abs: targets[0] }
   }
   const choice = await requestInteraction(options.sessionId, {
     kind: 'permission',
@@ -156,16 +170,24 @@ export async function guardPath(options: {
     permission: {
       tool: options.tool,
       action: options.action,
-      abs,
+      paths: pending,
       root: options.rootDir,
       command: options.action === 'command' ? options.command : undefined
     }
   })
   if (choice.status === 'submitted' && choice.value === 'allow') {
+    /* 一次应答覆盖本次调用的全部越界目标 */
     if (choice.remember) {
       sessionTrusted.add(options.sessionId)
     }
-    return { allowed: true, abs }
+    return { allowed: true, abs: pending[0] }
   }
-  return blocked(language, abs, options.rootDir, options.action, 'runtime.tool.pathDenied')
+  return blocked(language, pending[0], options.rootDir, options.action, 'runtime.tool.pathDenied')
+}
+
+/* 单项路径闸门：文件类工具单路径场景，等价于只含一个目标的批量判定 */
+export async function guardPath(
+  options: PathGateOptions & { target?: string }
+): Promise<{ allowed: boolean; abs: string; reason?: string }> {
+  return guardPaths({ ...options, targets: [options.target ?? ''] })
 }

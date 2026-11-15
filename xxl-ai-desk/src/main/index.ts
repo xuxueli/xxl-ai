@@ -1,11 +1,9 @@
 /* XXL-AI-Desk 主进程入口：窗口、生命周期、IPC 装配 */
 
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { mkdirSync } from 'fs'
-import { join } from 'path'
 import './i18n'
 import { BROWSER_IPC } from '@modules/browser/shared'
-import { APP_NAME } from '@common/shared/appInfo'
 import { getCacheDir, getDataDir } from '@common/main/config/paths'
 import { initDatabaseFromModules } from '@main/db'
 import type { DatabaseInitResult } from '@common/main/db'
@@ -18,7 +16,6 @@ import { ensureSeedProviders } from '@modules/provider/main'
 import {
   applyAppIcon,
   registerLocalFileProtocol,
-  resolveDefaultAppIcon,
   showDatabaseRecoveryNotice,
   showStartupFailure
 } from '@modules/platform/main'
@@ -27,8 +24,9 @@ import { disposeAllFsWatch } from '@modules/file/main'
 import { disposeAllNoteWatch } from '@modules/apps/note/main'
 import { disposeAllGitWatch } from '@modules/git/main'
 import { disposeAgentRuntime } from '@modules/agent/main'
-import { bindBrowserShortcut, disposeBrowserActions } from '@modules/browser/main'
+import { bindBrowserShortcut } from '@modules/browser/main'
 import { initLogger } from '@common/main/utils/logger'
+import { createMainWindow } from '@main/window'
 
 /* 业务数据目录：默认系统配置目录，可由 xxl-ai-desk-config.json 切换；必须在 app ready 前设置 */
 const dataDir = getDataDir()
@@ -43,88 +41,14 @@ app.setPath('sessionData', cacheDir)
 /* 主窗口引用（未创建或已关闭时为 null） */
 let mainWindow: BrowserWindow | null = null
 
-/* 创建主窗口 */
+/* 创建主窗口：窗口内部逻辑在 window.ts，这里只维护引用与应用级图标 */
 function createWindow(): void {
-  /* macOS：隐藏标题栏但保留系统红黄绿按钮，内容铺满整个窗口；其它平台沿用系统默认边框 */
-  const isMac = process.platform === 'darwin'
-  const appIconPath = resolveDefaultAppIcon()
-  mainWindow = new BrowserWindow({
-    width: 1512,
-    height: 944,
-    minWidth: 900,
-    minHeight: 720,
-    show: false,
-    autoHideMenuBar: true,
-    title: APP_NAME,
-    backgroundColor: '#ffffff',
-    ...(isMac
-      ? {
-          titleBarStyle: 'hidden' as const,
-          /* 红黄绿窗口按钮垂直居中于顶部栏（38px），水平位置与左内边距对齐 */
-          trafficLightPosition: { x: 14, y: 13 }
-        }
-      : appIconPath
-        ? { icon: appIconPath }
-        : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-      contextIsolation: true,
-      nodeIntegration: false,
-      /* 右侧「浏览器」面板使用 <webview> 内嵌网页 */
-      webviewTag: true
-    }
-  })
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
-  })
-
+  mainWindow = createMainWindow()
   /* 运行期应用图标：自定义 Logo 优先，未设置时回退内置 icon.png */
   applyAppIcon(getBrandingAssets().logoPath)
-
-  /* 窗口关闭：解除引用并结算未完成的浏览器读取，避免等待超时 */
   mainWindow.on('closed', () => {
-    disposeBrowserActions()
     mainWindow = null
   })
-
-  /* 渲染进程崩溃/重载：回收残留 PTY，避免进程泄漏 */
-  mainWindow.webContents.on('render-process-gone', () => {
-    disposeAllTerminals()
-  })
-
-  /* 外链使用系统浏览器打开 */
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
-    return { action: 'deny' }
-  })
-
-  /* 浏览器面板快捷键：主窗口内按键先经主进程拦截（避开菜单加速键） */
-  bindBrowserShortcut(mainWindow.webContents)
-
-  /*
-   * 拦截主窗口内导航：Markdown / 页面内的普通链接不得替换应用界面。
-   * 同文档（仅 hash 变化）放行；其余 http(s) 交给系统浏览器。
-   */
-  const guardNavigation = (event: Electron.Event, url: string): void => {
-    const current = mainWindow?.webContents.getURL() ?? ''
-    if (url.split('#')[0] === current.split('#')[0]) {
-      return
-    }
-    event.preventDefault()
-    if (/^https?:/i.test(url)) {
-      void shell.openExternal(url)
-    }
-  }
-  mainWindow.webContents.on('will-navigate', guardNavigation)
-  mainWindow.webContents.on('will-redirect', guardNavigation)
-
-  if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
 }
 
 /*
