@@ -36,6 +36,7 @@ src/
 │   ├── appCenter/                  # shared · main · preload · renderer · i18n（内置应用注册 / 安装启用 / 市场）
 │   ├── apps/{appId}/               # 子应用：shared · main · preload · renderer · i18n（如 apps/note）
 │   ├── settings/                   # shared · main · preload · renderer · i18n
+│   ├── schedule/                   # shared · main · preload · renderer · i18n（定时任务调度）
 │   ├── provider/                   # shared · main · preload · renderer
 │   ├── project/                    # shared · main · preload · renderer · i18n
 │   ├── chat/                       # shared · main · preload · renderer · i18n
@@ -193,6 +194,7 @@ modules/{domain}/
 | Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
+| 定时任务调度（规则 / 实例会话 / 休眠 / 并发） | `modules/schedule/{shared,main,preload,renderer}`；任务表 `desk_scheduled_task`，运行实例复用 `desk_session` |
 | IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
 | preload 能力片段 | `modules/{domain}/preload/index.ts`，由 `src/preload/index.ts` 聚合 |
 | DeskApi 类型聚合 | `src/preload/deskApi.ts` |
@@ -227,6 +229,7 @@ modules/{domain}/
 - **Agent 是能力编排实体**：`desk_agent` 保存指令、`skill_ids / mcp_ids` 与工具分类开关；会话装配只能取 Agent 已选资源，Agent 保存后由 `agent/main/ipc.ts` 清理绑定会话运行时，下一轮重新装配。
 - **项目记忆按项目维度**：`desk_project.memory_enabled` 控制注入，记忆正文与游标随 `desk_project` 行保存；记忆内容变更后清理项目下会话运行时，禁止在会话表另存一份记忆。
 - **上下文分项只存会话级**：`desk_session.context_breakdown` 是唯一来源，`desk_message.data` 只保存 Pi 原始消息；分项为估算值，删除消息时清空，下一轮重新采集，禁止把 UI 派生字段塞回消息对象。
+- **定时会话标记只由主进程写入**：`desk_session.trigger_type / schedule_task_id` 仅在调度域创建实例会话时设置，渲染层新建会话固定为 `manual`；定时会话的越界审批由运行时自动拒绝，不进入渲染层交互队列。
 - **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
