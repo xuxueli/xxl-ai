@@ -17,6 +17,7 @@ import { ensureDefaultProject } from '@modules/project/main/seed'
 import { PROVIDER_DDL } from '@modules/provider/main/ddl'
 import { SETTINGS_DDL } from '@modules/settings/main/ddl'
 import { SCHEDULE_DDL } from '@modules/schedule/main/ddl'
+import { seedExampleScheduledTasks } from '@modules/schedule/main/seed'
 import { SKILL_DDL } from '@modules/skill/main/ddl'
 
 /* 各领域建表片段按依赖顺序拼接 */
@@ -24,5 +25,5 @@ const DDL = [PROVIDER_DDL, PROJECT_DDL, CHAT_DDL, SETTINGS_DDL, MCP_DDL, SKILL_D
 
 /* 初始化本地数据库（应用就绪后调用）：返回旧库备份重建结果 */
 export function initDatabaseFromModules(): DatabaseInitResult {
-  return initDatabase(DDL, [seedMcpServers, seedDefaultAgent, ensureDefaultProject])
+  return initDatabase(DDL, [seedMcpServers, seedDefaultAgent, ensureDefaultProject, seedExampleScheduledTasks])
 }

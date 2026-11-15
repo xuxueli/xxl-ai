@@ -65,24 +65,27 @@ XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种�
 
 - **本地优先，项目即工作区（核心亮点）**
 
-- 1、跨平台开箱即用：Electron + Vue3 + TypeScript，支持 mac / win / linux；单文件 SQLite 本地存储，数据不出本机，运行目录可自定义；
-- 2、项目即工作区：项目 1:1 绑定本地目录，会话归属项目，Agent 直接在本机工程上工作；项目可独立开启长期记忆，跨会话沉淀偏好与决策；
+- 1、安装即用：mac / win / linux 三平台一键安装，零服务依赖，断网也能正常对话；
+- 2、数据不出本机：会话、消息与配置只落单文件 SQLite，运行目录可自定义，不连接任何外部数据库；
+- 3、项目即工作区：项目 1:1 绑定本地目录、会话归属项目，Agent 直接在本机工程内工作；项目可单独开启长期记忆，跨会话沉淀偏好与决策；
+- 4、会话不丢：提问发送即落库，完成消息按快照落库，流式草稿定时落库；异常退出后重开会话可恢复到最近一次完整内容；
 
-- **多 Agent 编排与扩展中心**
+- **Agent 编排与扩展装配**
 
-- 3、多 Agent：按 Agent 配置系统指令、SKILL、MCP 与内置工具，新建会话必须选择 Agent，保存后下一轮即时生效；
-- 4、统一扩展中心：MCP / SKILL / 内置工具集中管理并支持市场发现，按 Agent 勾选装配，未选中的能力不参与对话；
+- 5、多 Agent 编排：按 Agent 组合系统指令、SKILL、MCP 与内置工具，新建会话即绑定，保存后下一轮生效；
+- 6、统一扩展中心：MCP / SKILL / 内置工具集中管理并支持市场发现，未勾选的能力不参与对话；
+- 7、运行可靠：模型调用与工具执行跑在独立进程，长任务不阻塞界面；兼容 OpenAI 协议，供应商与模型两级管理；
 
-- **多供应商与可观测**
+- **本机执行与安全可控**
 
-- 5、执行过程可观测：思考 → 工具 → 正文按发生顺序时间线渲染，工具调用展示参数 / 状态 / 耗时；输入框底部会话状态信息条汇总会话统计、Token 用量与上下文占用，点击展开明细；
-- 6、多供应商与进程隔离：兼容 OpenAI 协议（OpenCodeGo / Ollama / Deepseek / 智谱GLM 等），Pi 运行于独立 utilityProcess，长任务不阻塞 UI；支持多主题与中英双语。
+- 8、本机直接干活：文件、Git、终端、浏览器统一为右侧 Tab，目录树与命令随会话隔离，浏览器操作带光标与动作反馈；
+- 9、三档权限：仅可查看 / 工作区内修改 / 完全权限随会话持久化；越界写入在输入框位置内联审批，敏感目录始终拦截；
+- 10、过程可观测：思考 → 工具 → 正文按发生顺序成时间线，工具调用带参数、状态与耗时；状态条汇总 Token 用量与上下文占用；
 
-- **权限可控与丰富内置工具**
+- **定时任务与个性化**
 
-- 7、三档权限 + 目录沙箱：仅可查看 / 工作区内修改 / 完全权限随会话持久化；越界写入在输入框内联审批，支持「本次 / 本会话允许」，敏感操作统一拦截；
-- 8、右侧工具面板：文件 / Git / 终端 / 浏览器统一为 Tab，目录树、编辑、命令与多标签页随会话隔离；
-
+- 11、定时任务：支持自定义定时任务、定时任务启动会话，支持立即运行、运行记录、并发上限与保持电脑不休眠；
+- 12、品牌与语言：应用名称、Slogan、Logo、会话区背景图与不透明度仅存本机；支持多主题与中英文切换；
 
 ### 1.3 下载
 
@@ -449,11 +452,11 @@ npm run build:win
 
 ### 3.2 本地版操作指南
 
-> 本章按 **供应商 → Agent → 项目 → 对话 → 工具面板 → 设置** 的顺序说明本地版使用方式。
+> 本章按 **供应商 → Agent → 项目 → 对话 → 工具面板 → 设置 → 定时任务 → 应用中心 → 个性化** 的顺序说明本地版使用方式。
 
 #### 3.2.1 界面总览
 
-- 左侧**会话栏**（可折叠为窄图标栏）：项目分组 + 会话列表，底部为新建对话、设置、折叠 / 展开；
+- 左侧**图标栏**（常驻）：首页、定时任务、应用中心、扩展中心、系统设置，以及已启用的应用入口；首页可展开为**会话栏**（项目分组 + 会话列表，可折叠 / 拖拽宽度）；
 - 右侧**内容区**：顶栏（标题 / 模型切换）、消息流、输入框（Composer，底部为会话状态信息条）；
 - 右侧**工具面板**：文件 / Git / 终端 / 浏览器统一为 Tab，可放大占满正文区、拖拽宽度，状态按会话隔离；
 - 新建对话时，输入框下方必须选择**项目**与 **Agent**，并提供示例任务快速上手。
@@ -511,7 +514,7 @@ npm run build:win
 - **文件面板**：项目目录树（懒加载 / 过滤 / 折叠）+ 代码编辑（行号、高亮、`⌘/Ctrl+S` 保存）+ 预览，随本地文件变更自动刷新，支持「打开所在文件夹 / 用指定应用打开」；
 - **Git 面板**：查看项目空间 Git 变更、审核与推送；
 - **终端面板**：基于 node-pty + xterm，按项目目录启动，支持终端命令行操作；
-- **浏览器面板**：内嵌 `webview`，多标签、前进 / 后退 / 刷新、地址栏搜索兜底、系统浏览器打开。
+- **浏览器面板**：内嵌 `webview`，多标签、前进 / 后退 / 刷新、地址栏搜索兜底、系统浏览器打开；工具栏支持常用操作与快捷键；Agent 操作时在页面上叠加虚拟光标与动作提示，实时展示点击、输入、滚动等状态；
 
 ![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk/desk_05.jpg)
 
@@ -523,15 +526,33 @@ npm run build:win
 
 #### 3.2.7 设置与运行数据
 
-- **设置 → 常规**：外观 / 主题 / 语言、全局快捷键即时生效；**设置 → 个性化**：配置应用名称、Slogan；
+- **设置 → 常规**：外观 / 主题 / 语言、全局快捷键即时生效；
+- **设置 → 个性化**：配置应用名称、Slogan，以及品牌资源（Logo、会话区背景图与背景不透明度），详见 3.2.10；
 - **设置 → 项目**：维护项目列表、长期记忆开关与记忆内容；
 - **设置 → 运行设置**：配置 Node / Python 运行环境与开发者模式；
+- **应用设置**：已安装应用在「应用中心 → 我的应用」中点击「设置」打开各自配置（如笔记的存储目录与启用开关）；
 - **数据目录**：macOS / Linux 默认 `~/.config/xxl-ai-desk`，Windows 默认 `%APPDATA%\xxl-ai-desk`；可在设置中查看 / 浏览 / 打开 / 修改，修改后重启生效；自定义目录记录在固定引导目录下的 `xxl-ai-desk-config.json`；
-- 会话 / 消息 / Agent / 供应商 / 项目 / 记忆 / 设置均落本地 SQLite，API Key 本地存储。
+- 会话 / 消息 / Agent / 供应商 / 项目 / 记忆 / 定时任务 / 应用状态 / 设置均落本地 SQLite，API Key 本地存储。
 
 ![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk/desk_09.jpg)
 
 ![图片](https://www.xuxueli.com/project/static/xxl-ai/images/desk/desk_10.jpg)
+
+#### 3.2.8 定时任务
+
+左侧「定时任务」板块用于按触发规则定时启动会话，包含 **任务列表 / 运行记录 / 任务设置** 三个子页。
+
+#### 3.2.9 应用中心与笔记
+
+左侧「应用中心」入口 提供 应用管理 和 应用市场 能力，支持应用的发现、安装、卸载、配置管理等操作。
+
+#### 3.2.10 个性化与品牌
+
+「设置 → 个性化」在应用名称与 Slogan 之外，支持自定义品牌资源：
+
+- **Logo**：用于运行期窗口 / Dock 图标、会话空态与关于页；支持 PNG / JPG / WEBP / GIF / BMP / ICO，最大 2MB；可恢复默认；安装包图标不受影响；
+- **背景图**：仅作用于会话内容区，支持 PNG / JPG / WEBP / GIF / BMP / ICO / SVG，最大 15MB；可移除；
+- **背景不透明度**：仅在设置背景图后展示，拖动时实时预览，释放后自动保存；
 
 ## 四、云版 vs 本地版
 
@@ -565,6 +586,10 @@ XXL-AI 提供「**云本结合**」两种交付形态，二者同源同品牌、
 | 本地系统能力 | 不直接操作本机文件 / 终端 / 浏览器 | **核心差异**：本地文件读写与检索、终端命令（node-pty + xterm）、Git 变更审核、统一工具面板（文件 / Git / 终端 / 浏览器） |
 | 读 / 写安全控制 | 空间归属 + RBAC + 审计日志 | **三档权限模式**：仅可查看全局读、工作区内修改限定项目与系统临时目录、完全权限全局读写；敏感操作统一拦截，越界在输入框位置内联展示审批「允许本次 / 本会话允许 / 拒绝」 |
 | 会话与上下文 | 会话 / 消息落 MySQL，按空间隔离；公开端以 `uuid` + `visitorId` 隔离 | 会话 / 消息落本地 SQLite，1:1 归属项目并绑定 Agent；生成中会话内存缓存，切换不丢流式增量；项目维度长期记忆 |
+| 会话可靠性 | SSE + Redis Stream，断线 / 刷新可续传 | 用户提问发送即落库，完成消息按快照落库，流式回复草稿定时落库；异常退出后可恢复到最近一次完整内容 |
+| 定时任务 | / | 定时任务：7 段触发规则、任务列表 / 运行记录 / 任务设置、立即运行、保持电脑不休眠、最大并发、定时会话审批自动拒绝 |
+| 应用中心与内置应用 | / | 应用中心 + 内置笔记：安装 / 启用 / 配置分离，应用设置面板按应用注册，卸载不清除本地业务文件 |
+| 界面自定义 | 主题与 i18n | 应用名称 / Slogan、Logo、会话区背景图与不透明度、浅色 / 深色 / 跟随系统 + 多主题配色、中 / 英双语 |
 | 数据存储 | MySQL（业务 + 平台表）、Redis（登录态 + 对话流）、Milvus（向量） | 单文件 SQLite（better-sqlite3 + Drizzle），运行时数据目录可自定义 |
 | 登录与权限 | XXL-SSO 登录（Redis 存储登录态）、RBAC 菜单 / 按钮权限、动态菜单零路由改动 | 无登录 / 无角色体系，纯本地应用 |
 | 多语言与主题 | Vue3 + Element Plus + TypeScript，中 / 英 i18n，动态菜单 | Vue3 + Element Plus + TypeScript，中 / 英 i18n，浅色 / 深色 / 跟随系统 + 多主题配色 |
@@ -1199,21 +1224,24 @@ xxl-ai-desk/
 ├── electron-builder.yml           # 打包配置
 └── src/
     ├── common/                    # 跨域公共层：被 ≥2 个领域复用且无业务规则
-    │   ├── shared/                # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、providerUrl、runtimeLog、appInfo、i18n
+    │   ├── shared/                # 跨进程纯 TS：contracts/(pagination·quickAction)、fileTypes、model、permission、providerUrl、runtimeLog、appInfo、i18n
     │   ├── main/                  # 主进程基础设施：db(getDb) / config/paths / utils / ipc
     │   └── renderer/              # 渲染公共：api(window.desk) / components / composables / config / styles / types / utils
     ├── modules/                   # 领域模块：一个域一个目录，纵向切片
     │   ├── agent/                 # shared · main · preload · worker · renderer · i18n
-    │   ├── app/                   # shared · main · preload · i18n
+    │   ├── appCenter/             # shared · main · preload · renderer · i18n（应用注册 / 安装启用 / 市场）
+    │   ├── apps/note/             # shared · main · preload · renderer · i18n（内置笔记应用）
     │   ├── browser/               # shared · main · preload · worker · renderer
     │   ├── chat/                  # shared · main · preload · renderer · i18n
     │   ├── diagnostics/           # shared · main · preload · renderer
     │   ├── file/                  # shared · main · preload · worker · renderer · i18n
     │   ├── git/                   # shared · main · preload · renderer · i18n
     │   ├── mcp/                   # shared · main · preload · worker · renderer
-    │   ├── plugin/                # renderer（扩展中心 / builtin） · i18n
+    │   ├── platform/              # shared · main · preload · renderer · i18n（外壳 / 更新 / 运行时 / 文件协议）
+    │   ├── plugin/                # renderer（扩展中心 / 内置工具目录） · i18n
     │   ├── project/               # shared · main · preload · renderer · i18n
     │   ├── provider/              # shared · main · preload · renderer
+    │   ├── schedule/              # shared · main · preload · renderer · i18n（定时任务）
     │   ├── settings/              # shared · main · preload · renderer · i18n
     │   ├── skill/                 # shared · main · preload · worker · renderer
     │   ├── terminal/              # shared · main · preload · renderer
@@ -1228,6 +1256,7 @@ xxl-ai-desk/
             ├── config/nav.ts      # 板块 / 子菜单 / 入口路径唯一定义
             ├── composables/       # useAppBootstrap / useSessionLifecycle / useQuickAction
             ├── stores/layout.ts
+            ├── appSettings.ts     # 应用设置面板注册表装配
             └── i18n/index.ts      # 渲染层词条组合根
 ```
 
@@ -1337,6 +1366,8 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 
 供应商能力：兼容 OpenAI 协议，采用「供应商 + 模型」两级本地配置（名称、Base URL、API Key、自定义 Header、模型列表、启用状态、排序），首次启动自动预置 OpenCodeGo / Ollama / Deepseek / 智谱GLM，安装即用。
 
+模型在供应商下按用途分类（通用模型 / 对话模型 / 嵌入模型 / 文生图模型）：只有对话模型可用于会话，嵌入 / 文生图模型在模型选择器中不参与会话选择；对话模型额外支持推理等级 Default / Low / High / Max，随会话持久化，Default 交由供应商决定，Max 由 Pi 按模型能力自动降级。
+
 实现要点（`modules/provider/main/providerService.ts` + `modules/agent/worker/models.ts`）：
 
 - **配置落库**：供应商配置存 `desk_provider`，API Key 经 `modules/provider/main/securityService.ts` 编解码后入库（不落明文），模型列表与请求头以 JSON 文本存储；
@@ -1407,6 +1438,8 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 | 浏览器 | 多标签 `webview` 内嵌浏览，供用户查看 Agent 浏览过程，也可独立使用 |
 | 终端 | `node-pty` + `xterm` 真实终端，多会话、随项目目录启动，`locale` 固定 UTF-8 解决中文乱码；项目维度还可查看 Git 变更并执行审核、推送 |
 
+**浏览器操作可视化**：Agent 操作内嵌浏览器时，渲染层在 `webview` 上叠加动作提示，而非只在消息流里显示工具参数：`BrowserCursorLayer` 绘制虚拟光标，`BrowserAgentOverlay` 展示当前操作与目标，`BrowserActionBar` 汇总本次动作；工具执行期间实时展示鼠标移动、点击、输入、滚动等状态，便于用户确认 Agent 正在操作哪个页面元素。对应实现位于 `modules/browser/renderer/components/browser/` 与 `composables/browserCursor.ts`，动作队列与渲染层 `webview` 桥接复用 `modules/browser` 的既有契约。
+
 **内置工具**是随客户端发布的**本地能力底座**，按域拆文件、由统一注册表装配（`modules/agent/worker/tools/index.ts`）：每个域导出一个工厂函数，注册表 `Promise.all` 聚合后按 `meta.permissionModes` 与内置工具开关过滤。新增工具只需在对应域文件追加定义，不必触碰装配逻辑。
 
 当前内置工具清单：
@@ -1452,8 +1485,8 @@ MCP（Model Context Protocol）负责把**外部工具**接进会话：远程服
 **项目与会话**：
 
 - 项目（`desk_project`）绑定本地磁盘目录，作为 Agent 运行的文件沙箱根与工具默认 `cwd`；`memory_enabled` 控制长期记忆，记忆正文与游标随项目行保存；
-- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / permission_mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`、上下文分项 `context_breakdown`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；
-- 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；落库增量 + 单事务，生成中切换会话不丢内容；
+- 会话（`desk_session`）归属项目并绑定 Agent，持久化 `project_id / agent_id / provider_id / model_id / permission_mode` 与会话摘要 `summary / summary_last_message_id / summary_update_time`、上下文分项 `context_breakdown`，支持搜索 / 重命名 / 删除 / 排序；项目与 Agent 创建后不可修改；定时任务触发的会话额外记录 `trigger_type='schedule'` 与 `schedule_task_id`；
+- 消息（`desk_message`）按自增 `id` 顺序落库，`data` 保存 Agent 原始消息 JSON，用于会话重建；`turn_id` 标记所属轮次、`source` 记录运行时注入来源（常规消息为空，`runtime:*` 表示运行时注入）；用户提问在发送时立即落库，模型每完成一条消息按本轮快照落库，流式正文另有草稿定时落库，异常退出后可恢复到最近一次完整内容（详见 6.5.4）；
 - 运行时：`modules/chat/main/chatService.ts#sendChat` 校验会话绑定的项目与 Agent → 组装系统指令（Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 模式 / 工具约束）与历史 → `modules/agent/main/host/runtimeHost.ts` → `modules/agent/worker/session.ts` 创建 / 复用会话级 Agent → 事件流回主进程 → IPC 推送渲染层，按片段发生顺序渲染时间线（思考 → 工具 → 正文交错），思考折叠、工具调用状态与耗时、轮次耗时摘要、会话状态信息条、Markdown 实时渲染与代码高亮。
 
 **生命周期**：任何改变 Agent 能力或模型的操作触发会话运行时清理（`evictAgent` / `resetAgents`），下一轮重新装配；应用退出时回收运行时与终端进程，避免残留。
@@ -1552,6 +1585,14 @@ desk_llm_trace
 - run 正常结束、异常、用户中止分别以 `success / error / aborted` 收尾；未拿到响应的一律按 `error` 落库，避免出现「空成功」；
 - 回传为 fire-and-forget：worker 不访问数据库，落库失败只记运行日志，不阻断对话。
 
+#### 6.4.9、定时任务调度
+
+- **运行实例即会话**：触发时创建或复用 `desk_session`（`trigger_type='schedule'` + `schedule_task_id`），执行直接调用对话域 `sendChat`；消息、流式、终止、历史、摘要、记忆全部复用，不另建运行表。
+- **调度**：每个启用任务挂一个到下次触发时刻的计时器，触发后写回运行结果并重算下一次；系统唤醒后全量重排，启动不补跑，停用不挂计时器。
+- **规则**：Cron 段表达式（秒 分 时 日 月 周 年），主进程保存时解析归一，最小间隔 1 分钟；日与周同时指定取交集，不存在的日期自动跳过。
+- **会话选择**：`reuse` 在会话存在、归属该任务且空闲时复用，否则新建；`new` 每次新建。同任务串行，超过并发上限的触发记为跳过。
+- **无人值守**：定时会话的越界审批自动拒绝，工具拿到明确结果后继续，不会挂起。
+
 ### 6.5、重点设计
 
 #### 6.5.1、权限安全设计
@@ -1569,15 +1610,17 @@ desk_llm_trace
 |---|---|
 | `desk_project` | 本地项目（`id / name / path / memory_enabled / memory / memory_last_time / memory_update_time / add_time / update_time`，路径 1:1 唯一；长期记忆随项目行保存） |
 | `desk_agent` | Agent 配置（`id / name / description / avatar / system_prompt / skill_ids / mcp_ids / tool_* / builtin / add_time / update_time`） |
-| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / permission_mode / summary / summary_last_message_id / summary_update_time / context_breakdown / add_time / update_time`） |
-| `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源） |
+| `desk_session` | 会话（`id / title / project_id / agent_id / provider_id / model_id / reasoning_level / permission_mode / trigger_type / schedule_task_id / summary / summary_last_message_id / summary_update_time / context_breakdown / add_time / update_time`；`trigger_type` 区分手动 / 定时，`schedule_task_id` 关联定时任务） |
+| `desk_message` | 消息（`id / session_id / turn_id / role / source / status / content / data / add_time`，`data` 为 Agent 原始消息 JSON，`status` 为归一化消息状态，`source` 为运行时注入来源；用户提问发送即落库，助手 / 工具消息按本轮快照落库） |
 | `desk_provider` | 供应商（`name / base_url / api_key / headers / models / enabled / sort`） |
 | `desk_setting` | 设置（`key / value`） |
 | `desk_skill` | 技能状态（`id` 目录名 / `name / description / version / source / source_id / enabled`，目录内容为权威） |
 | `desk_mcp` | MCP 服务（`name / type / transport / url / headers / command / args / env / cwd / config / remark / enabled / health`） |
+| `desk_scheduled_task` | 定时任务（`id / name / prompt / project_id / agent_id / provider_id / model_id / reasoning_level / permission_mode / schedule_expression / session_mode / enabled / last_run_at / last_run_status / last_error / last_session_id / add_time / update_time`） |
+| `desk_app_setting` | 应用状态（`app_id / installed / enabled / config / add_time / update_time`，安装与启用分离，`config` 为应用各自 JSON） |
 | `desk_llm_trace` | 模型通讯 trace（`session_id / run_id / step / phase / status / http_status / duration_ms / tokens / request / response / tool_calls / error / add_time`，仅开发者模式写入） |
 
-- **系统配置项**：应用名称 / Slogan、主题（浅色 / 深色 / 跟随系统 + 多主题配色）、语言（中 / 英）、Node / Python 运行环境 PATH、开发者模式等，统一存 `desk_setting`；Agent 指令与能力开关存 `desk_agent`，长期记忆开关与内容存 `desk_project`，会话摘要存 `desk_session`；
+- **系统配置项**：应用名称 / Slogan / 品牌资源、主题（浅色 / 深色 / 跟随系统 + 多主题配色）、语言（中 / 英）、Node / Python 运行环境 PATH、开发者模式、定时任务不休眠与最大并发等，统一存 `desk_setting`；Agent 指令与能力开关存 `desk_agent`，长期记忆开关与内容存 `desk_project`，会话摘要存 `desk_session`，定时任务存 `desk_scheduled_task`，应用安装 / 启用 / 配置存 `desk_app_setting`；
 - **数据目录**：macOS / Linux 默认 `~/.config/xxl-ai-desk`，Windows 默认 `%APPDATA%\xxl-ai-desk`；可自定义，配置写入固定引导目录下的 `xxl-ai-desk-config.json`，修改后重启生效。
 
 #### 6.5.3、数据目录设计
@@ -1635,6 +1678,42 @@ Linux 分别遵循 `XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `XDG_CACHE_HOME`；目�
 - 配置与切换：配置文件固定为 `<引导目录>/xxl-ai-desk-config.json`（引导目录即默认业务数据目录）；仅自定义数据目录时生成，只有 `dataDir` 字段；默认目录生效时不生成，切回默认时删除。
 - 权限与默认项目：业务数据目录初始化或重启时，若项目表为空则创建 `projects/default` 及默认项目记录，名称「默认项目空间 / Default Workspace」，保证始终至少有一个可用项目。macOS / Linux 三类目录均创建为 `0700`，配置文件 `0600`；Windows 使用用户级 ACL。
 
+
+#### 6.5.4、对话持久化与断点恢复
+
+本地版的对话落库目标是「**已产生的内容尽量不丢**」，而不是等整轮结束再一次性写入。持久化分三层：
+
+1. **用户提问即时落库**：`chatService#sendChat` 校验会话后，先调用 `sessionService#startTurn` 写入用户消息并取得本轮 `turnId`，再解析模型目标、组装历史与执行运行时；模型调用、工具执行、冷启动期间异常退出，用户已发送内容都能恢复；
+2. **完成消息快照落库**：worker 在 `message_end` 回传 `checkpoint` 事件（本轮截至当前的全部新增消息）。主进程按 `turnId` 幂等重写本轮助手 / 工具消息：保留用户提问行，删除本轮其余旧行后按最新快照重建（`replaceTurnMessages`），因此工具调用与工具结果都在完成时立即持久化；
+3. **流式草稿定时落库**：主进程聚合 `delta / thinking`，每 3 秒把当前未结束的回复作为草稿写入本轮，草稿只包含正文 / 思考，不包含未完成的工具调用；长回复执行中途异常时仍能恢复已输出内容。
+
+**收尾与恢复**：
+
+- 正常结束时用最终完整消息快照再覆盖一次，保证草稿、中间快照与最终结果不重复；
+- 失败只向本轮追加可读错误提示，不再重复写用户提问；应用退出导致的中断先补写草稿，再追加终止备注；
+- 崩溃可能留下「有工具调用、无工具结果」的半轮消息。历史装配时 `chat/shared/history.ts#stripUnpairedToolCalls` 会剔除没有对应工具结果的 `toolCall`，避免下一轮请求因上下文非法被供应商拒绝；
+- 快照重写会改变本轮助手 / 工具消息的自增 `id`（用户提问行与 `turnId` 不变）。生成期间渲染层使用内存中的实时消息，本轮结束后再回读数据库，因此不影响界面。
+
+对应实现：`modules/chat/main/chatService.ts`（落库编排）、`modules/chat/main/sessionService.ts`（`startTurn / replaceTurnMessages / appendTurnMessages`）、`modules/agent/shared/agentProtocol.ts`（`checkpoint` 事件）、`modules/agent/worker/session.ts`（`message_end` 回传快照）、`modules/chat/shared/history.ts`（悬空工具调用清理）。
+
+#### 6.5.5、数据升级与兼容
+
+本地版启动时由 `common/main/db#initDatabase` 统一做结构校验，避免升级后带旧表结构运行导致白屏或写入失败。
+
+**校验方式**：
+
+- 先在内存库执行聚合后的 DDL，得到期望表结构；再读取实际 SQLite 的表与字段做对比；
+- 表缺失、字段缺失，或残留旧版「必填且无默认值」字段，判定为结构不兼容；
+- 打开库、建表或种子执行抛出异常，判定为数据库损坏 / 无法打开。
+
+**恢复流程**：
+
+1. 关闭当前连接，先复制旧库到同目录备份文件 `{原文件名}-backup-{yyyyMMdd-HHmmss}{后缀}`；同一秒多次重建时追加序号，避免覆盖；
+2. 删除数据库文件及其 `-wal` / `-shm` / `-journal`，按最新 DDL 重建并执行各域种子；
+3. 业务数据目录初始化时补齐 `projects/default` 等默认数据，保证启动后至少有一个可用项目；
+4. 重建成功后弹出启动提示，说明原因、结构差异、备份文件路径与日志目录；重建失败则弹出启动失败提示并退出，避免停留在白屏。
+
+按仓库约定，本地版**不为历史字段做迁移脚本**：结构不兼容时以备份 + 重建恢复可用性，旧数据保留在备份文件中。升级前的重要数据由用户按备份文件自行恢复；默认项目、数据目录与权限规则由初始化流程统一兜底。
 
 ## 七、版本更新日志
 
@@ -1790,16 +1869,17 @@ docker compose down
 
 > **MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
 
-```
-sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
-```
 
-### v1.6.0 Release Notes[ING]
-- 1、【新增】自动化（定时任务）：
-  - 任务管理（定时）：支持定时任务的维护管理，多条件/状态筛选；新增任务只是设置：会话属性（同新建对话） + 定时任务属性（cron）
-  - 任务会话（实例）：任务运行触发会话，通过新增的“触发类型”区分触发来源；定时任务触发的会话，子菜单会话名称后缀添加 闹钟icon 标记；
-  - 电脑休眠：任务界面，支持设置电脑不休眠，避免打断任务；
-- 2、【新增】UI自定义增强：支持自定义更换Logo、背景图等，提升用户体验；
+
+### v1.6.0 Release Notes[2026-11-15]
+- 1、【新增】定时任务：
+  - 任务管理（定时）：支持定时任务的新增 / 编辑 / 启停 / 删除 / 立即运行，按关键词、项目、Agent、状态筛选；任务配置包含任务指令、触发规则、会话设置方式与会话属性；
+  - 触发规则：7 段表达式（秒 分 时 日 月 周 年，本地时区），支持每天 / 每周 / 每月 / 间隔 / 自定义可视化配置、未来 5 次触发预览，最小间隔 1 分钟；
+  - 任务会话（实例）：任务运行触发会话，通过新增的“触发类型”区分触发来源；支持每次新建会话 / 复用上次会话；定时任务触发的会话，子菜单会话名称后缀添加 闹钟icon 标记；
+  - 运行边界：同一任务串行执行，复用会话生成中或达到并发上限时记为「已跳过」；应用退出 / 关机期间错过的计划不补跑，系统唤醒后重新对齐；
+  - 电脑休眠：任务界面支持设置「保持系统不睡眠」（屏幕仍可关闭），避免打断任务；
+  - 无人值守：定时会话中的越界审批自动拒绝，避免工具调用永久挂起；
+- 2、【新增】UI自定义增强：支持自定义应用名称、Slogan、Logo、会话区背景图与背景不透明度，提升用户体验；
 - 3、【新增】浏览器操作动作可视化，工具操作时实时展示操作动作以及状态信息；
 - 4、【新增】会话正在思考时，新增思考内容跑马灯展示交互；
 - 5、【体验】数据目录规范化：macOS / Linux 统一至 `~/.config/xxl-ai-desk`，Windows 统一至 `%APPDATA%\xxl-ai-desk`；SKILL默认位置为 「数据目录/skills」；项目默认位置为 「数据目录/projects」（项目表为空时自动创建 `projects/default` 默认项目空间）；笔记默认位置为 「数据目录/notes」；
@@ -1817,8 +1897,12 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 17、【优化】内置工具输出上限调大，避免输出受限剪裁必要信息；
 - 18、【修复】升级兼容性问题解决，优化提示并备份旧数据、初始化新数据（sqlite），避免升级后白屏问题；
 - 19、【体验】UI显示宽高：适配多宽高显示器，提升体验；
-- 20、【ING】发送会话之后、响应之后，立即写一条到数据库。不然中断了，都是空白。
-    
+- 20、【优化】对话持久化与断点恢复：发送会话后立即落库用户提问；模型每完成一条消息按本轮快照落库；流式回复草稿每 3 秒落库。长轮次或异常退出后重新打开会话，可恢复到最近一次完整内容，不再出现整轮空白。
+
+```
+sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+```
+
 ### v1.6.1 Release Notes[ING]
 - 1、【ING】应用中心：
   - 应用中心：设计应用统一契约（app.manifest），建设应用契约收集与应用注册能力；搭建应用宿主托管能力，提供路由挂载、i18n注册等能力，支持内部及动态外部应用托管注册；

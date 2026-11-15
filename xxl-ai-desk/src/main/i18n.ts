@@ -16,12 +16,14 @@ import zhPlugin from '@modules/plugin/i18n/zh.json'
 import enPlugin from '@modules/plugin/i18n/en.json'
 import zhProject from '@modules/project/i18n/zh.json'
 import enProject from '@modules/project/i18n/en.json'
+import zhSchedule from '@modules/schedule/i18n/zh.json'
+import enSchedule from '@modules/schedule/i18n/en.json'
 import zhSettings from '@modules/settings/i18n/zh.json'
 import enSettings from '@modules/settings/i18n/en.json'
 import zhToolPanel from '@modules/toolPanel/i18n/zh.json'
 import enToolPanel from '@modules/toolPanel/i18n/en.json'
 
 configureMessages({
-  zh: { ...zhAgent, ...zhApp, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSettings, ...zhToolPanel },
-  en: { ...enAgent, ...enApp, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSettings, ...enToolPanel }
+  zh: { ...zhAgent, ...zhApp, ...zhChat, ...zhGit, ...zhPlugin, ...zhProject, ...zhSchedule, ...zhSettings, ...zhToolPanel },
+  en: { ...enAgent, ...enApp, ...enChat, ...enGit, ...enPlugin, ...enProject, ...enSchedule, ...enSettings, ...enToolPanel }
 })

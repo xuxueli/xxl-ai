@@ -95,7 +95,7 @@ export interface AppSettings {
   updateAutoCheck: boolean
   /* 开发者模式：开启后记录模型通讯 trace，并在工具面板展示「会话日志」 */
   developerMode: boolean
-  /* 定时任务：保持系统不休眠（允许屏幕休眠） */
+  /* 定时任务：阻止系统睡眠（屏幕仍可关闭） */
   scheduleKeepAwake: boolean
   /* 定时任务：最大并发运行数 */
   scheduleMaxConcurrency: number

@@ -165,11 +165,21 @@
       "count": "{0} records"
     },
     "settings": {
-      "keepAwake": "Keep computer awake",
-      "keepAwakeDesc": "Keep the system awake (display may still sleep) so scheduled tasks are not suspended.",
+      "keepAwake": "Prevent computer sleep",
+      "keepAwakeDesc": "Prevent the computer from sleeping (the display may still turn off) so scheduled tasks are not suspended. Closing the lid or sleeping manually still pauses them.",
       "maxConcurrency": "Maximum concurrent tasks",
       "maxConcurrencyDesc": "Upper limit of simultaneously running tasks ({0} ~ {1}). Triggers beyond the limit are recorded as skipped.",
       "saved": "Task settings saved"
+    },
+    "seed": {
+      "dailyNews": {
+        "name": "Daily briefing",
+        "prompt": "Every morning, gather today's hot topics from 2-3 authoritative tech news sites and pick 5 noteworthy items, each with a one-sentence takeaway and source link. Choose the sources yourself, preferring official blogs and mainstream tech media. Write the result to briefing/YYYY-MM-DD.md, creating the folder if missing; list unreachable sites at the end. Read and write only inside the working directory, and skip any action that needs permission approval."
+      },
+      "weeklyIndustry": {
+        "name": "Weekly industry watch",
+        "prompt": "Research last week's AI industry news, focusing on open-source models, AI products and applications, industry policy and moves of major players. Public sites are fine; choose the sources yourself, preferring official and authoritative media. Write a one-page watch: 3 trend judgments, 3 items worth following (with links) and 1 takeaway for us. Write the result to industry-watch/YYYY-Www.md, creating the folder if missing. Read and write only inside the working directory, and skip any action that needs permission approval."
+      }
     }
   }
 }

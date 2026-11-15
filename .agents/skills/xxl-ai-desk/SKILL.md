@@ -281,11 +281,14 @@ modules/{domain}/
 - **单一数据源**：JS 侧尺寸只取 `common/renderer/config/layout.ts#LAYOUT`，CSS 侧取 `common/renderer/styles/tokens.scss`；同一尺寸在两处出现时，改动必须同步，并在注释标注权威方。
 - **跨进程共享尺寸**（窗口最小宽度、顶栏高度等）下沉 `common/shared/`，主进程直接引用常量计算，禁止写魔法数（如窗口 `minWidth`）。
 - **布局不变量**（2026-11 基线）：
+  - 顶栏 38px（`--desk-header-height`）；面板标题栏 36px（`--desk-panel-header-height`）；
   - 图标栏 44px；按需独立于顶栏高度，不共用同一 token；
   - 子菜单：默认 240px、最小 150px、最大由会话区约束；
   - 工具面板：默认视口 50%、最小 150px；文件工具展开目录树时最小 300px；
   - 会话区：最小 400px，任一面板拖动 / 窗口缩放都必须成立；
   - 文件树：默认 240px、最小 150px；文件正文：最小 150px；
+  - 笔记目录树：默认 260px、最小 150px；工具栏宽度低于 880px 时低频动作收进「更多」；
+  - 页面标题区（`PageHeading`）按内容自适应（标题 20px + 说明 16px + 间距），不再保留固定高度 token；
   - 窗口最小宽度需满足上述最小值之和（当前 44 + 150 + 300 + 400 = 894，取 900）。
 - **工具面板宽度约定**：`0` 表示「自动按视口比例」，正数表示用户自定义像素；复位回到自动，不要写死旧默认值。
 - **约束只在 `common/renderer/config/layout.ts` 推导**：`sidebarWidthMax` / `toolPanelWidthMax` / `toolPanelMinWidth` 为纯函数；composable 只做 store 读写与响应式装配，组件内禁止重复硬编码 min/max。
@@ -452,6 +455,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **面板宽度约束**：左侧子菜单栏与右侧工具面板均按像素持久化；子菜单栏最小 150px，工具面板最小 150px（文件工具展开目录树时 300px），二者上限都要为会话区保留 400px。
 - **工具面板统一入口**：文件 / Git / 终端 / 浏览器均为右侧工具面板的 Tab，顺序为文件、Git、终端、浏览器；开发者模式追加「诊断」Tab，关闭后回退文件面板。
 - **顶栏图标按钮统一复用**：顶栏右侧操作（搜索 / 会话列表 / 工具面板）统一用 `shell/layout/components/Navbar/NavbarIconButton.vue`，即时提示与激活态不再各写一份。
+- **页面标题统一复用**：正文顶部标题区统一用 `common/renderer/components/PageHeading`（标题 + 说明 + 分隔线，分隔线与正文 28px 对齐）；TAB 行通过 `title` 插槽替换标题，不再各页自绘标题区。
 - **工具条样式统一复用**：工具条结构统一用全局 `.desk-toolbar` / `.desk-toolbar-btn` / `.desk-toolbar-divider`，禁止模块内再定义一套 `.toolbar-btn` 副本；编辑器主题下拉统一用 `CodeEditor/EditorThemeMenu`。
 - **面板交互统一复用**：拖拽用 `common/renderer/composables/usePanelResize.ts` + `shell/layout/components/PanelResizer/index.vue`；折叠用 `common/renderer/components/CollapseShell` + `useCollapseAnimation`（会话列表 / 笔记目录 / 文件树共用，禁止各写一份宽度与位移过渡）；左侧栏宽度走 `shell/stores/layout.ts`，工具面板宽度、文件树宽度等会话级尺寸走 `modules/toolPanel/renderer/store`（按会话持久化）；文件树与文件内容之间的拖拽复用 `PanelResizer`。
 - **共享选中态归属域**：跨「子菜单 ↔ 页面」的选中态放所属域 store（如 `modules/settings/renderer/store` 的 `activeTab`），不塞进 `layout`。

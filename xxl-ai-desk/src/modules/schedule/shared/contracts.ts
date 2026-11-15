@@ -79,7 +79,7 @@ export interface ScheduledTaskInput {
 
 /* 定时任务设置 */
 export interface ScheduleConfigDTO {
-  /* 保持系统不休眠（与是否存在任务无关） */
+  /* 阻止系统睡眠（屏幕仍可关闭，与是否存在任务无关） */
   keepAwake: boolean
   /* 最大并发运行数 */
   maxConcurrency: number
