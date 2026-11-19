@@ -14,9 +14,11 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -48,6 +50,10 @@ public class LlmModelFactory {
 
     /** 模型缓存有效期（毫秒）：定期过期刷新，避免长期持有陈旧实例 */
     private static final long CACHE_EXPIRE = 5 * 60 * 1000L;
+
+    /** 单次对话流式请求底层 HTTP 超时（毫秒，对齐 xxl-ai.chat.stream.timeout，避免默认 60s callTimeout 腰斩长文生成） */
+    @Value("${xxl-ai.chat.stream.timeout:180000}")
+    private long streamTimeout = 180_000L;
 
     /** 对话模型缓存（supplierId:modelId:sessionId → 配置指纹 + ChatModel），5min 过期 */
     private final Cache<String, ChatModelEntry> chatModelCache = CacheTool.<String, ChatModelEntry>newLRUCache(CACHE_MAX)
@@ -88,6 +94,7 @@ public class LlmModelFactory {
                 .baseUrl(normalizeBaseUrl(runtime.getBaseUrl()))
                 .apiKey(runtime.getApiKey())
                 .model(runtime.getModelName())
+                .timeout(Duration.ofMillis(streamTimeout))
                 .customHeaders(buildHeaders(runtime.getHeaders(), sessionId))
                 .build();
         OpenAiChatModel model = OpenAiChatModel.builder()
