@@ -162,9 +162,9 @@ SQL 脚本：`{business}-table.sql`
 ## 五、前端改造
 | 文件 | 位置 | 要点 |
 |---|---|---|
-| `types/index.ts` | modules/business/{module}/ | 实体+Query(pageNum/pageSize)+ListQuery |
-| `api/index.ts` | modules/business/{module}/ | list/get/add/del/update，Promise<Response<PageModel<T>>> |
-| `pages/index.vue` | modules/business/{module}/ | 三段式；usePageParams 转 offset/pagesize；按钮 v-hasPermi |
+| `types/index.ts` | modules/business/{module}/ | 实体 + Query(pageNum/pageSize) + Form(Pick 可编辑字段) |
+| `api/index.ts` | modules/business/{module}/ | `{business}Api` 命名空间；pageList 内转换 offset/pagesize |
+| `pages/index.vue` | modules/business/{module}/ | 模板五区 + script 四区；`FORM_DEFAULTS` + `@closed`；按钮 v-hasPermi |
 
 ## 六、验证结果 / 变更记录
 - [ ] 需求结论确认并回填第一节
@@ -210,79 +210,202 @@ SQL 脚本：`{business}-table.sql`
 
 | 文件 | 位置 | 说明 |
 |---|---|---|
-| types | `src/modules/business/{module}/types/index.ts` | `Xxx` 实体 + `XxxQuery`(pageNum/pageSize 表单形态) + `XxxListQuery = ListQuery<XxxQuery>` |
-| api | `src/modules/business/{module}/api/index.ts` | `request({url:'/{module}/pageList',params:...})` |
-| view | `src/modules/business/{module}/pages/index.vue` | 三段式列表页 |
+| types | `src/modules/business/{module}/types/index.ts` | `Xxx` 实体 + `XxxQuery`(pageNum/pageSize 表单形态) + `XxxForm = Pick<Xxx, 可编辑字段>` |
+| api | `src/modules/business/{module}/api/index.ts` | `{business}Api` 命名空间对象，`pageList/load/[业务方法]/insert/delete/update`，分页在 API 内转换 |
+| view | `src/modules/business/{module}/pages/index.vue` | 模板五区 + script 四区列表页 |
 
-页面（列表页及其内联弹窗，拆分子页如 `model.vue`、`doc.vue`、`conv.vue` 也放 `pages/`）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/ListQuery…）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
+页面（列表页及其内联弹窗，拆分子页如 `model.vue`、`doc.vue` 也放 `pages/`）放 `pages/`，接口放 `api/`，类型放 `types/`，三者同模块聚合、无 barrel 登记；全局基础类型（Response/PageModel/EnumOption/TableState/FormState）统一从 `@/types` 引用。「框架」内置模块在 `modules/framework/`，业务禁止混入。
 
 **i18n 落位**：通用规则见 `AGENTS.md`「国际化」；本节只规定本模式落位：文案 key 统一维护在 `src/i18n/locales/{zh,en}.json` **单一文件**内（按域名节点分区，如 `business.*`；`app` 前置 → 公共组 `common`/`modal`/`request`/`layout`/`components` → 平台业务组 `auth`/`system`/`dashboard`/`help`/`error` → 常规业务模块），zh/en 成对补。
 
+### types：`types/index.ts`
+
+固定三类导出：
+
+| 类型 | 用途 | 约定 |
+|---|---|---|
+| `Xxx` | 实体，对应后端 Entity/DTO | 字段全部可选；`Date` 对应 `string` |
+| `XxxQuery` | 搜索栏 + 分页列表入参 | 必含 `pageNum`、`pageSize`；筛选项可选，默认值只放页面初始状态 |
+| `XxxForm` | 新增/修改入参 | `Pick<Xxx, 可编辑字段>`，排除 `addTime/updateTime` 与联查字段 |
+
+- 只读模块（日志）只保留实体与 `XxxQuery`，不要为对称而造无用的 Form。
+- 多实体模块（供应商 + 供应商模型、知识库 + 文档）在各自 `types` 内分别定义，不共用一个 Form。
+- 字段注释写清含义与枚举取值；状态字段统一 `0-正常、1-停用`。
+
+### api：`api/index.ts`
+
+| 规则 | 说明 |
+|---|---|
+| 导出形态 | 只导出一个 `{business}Api` 对象，页面按 `xxxApi.method(...)` 调用 |
+| 方法命名 | 与后端 Controller 方法名一致，不二次改名 |
+| 方法顺序 | `pageList / load / [业务方法] / insert / delete / update` |
+| 通道 | `pageList/load` 用 `params`；`insert/update/delete` 用 `data` |
+| 分页 | 入参收 `XxxQuery`；在 `pageList` 内去掉 `pageNum/pageSize`，替换为后端约定的 `offset/pagesize` |
+| 删除 | 接收集合，`data: Array.isArray(ids) ? ids : [ids]` |
+
+```ts
+export const demoApi = {
+  pageList(query: DemoQuery): Promise<Response<PageModel<Demo>>> {
+    const { pageNum, pageSize, ...search } = query
+    return request({
+      url: '/demo/pageList',
+      method: 'get',
+      params: { offset: (pageNum - 1) * pageSize, pagesize: pageSize, ...search }
+    })
+  },
+  load(id: number): Promise<Response<Demo>> { /* ... */ },
+  insert(data: DemoForm): Promise<Response<unknown>> { /* ... */ },
+  delete(ids: number | number[]): Promise<Response<unknown>> { /* ... */ },
+  update(data: DemoForm): Promise<Response<unknown>> { /* ... */ }
+}
+```
+
+禁止在页面内自行拼 `offset/pagesize`；无 `/load` 的平台模块（用户、Agent）用列表行回填，不补假接口。
+
 ### Vue 约定
 
-- 组件 import 名与模板标签统一 PascalCase（`import NoticeDetailView` ↔ `<NoticeDetailView>`）。
-- script 除基础 import 外按「ref data → fun → page init」三节组织，节顶注释 `/* --- {功能，前后33个-} --- */`。
-- 响应式数据一律 `ref`，禁止 `reactive` 与 `toRefs(data)` 解构；按用途收敛为对象：`queryParams`（搜索栏）、`table`（表格数据与状态）、`formState`（表单与校验规则）。
+- 组件 import 名与模板标签统一 PascalCase（`import UserViewDrawer` ↔ `<UserViewDrawer>`）。
+- 模板固定按「搜索栏 → 操作按钮 → 数据列表 → 分页 → 新增或修改对话框」五区排列，区块注释保留。
+- script 固定按「响应式数据 → 分页检索 → 数据操作（增删改） → 页面初始化」四区组织，节顶注释 `// ---------------------- {分区} ----------------------`。
+- 响应式数据一律 `ref`，禁止 `reactive` 与 `toRefs(data)` 解构；按用途收敛为：`queryParams`（搜索栏）、`table`（表格数据与状态）、`formState`（表单与校验规则）。
+- 编辑表单默认值收敛为 `FORM_DEFAULTS`；重置直接替换对象 + `formRef.value?.clearValidate()`，**禁止 `resetFields()` 重置编辑表单**。
+- 弹窗固定 `:close-on-click-modal="false"`、`@closed="resetForm"`；`closeForm()` 只负责隐藏，重置统一交给 `@closed`。
+- 修改入口 `openEditForm(row?)`：顶部按钮取勾选行，行按钮传行数据；无 id 直接返回。
+- 删除入口 `removeXxx(row?)`：单条确认展示业务名称（回退主键），批量展示条数；删完当前页最后一条先回退一页。
+- 枚举文案统一 `enumTitle(statusOptions, code)`，禁止页面内重复写 `statusText`。
 - 少写桥接：`defineModel('visible')` + 模板 `v-model` 直连；模板直接用 `props.row`，不建冗余 computed 别名。
 - 通用能力复用 `@/composables/*`、`@/components`、`@/utils/modal`，禁止重复造轮子。
 
-types 参考 `src/modules/framework/system/user/types/index.ts` 封口写法；api 参考 `src/modules/framework/system/user/api/index.ts`。
+标准范本：`src/modules/framework/system/config/{types,api,pages}`；用户页 `src/modules/framework/system/user/pages/index.vue` 覆盖状态切换、重置密码、空间授权等扩展场景。
 
-### index.vue 骨架（三段式，template 略）
+### index.vue 骨架（script 四区，template 五区略）
 
 ```ts
 <script setup lang="ts">
 defineOptions({ name: 'Demo' })
-import { listDemo, getDemo, addDemo, delDemo, updateDemo } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import { useEnumOption } from '@/composables/useEnumOption'
-import modal from '@/utils/modal'
-import { t } from '@/i18n'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Demo, DemoQuery } from '../types'
-import type { FormInstance } from 'element-plus'
 import { ref } from 'vue'
+import { t } from '@/i18n'
+import { Pagination, RightToolbar } from '@/components'
+import { enumTitle, useEnumOption } from '@/composables/useEnumOption'
+import modal from '@/utils/modal'
+import { demoApi } from '../api'
+import type { Demo, DemoForm, DemoQuery } from '../types'
+import type { FormInstance } from 'element-plus'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
-const demoRef = ref<FormInstance>()            /* 编辑表单 ref */
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
+const formRef = ref<FormInstance>() /* 编辑表单 */
 const { DemoStatusEnum: statusOptions } = useEnumOption('DemoStatusEnum')
 
-const queryParams = ref<DemoQuery>({ pageNum: 1, pageSize: 10, status: -1, name: undefined })
+const queryParams = ref<DemoQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
-const table = ref<TableState<Demo>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
+const table = ref<TableState<Demo>>({
+  list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true
+})
 
-const formState = ref<FormState<Demo>>({ visible: false, title: '', form: {}, rules: { name: [{ required: true, message: t('demo.nameRequired'), trigger: 'blur' }] } })
+const FORM_DEFAULTS: Readonly<DemoForm> = { status: 0 }
 
-// --------------------------------- fun ---------------------------------
+const formState = ref<FormState<DemoForm>>({
+  visible: false,
+  title: '',
+  form: { ...FORM_DEFAULTS },
+  rules: { name: [{ required: true, message: t('common.requiredMsg', [t('business.demo.name')]), trigger: 'blur' }] }
+})
+
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()   // pageNum/pageSize → offset/pagesize
-  listDemo(params).then((response) => {
-    table.value.list = response.data.data        // 列表
-    table.value.total = response.data.total      // 总数
-    table.value.loading = false
+  demoApi.pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {})
+    .finally(() => {
+      table.value.loading = false
+    })
+}
+
+function handleQuery() { queryParams.value.pageNum = 1; getList() }
+function resetQuery() { queryRef.value?.resetFields(); handleQuery() }
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+function syncSelection(selection: Demo[]) {
+  table.value.ids = selection.map((item) => item.id as number)
+  table.value.single = selection.length !== 1
+  table.value.multiple = !selection.length
+}
+
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
+}
+
+function openCreateForm() {
+  resetForm()
+  formState.value.visible = true
+  formState.value.title = t('common.titleAdd', [t('business.demo.title')])
+}
+
+function openEditForm(row?: Demo) {
+  const id = row ? row.id : table.value.ids[0]
+  if (id == null) return
+  resetForm()
+  demoApi.load(id).then((response) => {
+    if (!response.data) return
+    const { addTime, updateTime, ...form } = response.data
+    formState.value.form = form
+    formState.value.visible = true
+    formState.value.title = t('common.titleEdit', [t('business.demo.title')])
+  }).catch(() => {})
+}
+
+function saveForm() {
+  formRef.value?.validate((valid) => {
+    if (!valid) return
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? demoApi.update(formState.value.form) : demoApi.insert(formState.value.form)
+    request.then(() => {
+      modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+      closeForm()
+      getList()
+    }).catch(() => {})
   })
 }
-function reset() { formState.value.form = { id: undefined, name: undefined, status: 0 }; resetForm('demoRef') }
-function handleQuery() { queryParams.value.pageNum = 1; getList() }
-function resetQuery() { resetForm('queryRef'); handleQuery() }
-function handleSelectionChange(selection: Demo[]) { table.value.ids = selection.map(i => i.id as number); table.value.single = selection.length !== 1; table.value.multiple = !selection.length }
-function handleAdd() { reset(); formState.value.visible = true; formState.value.title = t('common.titleAdd') }
-function handleUpdate(row: any) { reset(); const id = row?.id ?? table.value.ids[0]; if (id == null) return; getDemo(id).then(r => { formState.value.form = r.data; formState.value.visible = true; formState.value.title = t('common.titleEdit') }) }
-function handleDelete(row: any) { const ids = row?.id ?? table.value.ids; if (ids == null || (Array.isArray(ids) && ids.length === 0)) return; modal.confirm(t('demo.confirmDelete', [ids])).then(() => delDemo(ids)).then(() => { getList(); modal.msgSuccess(t('common.deleteSuccess')) }).catch(() => {}) }
-function submitForm() { demoRef.value!.validate(valid => { if (!valid) return; (formState.value.form.id != null ? updateDemo(formState.value.form) : addDemo(formState.value.form)).then(() => { modal.msgSuccess(formState.value.form.id != null ? t('common.updateSuccess') : t('common.addSuccess')); formState.value.visible = false; getList() }) }) }
 
-// --------------------------------- page init ---------------------------------
+function closeForm() { formState.value.visible = false }
+
+function removeDemo(row?: Demo) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.demo.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.demo.confirmBatchDelete', [ids.length])
+  modal.confirm(confirmText)
+    .then(() => demoApi.delete(ids))
+    .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
+      getList()
+      modal.msgSuccess(t('common.deleteSuccess'))
+    })
+    .catch(() => {})
+}
+
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>
 ```
 
-- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:default']"`（多业务为 `['demo:demo']`）、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible">` + `@/components` 的 Editor/ImageUpload 等按需引入。**列表页完整样例看 `src/modules/framework/system/config/pages/index.vue`、`src/modules/framework/system/user/pages/index.vue`。**
-- `getList()` 一律经 `usePageParams(queryParams)()` 转 `offset/pagesize`；从 `response.data.data / response.data.total` 取值。
+- 模板：搜索表单（`queryParams`）、`<el-table>` + 操作列用 `v-hasPermi="['demo:default']"`（多业务为 `['demo:demo']`）、`<Pagination>`、`<el-dialog :title="formState.title" v-model="formState.visible" :close-on-click-modal="false" @closed="resetForm">` + `@/components` 的 Editor/ImageUpload 等按需引入。
+- 列表首列展示数据库主键，文案 `common.id`；只有真实行号列（拖拽排序、导入结果）才用 `common.serialNo`。
+- 从 `response.data.data / response.data.total` 取值；`finally` 复位 loading。
 
 ## 菜单 / 权限注册（枚举资源，替代原资源表）
 
@@ -299,6 +422,8 @@ if (role == ADMIN) {
 ```
 
 要点：资源 id 全局唯一、parentId 指向父目录/菜单；在 `buildRoleResources` 中追加（公共区段或角色分支）即对对应角色可见。业务页面按钮默认用菜单 permission（`{module}:default` / `{module}:{business}`）做 `v-hasPermi`，无需单独注册按钮资源；仅当需要按钮级细粒度时，再追加 type=2 资源（`ResourceTypeEnum.BUTTOM`，parentId 指向所属菜单）。页面由 `loadView` 按 `url` 自动映射，**无需改路由**；平台内置枚举/资源一律不动 `business` 包。
+
+> 菜单下发保持「后端纯业务数据 + 前端适配路由」：后端 `/getMenus` 只返回 `MenuVO`（id/parentId/name/type/url/icon/order/visible/children），前端 `store/modules/routes.ts#adaptMenusToRoutes` 负责 Layout/ParentView/InnerLink 与 `meta.menuType` 适配；禁止再引入 `RouterVo`/`MetaVo` 之类携带前端路由语义的 DTO。
 
 页面文件 `src/modules/business/{module}/pages/index.vue` 建好后前端 `loadView` 自动映射，**无需改路由**。
 
@@ -330,7 +455,8 @@ if (role == ADMIN) {
 
 ### 前端与 i18n
 
-- [ ] types 三件齐（实体 / Query / ListQuery），同模块聚合、无 barrel 登记；api 封装 `Promise<Response<PageModel<T>>>`；列表页三段式 + `ref` 收敛 + `usePageParams`。
+- [ ] types 三件齐（实体 / Query / Form `Pick`），同模块聚合、无 barrel 登记；api 以 `{business}Api` 导出并在 `pageList` 内转换 `offset/pagesize`。
+- [ ] 列表页模板五区 + script 四区齐全，`ref` 收敛为 `queryParams/table/formState`；`FORM_DEFAULTS` + `@closed` 重置；删除按名称/条数确认；枚举文案走 `enumTitle`。
 - [ ] 页面无硬编码中文（注释除外），`t('key')` 引用且 zh/en 文案已成对维护；通用词复用 `common.*`；语言配置取 `default-settings.ts` 的 `language`。
 
 ### 菜单与权限
@@ -349,6 +475,8 @@ if (role == ADMIN) {
 
 ## 参考文件（绝对路径）
 
-- 列表页规范样例：`xxl-ai-ui/src/modules/framework/system/user/pages/index.vue`
-- API / 类型样例：`xxl-ai-ui/src/modules/framework/system/user/{api,types}/index.ts`
+- 列表页标准范本：`xxl-ai-ui/src/modules/framework/system/config/pages/index.vue`
+- 列表页扩展场景：`xxl-ai-ui/src/modules/framework/system/user/pages/index.vue`（状态切换 / 重置密码 / 空间授权）
+- API / 类型样例：`xxl-ai-ui/src/modules/framework/system/config/{api,types}/index.ts`
+- 枚举与文案：`xxl-ai-ui/src/composables/useEnumOption.ts`、`xxl-ai-ui/src/i18n/locales/{zh,en}.json`
 - 菜单 / 权限注册模板：见上文「菜单 / 权限注册（枚举资源，替代原资源表）」，按 `res()/ResourceTypeEnum` 追加即注册，无需改数据库与路由。

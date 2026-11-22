@@ -44,7 +44,8 @@ public class ConfigServiceImpl implements ConfigService {
         // 参数校验：实体及必填字段不能为空
         if (xxlBootConfig == null
                 || StringTool.isBlank(xxlBootConfig.getName())
-                || StringTool.isBlank(xxlBootConfig.getKey())) {
+                || StringTool.isBlank(xxlBootConfig.getKey())
+                || StringTool.isBlank(xxlBootConfig.getValue())) {
             return Response.ofFail("必要参数缺失");
         }
         // 配置Key格式校验：小写字母开头，由小写字母、数字和点组成
@@ -79,6 +80,23 @@ public class ConfigServiceImpl implements ConfigService {
      */
     @Override
     public Response<String> update(Config xxlBootConfig) {
+        // 参数校验：主键与必填字段不能为空
+        if (xxlBootConfig == null
+                || xxlBootConfig.getId() <= 0
+                || StringTool.isBlank(xxlBootConfig.getName())
+                || StringTool.isBlank(xxlBootConfig.getKey())
+                || StringTool.isBlank(xxlBootConfig.getValue())) {
+            return Response.ofFail("必要参数缺失");
+        }
+        // 配置Key创建后不可修改，避免业务按 Key 读取的配置失效
+        Config existConfig = configMapper.load((int) xxlBootConfig.getId());
+        if (existConfig == null) {
+            return Response.ofFail("配置不存在");
+        }
+        if (!existConfig.getKey().equals(xxlBootConfig.getKey())) {
+            return Response.ofFail("配置Key创建后不可修改");
+        }
+
         int ret = configMapper.update(xxlBootConfig);
         return ret>0? Response.ofSuccess() : Response.ofFail();
     }

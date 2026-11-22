@@ -11,6 +11,7 @@
     "operation": "操作",
     "all": "全部",
     "serialNo": "序号",
+    "id": "编号",
     "status": "状态",
     "remark": "备注",
     "content": "内容",
@@ -44,7 +45,8 @@
       "config": "配置",
       "iconName": "图标名称",
       "name": "名称",
-      "user": "用户"
+      "user": "用户",
+      "log": "日志"
     }
   },
   "modal": {
@@ -187,7 +189,7 @@
       "username": "账号",
       "usernameFormat": "格式：小写字母开头，字母/数字",
       "password": "密码",
-      "passwordLength": "密码长度 4-20",
+      "passwordLength": "密码长度 6-20",
       "role": "角色",
       "space": "业务空间",
       "email": "邮箱",
@@ -207,7 +209,8 @@
       "personalInfo": "个人信息",
       "basicInfo": "基本资料",
       "modifyPassword": "修改密码",
-      "confirmDelete": "是否确认删除用户编号为\"{0}\"的数据项？",
+      "confirmDelete": "是否确认删除用户\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个用户？",
       "resetPwdPrompt": "请输入「{0}」的新密码",
       "updatePwdSuccess": "修改成功，新密码是：{0}",
       "statusChangeSuccess": "{0}成功",
@@ -226,7 +229,8 @@
       "statusPlaceholder": "配置状态",
       "keyPattern": "以小写字母开头，只能由小写字母、数字和点组成",
       "keyLength": "长度需在4-100之间",
-      "confirmDeleteConfig": "是否确认删除配置编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除配置\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个配置？"
     },
     "log": {
       "logType": "日志类型",
@@ -239,7 +243,8 @@
       "operator": "操作人",
       "ipAddress": "操作地址",
       "detail": "详细",
-      "confirmDeleteLog": "是否确认删除日志编号为\"{0}\"的数据项?",
+      "confirmDelete": "是否确认删除日志\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 条日志？",
       "detailTitle": "日志详细",
       "basicInfo": "基本信息",
       "operLog": "操作日志",
@@ -289,7 +294,8 @@
       "space": "业务空间",
       "selectPlaceholder": "请选择业务空间",
       "noSpaceTip": "未分配空间",
-      "confirmDelete": "是否确认删除空间编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除空间\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个空间？"
     },
     "supplier": {
       "name": "供应商名称",
@@ -305,11 +311,13 @@
       "supplier": "供应商",
       "model": "模型",
       "testConnect": "连通测试",
-      "confirmDelete": "是否确认删除供应商ID为\"{0}\"的数据项？",
+      "confirmDelete": "是否确认删除供应商\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个供应商？",
       "modelName": "模型名称",
       "modelCode": "模型标识",
       "modelType": "模型类型",
-      "confirmDeleteModel": "是否确认删除模型ID为\"{0}\"的数据项？",
+      "confirmDeleteModel": "是否确认删除模型\"{0}\"？",
+      "confirmBatchDeleteModel": "是否确认删除选中的 {0} 个模型？",
       "autoImport": "自动导入",
       "importModelTitle": "选择要导入的模型",
       "importModelPlaceholder": "远程暂未返回可用模型",
@@ -353,7 +361,8 @@
       "headersInvalid": "请求头需为合法 JSON 对象",
       "cwd": "工作目录(可选)",
       "cwdPlaceholder": "如 /opt/server",
-      "confirmDelete": "是否确认删除 MCP 编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除 MCP\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个 MCP？"
     },
     "skill": {
       "skill": "Skill",
@@ -383,7 +392,8 @@
       "renameSuccess": "重命名成功",
       "moveSuccess": "移动成功",
       "confirmDeleteNode": "是否确认删除{1}\"{0}\"？（目录将递归删除其全部内容）",
-      "confirmDelete": "是否确认删除 SKILL 编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除 SKILL\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个 SKILL？"
     },
     "knowledge": {
       "name": "知识库名称",
@@ -404,7 +414,8 @@
       "score": "相似度",
       "docId": "文档ID",
       "hitContent": "命中内容",
-      "confirmDelete": "是否确认删除知识库编号为\"{0}\"的数据项？",
+      "confirmDelete": "是否确认删除知识库\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个知识库？",
       "docName": "文档名称",
       "docContent": "文档内容",
       "docContentPlaceholder": "请输入文档内容（粘贴文本）；也支持上传 .txt/.md 文件",
@@ -415,7 +426,8 @@
       "docStatus": "处理状态",
       "docChunks": "分片数",
       "doc": "文档",
-      "confirmDeleteDoc": "是否确认删除文档编号为\"{0}\"的数据项？",
+      "confirmDeleteDoc": "是否确认删除文档\"{0}\"？",
+      "confirmBatchDeleteDoc": "是否确认删除选中的 {0} 个文档？",
       "vectorizeConfirm": "确认对该文档执行向量化？将按知识库分片参数处理并入向量库",
       "vectorizeAllConfirm": "确认对该知识库下全部文档执行向量化？未向量化/失败的文档将被逐个处理并入向量库",
       "docVectorizeAll": "全库向量化",
@@ -438,7 +450,8 @@
       "systemPromptPlaceholder": "请输入 Agent 系统指令",
       "publishSuccess": "发布成功",
       "unpublishSuccess": "已取消发布",
-      "confirmDelete": "是否确认删除 Agent 编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除 Agent\"{0}\"？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 个 Agent？"
     },
     "chat": {
       "newChat": "新建对话",
@@ -491,7 +504,8 @@
       "viewMemory": "查看记忆",
       "editTitle": "修改记忆",
       "emptyContent": "暂无记忆内容",
-      "confirmDelete": "是否确认删除记忆编号为\"{0}\"的数据项？"
+      "confirmDelete": "是否确认删除访客\"{0}\"的记忆？",
+      "confirmBatchDelete": "是否确认删除选中的 {0} 条记忆？"
     }
   }
 }

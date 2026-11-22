@@ -3,7 +3,7 @@
  * 功能：管理当前用户可见的业务空间列表与「当前空间」，供顶部空间切换器 & 业务接口 header 注入使用
  */
 import { defineStore } from 'pinia'
-import { listSpaceByUser } from '@/modules/business/space/api'
+import { spaceApi } from '@/modules/business/space/api'
 import cache from '@/utils/cache'
 import type { Space } from '@/modules/business/space/types'
 
@@ -32,7 +32,8 @@ const useSpaceStore = defineStore('space', {
      */
     loadSpaces() {
       return new Promise<void>((resolve, reject) => {
-        listSpaceByUser()
+        spaceApi
+          .listByUser()
           .then((res) => {
             this.spaces = res.data
             // 当前空间失效时回退到第一个空间

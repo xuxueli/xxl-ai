@@ -11,6 +11,7 @@
     "operation": "Action",
     "all": "All",
     "serialNo": "No.",
+    "id": "ID",
     "status": "Status",
     "remark": "Remark",
     "content": "Content",
@@ -44,7 +45,8 @@
       "config": "Config",
       "iconName": "icon name",
       "name": "a name",
-      "user": "User"
+      "user": "User",
+      "log": "Log"
     }
   },
   "modal": {
@@ -187,7 +189,7 @@
       "username": "Username",
       "usernameFormat": "Format: start with a lowercase letter, letters/digits",
       "password": "Password",
-      "passwordLength": "Password length must be 4-20",
+      "passwordLength": "Password length must be 6-20",
       "role": "Role",
       "space": "Workspaces",
       "email": "Email",
@@ -207,7 +209,8 @@
       "personalInfo": "Personal Information",
       "basicInfo": "Basic Profile",
       "modifyPassword": "Change Password",
-      "confirmDelete": "Are you sure you want to delete user ID \"{0}\"?",
+      "confirmDelete": "Are you sure you want to delete user \"{0}\"?",
+      "confirmBatchDelete": "Are you sure you want to delete the selected {0} users?",
       "resetPwdPrompt": "Please enter the new password for \"{0}\"",
       "updatePwdSuccess": "Updated successfully, new password is: {0}",
       "statusChangeSuccess": "{0} succeeded",
@@ -226,7 +229,8 @@
       "statusPlaceholder": "Config status",
       "keyPattern": "Must start with a lowercase letter and contain only lowercase letters, digits and dots",
       "keyLength": "Length must be between 4 and 100",
-      "confirmDeleteConfig": "Are you sure to delete the config item with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete config \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} configs?"
     },
     "log": {
       "logType": "Log Type",
@@ -239,7 +243,8 @@
       "operator": "Operator",
       "ipAddress": "IP Address",
       "detail": "Detail",
-      "confirmDeleteLog": "Are you sure to delete the log with ID \"{0}\"?",
+      "confirmDelete": "Are you sure to delete log \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} logs?",
       "detailTitle": "Log Detail",
       "basicInfo": "Basic Info",
       "operLog": "Operation Log",
@@ -289,7 +294,8 @@
       "space": "Workspace",
       "selectPlaceholder": "Select Workspace",
       "noSpaceTip": "No Space Assigned",
-      "confirmDelete": "Are you sure to delete the space with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete space \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} spaces?"
     },
     "supplier": {
       "name": "Supplier Name",
@@ -305,11 +311,13 @@
       "supplier": "Supplier",
       "model": "Models",
       "testConnect": "Connectivity Test",
-      "confirmDelete": "Are you sure to delete the supplier with ID \"{0}\"?",
+      "confirmDelete": "Are you sure to delete supplier \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} suppliers?",
       "modelName": "Model Name",
       "modelCode": "Model ID",
       "modelType": "Model Type",
-      "confirmDeleteModel": "Are you sure to delete the model with ID \"{0}\"?",
+      "confirmDeleteModel": "Are you sure to delete model \"{0}\"?",
+      "confirmBatchDeleteModel": "Are you sure to delete the selected {0} models?",
       "autoImport": "Auto Import",
       "importModelTitle": "Select Models to Import",
       "importModelPlaceholder": "No available models returned from remote yet",
@@ -353,7 +361,8 @@
       "headersInvalid": "Headers must be a valid JSON object",
       "cwd": "Working Directory (optional)",
       "cwdPlaceholder": "e.g. /opt/server",
-      "confirmDelete": "Are you sure to delete the MCP with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete MCP \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} MCPs?"
     },
     "skill": {
       "skill": "Skill",
@@ -383,7 +392,8 @@
       "renameSuccess": "Renamed",
       "moveSuccess": "Moved",
       "confirmDeleteNode": "Delete {1} \"{0}\"? (a folder removes all of its contents recursively)",
-      "confirmDelete": "Are you sure to delete the Skill with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete SKILL \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} SKILLs?"
     },
     "knowledge": {
       "name": "KB Name",
@@ -404,7 +414,8 @@
       "score": "Score",
       "docId": "Doc ID",
       "hitContent": "Matched Content",
-      "confirmDelete": "Are you sure to delete the knowledge base with ID \"{0}\"?",
+      "confirmDelete": "Are you sure to delete knowledge base \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} knowledge bases?",
       "docName": "Doc Name",
       "docContent": "Doc Content",
       "docContentPlaceholder": "Paste text content; .txt / .md file upload is also supported",
@@ -415,7 +426,8 @@
       "docStatus": "Status",
       "docChunks": "Chunks",
       "doc": "Document",
-      "confirmDeleteDoc": "Are you sure to delete the document with ID \"{0}\"?",
+      "confirmDeleteDoc": "Are you sure to delete document \"{0}\"?",
+      "confirmBatchDeleteDoc": "Are you sure to delete the selected {0} documents?",
       "vectorizeConfirm": "Vectorize this document? It will be chunked per KB config and written into the vector store",
       "vectorizeAllConfirm": "Vectorize all documents in this knowledge base? Unprocessed/failed ones will be handled one by one and written into the vector store",
       "docVectorizeAll": "Vectorize All",
@@ -438,7 +450,8 @@
       "systemPromptPlaceholder": "Enter the agent system prompt",
       "publishSuccess": "Published",
       "unpublishSuccess": "Unpublished",
-      "confirmDelete": "Are you sure to delete the agent with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete Agent \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} Agents?"
     },
     "chat": {
       "newChat": "New Chat",
@@ -491,7 +504,8 @@
       "viewMemory": "View Memory",
       "editTitle": "Edit Memory",
       "emptyContent": "No memory content",
-      "confirmDelete": "Are you sure to delete the memory with ID \"{0}\"?"
+      "confirmDelete": "Are you sure to delete the memory of visitor \"{0}\"?",
+      "confirmBatchDelete": "Are you sure to delete the selected {0} memories?"
     }
   }
 }

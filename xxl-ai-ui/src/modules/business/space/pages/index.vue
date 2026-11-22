@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.space.name')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -32,15 +32,15 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['space:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['space:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['space:default']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['space:default']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['space:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeSpace()" v-hasPermi="['space:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -48,9 +48,9 @@
       </el-row>
 
       <!-- 空间列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.space.id')" align="center" prop="id" width="80" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.space.name')" align="center" prop="name" width="180" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.space.code')" align="center" prop="code" width="180" :show-overflow-tooltip="true" />
         <el-table-column :label="t('common.status')" align="center" width="100">
@@ -68,10 +68,10 @@
         </el-table-column>
         <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['space:default']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['space:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['space:default']">{{
+            <el-button link type="primary" icon="Delete" @click="removeSpace(scope.row)" v-hasPermi="['space:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -89,7 +89,7 @@
     </div>
 
     <!-- 添加或修改空间对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="520px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="520px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.space.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.space.name')])" maxlength="50" />
@@ -114,8 +114,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -124,30 +124,30 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'BusinessSpace' })
-import { t } from '@/i18n'
-import { listSpace, addSpace, updateSpace, delSpace } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Space, SpaceQuery } from '../types'
-import type { FormInstance } from 'element-plus'
 import { ref } from 'vue'
+import { t } from '@/i18n'
+import { Pagination, RightToolbar } from '@/components'
+import modal from '@/utils/modal'
+import { spaceApi } from '../api'
+import type { Space, SpaceForm, SpaceQuery } from '../types'
+import type { FormInstance } from 'element-plus'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
-
 const queryParams = ref<SpaceQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
 const table = ref<TableState<Space>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
-const formState = ref<FormState<Space>>({
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<SpaceForm> = { status: 0 }
+
+const formState = ref<FormState<SpaceForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.space.name')]), trigger: 'blur' }],
     code: [
@@ -157,79 +157,102 @@ const formState = ref<FormState<Space>>({
   }
 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listSpace(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  spaceApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
-function reset() {
-  formState.value.form = { id: undefined, name: undefined, code: undefined, status: 0, remark: undefined }
-  resetForm('formRef')
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
 }
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
-function handleSelectionChange(selection: Space[]) {
+function syncSelection(selection: Space[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.space.space')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: Space) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  resetForm()
+  formState.value.form = {
+    id: current.id,
+    name: current.name,
+    code: current.code,
+    status: current.status ?? 0,
+    remark: current.remark
+  }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.space.space')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeSpace(row?: Space) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.space.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.space.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.space.confirmDelete', [ids]))
-    .then(() => delSpace(ids))
+    .confirm(confirmText)
+    .then(() => spaceApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    const req = submitData.id != null ? updateSpace(submitData) : addSpace(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? spaceApi.update(formState.value.form) : spaceApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>

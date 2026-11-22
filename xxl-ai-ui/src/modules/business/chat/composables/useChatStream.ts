@@ -5,7 +5,7 @@
  * 中断时携带 msgId + lastEventId 自动续传（最多 3 次）；用户主动终止时不再续传。
  */
 import modal from '@/utils/modal'
-import { resumeStream, sendStream } from '../api'
+import { chatApi } from '../api'
 import { t } from '@/i18n'
 
 /** 流式增量回调 */
@@ -34,7 +34,7 @@ export function useChatStream() {
   ) {
     stopped = false
     controller = new AbortController()
-    const reader = await sendStream(payload.uuid, payload.visitorId, payload.sessionId, payload.content, controller.signal)
+    const reader = await chatApi.sendStream(payload.uuid, payload.visitorId, payload.sessionId, payload.content, controller.signal)
     if (!reader) {
       throw new Error('empty stream')
     }
@@ -53,7 +53,7 @@ export function useChatStream() {
     if (!msgId) return
     stopped = false
     controller = new AbortController()
-    const reader = await resumeStream(msgId, undefined, controller.signal)
+    const reader = await chatApi.resumeStream(msgId, undefined, controller.signal)
     if (!reader) return
     await streamWithResume(reader, { msgId }, onThinking, onContent, onError, () => stopped, controller.signal)
   }
@@ -105,7 +105,7 @@ async function streamWithResume(
     await new Promise((resolve) => setTimeout(resolve, 500 * attempts))
     if (isStopped()) return
     try {
-      const resumed = await resumeStream(state.msgId, state.lastEventId, signal)
+      const resumed = await chatApi.resumeStream(state.msgId, state.lastEventId, signal)
       if (!resumed) return
       reader = resumed
     } catch (e) {

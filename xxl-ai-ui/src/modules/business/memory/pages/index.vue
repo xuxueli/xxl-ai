@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.memory.agent')" prop="agentId">
           <el-select
             v-model="queryParams.agentId"
@@ -37,7 +37,7 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['memory:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeMemory()" v-hasPermi="['memory:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -45,9 +45,9 @@
       </el-row>
 
       <!-- 记忆列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="70" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.memory.agent')" align="left" prop="agentName" min-width="160" :show-overflow-tooltip="true" />
         <el-table-column
           :label="t('business.memory.visitorId')"
@@ -66,7 +66,7 @@
             <el-button link type="primary" icon="Edit" @click="openEdit(scope.row)" v-hasPermi="['memory:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['memory:default']">{{
+            <el-button link type="primary" icon="Delete" @click="removeMemory(scope.row)" v-hasPermi="['memory:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -119,7 +119,7 @@
     </el-drawer>
 
     <!-- 修改记忆对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="1000px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="1000px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.memory.content')" prop="content">
           <el-input
@@ -133,8 +133,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="formState.visible = false">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -143,22 +143,19 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Memory' })
+import { ref } from 'vue'
 import { t } from '@/i18n'
-import { pageMemory, delMemory, updateMemory } from '../api'
+import { Pagination, RightToolbar } from '@/components'
+import modal from '@/utils/modal'
+import { memoryApi } from '../api'
 import { useAgentOptions } from '@/modules/business/agent/composables/useAgentOptions'
 import MarkdownView from '@/modules/business/chat/components/MarkdownView.vue'
-import type { Memory, MemoryQuery } from '../types'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
+import type { Memory, MemoryForm, MemoryQuery } from '../types'
 import type { FormInstance } from 'element-plus'
-import { ref } from 'vue'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
 /** Agent 下拉选项（空间内全部 Agent，与对话管理页共用同一取数逻辑） */
 const { agentOptions, loadAgentOptions } = useAgentOptions()
 
@@ -168,28 +165,35 @@ const table = ref<TableState<Memory>>({ list: [], total: 0, loading: true, showS
 
 const drawer = ref<{ visible: boolean; memory: Partial<Memory> }>({ visible: false, memory: {} })
 
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 修改记忆表单 ref */
 
-const formState = ref<FormState<Memory>>({
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<MemoryForm> = { content: undefined }
+
+const formState = ref<FormState<MemoryForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     content: [{ required: true, message: t('common.requiredMsg', [t('business.memory.content')]), trigger: 'blur' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  pageMemory(params)
+  memoryApi
+    .pageList(queryParams.value)
     .then((response) => {
       table.value.list = response.data.data
       table.value.total = response.data.total
-      table.value.loading = false
     })
     .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
       table.value.loading = false
     })
 }
@@ -200,55 +204,79 @@ function handleQuery() {
 }
 
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
 
-function handleSelectionChange(selection: Memory[]) {
-  table.value.ids = selection.map((i) => i.id as number)
+// ---------------------- 数据操作（增删改） ----------------------
+
+function syncSelection(selection: Memory[]) {
+  table.value.ids = selection.map((item) => item.id as number)
   table.value.multiple = !selection.length
 }
 
 /** 打开记忆明细抽屉 */
-function openDetail(row: any) {
+function openDetail(row: Memory) {
   drawer.value.memory = row
   drawer.value.visible = true
 }
 
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
+}
+
 /** 打开修改记忆弹框：回填记忆正文 */
-function openEdit(row: any) {
+function openEdit(row: Memory) {
+  resetForm()
   formState.value.form = { id: row.id, content: row.content }
   formState.value.title = t('business.memory.editTitle')
   formState.value.visible = true
 }
 
 /** 提交修改记忆内容 */
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
     const { id, content } = formState.value.form
-    updateMemory({ id: id as number, content: content as string }).then(() => {
-      modal.msgSuccess(t('common.updateSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    memoryApi
+      .update({ id, content })
+      .then(() => {
+        modal.msgSuccess(t('common.updateSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
 
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+/** 关闭弹窗：重置统一交给 @closed */
+function closeForm() {
+  formState.value.visible = false
+}
+
+function removeMemory(row?: Memory) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.memory.confirmDelete', [row.visitorId ?? String(row.id)])
+    : t('business.memory.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.memory.confirmDelete', [ids]))
-    .then(() => delMemory(ids))
+    .confirm(confirmText)
+    .then(() => memoryApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 loadAgentOptions()
 getList()
 </script>

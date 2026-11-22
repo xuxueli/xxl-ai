@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.supplier.name')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -32,15 +32,15 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['supplier:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['supplier:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['supplier:default']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['supplier:default']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['supplier:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeSupplier()" v-hasPermi="['supplier:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -61,9 +61,9 @@
       </el-row>
 
       <!-- 供应商列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('business.supplier.id')" align="center" prop="id" width="80" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.supplier.name')" align="center" prop="name" min-width="120" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.baseUrl')" align="center" prop="baseUrl" min-width="180" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.apiKey')" align="center" width="180">
@@ -81,10 +81,10 @@
         <el-table-column :label="t('common.operation')" align="center" width="220" class-name="small-padding fixed-width">
           <template #default="scope">
             <el-button link type="primary" icon="Cpu" @click="goModel(scope.row)">{{ t('business.supplier.model') }}</el-button>
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['supplier:default']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['supplier:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['supplier:default']">{{
+            <el-button link type="primary" icon="Delete" @click="removeSupplier(scope.row)" v-hasPermi="['supplier:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -102,7 +102,7 @@
     </div>
 
     <!-- 添加或修改供应商对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="640px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="640px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="100px">
         <el-form-item :label="t('business.supplier.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.supplier.name')])" maxlength="50" />
@@ -150,8 +150,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -160,123 +160,146 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Supplier' })
-import { t } from '@/i18n'
-import { listSupplier, addSupplier, updateSupplier, delSupplier, testConnectSupplier } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Supplier, SupplierQuery } from '../types'
-import type { FormInstance } from 'element-plus'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { t } from '@/i18n'
+import { Pagination, RightToolbar } from '@/components'
+import modal from '@/utils/modal'
+import { supplierApi } from '../api'
+import type { Supplier, SupplierForm, SupplierQuery } from '../types'
+import type { FormInstance } from 'element-plus'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
 const router = useRouter()
 
-/* --- 供应商表单数据 --- */
-interface SupplierForm extends Supplier {}
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 供应商编辑表单 ref */
 const testing = ref(false) /* 连通测试请求中状态 */
-
 const queryParams = ref<SupplierQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
 const table = ref<TableState<Supplier>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<SupplierForm> = { status: 0 }
+
 const formState = ref<FormState<SupplierForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.name')]), trigger: 'blur' }],
     baseUrl: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.baseUrl')]), trigger: 'blur' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listSupplier(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  supplierApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
-function reset() {
-  formState.value.form = { id: undefined, name: undefined, baseUrl: undefined, apiKey: undefined, headers: undefined, status: 0, remark: undefined }
-  resetForm('formRef')
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
 }
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
-function handleSelectionChange(selection: Supplier[]) {
+function syncSelection(selection: Supplier[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.supplier.supplier')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: Supplier) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  resetForm()
+  formState.value.form = {
+    id: current.id,
+    name: current.name,
+    baseUrl: current.baseUrl,
+    apiKey: current.apiKey,
+    headers: current.headers,
+    status: current.status ?? 0,
+    remark: current.remark
+  }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.supplier.supplier')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeSupplier(row?: Supplier) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.supplier.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.supplier.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.supplier.confirmDelete', [ids]))
-    .then(() => delSupplier(ids))
+    .confirm(confirmText)
+    .then(() => supplierApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    if (submitData.headers) {
+    const data: SupplierForm = { ...formState.value.form }
+    if (data.headers) {
       try {
-        const parsed = JSON.parse(submitData.headers)
+        const parsed = JSON.parse(data.headers)
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error()
-        submitData.headers = Object.keys(parsed).length ? JSON.stringify(parsed) : undefined
+        data.headers = Object.keys(parsed).length ? JSON.stringify(parsed) : undefined
       } catch {
         modal.msgError(t('business.supplier.headersFormat'))
         return
       }
     }
-    const req = submitData.id != null ? updateSupplier(submitData) : addSupplier(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = data.id != null
+    const request = isEdit ? supplierApi.update(data) : supplierApi.insert(data)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
 /** 请求Header JSON 格式化（非空且非法 JSON 时提示） */
@@ -295,7 +318,8 @@ function handleTestConnect() {
   const ids = table.value.ids as number[]
   if (ids.length !== 1) return
   testing.value = true
-  testConnectSupplier(ids[0])
+  supplierApi
+    .testConnect(ids[0])
     .then((response) => {
       const result = response.data
       const message = result.message ?? `HTTP ${result.httpCode}`
@@ -311,13 +335,15 @@ function handleTestConnect() {
     })
 }
 
-// --------------------------------- 模型管理 ---------------------------------
+// ---------------------- 模型管理 ----------------------
+
 /** 跳转模型管理页（隐藏路由，按 loadView 映射 supplier/pages/model.vue） */
-function goModel(row: any) {
+function goModel(row: Supplier) {
   router.push({ path: '/supplier/model', query: { supplierId: String(row.id), supplierName: String(row.name) } })
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>
 

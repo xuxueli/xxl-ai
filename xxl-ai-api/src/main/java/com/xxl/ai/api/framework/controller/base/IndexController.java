@@ -2,8 +2,7 @@ package com.xxl.ai.api.framework.controller.base;
 
 import com.xxl.ai.api.framework.constant.enums.ResourceTypeEnum;
 import com.xxl.ai.api.framework.model.dto.BaseConfigDTO;
-import com.xxl.ai.api.framework.model.dto.MetaVo;
-import com.xxl.ai.api.framework.model.dto.RouterVo;
+import com.xxl.ai.api.framework.model.dto.MenuVO;
 import com.xxl.ai.api.framework.model.entity.Config;
 import com.xxl.ai.api.framework.service.ConfigService;
 import com.xxl.ai.api.framework.service.RoleService;
@@ -95,16 +94,16 @@ public class IndexController {
 	}
 
 
-	// ---------------------- getRouters ----------------------
+	// ---------------------- getMenus ----------------------
 
 	/**
-	 * 获取路由菜单
+	 * 获取当前用户菜单树
 	 *
-	 * 转换为前端 Vue Router 可消费的树形结构
+	 * 仅返回纯业务菜单数据，路由与菜单结构由前端按自身 UI 库适配
 	 */
-	@RequestMapping("/getRouters")
+	@RequestMapping("/getMenus")
 	@XxlSso
-	public Response<List<RouterVo>> getRouters(HttpServletRequest request) {
+	public Response<List<MenuVO>> getMenus(HttpServletRequest request) {
 
 		// login check
 		Response<LoginInfo> loginCheckResult = XxlSsoHelper.loginCheckWithAttr(request);
@@ -113,21 +112,16 @@ public class IndexController {
 		int userId = Integer.parseInt(loginCheckResult.getData().getUserId());
 		List<com.xxl.ai.api.framework.model.entity.Resource> resourceList = roleService.queryResourceByUserid(userId, -1);
 
-		// 直接从 flat list 构建 RouterVo 树（Resource 实体无 children 字段）
-		List<RouterVo> routerList = buildRoutersFromFlatList(resourceList);
-
-		return Response.ofSuccess(routerList);
+		// 从 flat list 构建纯业务菜单树（Resource 实体无 children 字段）
+		return Response.ofSuccess(buildMenuTree(resourceList));
 	}
 
 	/**
-	 * 从 flat Resource 列表直接构建 RouterVo 树
+	 * 从 flat Resource 列表构建纯业务菜单树
 	 *
-	 * 参考旧项目 SysMenuServiceImpl#buildMenus：
-	 *   CATALOG(0): parentId=0→Layout, parentId!=0→ParentView, 递归子路由
-	 *   MENU(1): parentId=0→Layout+子节点包装, parentId!=0→InnerLink/component
-	 *   BUTTON(2): 跳过
+	 * 仅映射业务字段（含子菜单），不涉及任何前端路由结构；按钮（type=2）跳过。
 	 */
-	private List<RouterVo> buildRoutersFromFlatList(List<com.xxl.ai.api.framework.model.entity.Resource> resourceList) {
+	private List<MenuVO> buildMenuTree(List<com.xxl.ai.api.framework.model.entity.Resource> resourceList) {
 		if (CollectionTool.isEmpty(resourceList)) {
 			return new ArrayList<>();
 		}
@@ -140,66 +134,20 @@ public class IndexController {
 			parentMap.computeIfAbsent(resource.getParentId(), k -> new ArrayList<>()).add(resource);
 		}
 		// 从根节点开始构建
-		return buildRouterChildren(parentMap.get(0), parentMap);
+		return buildMenuChildren(parentMap.get(0), parentMap);
 	}
 
-	private List<RouterVo> buildRouterChildren(List<com.xxl.ai.api.framework.model.entity.Resource> resources, Map<Integer, List<com.xxl.ai.api.framework.model.entity.Resource>> parentMap) {
+	private List<MenuVO> buildMenuChildren(List<com.xxl.ai.api.framework.model.entity.Resource> resources, Map<Integer, List<com.xxl.ai.api.framework.model.entity.Resource>> parentMap) {
 		if (CollectionTool.isEmpty(resources)) {
 			return new ArrayList<>();
 		}
-		List<RouterVo> routers = new ArrayList<>();
+		List<MenuVO> menuList = new ArrayList<>();
 		for (com.xxl.ai.api.framework.model.entity.Resource resource : resources) {
-
-			// build router
-			RouterVo router = new RouterVo();
-			router.setName("menu_" + resource.getId());
-			router.setPath(resource.getUrl());
-			router.setHidden(resource.getVisible() == 1);
-			router.setMeta(new MetaVo(resource.getName(), resource.getIcon()));
-
-			int type = resource.getType();
-			boolean isRoot = (resource.getParentId() == 0);
-			List<com.xxl.ai.api.framework.model.entity.Resource> childrenRes = parentMap.get(resource.getId());
-
-			if (type == ResourceTypeEnum.CATALOG.getCode()) {
-				if (isRoot) {
-					// 目录 - 根节点
-					router.setComponent("Layout");
-				} else {
-					// 目录 - 非根节点
-					router.setComponent("ParentView");
-				}
-
-				// 子节点
-				if (CollectionTool.isNotEmpty(childrenRes)) {
-					router.setChildren(buildRouterChildren(childrenRes, parentMap));
-				}
-			} else if (type == ResourceTypeEnum.MENU.getCode()) {
-				if (isRoot) {
-					// 菜单 - 根节点
-					router.setComponent("Layout");
-					router.setMeta(null);
-
-					// 模拟子节点
-					RouterVo child = new RouterVo();
-					child.setName("child_menu_" + resource.getId());
-					child.setPath(resource.getUrl());
-					child.setComponent(isHttp(resource.getUrl()) ? "InnerLink" : resource.getUrl());
-					child.setMeta(new MetaVo(resource.getName(), resource.getIcon()));
-
-					router.setChildren(List.of(child));
-				} else {
-					// 菜单 - 非根节点
-					router.setComponent(isHttp(resource.getUrl()) ? "InnerLink" : resource.getUrl());
-				}
-			}
-			routers.add(router);
+			MenuVO menu = new MenuVO(resource);
+			menu.setChildren(buildMenuChildren(parentMap.get(resource.getId()), parentMap));
+			menuList.add(menu);
 		}
-		return routers;
-	}
-
-	private boolean isHttp(String url) {
-		return url != null && (url.startsWith("http://") || url.startsWith("https://"));
+		return menuList;
 	}
 
 

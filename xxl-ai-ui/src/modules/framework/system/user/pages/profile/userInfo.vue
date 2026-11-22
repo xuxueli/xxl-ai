@@ -21,7 +21,7 @@
 <script setup lang="ts">
 // 引入
 import { t } from '@/i18n'
-import { updateUserProfile } from '../../api'
+import { userApi } from '../../api'
 import modal from '@/utils/modal'
 import tab from '@/utils/tab'
 import type { User } from '../../types'
@@ -51,7 +51,7 @@ const rules = ref<FormRules>({
 function submit() {
   userRef.value!.validate((valid) => {
     if (valid) {
-      updateUserProfile(form.value).then(() => {
+      userApi.updateProfile(form.value).then(() => {
         modal.msgSuccess(t('common.updateSuccess'))
       })
     }

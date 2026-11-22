@@ -1,12 +1,13 @@
 <!--
-  Agent（Agent管理）
-  Agent 在线配置管理 + 发布/取消发布（发布生成访问 URL）
+  Agent（Agent 管理）
+  功能：Agent 的分页查询 + 新增/修改/删除 + 发布/取消发布（发布生成访问 URL）
+  @author xuxueli 2026-11-22
 -->
 <template>
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.agent.name')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -31,53 +32,41 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['agent:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['agent:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['agent:default']">
-            {{ t('common.modify') }}
-          </el-button>
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['agent:default']">{{ t('common.modify') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['agent:default']">
-            {{ t('common.delete') }}
-          </el-button>
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeAgent()" v-hasPermi="['agent:default']">{{ t('common.delete') }}</el-button>
         </el-col>
         <RightToolbar v-model:showSearch="table.showSearch" @queryTable="getList" />
       </el-row>
 
       <!-- Agent 列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" type="index" width="70" />
-        <el-table-column :label="t('business.agent.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.agent.intro')" align="center" prop="intro" min-width="200" :show-overflow-tooltip="true" />
-        <el-table-column :label="t('business.agent.modelSupplier')" align="center" prop="modelSupplierName" min-width="140" :show-overflow-tooltip="true" />
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column :label="t('common.id')" prop="id" align="center" width="80" />
+        <el-table-column :label="t('business.agent.name')" align="center" prop="name" min-width="130" show-overflow-tooltip />
+        <el-table-column :label="t('business.agent.intro')" align="center" prop="intro" min-width="200" show-overflow-tooltip />
+        <el-table-column :label="t('business.agent.modelSupplier')" align="center" prop="modelSupplierName" min-width="140" show-overflow-tooltip />
         <el-table-column :label="t('business.agent.publishStatus')" align="center" width="90">
           <template #default="scope">
             <el-switch v-model="scope.row.publishStatus" :active-value="1" :inactive-value="0" @change="handlePublishChange(scope.row)" />
           </template>
         </el-table-column>
-        <el-table-column :label="t('business.agent.accessUrl')" align="center" width="110" :show-overflow-tooltip="true">
+        <el-table-column :label="t('business.agent.accessUrl')" align="center" width="110" show-overflow-tooltip>
           <template #default="scope">
-            <el-link
-              v-if="scope.row.publishStatus === 1 && scope.row.uuid"
-              type="primary"
-              underline="always"
-              @click="openAgentUrl(scope.row.uuid)"
-              >{{ t('business.agent.gotoAgent') }}</el-link
-            >
+            <el-link v-if="scope.row.publishStatus === 1 && scope.row.uuid" type="primary" underline="always" @click="openAgentUrl(scope.row.uuid)">
+              {{ t('business.agent.gotoAgent') }}
+            </el-link>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" align="center" width="200" class-name="small-padding fixed-width">
+        <el-table-column :label="t('common.operation')" align="center" width="160" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['agent:default']">{{
-              t('common.modify')
-            }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['agent:default']">{{
-              t('common.delete')
-            }}</el-button>
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['agent:default']">{{ t('common.modify') }}</el-button>
+            <el-button link type="primary" icon="Delete" @click="removeAgent(scope.row)" v-hasPermi="['agent:default']">{{ t('common.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -92,8 +81,8 @@
       />
     </div>
 
-    <!-- 添加或修改 Agent 对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="720px" append-to-body>
+    <!-- 新增或修改对话框 -->
+    <el-dialog :title="formState.title" v-model="formState.visible" width="720px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="110px">
         <el-form-item :label="t('business.agent.name')" prop="name">
           <el-input v-model="formState.form.name" maxlength="100" />
@@ -148,8 +137,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -158,190 +147,257 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Agent' })
+import { ref } from 'vue'
 import { t } from '@/i18n'
-import { listAgent, addAgent, updateAgent, delAgent, publishAgent, unpublishAgent } from '../api'
-import { listSupplierBySpace } from '@/modules/business/supplier/api'
-import { listModelBySupplier } from '@/modules/business/supplier/api'
-import { listMcpBySpace } from '@/modules/business/mcp/api'
-import { listSkillBySpace } from '@/modules/business/skill/api'
-import { listKnowledgeBaseBySpace } from '@/modules/business/knowledge/base/api'
-import { useFormReset } from '@/composables/useFormReset'
+import { Pagination, RightToolbar } from '@/components'
 import { useEnumOption } from '@/composables/useEnumOption'
-import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Agent, AgentQuery } from '../types'
-import type { Supplier } from '@/modules/business/supplier/types'
-import type { SupplierModel } from '@/modules/business/supplier/types'
+import { agentApi } from '../api'
+import { supplierApi, supplierModelApi } from '@/modules/business/supplier/api'
+import { mcpApi } from '@/modules/business/mcp/api'
+import { skillApi } from '@/modules/business/skill/api'
+import { knowledgeBaseApi } from '@/modules/business/knowledge/base/api'
+import type { Agent, AgentForm, AgentQuery } from '../types'
+import type { Supplier, SupplierModel } from '@/modules/business/supplier/types'
 import type { Mcp } from '@/modules/business/mcp/types'
 import type { Skill } from '@/modules/business/skill/types'
 import type { KnowledgeBase } from '@/modules/business/knowledge/base/types'
 import type { FormInstance } from 'element-plus'
-import { ref } from 'vue'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
+// ---------------------- 响应式数据 ----------------------
 
-interface AgentForm extends Agent {}
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
+const formRef = ref<FormInstance>() /* 编辑表单 */
+const origin = ref(window.location.origin) /* 发布访问地址来源 */
 
-// --------------------------------- ref data ---------------------------------
-const formRef = ref<FormInstance>() /* 编辑表单 ref */
-const origin = ref(window.location.origin)
-
-// 发布状态枚举选项（PublishStatusEnum，来自后端）
+// 发布状态选项，由后端枚举接口加载
 const { PublishStatusEnum: publishStatusOptions } = useEnumOption('PublishStatusEnum')
 
+// 绑定资源下拉选项，打开弹窗时加载
 const supplierOptions = ref<Supplier[]>([])
 const chatModelOptions = ref<SupplierModel[]>([])
 const kbOptions = ref<KnowledgeBase[]>([])
 const mcpOptions = ref<Mcp[]>([])
 const skillOptions = ref<Skill[]>([])
 
-const queryParams = ref<AgentQuery>({ pageNum: 1, pageSize: 10, name: undefined, publishStatus: -1 })
+// 搜索栏筛选条件与分页参数
+const queryParams = ref<AgentQuery>({
+  pageNum: 1 /* 当前页码 */,
+  pageSize: 10 /* 每页条数 */,
+  name: undefined /* Agent 名称 */,
+  publishStatus: -1 /* 发布状态筛选，-1 表示全部 */
+})
 
-const table = ref<TableState<Agent>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
+// 列表数据与勾选状态，勾选结果决定顶部按钮是否可用
+const table = ref<TableState<Agent>>({
+  list: [], // Agent 列表
+  total: 0, // 总条数
+  loading: true, // 加载状态
+  showSearch: true, // 是否显示搜索栏
+  ids: [], // 勾选行主键
+  single: true, // 修改按钮是否禁用
+  multiple: true // 删除按钮是否禁用
+})
 
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<AgentForm> = {
+  memoryStatus: 0,
+  kbIds: [],
+  mcpIds: [],
+  skillIds: []
+}
+
+// 编辑弹窗状态
 const formState = ref<FormState<AgentForm>>({
-  visible: false,
-  title: '',
-  form: {},
+  visible: false, // 弹窗显隐
+  title: '', // 弹窗标题
+  form: { ...FORM_DEFAULTS }, // 表单数据
   rules: {
+    // 校验规则
     name: [{ required: true, message: t('common.requiredMsg', [t('business.agent.name')]), trigger: 'blur' }],
     modelSupplierId: [{ required: true, message: t('common.requiredMsg', [t('business.agent.modelSupplier')]), trigger: 'change' }],
     modelId: [{ required: true, message: t('common.requiredMsg', [t('business.agent.model')]), trigger: 'change' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
+/** 查询 Agent 分页数据 */
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listAgent(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  agentApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
+
+/** 搜索：回到第一页后查询 */
+function handleQuery() {
+  queryParams.value.pageNum = 1
+  getList()
+}
+
+/** 重置搜索条件后重新查询 */
+function resetQuery() {
+  queryRef.value?.resetFields()
+  handleQuery()
+}
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 同步表格勾选结果，驱动批量修改/删除按钮状态 */
+function syncSelection(selection: Agent[]) {
+  table.value.ids = selection.map((item) => item.id as number)
+  table.value.single = selection.length !== 1
+  table.value.multiple = !selection.length
+}
+
+/** 加载绑定资源选项（供应商 / 知识库 / MCP / SKILL） */
 function loadBindOptions() {
-  listSupplierBySpace().then((response) => {
+  supplierApi.listBySpace().then((response) => {
     supplierOptions.value = response.data
   })
-  listKnowledgeBaseBySpace().then((response) => {
+  knowledgeBaseApi.listBySpace().then((response) => {
     kbOptions.value = response.data
   })
-  listMcpBySpace().then((response) => {
+  mcpApi.listBySpace().then((response) => {
     mcpOptions.value = response.data
   })
-  listSkillBySpace().then((response) => {
+  skillApi.listBySpace().then((response) => {
     skillOptions.value = response.data
   })
 }
+
 /** 供应商切换：加载该供应商下对话模型 */
 function handleSupplierChange(supplierId: number) {
   formState.value.form.modelId = undefined
   chatModelOptions.value = []
   if (!supplierId) return
-  listModelBySupplier(supplierId).then((response) => {
+  supplierModelApi.listBySupplier(supplierId).then((response) => {
     chatModelOptions.value = response.data.filter((item) => item.type === 0 && item.status === 0)
   })
 }
-function reset() {
-  formState.value.form = {
-    id: undefined,
-    name: undefined,
-    intro: undefined,
-    modelSupplierId: undefined,
-    modelId: undefined,
-    systemPrompt: undefined,
-    kbIds: [],
-    mcpIds: [],
-    skillIds: [],
-    memoryStatus: 0,
-    publishStatus: 0,
-    uuid: undefined
-  }
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除表单校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS, kbIds: [], mcpIds: [], skillIds: [] }
   chatModelOptions.value = []
-  resetForm('formRef')
+  formRef.value?.clearValidate()
 }
-function handleQuery() {
-  queryParams.value.pageNum = 1
-  getList()
-}
-function resetQuery() {
-  resetForm('queryRef')
-  handleQuery()
-}
-function handleSelectionChange(selection: Agent[]) {
-  table.value.ids = selection.map((i) => i.id as number)
-  table.value.single = selection.length !== 1
-  table.value.multiple = !selection.length
-}
-function handleAdd() {
-  reset()
+
+/** 打开新增弹窗 */
+function openCreateForm() {
+  resetForm()
   loadBindOptions()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.agent.agent')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+
+/**
+ * 打开修改弹窗并回填详情
+ *
+ * 后端无 load 接口，列表行已包含编辑所需字段。
+ *
+ * @param row 行数据；顶部按钮调用时为空，此时回退到勾选行
+ */
+function openEditForm(row?: Agent) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
+  resetForm()
   loadBindOptions()
-  formState.value.form = { ...current }
+  formState.value.form = {
+    id: current.id,
+    name: current.name,
+    intro: current.intro,
+    modelSupplierId: current.modelSupplierId,
+    modelId: current.modelId,
+    systemPrompt: current.systemPrompt,
+    kbIds: current.kbIds ?? [],
+    mcpIds: current.mcpIds ?? [],
+    skillIds: current.skillIds ?? [],
+    memoryStatus: current.memoryStatus ?? 0
+  }
+  // 回显选中供应商的对话模型
   if (current.modelSupplierId) {
-    listModelBySupplier(current.modelSupplierId).then((response) => {
+    supplierModelApi.listBySupplier(current.modelSupplierId).then((response) => {
       chatModelOptions.value = response.data.filter((item) => item.type === 0 && item.status === 0)
     })
   }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.agent.agent')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+
+/** 校验通过后保存：有 id 走修改，否则新增 */
+function saveForm() {
+  formRef.value?.validate((valid) => {
+    if (!valid) return
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? agentApi.update(formState.value.form) : agentApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
+  })
+}
+
+/** 关闭弹窗：重置统一交给 @closed，保证 X / ESC / 按钮三条路径一致 */
+function closeForm() {
+  formState.value.visible = false
+}
+
+/**
+ * 删除 Agent（单条或批量），成功后刷新列表
+ *
+ * @param row 行数据；顶部按钮调用时为空，此时删除勾选行
+ */
+function removeAgent(row?: Agent) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.agent.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.agent.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.agent.confirmDelete', [ids]))
-    .then(() => delAgent(ids))
+    .confirm(confirmText)
+    .then(() => agentApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
-    if (!valid) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    const req = submitData.id != null ? updateAgent(submitData) : addAgent(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
-  })
-}
-function cancel() {
-  formState.value.visible = false
-  reset()
-}
 
-// --------------------------------- 发布 / 访问 URL ---------------------------------
+// ---------------------- 发布 / 访问 URL ----------------------
+
+/** 拼接公开对话页 URL（Hash 模式） */
 function agentUrl(uuid: string) {
-  // Hash 模式：公开对话页 URL 采用 /#/chat/{uuid}
   return `${origin.value}/#/chat/${uuid}`
 }
-/** 发布状态快速切换：开启发布 / 关闭取消发布（失败回滚开关状态） */
+
+/** 发布状态快速切换：失败时回滚开关状态 */
 function handlePublishChange(row: Agent) {
   const target = Number(row.publishStatus)
-  const req = target === 1 ? publishAgent(row.id as number) : unpublishAgent(row.id as number)
-  req
-    .then((res) => {
-      // 发布接口返回访问 UUID，立即回填以便展示访问URL
-      if (target === 1 && res.data) row.uuid = res.data
+  const request = target === 1 ? agentApi.publish(row.id as number) : agentApi.unpublish(row.id as number)
+  request
+    .then((response) => {
+      // 发布接口返回访问 UUID，立即回填以便展示访问 URL
+      if (target === 1 && response.data) row.uuid = response.data
       modal.msgSuccess(target === 1 ? t('business.agent.publishSuccess') : t('business.agent.unpublishSuccess'))
       getList()
     })
@@ -349,11 +405,13 @@ function handlePublishChange(row: Agent) {
       row.publishStatus = target === 1 ? 0 : 1
     })
 }
+
 /** 打开 Agent 发布页面（新窗口跳转） */
 function openAgentUrl(uuid: string) {
   window.open(agentUrl(uuid), '_blank')
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>

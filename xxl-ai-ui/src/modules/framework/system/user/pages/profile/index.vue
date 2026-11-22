@@ -73,7 +73,7 @@ defineOptions({ name: 'Profile' })
 import { t } from '@/i18n'
 import userInfo from './userInfo.vue'
 import resetPwd from './resetPwd.vue'
-import { getUserProfile } from '../../api'
+import { userApi } from '../../api'
 import type { User } from '../../types'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -86,7 +86,7 @@ const roleName = ref('') // 角色名称
 
 /** 获取当前登录用户个人信息 */
 function getUser() {
-  getUserProfile().then((res) => {
+  userApi.loadProfile().then((res) => {
     user.value = res.data
     roleName.value = (user.value.roleName as string) || ''
   })

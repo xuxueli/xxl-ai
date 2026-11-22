@@ -24,7 +24,7 @@
 <script setup lang="ts">
 // 引入
 import { t } from '@/i18n'
-import { updateUserPwd } from '../../api'
+import { userApi } from '../../api'
 import modal from '@/utils/modal'
 import tab from '@/utils/tab'
 import type { FormInstance, FormItemRule, FormRules } from 'element-plus'
@@ -85,7 +85,7 @@ const rules = ref<FormRules>({
 function submit() {
   pwdRef.value!.validate((valid) => {
     if (valid) {
-      updateUserPwd(user.value.oldPassword as string, user.value.newPassword as string).then((res) => {
+      userApi.updatePwd(user.value.oldPassword as string, user.value.newPassword as string).then((res) => {
         modal.msgSuccess(t('common.updateSuccess'))
         user.value.oldPassword = undefined
         user.value.newPassword = undefined

@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.mcp.name')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -32,15 +32,15 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['mcp:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['mcp:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['mcp:default']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['mcp:default']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['mcp:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeMcp()" v-hasPermi="['mcp:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -48,13 +48,13 @@
       </el-row>
 
       <!-- MCP 列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.mcp.name')" align="center" prop="name" min-width="130" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.mcp.type')" align="center" min-width="150">
           <template #default="scope">
-            <el-tag>{{ mcpTypeTitle(scope.row.type) }}</el-tag>
+            <el-tag>{{ enumTitle(mcpTypeOptions, scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('business.mcp.url')" align="center" min-width="170" :show-overflow-tooltip="true">
@@ -69,11 +69,11 @@
         </el-table-column>
         <el-table-column :label="t('common.operation')" align="center" width="240" min-width="240" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Connection" @click="handleTest(scope.row)" v-hasPermi="['mcp:default']">{{
+            <el-button link type="primary" icon="Connection" @click="testConnection(scope.row)" v-hasPermi="['mcp:default']">{{
               t('business.mcp.test')
             }}</el-button>
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['mcp:default']">{{ t('common.modify') }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['mcp:default']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['mcp:default']">{{ t('common.modify') }}</el-button>
+            <el-button link type="primary" icon="Delete" @click="removeMcp(scope.row)" v-hasPermi="['mcp:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -91,7 +91,7 @@
     </div>
 
     <!-- 添加或修改 MCP 对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="110px">
         <el-form-item :label="t('business.mcp.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('common.inputPlaceholder', [t('business.mcp.name')])" maxlength="100" />
@@ -155,8 +155,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -202,24 +202,20 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Mcp' })
+import { computed, ref } from 'vue'
 import { t } from '@/i18n'
-import { listMcp, addMcp, updateMcp, delMcp, mcpTest } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { useEnumOption } from '@/composables/useEnumOption'
-import { usePageParams } from '@/composables/usePageParams'
+import { Pagination, RightToolbar } from '@/components'
+import { enumTitle, useEnumOption } from '@/composables/useEnumOption'
 import modal from '@/utils/modal'
 import { renderMarkdown } from '@/utils/markdown'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Mcp, McpQuery, McpConnectResult } from '../types'
+import { mcpApi } from '../api'
+import type { Mcp, McpConnectResult, McpForm, McpQuery } from '../types'
 import type { FormInstance } from 'element-plus'
-import { computed, ref } from 'vue'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
+// ---------------------- 响应式数据 ----------------------
 
-interface McpForm extends Mcp {}
-
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
 // 连通测试请求中状态
 const testing = ref(false) /* 连通测试请求中 */
@@ -248,40 +244,57 @@ const configForm = ref({
   cwd: ''
 })
 
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<McpForm> = { type: 0, status: 0 }
+
 const formState = ref<FormState<McpForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.mcp.name')]), trigger: 'blur' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
-/** 协议类型文案（按枚举选项解析，未命中回退原始值） */
-function mcpTypeTitle(type: number) {
-  return mcpTypeOptions.value.find((i) => i.code === type)?.title ?? String(type)
-}
+// ---------------------- 分页检索 ----------------------
 
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listMcp(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  mcpApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
+
+function handleQuery() {
+  queryParams.value.pageNum = 1
+  getList()
+}
+function resetQuery() {
+  queryRef.value?.resetFields()
+  handleQuery()
+}
+
+// ---------------------- 配置表单 ----------------------
 
 /** 重置完整配置编辑态 */
 function resetConfigForm() {
   configForm.value = { transport: 'http', url: undefined, headers: '', command: '', argsText: '', env: '', cwd: '' }
 }
 
-function reset() {
-  formState.value.form = { id: undefined, name: undefined, type: 0, remark: undefined, status: 0 }
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
   resetConfigForm()
-  resetForm('formRef')
+  formRef.value?.clearValidate()
 }
 
 /** 编辑回显：解析 config JSON 填充分形态配置（缺失时按平铺列兜底） */
@@ -405,76 +418,85 @@ function buildConfigPayload(): boolean {
   return true
 }
 
-function handleQuery() {
-  queryParams.value.pageNum = 1
-  getList()
-}
-function resetQuery() {
-  resetForm('queryRef')
-  handleQuery()
-}
-function handleSelectionChange(selection: Mcp[]) {
+// ---------------------- 数据操作（增删改） ----------------------
+
+function syncSelection(selection: Mcp[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.mcp.mcp')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: Mcp) {
+  resetForm()
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  formState.value.form = {
+    id: current.id,
+    name: current.name,
+    type: current.type ?? 0,
+    url: current.url,
+    headers: current.headers,
+    config: current.config,
+    remark: current.remark,
+    status: current.status ?? 0
+  }
   parseIntoForm(current)
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.mcp.mcp')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeMcp(row?: Mcp) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.mcp.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.mcp.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.mcp.confirmDelete', [ids]))
-    .then(() => delMcp(ids))
+    .confirm(confirmText)
+    .then(() => mcpApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
     if (!buildConfigPayload()) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    const req = submitData.id != null ? updateMcp(submitData) : addMcp(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? mcpApi.update(formState.value.form) : mcpApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
 /** 列表行/表头测试：对已落库配置发起 initialize + tools/list；成功弹窗展示可用工具 */
-function handleTest(row: any) {
-  const id = row?.id ?? table.value.ids[0]
+function testConnection(row?: Mcp) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) {
     modal.msgWarning(t('common.selectPlaceholder'))
     return
   }
   testing.value = true
-  mcpTest(id)
+  mcpApi
+    .test(id)
     .then((response) => {
       const result = response.data
       testResult.value.data = result
@@ -504,7 +526,8 @@ function displayUrl(row: Mcp) {
   return ''
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>
 

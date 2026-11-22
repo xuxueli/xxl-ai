@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.supplier.name')">
           <el-input
             v-model="queryParams.name"
@@ -31,15 +31,15 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['supplier:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['supplier:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['supplier:default']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['supplier:default']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['supplier:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeModel()" v-hasPermi="['supplier:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -52,13 +52,13 @@
       </el-row>
 
       <!-- 模型列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
         <el-table-column :label="t('business.supplier.modelName')" align="center" prop="name" min-width="110" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.modelCode')" align="center" prop="model" min-width="120" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.supplier.modelType')" align="center" width="130">
           <template #default="scope">
-            <el-tag>{{ modelTypeTitle(scope.row.type) }}</el-tag>
+            <el-tag>{{ enumTitle(modelTypeOptions, scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('common.status')" align="center" width="110">
@@ -70,10 +70,10 @@
         </el-table-column>
         <el-table-column :label="t('common.operation')" align="center" width="150" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['supplier:default']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['supplier:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['supplier:default']">{{
+            <el-button link type="primary" icon="Delete" @click="removeModel(scope.row)" v-hasPermi="['supplier:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -91,7 +91,7 @@
     </div>
 
     <!-- 添加或修改模型对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="560px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="560px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.supplier.modelName')" prop="name">
           <el-input v-model="formState.form.name" maxlength="50" />
@@ -113,8 +113,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -134,7 +134,7 @@
         v-loading="importState.loading"
         :data="importFilteredList"
         height="400"
-        @selection-change="handleImportSelectionChange"
+        @selection-change="syncImportSelection"
       >
         <el-table-column type="selection" width="45" align="center" :selectable="(row) => !row.imported" />
         <el-table-column :label="t('common.serialNo')" align="center" type="index" width="60" />
@@ -169,28 +169,25 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'SupplierModel' })
-import { t } from '@/i18n'
-import { listSupplierModel, addSupplierModel, updateSupplierModel, delSupplierModel, loadRemoteModels, importRemoteModels } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { useEnumOption } from '@/composables/useEnumOption'
-import { usePageParams } from '@/composables/usePageParams'
-import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { RemoteModel, SupplierModel, SupplierModelQuery } from '../types'
-import type { FormInstance, TableInstance } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { t } from '@/i18n'
+import { Pagination, RightToolbar } from '@/components'
+import { enumTitle, useEnumOption } from '@/composables/useEnumOption'
+import modal from '@/utils/modal'
+import { supplierModelApi } from '../api'
+import type { RemoteModel, SupplierModel, SupplierModelForm, SupplierModelQuery } from '../types'
+import type { FormInstance, TableInstance } from 'element-plus'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
 const route = useRoute()
 
-/** 当前供应商ID（来自路由 query：supplierId） */
+/** 当前供应商 ID（来自路由 query：supplierId） */
 const supplierId = Number(route.query.supplierId)
 
-interface ModelForm extends SupplierModel {}
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 模型编辑表单 ref */
 
 // 模型类型枚举选项（ModelTypeEnum，来自后端）
@@ -200,10 +197,13 @@ const queryParams = ref<SupplierModelQuery>({ pageNum: 1, pageSize: 10, supplier
 
 const table = ref<TableState<SupplierModel>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
-const formState = ref<FormState<ModelForm>>({
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<SupplierModelForm> = { supplierId, type: 0, status: 0 }
+
+const formState = ref<FormState<SupplierModelForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.modelName')]), trigger: 'blur' }],
     model: [{ required: true, message: t('common.requiredMsg', [t('business.supplier.modelCode')]), trigger: 'blur' }]
@@ -230,83 +230,104 @@ const importFilteredList = computed(() => {
   return importState.value.list.filter((item) => (item.modelId ?? '').toLowerCase().includes(keyword))
 })
 
-// --------------------------------- fun ---------------------------------
-/** 模型类型文案（按枚举选项解析，未命中回退原始值） */
-function modelTypeTitle(type: number) {
-  return modelTypeOptions.value.find((i) => i.code === type)?.title ?? String(type)
-}
+// ---------------------- 分页检索 ----------------------
 
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listSupplierModel(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  supplierModelApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
-function reset() {
-  formState.value.form = { supplierId, name: undefined, model: undefined, type: 0, status: 0 }
-  resetForm('formRef')
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
 }
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
-function handleSelectionChange(selection: SupplierModel[]) {
+function syncSelection(selection: SupplierModel[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.supplier.model')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: SupplierModel) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  resetForm()
+  formState.value.form = {
+    id: current.id,
+    supplierId,
+    name: current.name,
+    model: current.model,
+    type: current.type ?? 0,
+    status: current.status ?? 0
+  }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.supplier.model')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeModel(row?: SupplierModel) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.supplier.confirmDeleteModel', [row.name ?? String(row.id)])
+    : t('business.supplier.confirmBatchDeleteModel', [ids.length])
   modal
-    .confirm(t('business.supplier.confirmDeleteModel', [ids]))
-    .then(() => delSupplierModel(ids))
+    .confirm(confirmText)
+    .then(() => supplierModelApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
-    const submitData = { ...formState.value.form, supplierId }
-    const req = submitData.id != null ? updateSupplierModel(submitData) : addSupplierModel(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? supplierModelApi.update(formState.value.form) : supplierModelApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
-// --------------------------------- 自动导入 ---------------------------------
+// ---------------------- 自动导入 ----------------------
+
 /** 打开自动导入弹框并拉取远程可用模型（已导入项置灰不可选） */
 function handleAutoImport() {
   importState.value.visible = true
@@ -316,7 +337,8 @@ function handleAutoImport() {
   importState.value.ids = []
   importSearch.value = ''
   importTableRef.value?.clearSelection()
-  loadRemoteModels(supplierId)
+  supplierModelApi
+    .loadRemoteModels(supplierId)
     .then((response) => {
       importState.value.list = response.data
     })
@@ -329,7 +351,7 @@ function handleAutoImport() {
 }
 
 /** 导入弹框勾选变化 */
-function handleImportSelectionChange(selection: RemoteModel[]) {
+function syncImportSelection(selection: RemoteModel[]) {
   importState.value.ids = selection.map((i) => i.modelId as string)
 }
 
@@ -340,7 +362,8 @@ function confirmImport() {
     modal.msgWarning(t('business.supplier.importEmpty'))
     return
   }
-  importRemoteModels(supplierId, ids)
+  supplierModelApi
+    .importRemote(supplierId, ids)
     .then(() => {
       modal.msgSuccess(t('business.supplier.importSuccess'))
       importState.value.visible = false
@@ -356,7 +379,8 @@ function cancelImport() {
   importState.value.ids = []
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>
 <style scoped lang="scss">

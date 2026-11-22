@@ -188,7 +188,7 @@
 import { t } from '@/i18n'
 import logo from '@/assets/images/logo.png'
 import { useRoute, useRouter } from 'vue-router'
-import { createSession, deleteSession as removeSession, listSession, listMsg, loadAgentInfo, renameSession, stopStream } from '../api'
+import { chatApi } from '../api'
 import { useChatStream } from '../composables/useChatStream'
 import MarkdownView from '../components/MarkdownView.vue'
 import type { AgentChatInfo } from '../types'
@@ -234,7 +234,7 @@ const collapsed = ref(false)
 const editingSessionId = ref<number | undefined>(undefined)
 const editingTitle = ref('')
 
-// --------------------------------- init ---------------------------------
+// ---------------------- 初始化逻辑 ----------------------
 
 /**
  * 生成访客标识（浏览器维度，localStorage 持久化）
@@ -251,7 +251,7 @@ function ensureVisitorId() {
 /** 初始化：加载 Agent 元信息 + 对话列表；带对话参数则定位单个对话，否则默认展示新建对话内容 */
 async function init() {
   try {
-    const res = await loadAgentInfo(uuid.value)
+    const res = await chatApi.loadAgentInfo(uuid.value)
     agent.value = res.data
     document.title = agent.value?.name || 'Agent'
   } catch (e) {
@@ -275,14 +275,14 @@ async function init() {
 async function loadSessionList() {
   sessionLoading.value = true
   try {
-    const res = await listSession(uuid.value, visitorId.value)
+    const res = await chatApi.listSession(uuid.value, visitorId.value)
     sessionList.value = res.data
   } finally {
     sessionLoading.value = false
   }
 }
 
-// --------------------------------- 对话操作 ---------------------------------
+// ---------------------- 对话操作 ----------------------
 
 /** 新建对话：不立即建会话，进入新建状态并聚焦输入框，输入+发送后才生成对话 */
 function handleNewChat() {
@@ -335,7 +335,7 @@ async function selectSession(sessionId: number) {
 
 /** 拉取会话消息，并重置前端流式展示状态 */
 async function loadMessages(sessionId: number) {
-  const res = await listMsg(sessionId)
+  const res = await chatApi.listMsg(sessionId)
   messages.value = res.data.map((m) => ({ ...m, showThinking: false }))
 }
 
@@ -379,7 +379,7 @@ async function resumeGenerating(msg: SessionMsgItem) {
   }
 }
 
-// --------------------------------- 对话标题修改 ---------------------------------
+// ---------------------- 对话标题修改 ----------------------
 
 /** 进入标题编辑态 */
 function startEditSessionTitle(session: Session) {
@@ -394,7 +394,7 @@ function saveSessionTitle(session: Session) {
   editingSessionId.value = undefined
   editingTitle.value = ''
   if (!title || title === session.title) return
-  renameSession(session.id, title)
+  chatApi.renameSession(session.id, title)
     .then(() => {
       session.title = title
     })
@@ -412,7 +412,7 @@ function deleteSession(session: Session) {
   modal
     .confirm(t('business.chat.deleteSessionConfirm', [session.title]))
     .then(async () => {
-      await removeSession(session.id)
+      await chatApi.deleteSession(session.id)
       if (currentSessionId.value === session.id) {
         currentSessionId.value = undefined
         messages.value = []
@@ -422,7 +422,7 @@ function deleteSession(session: Session) {
     .catch(() => {})
 }
 
-// --------------------------------- 消息发送（SSE） ---------------------------------
+// ---------------------- 消息发送（SSE） ----------------------
 
 /**
  * 确保存在可写入的会话
@@ -432,7 +432,7 @@ function deleteSession(session: Session) {
 async function ensureSession(): Promise<number | null> {
   if (currentSessionId.value) return currentSessionId.value
   try {
-    const res = await createSession(uuid.value, visitorId.value)
+    const res = await chatApi.createSession(uuid.value, visitorId.value)
     const session = res.data
     currentSessionId.value = session.id
     newChat.value = false
@@ -539,7 +539,7 @@ async function handleStop() {
 async function requestStop(sessionId: number): Promise<boolean> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      await stopStream(sessionId)
+      await chatApi.stopStream(sessionId)
       return true
     } catch (e) {
       if (attempt < 2) {
@@ -589,7 +589,7 @@ async function stickReasoning(index: number) {
   if (el) el.scrollTop = el.scrollHeight
 }
 
-// --------------------------------- 访客信息 ---------------------------------
+// ---------------------- 访客信息 ----------------------
 
 /** 访客下拉：复制访客信息并提示 */
 async function handleVisitorCommand() {
@@ -599,14 +599,14 @@ async function handleVisitorCommand() {
   modal.msgSuccess(t('business.chat.copySuccess'))
 }
 
-// --------------------------------- 会话消息 ---------------------------------
+// ---------------------- 会话消息 ----------------------
 
 /** 消息发送时间（无值时返回空，悬浮时展示） */
 function timeText(msg: SessionMsgItem) {
   return msg.addTime ? parseTime(msg.addTime) || '' : ''
 }
 
-// --------------------------------- 滚动 ---------------------------------
+// ---------------------- 滚动 ----------------------
 
 /**
  * 对话区域滚动：计算是否贴近底部
@@ -692,7 +692,8 @@ function smoothScrollBottom(el: HTMLElement) {
   requestAnimationFrame(tick)
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 onMounted(() => {
   init()
 })

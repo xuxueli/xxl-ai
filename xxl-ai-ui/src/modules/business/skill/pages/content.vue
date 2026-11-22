@@ -104,17 +104,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import { t } from '@/i18n'
 import { renderMarkdown } from '@/utils/markdown'
-import {
-  listSkillBySpace,
-  skillFileTree,
-  skillFileLoad,
-  skillFileInsertDir,
-  skillFileInsertFile,
-  skillFileRename,
-  skillFileMove,
-  skillFileSaveContent,
-  skillFileDelete
-} from '../api'
+import { skillApi } from '../api'
 import modal from '@/utils/modal'
 import type { SkillFile } from '../types'
 import { SkillFileType } from '../types'
@@ -123,7 +113,8 @@ import type { ElTree } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 
-// --------------------------------- ref data ---------------------------------
+// ---------------------- 响应式数据 ----------------------
+
 const skillId = ref(Number(route.query.skillId) || 0)
 const skillName = ref(String(route.query.skillName ?? ''))
 
@@ -137,16 +128,17 @@ const currentFile = ref<SkillFile | null>(null) /* 当前编辑对象（含内�
 const editorContent = ref('') /* 编辑器内容 */
 const editorMode = ref<'edit' | 'preview'>('edit') /* Markdown 编辑/预览模式 */
 const saving = ref(false) /* 保存请求中 */
-
 const isMarkdown = computed(() => currentFile.value?.fileType === 'md')
 const previewHtml = computed(() => (editorMode.value === 'preview' ? renderMarkdown(editorContent.value) : ''))
 const editorRows = computed(() => Math.max(18, Math.floor((window.innerHeight - 320) / 22)))
 
-// --------------------------------- 树操作 ---------------------------------
+// ---------------------- 树操作 ----------------------
+
 function loadTree() {
   if (!skillId.value) return
   treeLoading.value = true
-  skillFileTree(skillId.value)
+  skillApi
+    .fileTree(skillId.value)
     .then((response) => {
       treeData.value = response.data
       // 保持当前选中状态
@@ -163,7 +155,8 @@ function loadTree() {
 /** 页头 SKILL 名称：优先取路由参数，缺失时按 skillId 回查 */
 function loadSkillName() {
   if (skillName.value) return
-  listSkillBySpace()
+  skillApi
+    .listBySpace()
     .then((response) => {
       const hit = response.data.find((item) => item.id === skillId.value)
       if (hit?.name) skillName.value = hit.name
@@ -188,7 +181,7 @@ function handleNodeClick(data: SkillFile) {
   if (data.type === SkillFileType.FILE) {
     currentFile.value = data
     editorMode.value = 'edit'
-    skillFileLoad(data.id as number).then((response) => {
+    skillApi.fileLoad(data.id as number).then((response) => {
       const file = response.data
       // 编辑器始终以最新内容为准
       editorContent.value = file.content ?? ''
@@ -226,14 +219,15 @@ function handleNodeDrop(draggingNode: any, dropNode: any, dropType: string) {
   const isInner = dropType === 'inner'
   const targetParentId = isInner ? (dropNode.data?.id ?? 0) : (dropNode.parent?.data?.id ?? dropNode.data?.parentId ?? 0)
   if (targetParentId === draggingNode.data?.parentId) return
-  skillFileMove({ id: nodeId, parentId: targetParentId }).then(() => {
+  skillApi.fileMove({ id: nodeId, parentId: targetParentId }).then(() => {
     modal.msgSuccess(t('business.skill.moveSuccess'))
     loadTree()
   })
   .catch(() => {})
 }
 
-// --------------------------------- 新增/重命名/删除 ---------------------------------
+// ---------------------- 新增/重命名/删除 ----------------------
+
 /** 新建文件/目录：默认创建于当前选中目录，无选中则为根级 */
 function handleNew(type: 'file' | 'dir') {
   const parentNode = selectedNode.value
@@ -248,7 +242,7 @@ function handleNew(type: 'file' | 'dir') {
         return Promise.reject('name-empty')
       }
       const data: SkillFile = { skillId: skillId.value, parentId, name }
-      return type === 'file' ? skillFileInsertFile(data) : skillFileInsertDir(data)
+      return type === 'file' ? skillApi.fileInsertFile(data) : skillApi.fileInsertDir(data)
     })
     .then(() => {
       modal.msgSuccess(t('business.skill.newSuccess'))
@@ -272,7 +266,7 @@ function handleRename() {
         modal.msgWarning(t('common.requiredMsg', [t('business.skill.name')]))
         return Promise.reject('name-empty')
       }
-      return skillFileRename({ id: node.id as number, name })
+      return skillApi.fileRename({ id: node.id as number, name })
     })
     .then(() => {
       modal.msgSuccess(t('business.skill.renameSuccess'))
@@ -291,7 +285,7 @@ function handleDeleteNode() {
   const label = node.type === SkillFileType.DIR ? t('business.skill.dir') : t('business.skill.file')
   modal
     .confirm(t('business.skill.confirmDeleteNode', [node.name ?? '', label]))
-    .then(() => skillFileDelete(node.id as number))
+    .then(() => skillApi.fileDelete(node.id as number))
     .then(() => {
       modal.msgSuccess(t('common.deleteSuccess'))
       currentFile.value = null
@@ -301,11 +295,12 @@ function handleDeleteNode() {
     .catch(() => {})
 }
 
-// --------------------------------- 内容保存 ---------------------------------
+// ---------------------- 内容保存 ----------------------
+
 function handleSaveContent() {
   if (!currentFile.value || currentFile.value.type !== SkillFileType.FILE) return
   saving.value = true
-  skillFileSaveContent({ id: currentFile.value.id as number, content: editorContent.value })
+  skillApi.fileSaveContent({ id: currentFile.value.id as number, content: editorContent.value })
     .then(() => {
       modal.msgSuccess(t('common.saveSuccess'))
     })
@@ -319,7 +314,8 @@ function goBack() {
   router.push({ path: '/skill' })
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 loadTree()
 loadSkillName()
 </script>

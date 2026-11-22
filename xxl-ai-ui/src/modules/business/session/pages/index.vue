@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.session.agent')" prop="agentId">
           <el-select
             v-model="queryParams.agentId"
@@ -45,7 +45,7 @@
 
       <!-- 对话列表：仅点击「查看明细」查看，行点击不触发 -->
       <el-table v-loading="table.loading" :data="table.list">
-        <el-table-column :label="t('common.serialNo')" align="center" type="index" min-width="70" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" min-width="80" />
         <el-table-column :label="t('business.session.agent')" align="left" prop="agentName" min-width="160" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.session.sessionTitle')" align="left" prop="title" min-width="220" :show-overflow-tooltip="true" />
         <el-table-column
@@ -59,7 +59,7 @@
         <el-table-column :label="t('common.updateTime')" align="center" prop="updateTime" min-width="180" />
         <el-table-column :label="t('common.operation')" align="center" min-width="120" class-name="small-padding fixed-width">
           <template #default="scope">
-            <el-button link type="primary" icon="View" @click="openDetail(scope.row)" v-hasPermi="['session:default']">{{
+            <el-button link type="primary" icon="View" @click="openDetail(scope.row as SessionDTO)" v-hasPermi="['session:default']">{{
               t('business.session.viewDetail')
             }}</el-button>
           </template>
@@ -141,27 +141,28 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'Session' })
-import { t } from '@/i18n'
+import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { listSessionMsg, pageSession } from '../api'
+import { t } from '@/i18n'
+import { Pagination } from '@/components'
+import { sessionApi } from '../api'
 import { useAgentOptions } from '@/modules/business/agent/composables/useAgentOptions'
 import MarkdownView from '@/modules/business/chat/components/MarkdownView.vue'
 import type { SessionDTO, SessionMsg, SessionQuery } from '../types'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import { Pagination } from '@/components'
+import type { FormInstance } from 'element-plus'
 import type { TableState } from '@/types'
-import { ref } from 'vue'
 
 const route = useRoute()
-const resetForm = useFormReset()
 
 /** 对话消息（含前端折叠状态 showThinking） */
 interface SessionMsgItem extends SessionMsg {
   showThinking?: boolean
 }
 
-// --------------------------------- ref data ---------------------------------
+// ---------------------- 响应式数据 ----------------------
+
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
+
 /** 指定 Agent 时按 Agent 过滤（从 Agent 列表跳转携带），未指定为 undefined（下拉显示占位符） */
 const agentId = ref(Number(route.query.agentId) || 0)
 
@@ -188,17 +189,20 @@ const drawer = ref<{
   pageSize: number
 }>({ visible: false, loading: false, session: {}, messages: [], total: 0, pageNum: 1, pageSize: 10 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  pageSession(params)
+  sessionApi
+    .pageList(queryParams.value)
     .then((response) => {
       table.value.list = response.data.data
       table.value.total = response.data.total
-      table.value.loading = false
     })
     .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
       table.value.loading = false
     })
 }
@@ -209,12 +213,14 @@ function handleQuery() {
 }
 
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
 
+// ---------------------- 数据操作（增删改） ----------------------
+
 /** 打开对话明细抽屉：重置分页并加载消息 */
-function openDetail(row: any) {
+function openDetail(row: SessionDTO) {
   drawer.value.session = row
   drawer.value.messages = []
   drawer.value.total = 0
@@ -228,8 +234,13 @@ function openDetail(row: any) {
 function loadMessages() {
   if (drawer.value.session.id == null) return
   drawer.value.loading = true
-  const offset = (drawer.value.pageNum - 1) * drawer.value.pageSize
-  listSessionMsg(drawer.value.session.id, queryParams.value.agentId, offset, drawer.value.pageSize)
+  sessionApi
+    .msgList({
+      sessionId: drawer.value.session.id,
+      agentId: queryParams.value.agentId,
+      pageNum: drawer.value.pageNum,
+      pageSize: drawer.value.pageSize
+    })
     .then((response) => {
       drawer.value.messages = response.data.data.map((msg) => ({ ...msg, showThinking: false }))
       drawer.value.total = response.data.total
@@ -245,7 +256,8 @@ function toggleThinking(index: number) {
   if (msg) msg.showThinking = !msg.showThinking
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 loadAgentOptions()
 getList()
 </script>

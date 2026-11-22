@@ -16,7 +16,7 @@
       </el-row>
 
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.knowledge.docName')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -41,7 +41,7 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['knowledge:doc']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['knowledge:doc']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
           <el-upload
@@ -57,17 +57,17 @@
           </el-upload>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['knowledge:doc']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['knowledge:doc']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['knowledge:doc']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeDoc()" v-hasPermi="['knowledge:doc']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="warning" plain icon="MagicStick" :disabled="table.multiple" @click="handleVectorize" v-hasPermi="['knowledge:doc']">
+          <el-button type="warning" plain icon="MagicStick" :disabled="table.multiple" @click="handleVectorize()" v-hasPermi="['knowledge:doc']">
             {{ t('business.knowledge.docVectorize') }}
           </el-button>
         </el-col>
@@ -83,14 +83,14 @@
       </el-row>
 
       <!-- 文档列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="70" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.knowledge.docName')" align="center" prop="name" min-width="2.5" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.knowledge.docStatus')" align="center" min-width="1">
           <template #default="scope">
             <el-tag :type="docStatusType(scope.row.status)">
-              {{ docStatusTitle(scope.row.status) }}
+              {{ enumTitle(docStatusOptions, scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -105,10 +105,10 @@
             <el-button link type="primary" icon="MagicStick" @click="handleVectorize(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('business.knowledge.docVectorize')
             }}</el-button>
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['knowledge:doc']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['knowledge:doc']">{{
+            <el-button link type="primary" icon="Delete" @click="removeDoc(scope.row)" v-hasPermi="['knowledge:doc']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -126,7 +126,7 @@
     </div>
 
     <!-- 添加或修改文档对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="1000px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="1000px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.knowledge.docName')" prop="name">
           <el-input v-model="formState.form.name" maxlength="200" />
@@ -144,8 +144,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -188,28 +188,25 @@
 
 <script setup lang="ts">
 defineOptions({ name: 'KnowledgeDoc' })
-import { t } from '@/i18n'
-import { listKnowledgeDoc, addKnowledgeDoc, updateKnowledgeDoc, delKnowledgeDoc, uploadKnowledgeDoc, vectorizeKnowledgeDoc, vectorizeKnowledgeBaseAll } from '@/modules/business/knowledge/doc/api'
-import { searchKnowledgeDoc } from '@/modules/business/knowledge/base/api'
-import { useEnumOption } from '@/composables/useEnumOption'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
-import modal from '@/utils/modal'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { KnowledgeDoc, KnowledgeDocQuery } from '@/modules/business/knowledge/doc/types'
+import { t } from '@/i18n'
+import { Pagination, RightToolbar } from '@/components'
+import { enumTitle, useEnumOption } from '@/composables/useEnumOption'
+import modal from '@/utils/modal'
+import { knowledgeDocApi } from '@/modules/business/knowledge/doc/api'
+import { knowledgeBaseApi } from '@/modules/business/knowledge/base/api'
+import type { KnowledgeDoc, KnowledgeDocForm, KnowledgeDocQuery } from '@/modules/business/knowledge/doc/types'
 import type { KnowledgeHit } from '@/modules/business/knowledge/base/types'
 import type { FormInstance, UploadRequestOptions } from 'element-plus'
-import { ref } from 'vue'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
 const route = useRoute()
 const router = useRouter()
 
-interface KnowledgeDocForm extends KnowledgeDoc {}
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
 const baseId = ref<number>(Number((route.query.baseId as string) ?? 0))
 const baseName = ref<string>((route.query.baseName as string) ?? '')
@@ -227,97 +224,123 @@ const search = ref({
   loading: false
 })
 
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<KnowledgeDocForm> = { baseId: baseId.value, chunkCount: 0, status: 0 }
+
 const formState = ref<FormState<KnowledgeDocForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.knowledge.docName')]), trigger: 'blur' }],
     content: [{ required: true, message: t('common.requiredMsg', [t('business.knowledge.docContent')]), trigger: 'blur' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
-function docStatusTitle(status: number) {
-  return docStatusOptions.value.find((i) => i.code === status)?.title ?? String(status)
-}
-function docStatusType(status: number) {
+// ---------------------- 状态展示 ----------------------
+
+function docStatusType(status?: number) {
   return status === 1 ? 'success' : status === 2 ? 'danger' : 'info'
 }
 
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listKnowledgeDoc(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  knowledgeDocApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
-function reset() {
-  formState.value.form = { id: undefined, baseId: baseId.value, name: undefined, content: undefined, chunkCount: 0, status: 0 }
-  resetForm('formRef')
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
 }
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
-function handleSelectionChange(selection: KnowledgeDoc[]) {
+function syncSelection(selection: KnowledgeDoc[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.knowledge.doc')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: KnowledgeDoc) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  resetForm()
+  formState.value.form = {
+    id: current.id,
+    baseId: baseId.value,
+    name: current.name,
+    content: current.content,
+    chunkCount: current.chunkCount,
+    status: current.status ?? 0
+  }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.knowledge.doc')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeDoc(row?: KnowledgeDoc) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.knowledge.confirmDeleteDoc', [row.name ?? String(row.id)])
+    : t('business.knowledge.confirmBatchDeleteDoc', [ids.length])
   modal
-    .confirm(t('business.knowledge.confirmDeleteDoc', [ids]))
-    .then(() => delKnowledgeDoc(ids))
+    .confirm(confirmText)
+    .then(() => knowledgeDocApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    const req = submitData.id != null ? updateKnowledgeDoc(submitData) : addKnowledgeDoc(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? knowledgeDocApi.update(formState.value.form) : knowledgeDocApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
-// --------------------------------- 上传 / 向量化 ---------------------------------
+// ---------------------- 上传 / 向量化 ----------------------
+
 /** 上传前校验：仅允许 .txt/.md 且不超 10MB */
 function handleBeforeUpload(file: File): boolean {
   const ext = (file.name.toLowerCase().match(/\.(\w+)$/) || [])[1]
@@ -339,7 +362,8 @@ async function handleUpload(options: UploadRequestOptions) {
     return
   }
   uploading.value = true
-  await uploadKnowledgeDoc(baseId.value, options.file as File)
+  await knowledgeDocApi
+    .upload(baseId.value, options.file as File)
     .then(() => {
       modal.msgSuccess(t('common.addSuccess'))
       getList()
@@ -351,7 +375,7 @@ async function handleUpload(options: UploadRequestOptions) {
 }
 
 /** 向量化：分片 → 嵌入 → 写 Milvus（支持勾选多条批量向量化） */
-function handleVectorize(row: any) {
+function handleVectorize(row?: KnowledgeDoc) {
   const raw = row?.id ?? table.value.ids
   const ids = Array.isArray(raw) ? raw : [raw]
   if (ids.length === 0) return
@@ -362,7 +386,7 @@ function handleVectorize(row: any) {
       let fail = 0
       for (const id of ids) {
         try {
-          await vectorizeKnowledgeDoc(id)
+          await knowledgeDocApi.vectorize(id)
           success++
         } catch (e) {
           fail++
@@ -382,7 +406,7 @@ function handleVectorizeAll() {
   if (!baseId.value) return
   modal
     .confirm(t('business.knowledge.vectorizeAllConfirm'))
-    .then(() => vectorizeKnowledgeBaseAll(baseId.value))
+    .then(() => knowledgeDocApi.vectorizeAll(baseId.value))
     .then((res) => {
       modal.msgSuccess(res.msg)
       getList()
@@ -395,7 +419,8 @@ function goBack() {
   router.push({ path: '/knowledge/base' })
 }
 
-// --------------------------------- 向量检索 ---------------------------------
+// ---------------------- 向量检索 ----------------------
+
 /** 打开向量检索弹窗（检索当前知识库全量文档） */
 function openSearch() {
   search.value.visible = true
@@ -408,7 +433,8 @@ function handleSearchSubmit() {
     return
   }
   search.value.loading = true
-  searchKnowledgeDoc(baseId.value, search.value.query)
+  knowledgeBaseApi
+    .search(baseId.value, search.value.query)
     .then((response) => {
       search.value.list = response.data
       search.value.loading = false
@@ -418,7 +444,8 @@ function handleSearchSubmit() {
     })
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>
 

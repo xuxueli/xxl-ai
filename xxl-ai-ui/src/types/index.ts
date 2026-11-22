@@ -1,11 +1,13 @@
 /**
- * 通用基础结构（types/index.ts）
- * 覆盖项目通用类型：后端统一返回、分页、枚举数据、字典数据、登录认证、动态路由、页面 UI 状态等
- * 对应后端 com.xxl.tool.response.Response、com.xxl.sso.core.model.LoginInfo 等
+ * @fileoverview 通用基础结构
+ * @description
+ *    覆盖项目通用类型：后端统一返回、分页、枚举数据、登录认证、动态路由、页面 UI 状态等；
+ *    对应后端 com.xxl.tool.response.Response、com.xxl.sso.core.model.LoginInfo 等
+ * @author xuxueli 2026-11-22
  */
 import type { FormRules } from 'element-plus'
 
-// --------------------------------- 通用返回结构 ---------------------------------
+// ---------------------- 通用返回结构 ----------------------
 
 /**
  * 后端统一返回结构
@@ -29,32 +31,11 @@ export interface PageModel<T> {
   total: number
 }
 
-/**
- * 分页查询入参（后端约定 offset / pagesize）
- * - 前端页面通常以 pageNum/pageSize 组织，调用接口时转换为 offset/pagesize
- */
-export interface PageQuery {
-  offset: number
-  pagesize: number
-  [key: string]: unknown
-}
-
-/**
- * 列表请求参数工具类型
- * 由「搜索栏表单查询类型」派生为「列表接口请求类型」：
- * - 去除前端分页字段（pageNum/pageSize）
- * - 补充后端分页字段（offset/pagesize）
- * - 筛选字段全部可选（允许只传分页或空对象）
- *
- * 用法：export type RoleListQuery = ListQuery<RoleQuery>
- */
-export type ListQuery<T extends object> = PageQuery & Partial<Omit<T, 'pageNum' | 'pageSize'>>
-
-// --------------------------------- 枚举数据（loadEnumItem） ---------------------------------
+// ---------------------- 枚举数据（loadEnumItem） ----------------------
 
 /**
  * 枚举项统一结构
- * 对应 loadEnumItem 接口返回项（如 UserStatuEnum、RoleStatusEnum）
+ * 对应 loadEnumItem 接口返回项（如 PublishStatusEnum、McpTypeEnum）
  */
 export interface EnumOption {
   /** 枚举编码 */
@@ -64,7 +45,7 @@ export interface EnumOption {
   [key: string]: unknown
 }
 
-// --------------------------------- 登录认证 ---------------------------------
+// ---------------------- 登录认证 ----------------------
 
 /**
  * 登录用户信息
@@ -86,33 +67,34 @@ export interface LoginInfo {
   [key: string]: unknown
 }
 
-// --------------------------------- 动态路由（后端菜单） ---------------------------------
+// ---------------------- 动态菜单（后端菜单） ----------------------
 
 /**
- * 后端菜单数据 → 前端路由
- * 对应 store/modules/routes.ts transformRoutes 入参
+ * 后端菜单节点（/getMenus 返回）
+ * 纯业务字段，路由与菜单结构由前端按自身 UI 库适配
  */
-export interface MenuRoute {
-  path?: string
-  component?: string
-  name?: string
-  redirect?: string
-  hidden?: boolean
-  alwaysShow?: boolean
-  meta?: {
-    title?: string
-    icon?: string
-    activeMenu?: string
-    affix?: boolean
-    hidden?: boolean
-    query?: Record<string, string>
-    [key: string]: unknown
-  }
-  children?: MenuRoute[]
-  [key: string]: unknown
+export interface MenuNode {
+  /** 资源 ID */
+  id: number
+  /** 父节点 ID */
+  parentId: number
+  /** 菜单名称 */
+  name: string
+  /** 类型：0-目录、1-菜单 */
+  type: number
+  /** 菜单地址：内部路径或 http(s) 外链 */
+  url?: string
+  /** 图标标识（由 UI 库解析） */
+  icon?: string
+  /** 排序 */
+  order?: number
+  /** 显示状态：0-显示、1-隐藏 */
+  visible: number
+  /** 子菜单 */
+  children?: MenuNode[]
 }
 
-// --------------------------------- 页面 UI 状态（列表页通用） ---------------------------------
+// ---------------------- 页面 UI 状态（列表页通用） ----------------------
 
 /**
  * 表格 UI 状态（列表页通用）
@@ -129,9 +111,9 @@ export interface TableState<T = unknown> {
   showSearch?: boolean
   /** 选中行 ID 数组 */
   ids: number[]
-  /** 是否单选（多选数量不为 1 时禁用"修改"） */
+  /** 是否单选（多选数量不为 1 时禁用「修改」） */
   single?: boolean
-  /** 是否多选（无选中时禁用"删除"） */
+  /** 是否多选（无选中时禁用「删除」） */
   multiple?: boolean
 }
 

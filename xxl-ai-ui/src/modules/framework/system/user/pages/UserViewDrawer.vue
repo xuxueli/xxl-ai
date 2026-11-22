@@ -1,6 +1,7 @@
 <!--
-  UserView（用户详情抽屉）
-  展示用户基本信息、角色信息及账号相关数据
+  UserViewDrawer（用户详情抽屉）
+  功能：展示用户基本信息、角色信息及账号相关数据
+  @author xuxueli 2026-11-22
 -->
 <template>
   <el-drawer
@@ -52,7 +53,7 @@
           <div class="info-item">
             <label class="info-label">{{ t('system.user.statusLabel') }}：</label>
             <span class="info-value plaintext">
-              <el-tag size="small" :type="info.status === 0 ? 'success' : 'danger'">{{ statusText(info.status) }}</el-tag>
+              <el-tag size="small" :type="info.status === 0 ? 'success' : 'danger'">{{ enumTitle(statusOptions, info.status) }}</el-tag>
             </span>
           </div>
         </el-col>
@@ -88,44 +89,39 @@
 </template>
 
 <script setup lang="ts">
-defineOptions({ name: 'UserView' })
+defineOptions({ name: 'UserViewDrawer' })
+import { computed, ref } from 'vue'
 import { t } from '@/i18n'
-import { listRoleOptions } from '../api'
-import { loadEnumItem } from '@/modules/framework/system/dict/api'
+import { enumTitle, useEnumOption } from '@/composables/useEnumOption'
 import { parseTime } from '@/utils/common'
+import { roleApi } from '@/modules/framework/system/role/api'
 import type { User } from '../types'
 import type { EnumOption } from '@/types'
-import { computed, ref } from 'vue'
 
 const visible = ref(false)
 const loading = ref(false)
 const info = ref<User>({})
-const statusOptions = ref<EnumOption[]>([])
 const roleOptions = ref<EnumOption[]>([])
 
+// 用户状态选项，由后端枚举接口加载
+const { UserStatuEnum: statusOptions } = useEnumOption('UserStatuEnum')
+
+/** 角色编码 → 名称 */
 const roleName = computed(() => {
   const roleCode = info.value.role
   if (!roleCode) return ''
-  return roleOptions.value.find((i) => i.code === roleCode)?.title || roleCode
+  return roleOptions.value.find((item) => item.code === roleCode)?.title || roleCode
 })
-
-/** 状态编码 → 文案 */
-function statusText(status?: number) {
-  const item = statusOptions.value.find((i) => i.code === status)
-  return item ? item.title : status
-}
 
 /** 打开详情抽屉 */
 function open(row: User) {
   visible.value = true
   loading.value = true
   info.value = { ...row }
-  listRoleOptions().then((response) => {
-    roleOptions.value = response.data
-  })
-  loadEnumItem('UserStatuEnum')
-    .then((res) => {
-      statusOptions.value = res.data
+  roleApi
+    .list()
+    .then((response) => {
+      roleOptions.value = response.data
     })
     .finally(() => {
       loading.value = false

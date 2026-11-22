@@ -47,7 +47,8 @@ export const constantRoutes = [
         name: 'Profile',
         path: '/user/profile/:activeTab?',
         component: () => import('@/modules/framework/system/user/pages/profile/index.vue'),
-        meta: { title: t('layout.nav.profile'), icon: 'user' }
+        // 使用 getter 延迟翻译，避免模块加载期固化语言（后端基础配置同步语言后才可正确取值）
+        meta: { get title() { return t('layout.nav.profile') }, icon: 'user' }
       }
     ]
   },

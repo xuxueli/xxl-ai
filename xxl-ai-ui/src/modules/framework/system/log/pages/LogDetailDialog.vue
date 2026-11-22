@@ -1,6 +1,7 @@
 <!--
-  页面：LogDetail（日志详情弹窗）
+  LogDetailDialog（日志详情弹窗）
   功能：展示单条日志的详细信息
+  @author xuxueli 2026-11-22
 -->
 <template>
   <el-dialog :title="t('system.log.detailTitle')" v-model="visible" width="700px" append-to-body>
@@ -19,7 +20,7 @@
           </el-col>
           <el-col :span="12">
             <div class="detail-item">
-              <span class="detail-label">{{ t('system.log.logModule') }}</span><span class="detail-value">{{ moduleMap[row.module] || row.module }}</span>
+              <span class="detail-label">{{ t('system.log.logModule') }}</span><span class="detail-value">{{ moduleMap[row.module ?? ''] || row.module }}</span>
             </div>
           </el-col>
         </el-row>
@@ -87,8 +88,10 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'LogDetailDialog' })
 import { t } from '@/i18n'
 import modal from '@/utils/modal'
+import type { Log } from '../types'
 import { copyText as copyTextUtil } from '@/utils/clipboard'
 
 /**
@@ -111,7 +114,7 @@ const visible = defineModel('visible', { type: Boolean, default: false })
 
 /** 组件入参类型 */
 interface DetailProps {
-  row?: any
+  row?: Log
   moduleMap?: Record<number | string, string | undefined>
 }
 

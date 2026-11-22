@@ -1,12 +1,14 @@
 /**
- * 供应商模型 类型定义
+ * @fileoverview SupplierModel 类型定义
+ * @description 实体、查询与表单类型，对应后端 SupplierModel
+ * @author xuxueli 2026-11-22
  */
-import type { ListQuery } from '@/types'
 
 /** 供应商模型实体（对应后端 SupplierModel） */
 export interface SupplierModel {
+  /** 主键 */
   id?: number
-  /** 供应商ID */
+  /** 供应商 ID */
   supplierId?: number
   /** 模型展示名称 */
   name?: string
@@ -19,17 +21,22 @@ export interface SupplierModel {
   [key: string]: unknown
 }
 
-/** 搜索栏表单查询参数 */
+/** 搜索栏查询参数（含分页，前端表单形态） */
 export interface SupplierModelQuery {
+  /** 当前页码 */
   pageNum: number
+  /** 每页条数 */
   pageSize: number
+  /** 供应商 ID */
   supplierId: number
+  /** 模型名称，模糊匹配 */
   name?: string
-  type: number
+  /** 类型筛选，-1 表示全部 */
+  type?: number
 }
 
-/** 列表接口请求参数 */
-export type SupplierModelListQuery = ListQuery<SupplierModelQuery>
+/** 新增/修改表单：复用实体中的可编辑字段 */
+export type SupplierModelForm = Pick<SupplierModel, 'id' | 'supplierId' | 'name' | 'model' | 'type' | 'status'>
 
 /** 远程模型（自动导入） */
 export interface RemoteModel {

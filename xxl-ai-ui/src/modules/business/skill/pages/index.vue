@@ -6,7 +6,7 @@
   <div class="app-container">
     <div class="content-inner">
       <!-- 搜索栏 -->
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="table.showSearch">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="auto" v-show="table.showSearch">
         <el-form-item :label="t('business.skill.name')" prop="name">
           <el-input
             v-model="queryParams.name"
@@ -32,15 +32,15 @@
       <!-- 操作按钮 -->
       <el-row :gutter="10" class="mb8">
         <el-col :span="1.5">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['skill:default']">{{ t('common.add') }}</el-button>
+          <el-button type="primary" plain icon="Plus" @click="openCreateForm" v-hasPermi="['skill:default']">{{ t('common.add') }}</el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="handleUpdate" v-hasPermi="['skill:default']">
+          <el-button type="success" plain icon="Edit" :disabled="table.single" @click="openEditForm()" v-hasPermi="['skill:default']">
             {{ t('common.modify') }}
           </el-button>
         </el-col>
         <el-col :span="1.5">
-          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="handleDelete" v-hasPermi="['skill:default']">
+          <el-button type="danger" plain icon="Delete" :disabled="table.multiple" @click="removeSkill()" v-hasPermi="['skill:default']">
             {{ t('common.delete') }}
           </el-button>
         </el-col>
@@ -48,9 +48,9 @@
       </el-row>
 
       <!-- SKILL 列表 -->
-      <el-table v-loading="table.loading" :data="table.list" @selection-change="handleSelectionChange">
+      <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
         <el-table-column type="selection" width="45" align="center" />
-        <el-table-column :label="t('common.serialNo')" align="center" prop="id" width="80" />
+        <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
         <el-table-column :label="t('business.skill.name')" align="center" prop="name" min-width="150" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.description')" align="center" prop="description" min-width="240" :show-overflow-tooltip="true" />
         <el-table-column :label="t('business.skill.version')" align="center" prop="version" width="90" />
@@ -66,10 +66,10 @@
             <el-button link type="primary" icon="FolderOpened" @click="goContent(scope.row)" v-hasPermi="['skill:default']">{{
               t('business.skill.contentManage')
             }}</el-button>
-            <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['skill:default']">{{
+            <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['skill:default']">{{
               t('common.modify')
             }}</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['skill:default']">{{
+            <el-button link type="primary" icon="Delete" @click="removeSkill(scope.row)" v-hasPermi="['skill:default']">{{
               t('common.delete')
             }}</el-button>
           </template>
@@ -87,7 +87,7 @@
     </div>
 
     <!-- 添加或修改 SKILL 对话框 -->
-    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body>
+    <el-dialog :title="formState.title" v-model="formState.visible" width="620px" append-to-body :close-on-click-modal="false" @closed="resetForm">
       <el-form ref="formRef" :model="formState.form" :rules="formState.rules" label-width="90px">
         <el-form-item :label="t('business.skill.name')" prop="name">
           <el-input v-model="formState.form.name" :placeholder="t('business.skill.namePlaceholder')" maxlength="100" />
@@ -107,8 +107,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">{{ t('modal.confirmButton') }}</el-button>
-          <el-button @click="cancel">{{ t('modal.cancelButton') }}</el-button>
+          <el-button type="primary" @click="saveForm">{{ t('modal.confirmButton') }}</el-button>
+          <el-button @click="closeForm">{{ t('modal.cancelButton') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -120,115 +120,137 @@ defineOptions({ name: 'Skill' })
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import { t } from '@/i18n'
-import { listSkill, addSkill, updateSkill, delSkill } from '../api'
-import { useFormReset } from '@/composables/useFormReset'
-import { usePageParams } from '@/composables/usePageParams'
 import modal from '@/utils/modal'
-import { RightToolbar, Pagination } from '@/components'
-import type { FormState, TableState } from '@/types'
-import type { Skill, SkillQuery } from '../types'
+import { Pagination, RightToolbar } from '@/components'
+import { skillApi } from '../api'
+import type { Skill, SkillForm, SkillQuery } from '../types'
 import type { FormInstance } from 'element-plus'
+import type { FormState, TableState } from '@/types'
 
-const resetForm = useFormReset()
 const router = useRouter()
 
-interface SkillForm extends Skill {}
+// ---------------------- 响应式数据 ----------------------
 
-// --------------------------------- ref data ---------------------------------
+const queryRef = ref<FormInstance>() /* 搜索栏表单 */
 const formRef = ref<FormInstance>() /* 编辑表单 ref */
-
 const queryParams = ref<SkillQuery>({ pageNum: 1, pageSize: 10, name: undefined, status: -1 })
 
 const table = ref<TableState<Skill>>({ list: [], total: 0, loading: true, showSearch: true, ids: [], single: true, multiple: true })
 
+// 编辑表单默认值：新增初始值与每次重置共用
+const FORM_DEFAULTS: Readonly<SkillForm> = { version: '1.0', status: 0 }
+
 const formState = ref<FormState<SkillForm>>({
   visible: false,
   title: '',
-  form: {},
+  form: { ...FORM_DEFAULTS },
   rules: {
     name: [{ required: true, message: t('common.requiredMsg', [t('business.skill.name')]), trigger: 'blur' }]
   }
 })
 
-// --------------------------------- fun ---------------------------------
+// ---------------------- 分页检索 ----------------------
+
 function getList() {
   table.value.loading = true
-  const params = usePageParams(queryParams)()
-  listSkill(params).then((response) => {
-    table.value.list = response.data.data
-    table.value.total = response.data.total
-    table.value.loading = false
-  })
+  skillApi
+    .pageList(queryParams.value)
+    .then((response) => {
+      table.value.list = response.data.data
+      table.value.total = response.data.total
+    })
+    .catch(() => {
+      // 错误已由请求层提示，继续走到 finally 复位 loading
+    })
+    .finally(() => {
+      table.value.loading = false
+    })
 }
-function reset() {
-  formState.value.form = { id: undefined, name: undefined, description: undefined, version: '1.0', status: 0 }
-  resetForm('formRef')
+
+// ---------------------- 数据操作（增删改） ----------------------
+
+/** 重置编辑表单：重置表单数据为默认值 + 清除校验状态 */
+function resetForm() {
+  formState.value.form = { ...FORM_DEFAULTS }
+  formRef.value?.clearValidate()
 }
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
 }
 function resetQuery() {
-  resetForm('queryRef')
+  queryRef.value?.resetFields()
   handleQuery()
 }
-function handleSelectionChange(selection: Skill[]) {
+function syncSelection(selection: Skill[]) {
   table.value.ids = selection.map((i) => i.id as number)
   table.value.single = selection.length !== 1
   table.value.multiple = !selection.length
 }
-function handleAdd() {
-  reset()
+function openCreateForm() {
+  resetForm()
   formState.value.visible = true
   formState.value.title = t('common.titleAdd', [t('business.skill.skill')])
 }
-function handleUpdate(row: any) {
-  reset()
-  const id = row?.id ?? table.value.ids[0]
+function openEditForm(row?: Skill) {
+  const id = row ? row.id : table.value.ids[0]
   if (id == null) return
-  const current = table.value.list.find((item) => item.id === id)
+  const current = row ?? table.value.list.find((item) => item.id === id)
   if (!current) return
-  formState.value.form = { ...current }
+  formState.value.form = {
+    id: current.id,
+    name: current.name,
+    description: current.description,
+    version: current.version,
+    status: current.status ?? 0
+  }
   formState.value.visible = true
   formState.value.title = t('common.titleEdit', [t('business.skill.skill')])
 }
-function handleDelete(row: any) {
-  const ids = row?.id ?? table.value.ids
-  if (ids == null || (Array.isArray(ids) && ids.length === 0)) return
+function removeSkill(row?: Skill) {
+  const ids = row ? (row.id != null ? [row.id] : []) : table.value.ids
+  if (ids.length === 0) return
+  const confirmText = row
+    ? t('business.skill.confirmDelete', [row.name ?? String(row.id)])
+    : t('business.skill.confirmBatchDelete', [ids.length])
   modal
-    .confirm(t('business.skill.confirmDelete', [ids]))
-    .then(() => delSkill(ids))
+    .confirm(confirmText)
+    .then(() => skillApi.delete(ids))
     .then(() => {
+      if (table.value.list.length === ids.length && queryParams.value.pageNum > 1) {
+        queryParams.value.pageNum -= 1
+      }
       getList()
       modal.msgSuccess(t('common.deleteSuccess'))
     })
     .catch(() => {})
 }
-function submitForm() {
-  formRef.value!.validate((valid) => {
+function saveForm() {
+  formRef.value?.validate((valid) => {
     if (!valid) return
-    const submitData = { ...formState.value.form }
-    delete submitData.addTime
-    delete submitData.updateTime
-    const req = submitData.id != null ? updateSkill(submitData) : addSkill(submitData)
-    req.then(() => {
-      modal.msgSuccess(submitData.id != null ? t('common.updateSuccess') : t('common.addSuccess'))
-      formState.value.visible = false
-      getList()
-    })
+    const isEdit = formState.value.form.id != null
+    const request = isEdit ? skillApi.update(formState.value.form) : skillApi.insert(formState.value.form)
+    request
+      .then(() => {
+        modal.msgSuccess(t(isEdit ? 'common.updateSuccess' : 'common.addSuccess'))
+        closeForm()
+        getList()
+      })
+      .catch(() => {})
   })
 }
-function cancel() {
+function closeForm() {
   formState.value.visible = false
-  reset()
 }
 
-// --------------------------------- 内容管理 ---------------------------------
+// ---------------------- 内容管理 ----------------------
+
 /** 跳转内容管理页（隐藏路由，按 loadView 映射 skill/pages/content.vue，仅需 skillId） */
-function goContent(row: any) {
+function goContent(row: Skill) {
   router.push({ path: '/skill/content', query: { skillId: String(row.id) } })
 }
 
-// --------------------------------- page init ---------------------------------
+// ---------------------- 页面初始化 ----------------------
+
 getList()
 </script>

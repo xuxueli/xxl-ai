@@ -1,11 +1,12 @@
-import type { PageQuery } from '@/types'
 /**
- * 用户管理类型定义（modules/framework/system/user 页面）
- * 对应后端 User.java（角色由枚举 XxlRoleEnum 定义，存储角色编码）
+ * @fileoverview User 类型定义
+ * @description 实体、查询与表单类型，对应后端 UserDTO.java；角色由枚举 XxlRoleEnum 定义
+ * @author xuxueli 2026-11-22
  */
 
-/** 用户实体（对应 User.java，用户管理 CRUD） */
+/** 用户实体（对应后端 UserDTO） */
 export interface User {
+  /** 主键 */
   id?: number
   /** 账号 */
   username?: string
@@ -13,7 +14,7 @@ export interface User {
   password?: string
   /** 角色编码：admin-管理员、user-普通用户 */
   role?: string
-  /** 角色名称（非DB字段，loadProfile 返回） */
+  /** 角色名称（非 DB 字段，loadProfile 返回） */
   roleName?: string
   /** 真实姓名 */
   realName?: string
@@ -21,31 +22,29 @@ export interface User {
   email?: string
   /** 状态：0-正常、1-停用 */
   status?: number
+  /** 添加时间 */
   addTime?: string
+  /** 更新时间 */
   updateTime?: string
   [key: string]: unknown
 }
 
-/** 用户分页查询参数（搜索栏表单形态） */
+/** 搜索栏查询参数（含分页，前端表单形态） */
 export interface UserQuery {
+  /** 当前页码 */
   pageNum: number
+  /** 每页条数 */
   pageSize: number
-  /** 账号关键词 */
+  /** 账号，模糊匹配 */
   username?: string
-  /** 状态：-1 全部 */
-  status: number
-}
-
-/** 用户表单（新增/修改入参） */
-export type UserForm = Pick<User, 'id' | 'username' | 'realName' | 'email' | 'status' | 'password'> & {
-  /** 角色编码 */
-  role?: string
-}
-
-/** 用户列表请求参数（请求形态：offset/pagesize，供 api 使用） */
-export interface UserListQuery extends PageQuery {
-  /** 账号关键词 */
-  username?: string
-  /** 状态：-1 全部 */
+  /** 状态筛选，-1 表示全部 */
   status?: number
+}
+
+/** 新增/修改表单：复用实体中的可编辑字段 + 空间授权字段 */
+export type UserForm = Pick<User, 'id' | 'username' | 'realName' | 'email' | 'status' | 'password' | 'role'> & {
+  /** 授权空间 ID 集合 */
+  spaceIds?: number[]
+  /** 是否同步空间授权（含清空授权场景） */
+  updateSpaces?: boolean
 }

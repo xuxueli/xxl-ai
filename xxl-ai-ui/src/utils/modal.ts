@@ -12,6 +12,7 @@
  *   modal.msgSuccess('保存成功')
  */
 import { ElMessage, ElMessageBox, ElNotification, ElLoading } from 'element-plus'
+import type { ElMessageBoxOptions } from 'element-plus'
 import { t } from '@/i18n'
 
 // 全局 Loading 实例引用，供 closeLoading 关闭
@@ -88,12 +89,16 @@ export default {
   /**
    * 输入框：返回 Promise<{ value: string }>，then 中获取用户输入
    *   modal.prompt('请输入原因').then(({ value }) => { ... })
+   *
+   * @param content 提示文案
+   * @param options 额外的 ElMessageBox 配置（如 inputValidator / inputPattern）
    */
-  prompt(content: string): Promise<{ value: string }> {
+  prompt(content: string, options?: ElMessageBoxOptions): Promise<{ value: string }> {
     return ElMessageBox.prompt(content, t('modal.title'), {
       confirmButtonText: t('modal.confirmButton'),
       cancelButtonText: t('modal.cancelButton'),
-      type: 'warning'
+      type: 'warning',
+      ...options
     })
   },
 
