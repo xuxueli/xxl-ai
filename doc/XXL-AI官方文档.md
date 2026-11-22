@@ -2035,6 +2035,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 ```
 
 - 4、【ING】调度过期处理策略：如电脑休眠错过时间，启动之后如何处理策略；
+- 5、【ING】安装包压缩；
 
 ### TODO LIST
 - 1、Bot机器人：Super Agent 方案；桌面机器人，可在桌面悬浮窗中进行互动；体现工作状态，同步消息通知；
