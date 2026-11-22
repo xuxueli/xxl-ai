@@ -1984,14 +1984,9 @@ docker compose down
 - 19、【体验】UI显示宽高：适配多宽高显示器，提升体验；
 - 20、【优化】对话持久化与断点恢复：发送会话后立即落库用户提问；模型每完成一条消息按本轮快照落库；流式回复草稿每 3 秒落库。长轮次或异常退出后重新打开会话，可恢复到最近一次完整内容，不再出现整轮空白。
 
-**MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
-```
-sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
-```
+### v1.7.0 Release Notes[2026-11-22]
 
-### v1.7.0 Release Notes[ING]
-
-**【云版（Web 服务端）】**
+**【本地版（Desk 桌面端）】**
 
 - 1、【架构】Harness模块独立：针对会话Loop，包含模型请求、工具调用、MCP调用、SKILL加载等等，统一闭环在chat模块下独立的 harness 模块中，提升可维护性和可扩展性；
 - 2、【模型】会话模型标准化：针对会话模型进行标准化，会话Loop差异化行为统一通过“会话属性”扩展设置；会话属性进行枚举化设计，显示在会话属性配置。会话Loop关注的主要会话属性包括：
@@ -2008,10 +2003,15 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 8、【体验】会话区步骤内容渲染优化：单轮次多个步骤内容，点击单个步骤自动折叠其他步骤内容，提升会话区操作体验；
 - 9、【体验】定时任务会话标题优化：定时任务触发的会话，标题显示为「任务名称 + 触发时间」，标题固定不随后续会话复用而变化；
 
-**【本地版（Desk 桌面端）】**
+**【云版（Web 服务端）】**
 
 - 1、【重构】UI项目重构：跟进XXL-BOOT升级项目SKILL，代码做针对性强化升级；
 - 2、【体验】菜单整合优化：整合功能菜单，提升操作效率、优化体验；
+
+**MacOS 安装说明**：macOS 提示「文件损坏」并非实际损坏，而是安装软件未签名（没有开发者账号）。将安装软件拖入 /Applications 后，终端执行如下命令即可。
+```
+sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
+```
 
 ### v1.7.1 Release Notes[ING]
 - 1、【ING】应用中心：
