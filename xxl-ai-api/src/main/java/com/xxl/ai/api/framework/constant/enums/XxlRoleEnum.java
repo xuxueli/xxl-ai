@@ -83,40 +83,39 @@ public enum XxlRoleEnum {
         // 首页
         resources.add(res(1, 0, "首页", ResourceTypeEnum.MENU, "dashboard", "/dashboard", "dashboard", 100));
 
-        // Agent管理（一级菜单）
-        resources.add(res(2, 0, "Agent管理", ResourceTypeEnum.MENU, "agent:default", "/agent/index", "monitor", 200));
+        // Agent智能体（一级菜单）
+        resources.add(res(2, 0, "Agent智能体", ResourceTypeEnum.MENU, "agent:default", "/agent/index", "monitor", 200));
 
         // 对话和记忆（目录：对话管理 + 长期记忆）
         resources.add(res(3, 0, "对话和记忆", ResourceTypeEnum.CATALOG, "dialog", "/dialog", "message", 300));
         resources.add(res(31, 3, "对话管理", ResourceTypeEnum.MENU, "session:default", "/session", "message", 301));
         resources.add(res(32, 3, "长期记忆", ResourceTypeEnum.MENU, "memory:default", "/memory", "star", 302));
 
+        // 扩展中心（目录：SKILL技能 + MCP工具）
+        resources.add(res(4, 0, "扩展中心", ResourceTypeEnum.CATALOG, "extension", "/extension", "tool", 400));
+        resources.add(res(41, 4, "SKILL技能", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 401));
+        resources.add(res(42, 4, "MCP工具", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 402));
+        resources.add(resHidden(411, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 403));
+
         // 知识库
-        resources.add(res(4, 0, "RAG知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 400));
-        resources.add(resHidden(41, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 401));
-
-        // SKILL
-        resources.add(res(5, 0, "SKILL技能", ResourceTypeEnum.MENU, "skill:default", "/skill", "skill", 500));
-        resources.add(resHidden(51, 0, "SKILL内容", ResourceTypeEnum.MENU, "skill:default", "/skill/content", "", 501));
-
-        // MCP
-        resources.add(res(6, 0, "MCP工具", ResourceTypeEnum.MENU, "mcp:default", "/mcp", "link", 600));
+        resources.add(res(5, 0, "RAG知识库", ResourceTypeEnum.MENU, "knowledge:base", "/knowledge/base", "documentation", 500));
+        resources.add(resHidden(51, 0, "知识文档", ResourceTypeEnum.MENU, "knowledge:doc", "/knowledge/base/doc", "", 501));
 
         // 供应商
-        resources.add(res(7, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 700));
-        resources.add(resHidden(71, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 701));
+        resources.add(res(6, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier", "server", 600));
+        resources.add(resHidden(61, 0, "供应商模型", ResourceTypeEnum.MENU, "supplier:default", "/supplier/model", "", 601));
 
         // 系统管理（仅管理员）
         if (role == ADMIN) {
-            resources.add(res(8, 0, "系统管理", ResourceTypeEnum.CATALOG, "system", "/system", "system", 800));
-            resources.add(res(81, 8, "业务空间", ResourceTypeEnum.MENU, "space:default", "/space", "component", 801));
-            resources.add(res(82, 8, "用户管理", ResourceTypeEnum.MENU, "system:user", "/system/user", "user", 802));
-            resources.add(res(83, 8, "配置管理", ResourceTypeEnum.MENU, "system:config", "/system/config", "edit", 803));
-            resources.add(res(84, 8, "审计日志", ResourceTypeEnum.MENU, "system:log", "/system/log", "log", 804));
+            resources.add(res(7, 0, "系统管理", ResourceTypeEnum.CATALOG, "system", "/system", "system", 700));
+            resources.add(res(71, 7, "业务空间", ResourceTypeEnum.MENU, "space:default", "/space", "component", 701));
+            resources.add(res(72, 7, "用户管理", ResourceTypeEnum.MENU, "system:user", "/system/user", "user", 702));
+            resources.add(res(73, 7, "配置管理", ResourceTypeEnum.MENU, "system:config", "/system/config", "edit", 703));
+            resources.add(res(74, 7, "审计日志", ResourceTypeEnum.MENU, "system:log", "/system/log", "log", 704));
         }
 
         // 帮助中心
-        resources.add(res(9, 0, "帮助中心", ResourceTypeEnum.MENU, "help", "/help", "guide", 900));
+        resources.add(res(8, 0, "帮助中心", ResourceTypeEnum.MENU, "help", "/help", "guide", 800));
 
         return resources;
     }
