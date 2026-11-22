@@ -908,6 +908,17 @@ body.resizing-vertical {
   line-height: 1.65;
 }
 
+/* --- 全局消息提示：限制最大宽度并允许多行换行，避免长错误信息铺满整行 --- */
+.el-message {
+  max-width: min(560px, calc(100vw - 32px));
+  align-items: flex-start;
+}
+
+.el-message__content {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
 /* --- 通用工具类 --- */
 .text-secondary {
   color: var(--desk-text-secondary);

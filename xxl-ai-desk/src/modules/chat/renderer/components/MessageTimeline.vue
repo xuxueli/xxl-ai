@@ -28,9 +28,24 @@ const baseDir = computed(() => {
 /* 生成中：共享秒级时钟，实时刷新耗时展示 */
 const now = useNow(() => Boolean(props.message.pending))
 
-/* 片段索引/工具 id → 展开态覆盖（未设置时按运行态默认） */
-const thinkingOpen = ref<Record<number, boolean>>({})
-const toolOpen = ref<Record<string, boolean>>({})
+/* 当前展开的步骤（思考 / 工具共用一个槽位）：同一轮只展开一个，避免长过程把对话撑高 */
+const openStep = ref('')
+
+/* 步骤标识：思考按片段下标、工具按调用 id，二者共用一个展开槽位 */
+function stepKey(kind: 'thinking' | 'tool', key: number | string): string {
+  return `${kind}:${key}`
+}
+
+/* 最后一个非正文片段下标：完成后用于把分隔线放在过程明细与答复正文之间 */
+const lastProcessIndex = computed(() => {
+  const parts = props.message.parts
+  for (let index = parts.length - 1; index >= 0; index--) {
+    if (parts[index].type !== 'text') {
+      return index
+    }
+  }
+  return -1
+})
 
 /* 最后一个片段下标（用于判断是否处于流式跟随的尾段） */
 const lastIndex = computed(() => props.message.parts.length - 1)
@@ -103,14 +118,15 @@ function isLastPart(index: number): boolean {
   return index === lastIndex.value
 }
 
-/* 思考区展开态：默认收起，避免生成时思考内容持续刷屏；用户点击可展开查看 */
+/* 思考区展开态：默认收起；同一轮仅允许展开一个步骤 */
 function thinkingExpanded(index: number): boolean {
-  return thinkingOpen.value[index] ?? false
+  return openStep.value === stepKey('thinking', index)
 }
 
-/* 切换指定思考片段的展开/收起 */
+/* 切换指定思考片段：展开时自动收起其它步骤，再次点击收起自身 */
 function toggleThinking(index: number): void {
-  thinkingOpen.value = { ...thinkingOpen.value, [index]: !thinkingExpanded(index) }
+  const key = stepKey('thinking', index)
+  openStep.value = openStep.value === key ? '' : key
 }
 
 /* 思考正文容器：索引 → 元素（生成中吸底用） */
@@ -155,14 +171,15 @@ watch(
   { flush: 'post' }
 )
 
-/* 工具卡片展开态：默认收起，仅用户点击后展开；避免「执行中自动展开 → 结束收起」造成一闪而过 */
+/* 工具卡片展开态：默认收起；与思考共用同一展开槽位，展开即折叠其它步骤 */
 function toolExpanded(tool: ToolCallState): boolean {
-  return toolOpen.value[tool.id] ?? false
+  return openStep.value === stepKey('tool', tool.id)
 }
 
-/* 切换指定工具卡片的展开/收起 */
+/* 切换指定工具卡片：再次点击收起自身 */
 function toggleTool(tool: ToolCallState): void {
-  toolOpen.value = { ...toolOpen.value, [tool.id]: !toolExpanded(tool) }
+  const key = stepKey('tool', tool.id)
+  openStep.value = openStep.value === key ? '' : key
 }
 
 /* 工具耗时：优先使用运行时上报的 durationMs（落库后仍可展示），否则按时间戳计算 */
@@ -194,7 +211,11 @@ function toolDetailsText(tool: ToolCallState): string {
 <template>
   <div class="timeline">
     <!-- 轮次完成：过程明细折叠为摘要行；有过程时可点击展开查看思考与工具调用 -->
-    <div v-if="!message.pending" class="turn-summary-row">
+    <div
+      v-if="!message.pending"
+      class="turn-summary-row"
+      :class="{ 'with-divider': !hasProcess || !processOpen }"
+    >
       <button v-if="hasProcess" class="turn-summary" @click="toggleProcess">
         <span>{{ turnSummary }}</span>
         <el-icon class="step-chevron" :class="{ open: processOpen }">
@@ -282,6 +303,12 @@ function toolDetailsText(tool: ToolCallState): string {
         :content="part.text"
         :base-dir="baseDir"
       />
+
+      <!-- 分隔线：展开时放在最后一段过程明细之后、答复正文之前，而不是摘要行下面 -->
+      <div
+        v-if="!message.pending && processOpen && index === lastProcessIndex && index < lastIndex"
+        class="process-divider"
+      />
     </template>
 
     <!-- 生成中：尾部常驻活动指示，明确「仍在运行」，避免看似卡住 -->
@@ -304,10 +331,20 @@ function toolDetailsText(tool: ToolCallState): string {
   position: relative;
 }
 
-/* 轮次摘要行：过程明细折叠后的单行入口，底部细线区分答复正文 */
+/* 轮次摘要行：折叠时底部细线区分答复正文；展开时细线移到过程明细之后 */
 .turn-summary-row {
   padding-bottom: 8px;
+}
+
+.turn-summary-row.with-divider {
   border-bottom: 1px solid var(--desk-border);
+}
+
+/* 过程明细与答复正文的分隔线：只在过程展开且后面还有正文时出现 */
+.process-divider {
+  height: 1px;
+  margin: 2px 0;
+  background: var(--desk-border);
 }
 
 .turn-summary {
