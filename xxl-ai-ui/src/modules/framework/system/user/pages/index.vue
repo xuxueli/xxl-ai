@@ -46,21 +46,21 @@
     <el-table v-loading="table.loading" :data="table.list" @selection-change="syncSelection">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column :label="t('common.id')" align="center" prop="id" width="80" />
-      <el-table-column :label="t('system.user.username')" align="center" prop="username" width="110" show-overflow-tooltip>
+      <el-table-column :label="t('system.user.username')" align="center" prop="username" width="140" show-overflow-tooltip>
         <template #default="scope">
           <el-link type="primary" @click="openDetail(scope.row)">{{ scope.row.username }}</el-link>
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.realName')" align="center" prop="realName" min-width="110" show-overflow-tooltip />
+      <el-table-column :label="t('common.realName')" align="center" prop="realName" min-width="160" show-overflow-tooltip />
       <el-table-column :label="t('common.status')" align="center" width="100">
         <template #default="scope">
           <el-switch v-model="scope.row.status" :active-value="0" :inactive-value="1" @change="handleStatusChange(scope.row)" />
         </template>
       </el-table-column>
-      <el-table-column :label="t('common.addTime')" align="center" width="170">
+      <el-table-column :label="t('common.addTime')" align="center" width="180">
         <template #default="scope">{{ parseTime(scope.row.addTime) }}</template>
       </el-table-column>
-      <el-table-column :label="t('common.operation')" align="center" width="190" class-name="small-padding fixed-width">
+      <el-table-column :label="t('common.operation')" align="center" width="240" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="openEditForm(scope.row)" v-hasPermi="['system:user']">{{ t('common.modify') }}</el-button>
           <el-button link type="primary" icon="Delete" @click="removeUser(scope.row)" v-hasPermi="['system:user']">{{ t('common.delete') }}</el-button>
@@ -428,3 +428,11 @@ function openDetail(row: User) {
 
 getList()
 </script>
+
+<style scoped>
+/* el-dropdown 默认 vertical-align: top，需与相邻 link 按钮保持同一水平线 */
+.operation-more {
+  margin-left: 12px;
+  vertical-align: middle;
+}
+</style>
