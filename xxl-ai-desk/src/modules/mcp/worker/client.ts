@@ -148,9 +148,44 @@ async function createTransport(server: McpRuntimeConfig): Promise<McpTransport> 
 /* stdio stderr 尾部缓存：服务 ID → 输出（仅用于错误提示） */
 const stderrCapture = new Map<string, string>()
 
-/* 连接失败文案：优先给出定位提示，并附带服务 stderr 尾部输出 */
+/*
+ * 归纳服务 stderr：去掉 ANSI 控制符与 \r 进度刷新，过滤下载/安装进度行（只保留「正在安装」标记），
+ * 其余日志按行去重、仅取末尾数条并限制单行长度，避免首次安装日志把错误提示刷成一大段重复文本。
+ */
+function summarizeStderr(raw: string): { output: string; installing: boolean } {
+  const noise = /^(Downloading|Installing|Resolving|Building|Preparing|Collecting|Fetching)\s+(\S+)/i
+  const seen = new Set<string>()
+  const lines: string[] = []
+  let installing = false
+  for (const item of raw.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').split(/[\r\n]+/)) {
+    const line = item.trim()
+    if (!line) {
+      continue
+    }
+    /* 进度类日志对定位无帮助：只标记首次安装，不进入提示正文 */
+    if (noise.test(line)) {
+      installing = true
+      continue
+    }
+    if (seen.has(line)) {
+      continue
+    }
+    seen.add(line)
+    lines.push(line.length > 160 ? `${line.slice(0, 160)}…` : line)
+  }
+  return { output: lines.slice(-5).join('；'), installing }
+}
+
+/* 连接失败文案：优先给出定位提示，并附带压缩后的服务 stderr 尾部输出 */
 function describeConnectError(error: Error, stderr: string, server: McpRuntimeConfig): string {
-  const base = error.message || translate(language, 'runtime.error.mcpConnectFailed')
+  const raw = error.message || translate(language, 'runtime.error.mcpConnectFailed')
+  /* pi-mcp 的超时是英文原始文案：按应用语言归一，并保留具体秒数 */
+  const timeout = raw.match(/timed out after (\d+)ms/i)
+  const base = timeout
+    ? translate(language, 'runtime.error.mcpConnectTimeout', [
+        String(Math.round(Number(timeout[1]) / 1000))
+      ])
+    : raw
   const parts: string[] = []
   if (/closed|transport/i.test(base) && !stderr) {
     parts.push(
@@ -161,14 +196,17 @@ function describeConnectError(error: Error, stderr: string, server: McpRuntimeCo
   } else {
     parts.push(base)
   }
-  if (stderr) {
-    /* 首次安装依赖的提示：避免用户把正常下载误判为服务故障 */
-    if (/Downloading|Installing|Resolving|Building/i.test(stderr)) {
-      parts.push(translate(language, 'runtime.error.mcpFirstInstall'))
-    }
-    parts.push(translate(language, 'runtime.error.mcpStderr', [stderr]))
+  const { output, installing } = summarizeStderr(stderr)
+  /* 首次安装依赖的提示：避免用户把正常下载误判为服务故障 */
+  if (installing) {
+    parts.push(translate(language, 'runtime.error.mcpFirstInstall'))
   }
-  return parts.join('；')
+  if (output) {
+    parts.push(translate(language, 'runtime.error.mcpStderr', [output]))
+  }
+  /* 兜底限长：即使服务输出大量无重复行，也不让提示退化成整屏日志 */
+  const message = parts.join('；')
+  return message.length > 300 ? `${message.slice(0, 300)}…` : message
 }
 
 /* 建立新连接（含 initialize 握手） */

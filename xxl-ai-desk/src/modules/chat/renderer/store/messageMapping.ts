@@ -170,6 +170,18 @@ export function mapStoredMessages(stored: StoredMessage[]): UiMessage[] {
         tool.result = contentToPlain(raw)
         tool.details = raw?.details
         tool.durationMs = typeof raw?.durationMs === 'number' ? raw.durationMs : undefined
+        /* MCP 结果带真实服务与工具名：还原展示名，重载后不再从归一化工具名反推 */
+        const details = raw?.details as { server?: unknown; title?: unknown; tool?: unknown } | undefined
+        const server = typeof details?.server === 'string' ? details.server : ''
+        const title =
+          typeof details?.title === 'string'
+            ? details.title
+            : typeof details?.tool === 'string'
+              ? details.tool
+              : ''
+        if (server && title) {
+          tool.toolLabel = `${server} · ${title}`
+        }
       }
       continue
     }

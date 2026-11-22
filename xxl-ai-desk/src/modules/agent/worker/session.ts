@@ -403,15 +403,19 @@ export async function runPrompt(
         }
         break
       }
-      case 'tool_execution_start':
+      case 'tool_execution_start': {
         handleTraceToolStart(traceTarget, event.toolCallId, event.toolName, event.args)
+        /* 工具展示名：MCP 等工具由 AgentTool.label 携带真实的可读名称 */
+        const toolLabel = agent.state.tools.find((tool) => tool.name === event.toolName)?.label
         sink({
           type: 'tool_start',
           toolCallId: event.toolCallId,
           toolName: event.toolName,
+          toolLabel,
           args: event.args
         })
         break
+      }
       case 'tool_execution_end':
         handleTraceToolEnd(traceTarget, event.toolCallId, {
           isError: event.isError,

@@ -95,6 +95,7 @@
       "mcpConnectionClosed": "MCP 服务连接被关闭（地址：{0}）",
       "mcpFirstInstall": "该 MCP 依赖首次安装耗时较长，请等待安装完成后重试",
       "mcpStderr": "服务输出：{0}",
+      "mcpConnectTimeout": "MCP 服务连接超时（{0} 秒）",
       "mcpRequestTimeout": "MCP 请求超时，请检查服务是否可用",
       "mcpNameDuplicate": "MCP 名称「{0}」已存在，请更换名称",
       "mcpInUse": "该 MCP 已被 {0} 个 Agent 使用，无法删除",

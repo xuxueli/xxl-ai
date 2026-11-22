@@ -52,10 +52,10 @@ export async function createSkillTools(context: ToolContext): Promise<ToolEntry[
     )
   }
 
-  /* 读取技能说明：默认 SKILL.md，可读取技能目录内其他文件 */
+  /* 读取技能：默认 SKILL.md，可读取技能目录内其他文件 */
   const readSkill: AgentTool = {
     name: 'read_skill',
-    label: '读取技能说明',
+    label: '读取技能',
     description: describe(
       '读取当前 Agent 已配置技能的 SKILL.md 完整说明或技能目录内的附属文件；任务与技能描述匹配时，先调用本工具再执行。',
       'Read the full SKILL.md or a supporting file of a skill assigned to the current agent before following it.'

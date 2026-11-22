@@ -155,16 +155,12 @@ watch(
   { flush: 'post' }
 )
 
-/* 工具卡片展开态：默认执行中自动展开以展示进度/参数，完成后收起 */
+/* 工具卡片展开态：默认收起，仅用户点击后展开；避免「执行中自动展开 → 结束收起」造成一闪而过 */
 function toolExpanded(tool: ToolCallState): boolean {
-  const override = toolOpen.value[tool.id]
-  if (override !== undefined) {
-    return override
-  }
-  return tool.status === 'running'
+  return toolOpen.value[tool.id] ?? false
 }
 
-/* 切换指定工具卡片的展开/收起（覆盖默认运行态展开规则） */
+/* 切换指定工具卡片的展开/收起 */
 function toggleTool(tool: ToolCallState): void {
   toolOpen.value = { ...toolOpen.value, [tool.id]: !toolExpanded(tool) }
 }

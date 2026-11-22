@@ -181,6 +181,7 @@ export function createChatStream(context: ChatStreamContext) {
           const tool: ToolCallState = {
             id: event.toolCallId ?? uid(),
             name: event.toolName ?? 'tool',
+            toolLabel: event.toolLabel,
             status: 'running',
             args: event.args,
             startedAt: Date.now()

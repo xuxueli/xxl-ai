@@ -9,6 +9,8 @@ export interface ToolCallState {
   id: string
   /* 工具名称 */
   name: string
+  /* 工具展示名（MCP 为「服务名 · 工具标题」；历史消息由结构化结果回填） */
+  toolLabel?: string
   /* 调用状态：执行中 / 成功 / 失败 */
   status: 'running' | 'done' | 'error'
   /* 调用入参（模型给出的参数） */

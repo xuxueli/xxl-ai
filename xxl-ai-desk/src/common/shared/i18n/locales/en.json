@@ -95,6 +95,7 @@
       "mcpConnectionClosed": "MCP connection was closed (URL: {0})",
       "mcpFirstInstall": "This MCP dependency is being installed for the first time and may take several minutes; wait for the installation to finish and retry",
       "mcpStderr": "Service output: {0}",
+      "mcpConnectTimeout": "MCP server connection timed out after {0}s",
       "mcpRequestTimeout": "MCP request timed out; check whether the service is available",
       "mcpNameDuplicate": "An MCP named \"{0}\" already exists; choose another name",
       "mcpInUse": "This MCP is used by {0} Agent(s) and cannot be deleted",

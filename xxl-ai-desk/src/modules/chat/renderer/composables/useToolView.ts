@@ -56,6 +56,13 @@ function targetDetail(args: ToolArgs): string {
   return clip(pick(args, 'ref') || pick(args, 'selector') || point)
 }
 
+/* 标签页操作 → 文案 key（模型参数为英文枚举，界面统一走 i18n） */
+const TAB_OPERATION_KEYS: Record<string, string> = {
+  list: 'tabsList',
+  select: 'tabsSelect',
+  close: 'tabsClose'
+}
+
 /* 工具名 → 展示元信息（顺序即维护顺序） */
 const TOOL_VIEWS: Record<string, ToolViewMeta> = {
   read_file: { titleKey: 'readFile', icon: 'Document', detail: (args) => pathDetail(args) },
@@ -87,7 +94,12 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
   read_skill: {
     titleKey: 'readSkill',
     icon: 'Reading',
-    detail: (args) => clip(pick(args, 'name') + (pick(args, 'path') ? ` / ${pick(args, 'path')}` : ''))
+    /* 未传路径时实际读取默认 SKILL.md，摘要一并展示，避免只看到技能名 */
+    detail: (args) => {
+      const name = pick(args, 'name')
+      const path = pick(args, 'path') || 'SKILL.md'
+      return clip(name ? `${name} / ${path}` : path)
+    }
   },
   open_browser: {
     titleKey: 'openBrowser',
@@ -129,7 +141,10 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
     icon: 'FolderOpened',
     detail: (args) => {
       const operation = pick(args, 'operation')
-      return clip(operation === 'list' ? 'list' : `${operation} ${pick(args, 'tab_id')}`)
+      const key = TAB_OPERATION_KEYS[operation]
+      const label = key ? t(`chat.tool.${key}`) : operation
+      const tabId = pick(args, 'tab_id')
+      return clip(tabId ? `${label} ${tabId}` : label)
     }
   },
   ask_user: { titleKey: 'askUser', icon: 'ChatDotRound', detail: (args) => clip(pick(args, 'title')) }
@@ -138,20 +153,20 @@ const TOOL_VIEWS: Record<string, ToolViewMeta> = {
 /* 生成工具调用的展示视图 */
 export function toolView(tool: ToolCallState): ToolView {
   const meta = TOOL_VIEWS[tool.name]
-  /* MCP 工具：展示「MCP 工具」标题，详情给出原始工具标识 */
+  /* MCP 工具：展示「MCP 工具」标题，详情优先用运行时下发的真实「服务名 · 工具名」 */
   if (!meta && tool.name.startsWith('mcp_')) {
     return {
       icon: 'Connection',
       title: t('chat.tool.mcp'),
-      detail: clip(tool.name.slice(4).replace(/_/g, ' / '))
+      detail: clip(tool.toolLabel || tool.name.slice(4).replace(/_/g, ' / '))
     }
   }
   const args = (tool.args ?? {}) as ToolArgs
-  /* 未知工具回退为原始工具名，再回退通用标题 */
+  /* 未知工具回退为通用标题，原始工具名放入摘要，避免界面出现纯英文标题 */
   return {
     icon: meta?.icon ?? 'Tools',
-    title: meta ? t(`chat.tool.${meta.titleKey}`) : tool.name || t('chat.tool.generic'),
-    detail: meta ? meta.detail(args) : ''
+    title: meta ? t(`chat.tool.${meta.titleKey}`) : t('chat.tool.generic'),
+    detail: meta ? meta.detail(args) : clip(tool.name)
   }
 }
 

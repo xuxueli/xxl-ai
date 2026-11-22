@@ -25,7 +25,7 @@ import { buildToolName, uniqueToolName } from '@modules/mcp/worker/naming'
 /* 工具结果详情：图片只保留类型与大小，避免 base64 落库膨胀 */
 function buildToolDetails(
   server: McpRuntimeConfig,
-  toolName: string,
+  tool: { name: string; title?: string },
   result: { isError?: boolean; content?: unknown[]; structuredContent?: unknown }
 ): Record<string, unknown> {
   const blocks = (result.content ?? []).map((block) => {
@@ -41,7 +41,9 @@ function buildToolDetails(
   })
   return {
     server: server.name,
-    tool: toolName,
+    tool: tool.name,
+    /* 工具标题：历史消息据此还原展示名，与运行态 label 保持一致 */
+    title: tool.title || tool.name,
     isError: result.isError === true,
     content: blocks,
     structuredContent: result.structuredContent
@@ -109,7 +111,8 @@ export async function createMcpTools(options: {
 
       tools.push({
         name,
-        label: tool.title || tool.name,
+        /* 展示名带上服务名：会话时间线据此还原真实来源，避免从归一化工具名反推 */
+        label: `${server.name} · ${tool.title || tool.name}`,
         description: tool.description || `来自 MCP 服务「${server.name}」的工具`,
         /* 模型供应商要求对象 schema；部分服务未提供 properties，补齐避免被拒 */
         parameters: {
@@ -130,7 +133,7 @@ export async function createMcpTools(options: {
             /* Pi 推荐：MCP 失败通过 isError 透传，内容统一走 toLlmContent */
             return {
               content: mcp.toLlmContent(result),
-              details: buildToolDetails(server, tool.name, result),
+              details: buildToolDetails(server, tool, result),
               isError: result.isError === true
             }
           } catch (error) {

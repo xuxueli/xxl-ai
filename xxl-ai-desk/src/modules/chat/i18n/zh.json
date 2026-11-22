@@ -68,7 +68,7 @@
       "search": "搜索内容",
       "command": "执行命令",
       "time": "获取当前时间",
-      "readSkill": "读取技能说明",
+      "readSkill": "读取技能",
       "openBrowser": "打开网页",
       "readBrowser": "读取网页",
       "snapshotBrowser": "读取页面结构",
@@ -82,6 +82,9 @@
       "screenshotBrowser": "页面截图",
       "inspectBrowser": "页面诊断",
       "browserTabs": "管理浏览器标签页",
+      "tabsList": "列出标签页",
+      "tabsSelect": "切换标签页",
+      "tabsClose": "关闭标签页",
       "askUser": "询问用户",
       "mcp": "MCP 工具",
       "generic": "调用工具"

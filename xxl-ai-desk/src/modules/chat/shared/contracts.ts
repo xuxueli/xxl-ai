@@ -26,6 +26,8 @@ export interface ChatEvent {
   text?: string
   /* 工具名（tool_start / tool_end） */
   toolName?: string
+  /* 工具展示名（tool_start；MCP 为「服务名 · 工具标题」，供时间线展示真实名称） */
+  toolLabel?: string
   /* 工具调用 ID（tool_start / tool_end） */
   toolCallId?: string
   /* 工具调用入参（tool_start） */

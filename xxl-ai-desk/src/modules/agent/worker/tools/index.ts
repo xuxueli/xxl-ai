@@ -89,7 +89,7 @@ export async function createBuiltinToolEntries(context: ToolContext): Promise<To
     .map((entry) => withExecutionGuards(entry, context.language))
 }
 
-/* 生成可用工具提示：名称 + 读写属性 + 一句话说明，避免模型臆造工具 */
+/* 生成内置工具清单：名称 + 读写属性 + 一句话说明，避免模型臆造内置工具；MCP 工具由本轮工具列表提供 */
 export function buildToolGuide(entries: ToolEntry[]): string {
   if (entries.length === 0) {
     return ''
@@ -97,7 +97,7 @@ export function buildToolGuide(entries: ToolEntry[]): string {
   const lines = entries.map(
     ({ meta, tool }) => `- ${tool.name}（${meta.readOnly ? '只读' : '可写'}）：${tool.label}`
   )
-  return `\n\n当前可用工具：\n${lines.join('\n')}`
+  return `\n\n## 内置工具\n${lines.join('\n')}`
 }
 
 /* 运行时 PATH 注入（终端与 MCP stdio 共用） */

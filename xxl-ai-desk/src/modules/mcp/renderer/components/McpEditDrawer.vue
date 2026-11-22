@@ -380,7 +380,7 @@ watch(visible, (value) => {
       <div v-if="testResult" class="test-result" :class="{ failed: !testResult.ok }">
         <div class="test-title">
           <el-icon><Connection /></el-icon>
-          <span>{{ testResult.message }}</span>
+          <span class="test-message">{{ testResult.message }}</span>
           <span class="test-elapsed">{{ testResult.elapsedMs }}ms</span>
         </div>
         <div v-if="testResult.serverName" class="test-server">
@@ -465,11 +465,20 @@ watch(visible, (value) => {
 
 .test-title {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+  line-height: 1.6;
+}
+
+/* 失败详情可能包含服务输出：允许换行，避免长串把结果面板撑宽 */
+.test-message {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .test-elapsed {
+  flex-shrink: 0;
   margin-left: auto;
   color: var(--desk-text-tertiary);
   font-size: var(--desk-font-xs);

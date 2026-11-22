@@ -82,6 +82,9 @@
       "screenshotBrowser": "Page screenshot",
       "inspectBrowser": "Page diagnostics",
       "browserTabs": "Manage browser tabs",
+      "tabsList": "List tabs",
+      "tabsSelect": "Switch tab",
+      "tabsClose": "Close tab",
       "askUser": "Ask user",
       "mcp": "MCP tool",
       "generic": "Tool"
