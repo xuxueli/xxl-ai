@@ -59,7 +59,7 @@ const agent = useAgentStore()
         <el-option :label="t('schedule.status.enabled')" value="enabled" />
         <el-option :label="t('schedule.status.disabled')" value="disabled" />
       </el-select>
-      <el-button text class="filter-reset" @click="schedule.resetFilters()">
+      <el-button @click="schedule.resetFilters()">
         <el-icon><Refresh /></el-icon>
         {{ t('schedule.reset') }}
       </el-button>
@@ -103,15 +103,6 @@ const agent = useAgentStore()
 
 .filter-status {
   width: 132px;
-}
-
-.filter-reset {
-  padding: 4px 8px;
-  color: var(--desk-text-tertiary);
-}
-
-.filter-reset:hover {
-  color: var(--desk-primary);
 }
 
 .toolbar-actions {

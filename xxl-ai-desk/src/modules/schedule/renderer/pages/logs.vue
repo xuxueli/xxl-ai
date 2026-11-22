@@ -204,11 +204,11 @@ onBeforeUnmount(() => {
               class="filter-dates"
               @change="onRangeDatesChange"
             />
-            <el-button text class="filter-query" :loading="schedule.logsLoading" @click="onQuery">
+            <el-button :loading="schedule.logsLoading" @click="onQuery">
               <el-icon><Search /></el-icon>
               {{ t('schedule.query') }}
             </el-button>
-            <el-button text class="filter-reset" @click="onReset">
+            <el-button @click="onReset">
               <el-icon><Refresh /></el-icon>
               {{ t('schedule.reset') }}
             </el-button>
@@ -381,17 +381,6 @@ onBeforeUnmount(() => {
 
 .filter-dates {
   width: 240px;
-}
-
-.filter-query,
-.filter-reset {
-  padding: 4px 8px;
-  color: var(--desk-text-tertiary);
-}
-
-.filter-query:hover,
-.filter-reset:hover {
-  color: var(--desk-primary);
 }
 
 /* 日志清理弹窗：字段行 + 说明 */
