@@ -37,12 +37,18 @@ const STATUS_LABEL_KEYS: Record<SessionStatus, string> = {
   aborted: 'chat.status.aborted'
 }
 
+/* 仅运行中 / 待确认 / 失败展示提示：进行中给反馈，需要用户时才常驻 */
 function statusVisible(status: SessionStatus): boolean {
-  return status !== 'idle'
+  return status === 'running' || status === 'waiting-confirm' || status === 'failed'
 }
 
 function statusLabel(status: SessionStatus): string {
   return t(STATUS_LABEL_KEYS[status])
+}
+
+/* 运行中用三颗呼吸点表达进展，其余状态单点提醒 */
+function statusDotCount(status: SessionStatus): number {
+  return status === 'running' ? 3 : 1
 }
 
 /* 项目行下拉实例：右键项目名与悬浮「...」共用同一菜单 */
@@ -240,14 +246,6 @@ async function onDeleteSession(id: number): Promise<void> {
           >
             <AlarmClock />
           </el-icon>
-          <span
-            v-if="statusVisible(session.status)"
-            class="session-status"
-            :class="`session-status--${session.status}`"
-            role="img"
-            :title="statusLabel(session.status)"
-            :aria-label="statusLabel(session.status)"
-          />
         </span>
         <template #actions>
           <span class="session-actions" @click.stop>
@@ -270,6 +268,20 @@ async function onDeleteSession(id: number): Promise<void> {
                 </template>
               </el-dropdown>
             </DeskTooltip>
+            <span
+              v-if="statusVisible(session.status)"
+              class="session-status"
+              :class="`session-status--${session.status}`"
+              role="img"
+              :title="statusLabel(session.status)"
+              :aria-label="statusLabel(session.status)"
+            >
+              <span
+                v-for="index in statusDotCount(session.status)"
+                :key="index"
+                class="session-status-dot"
+              />
+            </span>
           </span>
         </template>
       </SidebarRow>
@@ -299,34 +311,67 @@ async function onDeleteSession(id: number): Promise<void> {
   gap: 6px;
 }
 
-/* 会话行状态圆点：固定在标题右侧，用淡色区分运行 / 待确认 / 完成 / 失败 / 终止 */
+/* 会话行状态点：运行中呼吸提示，待确认 / 失败单点常驻，完成与终止不打扰 */
+/* 状态点位于行尾操作区：操作图标隐藏时仍保持可见，靠右对齐 */
 .session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--desk-text-tertiary);
-  opacity: 0.6;
+  visibility: visible;
 }
 
-.session-status--running {
-  background: var(--desk-primary);
+.session-status-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .session-status--waiting-confirm {
-  background: var(--desk-warning);
-}
-
-.session-status--completed {
-  background: var(--desk-success);
+  color: var(--desk-info);
+  opacity: 0.55;
 }
 
 .session-status--failed {
-  background: var(--desk-danger);
+  color: var(--desk-danger);
+  opacity: 0.55;
 }
 
-.session-status--aborted {
-  background: var(--desk-text-tertiary);
+/* 运行中：三颗小点错峰呼吸，结束后自动消失 */
+.session-status--running .session-status-dot {
+  width: 3px;
+  height: 3px;
+  background: var(--desk-warning);
+  animation: session-status-breathe 1.2s ease-in-out infinite;
+}
+
+.session-status--running .session-status-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.session-status--running .session-status-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes session-status-breathe {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* 减少动效偏好下保持静态可见，不做呼吸动画 */
+@media (prefers-reduced-motion: reduce) {
+  .session-status--running .session-status-dot {
+    opacity: 0.55;
+    animation: none;
+  }
 }
 
 .session-empty {
@@ -340,7 +385,6 @@ async function onDeleteSession(id: number): Promise<void> {
   display: flex;
   align-items: center;
   gap: 4px;
-  width: 100%;
   min-width: 0;
 }
 
