@@ -1964,14 +1964,26 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 - 1、【重构】UI项目重构：跟进XXL-BOOT升级项目SKILL，代码做针对性强化升级；
 - 2、【体验】菜单整合优化：整合功能菜单，提升操作效率、优化体验；
 
-
 ### v1.7.1 Release Notes[ING]
 - 1、【ING】应用中心：
   - 应用中心：设计应用统一契约（app.manifest），建设应用契约收集与应用注册能力；搭建应用宿主托管能力，提供路由挂载、i18n注册等能力，支持内部及动态外部应用托管注册；
   - 内置应用：丰富内置应用集合，基于统一契约简化开发；
   - 外部应用：提供应用开发规范及SKILL，支持外部应用开发及动态加载注册（安装路径下制定目录动态扫描、自动注册托管运行）；
-- 2、【ING】云版：SKILL管理；支持Zip压缩包上传；
+- 2、【ING】SKILL本地上传：支持本地上传SKILL压缩包，自动解析识别并保存技能；
+- 3、【ING】云版本地运行时目录结构设计：SKILL共享，工作区用户&Agent隔离，提升云版沙箱操作安全行及体验；
 
+```
+{xxl-ai.runtime.root}/
+└── space_{spaceId}/
+    ├── skills/
+    │   ├── .locks/skill_{skillId}.lock
+    │   └── skill_{skillId}/           # SKILL全局共享，使用时按需加载多个SKILL目录；（守护线程，定期检测版本、同步）
+    │       ├── .fingerprint
+    │       └── SKILL.md ...
+    ├── projects/
+    │   └── agent_{agentId}/user_{subjectKey}/      # Agent-用户维度工作区隔离； 
+    └── tmp/{SKILL上传解析 ｜ 知识无聊上传}
+```
 
 ### TODO LIST
 - 1、Bot机器人：Super Agent 方案；桌面机器人，可在桌面悬浮窗中进行互动；体现工作状态，同步消息通知；
@@ -2006,7 +2018,7 @@ sudo xattr -rd com.apple.quarantine /Applications/XXL-AI-Desk.app
 | 记忆	     | 长期记忆，		 | Yes项目   | Yes项目  |
 | 定时任务	 | 任务		                | No | Yes  |
 
-- 10、功能设计：
+- 10、产品功能/菜单设计：
 
 ```
 ========= 云版：
