@@ -41,7 +41,7 @@ XXL-AI 是一个「**云本结合**」的 AI Agent 开发平台，提供两种�
 | 面向 | 团队——多用户、多业务空间（Tenant） | 个人——单用户本地工作台 |
 | 定位 | Agent 编排、一键发布、权限治理 | 本地优先，直接操作本机项目与系统能力 |
 | 扩展 | MCP + SKILL + RAG，多供应商，流式对话 | 本地文件 / 终端 / 浏览器面板，三档权限模式 |
-| 模块 | `xxl-ai-api` + `xxl-ai-ui`（+ `xxl-ai-sample`） | `xxl-ai-desk` |
+| 模块 | `xxl-ai-api` + `xxl-ai-ui` | `xxl-ai-desk` |
 | 依赖 | MySQL + Redis + Milvus | 零依赖（仅本地 SQLite） |
 
 ## Documentation
