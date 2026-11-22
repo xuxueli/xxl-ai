@@ -5,6 +5,7 @@
  *   - ipc.ts 仅负责通道注册与事件转发，保持薄网关。
  */
 
+import { createHash } from 'crypto'
 import log from 'electron-log/main'
 import { trimHistory } from '@modules/chat/shared'
 import { translate } from '@common/shared/i18n'
@@ -13,7 +14,8 @@ import type {
   InteractionResult,
   MessageSource,
   PermissionMode,
-  SessionDTO
+  SessionDTO,
+  SessionStatus
 } from '@modules/chat/shared'
 import type { AppSettings } from '@modules/settings/shared'
 import type { ProviderDTO } from '@modules/provider/shared'
@@ -24,17 +26,17 @@ import { getSettings } from '@modules/settings/main'
 import { getProvider } from '@modules/provider/main'
 import { listMcpRuntimeConfigs } from '@modules/mcp/main'
 import { listSkillsForRuntime } from '@modules/skill/main'
-import { appendTurnMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, listSessionIdsByProject, replaceTurnMessages, saveSessionContextBreakdown, startTurn, updateSession } from './sessionService'
+import { appendTurnMessages, getSession, getSessionSummary, isSessionRemoved, listMessages, listMessagesAfter, listNewProjectMessages, replaceTurnMessages, saveSessionContextBreakdown, startTurn, updateSession, updateSessionStatus } from './sessionService'
 import type { TurnMessageInput } from './sessionService'
-import { buildSystemPrompt } from './systemPrompt'
+import { buildSystemPrompt } from '@modules/chat/harness'
 import { maybeCompressSession } from './sessionSummaryService'
 import { getProject } from '@modules/project/main'
 import { getAgentById, getAgentMemory, maybeGenerateAgentMemory } from '@modules/agent/main'
 import { buildMcpRuntimePath, buildRuntimePath } from '@modules/platform/main'
 import { getSkillsDir } from '@common/main/config/paths'
-import { abortAgent, evictAgent, isAgentRunning, prepareAgentRuntime, runAgent } from '@modules/agent/main'
+import { abortAgent, evictAgent, generateMemory, isAgentRunning, prepareAgentRuntime, runAgent } from '@modules/chat/harness'
 import { cancelBrowserActionsOf } from '@modules/browser/main'
-import { resolveInteraction, cancelInteractionsOf } from '@modules/agent/main'
+import { resolveInteraction, cancelInteractionsOf } from '@modules/chat/harness'
 
 /* 下发到渲染层的对话事件负载：流式事件（含轮次开始）或运行时事件 */
 export type ChatEventPayload = ChatEvent | ({ sessionId: number } & HostEvent)
@@ -383,11 +385,20 @@ export async function sendChat(
         : event
     emit({ sessionId, ...payload })
   }
+  /* 会话状态：Loop 状态及时落库，并同步渲染层侧栏 / 状态条 */
+  const setStatus = (status: SessionStatus): void => {
+    updateSessionStatus(sessionId, status)
+    if (!isSessionRemoved(sessionId)) {
+      emit({ sessionId, type: 'status', status })
+    }
+  }
+
   /* 失败兜底：把可读错误提示落到本轮并下发，避免重载/切换会话后提示丢失 */
   const fail = (raw: string): void => {
     const tip = contextReady ? describeError(raw, providerName, modelId, language) : raw
     /* 失败前已产生用量：仍保留最近一次分项，避免面板回退成无数据 */
     saveSessionContextBreakdown(sessionId, roundBreakdown)
+    setStatus('failed')
     if (!committed && turnId) {
       /* 先把已输出的草稿落库，再追加可读错误提示 */
       if (draftParts.length > 0) {
@@ -419,6 +430,7 @@ export async function sendChat(
      * 渲染层发起的轮次已本地占位（streamingIds 去重）；主进程发起的轮次据此补建消息并接入流式。
      */
     emit({ sessionId, type: 'turn-start', userText: text, startedAt })
+    setStatus('running')
 
     /* 会话引用的供应商/模型若已删除或停用，直接提示用户重新选择，不做静默切换 */
     const target = resolveRuntimeTarget(session, settings, language)
@@ -452,7 +464,7 @@ export async function sendChat(
     const skills = listSkillsForRuntime().filter((item) => agent.skillIds.includes(item.id))
     const mcpServers = listMcpRuntimeConfigs().filter((item) => agent.mcpIds.includes(item.id))
     /* Agent 记忆：项目开启记忆时注入，作为可能过时的历史事实，冲突以当前指令为准 */
-    /* 注意：系统提示词在会话 Agent 创建时固化，以下任一来源变更都必须 evictAgent / resetAgents 重建 */
+    /* 注意：系统提示词在会话 Agent 创建时固化，以下来源统一计入运行时指纹，变化后下一轮自动重建 */
     const memory = project.memoryEnabled ? getAgentMemory(project.id) : ''
     /* 会话摘要：历史轮次压缩后的结论；已有摘要时只传摘要与上次摘要后的增量消息 */
     const summary = getSessionSummary(sessionId)
@@ -488,6 +500,28 @@ export async function sendChat(
       Boolean(summary.summary)
     )
 
+    /*
+     * 运行时装配指纹：Agent 指令 / 记忆 / 摘要 / SKILL / MCP / 权限 / 内置工具 / 供应商任一变化，
+     * 下一轮自动重建会话 Agent；配置模块只负责数据，不参与 Loop 缓存失效。
+     */
+    const runtimeFingerprint = createHash('sha1')
+      .update(
+        JSON.stringify({
+          provider: toRuntimeConfig(provider),
+          modelId,
+          reasoningLevel: session.reasoningLevel,
+          systemPrompt,
+          permissionMode,
+          rootDir,
+          mcpServers,
+          skills,
+          skillsDir: getSkillsDir(),
+          tools: agent.tools,
+          language: settings.language
+        })
+      )
+      .digest('hex')
+
     /* 交运行时进程执行：只下发模型上下文，结束后回传本轮新增消息供追加落库 */
     const runInput: RunAgentInput = {
       sessionId,
@@ -499,6 +533,7 @@ export async function sendChat(
       language: settings.language,
       permissionMode,
       rootDir,
+      runtimeFingerprint,
       runtimePath: buildRuntimePath(),
       mcpRuntimePath: buildMcpRuntimePath(),
       /* MCP：只下发 Agent 选中的服务，运行时进程按配置装配工具 */
@@ -534,6 +569,7 @@ export async function sendChat(
           persistRound()
         }
         persistInterruptedTip(sessionId, turnId, settings.language)
+        setStatus('failed')
         committed = true
         return
       }
@@ -552,6 +588,7 @@ export async function sendChat(
     }
     /* 最终落库：按本轮完整快照覆盖助手 / 工具消息（用户提问行保持不变） */
     replaceTurnMessages(sessionId, turnId, serializeRuntimeMessages(result.messages, true))
+    setStatus('completed')
     committed = true
     /* 会话只保留最近一次分项：不写入消息原始数据，切会话 / 重启后由会话表还原 */
     saveSessionContextBreakdown(sessionId, roundBreakdown)
@@ -563,10 +600,9 @@ export async function sendChat(
     void maybeGenerateAgentMemory({
       session,
       loadPendingMessages: (since) => listNewProjectMessages(session.projectId, since),
-      evictProjectSessions: () =>
-        listSessionIdsByProject(session.projectId).forEach((id) => evictAgent(id)),
       /* 记忆写入前复核来源会话：删除会话后不再把其内容并入项目记忆 */
-      isSessionActive: (id) => !isSessionRemoved(id) && Boolean(getSession(id))
+      isSessionActive: (id) => !isSessionRemoved(id) && Boolean(getSession(id)),
+      generate: (input) => generateMemory(input)
     }).catch((error) => {
       log.warn(`[chat] 记忆生成异常 session=${sessionId}`, error)
     })
@@ -583,6 +619,7 @@ export async function sendChat(
     }
     /* 用户主动终止本轮：广播终止事件，供定时任务运行器区分「已终止」与「成功」 */
     if (abortRequested.has(sessionId) && !isSessionRemoved(sessionId)) {
+      setStatus('aborted')
       emit({ sessionId, type: 'aborted' })
     }
     abortRequested.delete(sessionId)

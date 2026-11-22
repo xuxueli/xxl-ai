@@ -79,7 +79,7 @@ function ensureWorker(): Promise<UtilityProcess> {
   if (worker && workerReady) {
     return workerReady
   }
-  const proc = utilityProcess.fork(join(__dirname, 'agent/worker/worker.js'), [], {
+  const proc = utilityProcess.fork(join(__dirname, 'chat/harness/worker/worker.js'), [], {
     serviceName: 'xxl-ai-desk-agent',
     /* 运行时进程与主进程写入同一目录的运行日志（按天分片） */
     env: {
@@ -313,11 +313,6 @@ export function evictAgent(sessionId: number): void {
 /* 清理会话越界白名单 */
 export function clearSessionPermissions(sessionId: number): void {
   postRequest({ type: 'clear-permissions', sessionId })
-}
-
-/* 清空全部会话运行时缓存（设置/供应商变更时） */
-export function resetAgents(): void {
-  postRequest({ type: 'reset' })
 }
 
 /* 发送一次 MCP 请求并等待结果（超时/进程退出统一转为异常） */

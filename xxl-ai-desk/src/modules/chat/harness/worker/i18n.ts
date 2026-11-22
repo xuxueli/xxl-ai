@@ -1,5 +1,5 @@
 /*
- * Worker i18n 组合根：注册运行时所需的领域词条。
+ * Harness Worker i18n 组合根：注册运行时所需的领域词条。
  * @author xuxueli 2026-11-07
  */
 

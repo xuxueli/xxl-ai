@@ -18,6 +18,18 @@
     "permissionWorkspaceWrite": "工作区内修改",
     "permissionFullAccess": "完全权限",
     "permissionTip": "仅可查看：全局可读，不可写入或执行命令；工作区内修改：全局可读，仅项目与系统临时目录可写；完全权限：全局读写，敏感操作仍会拦截",
+    "humanModeOn": "人机协同",
+    "humanModeOff": "无人值守",
+    "humanModeTip": "人机协同：权限审批与提问进入输入区等待确认；无人值守：权限审批自动拒绝，提问交回模型自行决策",
+    "humanModeFixedOff": "定时任务会话固定为无人值守，避免工具调用永久挂起",
+    "status": {
+      "idle": "待开始",
+      "running": "运行中",
+      "waitingConfirm": "等待确认",
+      "completed": "已完成",
+      "failed": "失败",
+      "aborted": "已终止"
+    },
     "reasoningDefault": "Default",
     "reasoningLow": "Low",
     "reasoningHigh": "High",

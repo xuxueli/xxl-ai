@@ -12,7 +12,7 @@ import { isRuntimeSource, type ProjectMessageGroup, type ProjectMessages, type S
 import { translate } from '@common/shared/i18n'
 import { getSettings } from '@modules/settings/main'
 import { getProject, getProjectMemory, listProjectMemories, saveProjectMemory } from '@modules/project/main'
-import { generateMemory } from './host/runtimeHost'
+import type { MemoryGenerateInput } from '@modules/agent/shared/agentProtocol'
 import { resolveAgentTarget, toRuntimeConfig } from './runtimeTarget'
 
 /* 记忆生成上下文：会话数据由调用方（chat）提供，避免 agent → chat 反向依赖 */
@@ -21,10 +21,10 @@ export interface AgentMemoryGenerationContext {
   session: SessionDTO
   /* 读取项目内晚于游标的消息 */
   loadPendingMessages: (since: string) => ProjectMessages
-  /* 记忆变更后清理项目下会话运行时，使新记忆下一轮生效 */
-  evictProjectSessions: () => void
   /* 来源会话是否仍存在：写入前复核，避免已删会话内容进入项目记忆 */
   isSessionActive: (sessionId: number) => boolean
+  /* 记忆生成执行器：由会话域提供，避免 agent 配置反向依赖 chat/harness */
+  generate: (input: Omit<MemoryGenerateInput, 'requestId'>) => Promise<string>
 }
 
 /* 生成中的项目：同一项目同时只跑一个记忆任务，避免多会话并发覆盖 */
@@ -159,7 +159,7 @@ export async function maybeGenerateAgentMemory(
   const lastMessageTime = pending.lastMessageTime
   generatingProjects.add(project.id)
   try {
-    const content = await generateMemory({
+    const content = await context.generate({
       provider: toRuntimeConfig(target.provider),
       modelId: target.modelId,
       language: settings.language,
@@ -178,8 +178,6 @@ export async function maybeGenerateAgentMemory(
       return
     }
     saveProjectMemory(project.id, saved, lastMessageTime)
-    /* 系统提示词在创建 Agent 时固化：新记忆需清理项目下会话运行时，下一轮重新装配 */
-    context.evictProjectSessions()
     log.info(`[agent-memory] 项目 ${project.id} 记忆已更新（${transcript.count} 条消息）`)
   } catch (error) {
     /* 失败隔离：保留旧记忆，下一轮继续尝试 */

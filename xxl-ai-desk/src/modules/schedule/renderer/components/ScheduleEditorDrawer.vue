@@ -331,6 +331,10 @@ async function onSave(): Promise<void> {
               </el-select>
               <div class="form-tip">{{ t('schedule.fields.permissionTip') }}</div>
             </el-form-item>
+            <el-form-item :label="t('schedule.fields.humanMode')">
+              <el-input :model-value="t('chat.humanModeOff')" disabled />
+              <div class="form-tip">{{ t('schedule.fields.humanModeFixedOff') }}</div>
+            </el-form-item>
             <el-form-item :label="t('schedule.fields.provider')">
               <el-select v-model="form.providerId" style="width: 100%" @change="onProviderChange">
                 <el-option

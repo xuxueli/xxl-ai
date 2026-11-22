@@ -1,12 +1,14 @@
 /*
- * 对话域跨进程契约：流式事件与人机交互。
+ * 对话域跨进程契约：流式事件、会话状态与人机交互。
  */
+
+import type { SessionStatus } from './session'
 
 /* 对话流式事件（主 → 渲染） */
 export interface ChatEvent {
   /* 所属会话主键 */
   sessionId: number
-  /* 事件类型：turn-start 轮次开始 / delta 增量文本 / thinking 思考 / tool_start / tool_end / usage 上下文用量 / notice 非致命提示 / error 致命错误 / done / aborted */
+  /* 事件类型：turn-start 轮次开始 / delta 增量文本 / thinking 思考 / tool_start / tool_end / usage 上下文用量 / notice 非致命提示 / status 会话状态 / error 致命错误 / done / aborted */
   type:
     | 'turn-start'
     | 'delta'
@@ -15,6 +17,7 @@ export interface ChatEvent {
     | 'tool_end'
     | 'usage'
     | 'notice'
+    | 'status'
     | 'error'
     | 'done'
     | 'aborted'
@@ -52,6 +55,8 @@ export interface ChatEvent {
   messageTokens?: number
   /* 错误 / 提示信息（notice / error） */
   message?: string
+  /* 会话状态（status） */
+  status?: SessionStatus
 }
 
 /* 选择项（value 回传模型，label 展示） */

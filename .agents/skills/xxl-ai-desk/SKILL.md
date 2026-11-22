@@ -17,7 +17,7 @@ Desk 是 **Electron + Vue3 + Pi + SQLite/Drizzle** 的三进程桌面应用；�
 |---|---|---|---|
 | Renderer | `src/renderer/src` | 界面、Pinia 状态、模块业务 | 只经 `@common/renderer/api` 访问能力，无 Node / FS / DB |
 | Main | `src/main/index.ts` | 窗口、IPC / DB / i18n 装配、`desk-file` 协议 | 业务在 `modules/*/main`；唯一 `getDb()` 出口在 `common/main/db`；不直接执行 Agent 会话 |
-| Worker | `src/modules/agent/worker/worker.ts`（utilityProcess） | Agent 会话、工具、MCP、技能沙箱 | 不访问 DB 与主进程内部，只经 `modules/agent/shared/agentProtocol.ts` |
+| Worker | `src/modules/chat/harness/worker/worker.ts`（utilityProcess） | 会话 Loop、模型请求、工具、MCP、技能沙箱 | 不访问 DB 与主进程内部，只经 `modules/agent/shared/agentProtocol.ts` |
 
 ```
 Renderer ──preload 白名单（DeskApi）──▶ Main ──utilityProcess + parentPort──▶ Worker
@@ -234,7 +234,7 @@ modules/{domain}/
 - **巡检是全局唯一兜底**：单链 `setTimeout` + 10s 存活看护，任何异常必须续排、链丢失必须自愈；间隔取 `desk_setting.scheduleWatchdogInterval`（30~600s，默认 60）。任务超时取任务字段 `timeout_minutes`（0 不限时），不得改回全局常量。
 - **运行态不落库**：运行中标记、开始时刻、待强制调度请求只在 `schedule/main/runState.ts`（进程内），应用退出自然清空；`desk_scheduled_log` 只做触发追溯（启动时把遗留 `running` 结算为失败；不自动裁剪，由日志页「日志清理」按任务 + 时间范围删除，删除任务时级联清理），`desk_scheduled_task.last_*` 只表达真实运行结果，三者职责分离。
 - **主进程发起的轮次统一 `turn-start`**：`sendChat` 每轮下发 `turn-start`（`userText` / `startedAt`），手动与定时共用；渲染层以 `streamingIds` 去重，外部轮次补建消息并接入 `createChatStream`，复用会话先补齐历史，禁止另建定时专用流式通道。
-- **无人值守交互在主进程结算**：唯一实现在 `chat/main/interactionPolicy.ts#resolveUnattendedInteraction`，按 `request.kind` 返回 `denied`（权限审批）/ `auto`（`ask_user`）；agent 侧只经 `setInteractionAutoResolver` 回调，禁止反向依赖 chat，worker 收到 `auto` 回填 `runtime.hitl.autoDecision` 并继续后续问题。
+- **无人值守交互在主进程结算**：唯一实现在 `chat/harness/main/interactionPolicy.ts#resolveUnattendedInteraction`，按 `request.kind` 返回 `denied`（权限审批）/ `auto`（`ask_user`）；agent 侧只经 `setInteractionAutoResolver` 回调，禁止反向依赖 chat，worker 收到 `auto` 回填 `runtime.hitl.autoDecision` 并继续后续问题。
 - **跨进程文案**：主进程 / worker 的用户可见错误用 `common/shared/i18n` 的 `translate(language, 'runtime.*')`；新增文案禁止硬编码中文（存量待收敛）。
 
 ### 2.2 运行时与资源 [硬]
@@ -242,7 +242,7 @@ modules/{domain}/
 - **生命周期闭环**：创建/连接 → 缓存复用 → 失效重建（配置变更）→ 释放（重置/退出）；`close` 幂等。
 - **超时 + 取消**：连接、请求、工具调用、命令执行均支持超时与 `AbortSignal`；终止后不得继续执行。
 - **失败隔离**：单个外部服务失败只跳过自身并记录可定位日志，不阻断主流程。
-- **副作用集中**：配置变更后的缓存失效（如 `resetAgents()`）在一个入口统一完成。
+- **配置失效不由配置模块驱动**：运行时装配指纹（Agent / 记忆 / 摘要 / SKILL / MCP / 权限 / 工具 / 供应商）变化后由会话 Loop 在下一轮自动重建；扩展中心、应用中心、系统设置只落数据，不调用运行时清理。
 - **官方方案优先**：有官方/上游 SDK 或推荐接入方式时禁止自写协议。例：MCP 使用 `@earendil-works/pi-mcp`；模型/Agent 使用 `@earendil-works/pi-ai`、`pi-agent-core`。
 
 ### 2.3 UI 与样式 [硬]
@@ -489,25 +489,69 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ## 6. Agent 运行时
 
-新增 Agent 能力落 `src/modules/agent/`，按进程归属落位；工具/会话扩展不需要新 IPC，只有新增跨进程能力才动 `modules/agent/shared/agentProtocol.ts` 与各模块 `main/ipc.ts` / `preload/index.ts`。
+新增 Agent 能力时：Agent 配置落 `modules/agent/`；会话 Loop 扩展落 `modules/chat/harness/`；工具执行落对应能力域 `worker`。工具/会话扩展不需要新 IPC，只有新增跨进程能力才动 `modules/agent/shared/agentProtocol.ts` 与各模块 `main/ipc.ts` / `preload/index.ts`。
 
 | 需求 | 落位 | 要点 |
 |---|---|---|
 | Agent 配置 | `modules/agent/main/{agentService,seed}.ts` | `desk_agent` 保存名称 / 指令 / SKILL / MCP / 工具分类；默认内置 Agent 禁删，被会话占用禁删 |
-| 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/agent/worker/memory.ts` | 记忆随 `desk_project` 行保存，按 `memory_enabled` 注入；生成与消费解耦 |
-| 会话压缩 | `modules/chat/main/sessionSummaryService.ts` + `modules/agent/worker/summary.ts` | 摘要存 `desk_session.summary*`；无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 时异步压缩 |
-| 上下文分项 | `modules/agent/worker/session.ts` + `modules/chat/main/sessionService.ts` | 每次响应用估算值（CJK 1 token/字、其余 4 字符/token）回传；存 `desk_session.context_breakdown`，每轮更新，删除消息时清空 |
+| 项目记忆 | `modules/agent/main/agentMemoryService.ts` + `modules/chat/harness/worker/memory.ts` | 记忆随 `desk_project` 行保存，按 `memory_enabled` 注入；生成与消费解耦 |
+| 会话压缩 | `modules/chat/main/sessionSummaryService.ts` + `modules/chat/harness/worker/summary.ts` | 摘要存 `desk_session.summary*`；无摘要 / 上下文 ≥80% / 摘要后轮次 ≥20 时异步压缩 |
+| 上下文分项 | `modules/chat/harness/worker/loop.ts` + `modules/chat/main/sessionService.ts` | 每次响应用估算值（CJK 1 token/字、其余 4 字符/token）回传；存 `desk_session.context_breakdown`，每轮更新，删除消息时清空 |
 | 内置工具 | `modules/{file,browser,agent,skill}/worker/*` | `createBuiltinToolEntries()` 用 `Type.Object` 定义 `AgentTool`；只读工具常驻，写 / 命令类需「工作区内修改」及以上权限；是否进入「内置工具」页见 §6.1 |
 | 文件类工具 | `modules/file/worker/*` + `modules/agent/worker/sandbox.ts` | 必须先过 `guardPath({ sessionId, rootDir, target, action, tool, permissionMode, trustedRoots })`（多目标用 `guardPaths({ targets: [...] })`），越界返回拦截错误 |
-| 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/agent/main/host/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层在输入框位置内联展示审批面板（按会话隔离），回传 `allow`（可 `remember`）/ `deny` |
+| 越界审批 | `modules/agent/worker/{sandbox,hitl}.ts` + `modules/chat/harness/main/interaction.ts` | worker 经 `parentPort` 发 `interaction-request`，主进程转渲染层在输入框位置内联展示审批面板（按会话隔离），回传 `allow`（可 `remember`）/ `deny` |
 | MCP | `modules/mcp/worker/*` | 使用 Pi 官方 `@earendil-works/pi-mcp`；工具转换 `toLlmContent` + `Type.Unsafe` + `signal`；只装配 Agent 选中的服务 |
-| 会话装配 | `modules/agent/worker/session.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；systemPrompt = Agent 指令 + 长期记忆 + 会话摘要 + SKILL 索引 + 权限/工具约束 |
-| 定时任务运行 / 无人值守 | `modules/schedule/main/{runner,runLog,runState}.ts` + `modules/chat/main/interactionPolicy.ts` | 会话选择与阻塞策略在 `runner`；运行日志与进程内运行态分离；定时会话交互在主进程按 `kind` 自动结算 |
+| 会话装配 | `modules/chat/harness/worker/loop.ts` + `main/systemPrompt.ts` | 会话级 Agent 缓存 + 事件流 + 工具合并；系统提示词经 `SystemPromptSources` 结构化生成 |
+| 定时任务运行 / 无人值守 | `modules/schedule/main/{runner,runLog,runState}.ts` + `modules/chat/harness/main/interactionPolicy.ts` | 会话选择与阻塞策略在 `runner`；运行日志与进程内运行态分离；定时会话交互在主进程按 `kind` 自动结算 |
 | 工具注册表 | `modules/agent/worker/tools/index.ts` | 按 `ToolGroup` 聚合工厂，`createBuiltinToolEntries()` 统一按权限 / 开关过滤并裁剪输出；`toolkit.ts` 提供 `ALL_PERMISSIONS` / `WRITE_PERMISSIONS` / `describe` / `toolError` / `createGuard` |
-| 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 worker.ts、session.ts、runtimeHost.ts |
-| 模型 | `modules/agent/worker/models.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
+| 协议 | `modules/agent/shared/agentProtocol.ts` | 改 `HostEvent`/`WorkerRequest` 需同步 `harness/worker/{worker,loop}.ts`、`harness/main/runtimeHost.ts` |
+| 模型 | `modules/chat/harness/worker/model.ts` | `normalizeBaseUrl`、`buildModels`、`{session}` 占位替换 |
 
 工具结果 `content` 为文本块数组；失败用 `isError: true`。新增工具必须自测越界拦截与「仅可查看」权限下不可见。
+
+### 6.0 会话 Loop 与 Harness 边界（硬约束）
+
+**会话 Loop 唯一归属 `modules/chat/harness`**；`chat/main` 只负责会话生命周期、上下文落库与状态回写，`agent` 只保存 Agent 配置，MCP / SKILL / 文件 / 浏览器 / 终端仍是独立能力域。
+
+**1）Harness 闭环**
+
+- 模型请求、会话 Agent 装配、工具调用、MCP 装配、SKILL 索引注入、流式事件、记忆 / 摘要模型请求全部在 `chat/harness` 内完成。
+- 主进程 `harness/main`：`runtimeHost` 管 utilityProcess、事件转发与交互配对；`interaction` 联动会话状态；`systemPrompt` 生成提示词。
+- 运行时进程 `harness/worker`：`loop` 按会话创建 / 缓存 Agent；`model` 构建模型；`memory` / `summary` 复用同一模型通道。
+- 禁止在 `chat/main`、渲染层或配置模块重新实现会话 Loop、工具装配或模型调用。
+
+**2）会话属性标准化**
+
+| 属性 | 枚举 | 默认 | 约束 |
+|---|---|---|---|
+| `triggerType` | `manual` / `schedule` / `resume` | `manual` | 仅备注；`schedule` 固定关闭人机模式 |
+| `permissionMode` | `read-only` / `workspace-write` / `full-access` | `workspace-write` | 决定工具装配与读写 / 命令范围 |
+| `humanMode` | `on` / `off` | `on` | `off` 时权限审批自动拒绝、提问交回模型 |
+| `loopMode` | `normal` / `goal` | `normal` | Goal 仅预留属性，本期不实现 |
+| `status` | `idle` / `running` / `waiting-confirm` / `completed` / `failed` / `aborted` | `idle` | Loop 状态唯一对外感知入口，实时落 `desk_session` |
+
+- 会话属性变化只落 `desk_session`，Loop 每轮按属性读取；禁止把模式判断散落到任务、渲染层或工具。
+- `status` 必须由 Loop 在开始 / 等待确认 / 结算 / 失败 / 终止时及时回写；应用启动把遗留运行态结算为 `failed`。
+- 定时任务只传 `triggerType='schedule'`；人机模式由 chat 域统一收敛为 `off`，复用会话历史属性为 `on` 时也以生效值为准。
+
+**3）模型提示词结构化**
+
+- 统一经 `harness/main/systemPrompt.ts#buildSystemPrompt(SystemPromptSources)` 生成；业务与渲染层禁止自行拼接系统提示词。
+- 固定顺序：Agent 指令 → 记忆 → 摘要 → SKILL 索引 → MCP 索引 → 权限说明 → 工具使用约束 → 人机交互说明；空段自动省略。
+- SKILL / MCP 常驻上下文只放索引，正文 / 工具按需读取；内置工具清单由运行时按实际装配结果经 `buildToolGuide()` 追加。
+- 提示词内容计入运行时装配指纹，配置变化后下一轮自动重建。
+
+**4）任务只负责触发**
+
+- `modules/schedule` 只负责触发、会话选择与运行日志；不得在任务侧决定人机模式、权限差异或 Loop 分支。
+- 任务会话的定制在 chat 域闭环：触发来源进入会话属性，人机模式固定 `off`，无人值守结算统一走 `interactionPolicy`。
+
+**5）模块职责**
+
+- 扩展中心（Agent / MCP / SKILL）、应用中心、系统设置只做本模块数据与配置读写，为 Loop 提供数据 / 文件支撑。
+- 配置模块禁止调用 `runAgent` / `abortAgent` / `evictAgent` / `resetAgents`、读写会话状态或决定 Loop 分支；必要的数据读取由 chat 注入回调。
+- 配置生效统一由 `runtimeFingerprint` 驱动：覆盖 Agent 指令、记忆、摘要、SKILL、MCP、权限、工具开关、模型与供应商；指纹变化后 `harness/worker/loop.ts` 在下一轮重建 Agent。
+- 例外：MCP 连通测试等运行时工具可经 harness 公共出口调用，但不得触碰会话 Loop 状态。
 
 ### 6.1 内置工具目录的产品边界（硬约束）
 
@@ -543,10 +587,10 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 - **内联而非弹窗**：权限审批与 `ask_user` 统一占用输入框位置展示（`InteractionPanel`），不再使用全局模态对话框；`App.vue` 不挂交互宿主。
 - **按会话隔离**：交互队列按 `sessionId` 分组，只展示当前会话的请求；其它会话的请求留在各自队列，切回时再展示，禁止跨会话抢占输入区。
-- **无人值守自动结算**：`trigger_type='schedule'` 的会话在推送渲染层前由 `chat/main/interactionPolicy.ts` 直接给出结果——权限审批 `denied`、`ask_user` `auto`（交回模型自行决策），禁止把定时会话的请求塞进渲染层队列，也禁止把两类交互统一成一种结果。
+- **无人值守自动结算**：`humanMode='off'` 的会话（定时任务固定关闭）在推送渲染层前由 `chat/harness/main/interactionPolicy.ts` 直接给出结果——权限审批 `denied`、`ask_user` `auto`（交回模型自行决策），禁止把定时会话的请求塞进渲染层队列，也禁止把两类交互统一成一种结果。
 - **标题与配色固定**：权限审批标题固定「权限审批申请」、淡红色系；`ask_user` 标题固定「用户确认」、黄色系；两类共用同一卡片布局。
 - **多问题**：`ask_user` 支持 `questions` 数组（1~10 个），由 worker 逐题发起并回传；契约使用 `round` / `total`，渲染层在左下角展示 `1/N`。
-- **取消只走显式路径**：用户终止、删除会话、运行时重置 / 退出才取消交互；运行期间后台摘要、长期记忆或配置刷新触发的 `evict` 必须延后到本轮结束（`runtimeHost.pendingEvictions`），禁止取消正在等待的审批。
+- **取消只走显式路径**：用户终止、删除会话、运行时释放 / 退出才取消交互；配置变化、后台摘要与长期记忆只更新数据，由装配指纹在下一轮重建，禁止取消正在等待的审批。
 - **清理闭环**：会话删除 / 级联删除后同时清理交互队列；新增交互类型必须复用同一队列与卡片，不再新建弹窗。
 
 ### 6.3 Agent 配置与会话绑定 [硬]
@@ -554,7 +598,7 @@ shell/layout/index.vue（app-wrapper，纵向）
 - **Agent 是能力编排实体**：`desk_agent` 持有 `system_prompt`、`skill_ids`、`mcp_ids` 与五类内置工具开关；MCP / SKILL / 内置工具本身仍是独立域，Agent 只保存引用与开关。
 - **会话创建即绑定**：新建会话必须选择项目与 Agent；`desk_session.agent_id` 创建后不可修改，运行时的指令、SKILL、MCP、内置工具全部按该 Agent 读取。
 - **权限来源唯一**：`chat/main/chatService.ts` 只从会话绑定的 Agent 取能力，禁止再读全局工具开关或把配置复制到会话；Agent 缺失直接报 `runtime.agentMissing`。
-- **实时生效**：Agent 保存后清理绑定会话的运行时缓存（`evictAgent`），长期记忆 / 记忆开关变更清理项目下会话运行时；摘要生成后清理当前会话运行时；下一轮重新装配，已发生消息不受影响。
+- **实时生效**：Agent 保存、记忆 / 记忆开关变更、摘要生成只更新数据；会话 Loop 在下一轮按运行时装配指纹自动重建，已发生消息由数据库恢复，不受影响。
 - **删除约束**：默认内置 Agent（`builtin=1`）禁删；仍被会话引用的 Agent 禁删，并提示关联会话数。
 - **项目记忆归属**：记忆随项目行保存（`desk_project.memory*`），由 `desk_project.memory_enabled` 控制是否注入；手动管理入口在「系统设置 → 项目」，不在 Agent 页另建一份。
 - **新增 Agent 能力时**：契约加在 `modules/agent/shared/contracts.ts`，持久化加在 `agent/main/{schema,ddl,agentService}.ts`，装配只在 `chatService` / `worker/session` 消费，禁止在渲染层拼装系统提示。
@@ -602,11 +646,17 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ### 7.5 Agent 运行时与安全边界
 
-- [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后已清理关联会话运行时；默认与占用中的 Agent 未被删除。
+- [ ] 会话已绑定项目与 Agent；能力只从 Agent 读取，Agent / 记忆变更后下一轮按装配指纹重建；默认与占用中的 Agent 未被删除。
 - [ ] 「内置工具」仅收录客户端核心能力，未混入 MCP / SKILL 等插件内部工具。
-- [ ] 人机交互按会话隔离并占用输入框位置；权限 / 用户确认标题与配色固定；多问题使用 `round` / `total`；后台 `evict` 已延后到本轮结束，未误取消审批。
+- [ ] 人机交互按会话隔离并占用输入框位置；权限 / 用户确认标题与配色固定；多问题使用 `round` / `total`；删除 / 释放在本轮结束后执行，未误取消审批。
 - [ ] 定时会话的交互在主进程按 `kind` 自动结算（权限 `denied` / 提问 `auto`），未进入渲染层交互队列；`turn-start` 外部轮次已接入流式并以 `streamingIds` 去重。
 - [ ] 技能库读写不触发审批；`read_skill` 仍只认已启用技能；未新增脆弱的 shell 只读命令白名单。
+
+- [ ] 会话 Loop（模型 / 工具 / MCP / SKILL / 提示词）只在 `modules/chat/harness` 实现，`chat/main` 与渲染层未重复实现。
+- [ ] 会话属性枚举化并落 `desk_session`；`status` 在关键节点及时回写，外部只读状态感知 Loop。
+- [ ] 系统提示词统一经 `buildSystemPrompt` 生成，未在业务 / 渲染层手工拼接。
+- [ ] 定时任务只触发；任务会话人机模式固定 `off`，复用会话也按生效值收敛。
+- [ ] 扩展中心 / 应用中心 / 系统设置未调用运行时控制，配置变化由 `runtimeFingerprint` 下一轮重建。
 
 ### 7.6 交付与验证
 
@@ -616,9 +666,9 @@ shell/layout/index.vue（app-wrapper，纵向）
 
 ## 8. 参考实现
 
-- 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/{agentService,agentMemoryService}.ts`、`modules/agent/main/host/runtimeHost.ts`
+- 主进程：`modules/chat/main/chatService.ts`（编排）、`modules/chat/main/sessionService.ts`（CRUD + 级联）、`modules/agent/main/{agentService,agentMemoryService}.ts`、`modules/chat/harness/main/runtimeHost.ts`
 - 渲染：`modules/mcp/renderer/{pages,components}`（管理 + 发现）、`modules/chat/renderer/store/{index,stream}.ts`
 - 内置应用：`modules/appCenter/**`（注册表 / 安装启用 / 市场）、`modules/apps/note/**`（目录树 / 编辑器 / 右侧文章目录 / 目录监听）
 - 公共能力：`common/main/utils/directoryWatcher.ts`（目录监听）、`common/renderer/components/CollapseShell/`（折叠面板外壳）、`common/renderer/components/CodeEditor/`（编辑器与主题）
-- 运行时：`modules/agent/worker/session.ts`、`modules/agent/worker/tools/index.ts`、`modules/agent/worker/toolkit.ts`
+- 运行时：`modules/chat/harness/worker/{worker,loop,model,memory,summary}.ts`、`modules/agent/worker/tools/index.ts`、`modules/agent/worker/toolkit.ts`
 - 构建：`package.json`（`type-check` / `build` / `dev`）、`electron.vite.config.ts`

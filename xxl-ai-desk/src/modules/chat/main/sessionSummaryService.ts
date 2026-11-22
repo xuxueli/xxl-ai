@@ -11,7 +11,8 @@ import { SESSION_SUMMARY_MAX_CHARS } from '@modules/chat/shared'
 import type { StoredMessage } from '@modules/chat/shared'
 import { isRuntimeSource } from '@modules/chat/shared'
 import { getSettings } from '@modules/settings/main'
-import { evictAgent, generateSessionSummary, resolveAgentTarget, toRuntimeConfig } from '@modules/agent/main'
+import { generateSessionSummary } from '@modules/chat/harness'
+import { resolveAgentTarget, toRuntimeConfig } from '@modules/agent/main'
 import { countTurnsAfter, getSession, getSessionSummary, listMessagesAfter, saveSessionSummary } from './sessionService'
 
 /* 上下文使用率触发阈值：达到 80% 即主动压缩 */
@@ -143,8 +144,6 @@ export async function maybeCompressSession(context: SessionCompressionContext): 
       return
     }
     saveSessionSummary(sessionId, saved, lastMessageId)
-    /* 系统提示词在创建 Agent 时固化：摘要需清理会话运行时，下一轮重新装配 */
-    evictAgent(sessionId)
     log.info(`[session-summary] 会话 ${sessionId} 摘要已更新（${turns} 轮增量）`)
   } catch (error) {
     /* 失败隔离：保留旧摘要与游标，下一轮继续尝试 */

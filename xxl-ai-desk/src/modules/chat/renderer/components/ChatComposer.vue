@@ -13,7 +13,7 @@ import { DeskTooltip } from '@common/renderer/components'
 import ChatFilePicker from '@modules/chat/renderer/components/ChatFilePicker.vue'
 import SessionStatusBar from '@modules/chat/renderer/components/SessionStatusBar.vue'
 import { relativeToRoot } from '@modules/chat/renderer/utils/path'
-import { DEFAULT_PERMISSION_MODE, type PermissionMode } from '@modules/chat/shared'
+import { DEFAULT_PERMISSION_MODE, type PermissionMode, type SessionHumanMode } from '@modules/chat/shared'
 import {
   DEFAULT_REASONING_LEVEL,
   REASONING_LEVELS,
@@ -139,9 +139,29 @@ const currentPermissionLabel = computed(() => t(PERMISSION_LABEL_KEYS[currentPer
 /* 完全权限：入口文案与下拉项均用危险色提示 */
 const fullAccess = computed(() => currentPermissionMode.value === 'full-access')
 
+/* 当前人机模式：已生成对话取会话配置，新建对话默认开启；定时任务会话固定关闭 */
+const currentHumanMode = computed<SessionHumanMode>(() =>
+  locked.value ? chat.currentSession?.humanMode ?? 'on' : 'on'
+)
+const humanModeLocked = computed(
+  () => locked.value && chat.currentSession?.triggerType === 'schedule'
+)
+const currentHumanModeLabel = computed(() =>
+  t(currentHumanMode.value === 'on' ? 'chat.humanModeOn' : 'chat.humanModeOff')
+)
+
 /* 切换权限：记住全局默认，已生成对话同时落库到会话 */
 async function onPermissionChange(permissionMode: PermissionMode): Promise<void> {
   await chat.updateSessionPermissionMode(permissionMode)
+}
+
+/* 切换人机模式：仅已生成的手动会话可改，定时任务会话固定关闭 */
+async function onHumanModeChange(humanMode: SessionHumanMode): Promise<void> {
+  if (humanModeLocked.value) {
+    ElMessage.warning(t('chat.humanModeFixedOff'))
+    return
+  }
+  await chat.updateSessionHumanMode(humanMode)
 }
 
 /* 选择模型（命令格式 providerId::modelId）：全局记忆最近选择，并同步当前会话 */
@@ -317,6 +337,45 @@ function onKeydown(event: KeyboardEvent): void {
                   :class="{ 'picker-active': currentPermissionMode === 'full-access' }"
                 >
                   <el-icon><Unlock /></el-icon>{{ t('chat.permissionFullAccess') }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
+          <!-- 人机模式：开启时审批 / 提问进入输入区；关闭时由主进程无人值守结算 -->
+          <el-dropdown
+            v-if="locked"
+            trigger="click"
+            popper-class="human-mode-dropdown"
+            @command="onHumanModeChange"
+          >
+            <span
+              class="picker-trigger"
+              :class="{ 'picker-trigger--muted': currentHumanMode === 'off' }"
+              :title="humanModeLocked ? t('chat.humanModeFixedOff') : t('chat.humanModeTip')"
+            >
+              <el-icon class="picker-icon">
+                <User v-if="currentHumanMode === 'on'" />
+                <UserFilled v-else />
+              </el-icon>
+              <span class="picker-name">{{ currentHumanModeLabel }}</span>
+              <el-icon class="picker-arrow"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  command="on"
+                  :disabled="humanModeLocked"
+                  :class="{ 'picker-active': currentHumanMode === 'on' }"
+                >
+                  <el-icon><User /></el-icon>{{ t('chat.humanModeOn') }}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  command="off"
+                  :disabled="humanModeLocked"
+                  :class="{ 'picker-active': currentHumanMode === 'off' }"
+                >
+                  <el-icon><UserFilled /></el-icon>{{ t('chat.humanModeOff') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -608,6 +667,11 @@ function onKeydown(event: KeyboardEvent): void {
 .picker-trigger.picker-trigger--danger,
 .picker-trigger.picker-trigger--danger:hover {
   color: var(--desk-danger);
+}
+
+/* 人机模式关闭：弱化入口，提示当前为无人值守运行 */
+.picker-trigger.picker-trigger--muted {
+  color: var(--desk-text-tertiary);
 }
 
 .picker-trigger .picker-icon,

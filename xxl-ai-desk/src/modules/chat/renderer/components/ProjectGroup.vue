@@ -11,7 +11,7 @@ import SidebarRow from '@renderer/shell/layout/components/Sidebar/SidebarRow.vue
 import { DeskTooltip } from '@common/renderer/components'
 import { t } from '@common/renderer/i18n'
 import type { ProjectDTO } from '@modules/project/shared'
-import type { SessionDTO } from '@modules/chat/shared'
+import type { SessionDTO, SessionStatus } from '@modules/chat/shared'
 
 const props = defineProps<{
   /* 项目及其下会话（已按当前排序方式排好） */
@@ -26,6 +26,24 @@ const emit = defineEmits<{ toggle: []; select: [sessionId: number] }>()
 
 const chat = useChatStore()
 const projectStore = useProjectStore()
+
+/* 会话状态点：仅展示需要用户关注的运行态 / 异常态 */
+const STATUS_LABEL_KEYS: Record<SessionStatus, string> = {
+  idle: 'chat.status.idle',
+  running: 'chat.status.running',
+  'waiting-confirm': 'chat.status.waitingConfirm',
+  completed: 'chat.status.completed',
+  failed: 'chat.status.failed',
+  aborted: 'chat.status.aborted'
+}
+
+function statusVisible(status: SessionStatus): boolean {
+  return status !== 'idle'
+}
+
+function statusLabel(status: SessionStatus): string {
+  return t(STATUS_LABEL_KEYS[status])
+}
 
 /* 项目行下拉实例：右键项目名与悬浮「...」共用同一菜单 */
 const projectMenu = ref<DropdownInstance>()
@@ -222,6 +240,14 @@ async function onDeleteSession(id: number): Promise<void> {
           >
             <AlarmClock />
           </el-icon>
+          <span
+            v-if="statusVisible(session.status)"
+            class="session-status"
+            :class="`session-status--${session.status}`"
+            role="img"
+            :title="statusLabel(session.status)"
+            :aria-label="statusLabel(session.status)"
+          />
         </span>
         <template #actions>
           <span class="session-actions" @click.stop>
@@ -273,6 +299,36 @@ async function onDeleteSession(id: number): Promise<void> {
   gap: 6px;
 }
 
+/* 会话行状态圆点：固定在标题右侧，用淡色区分运行 / 待确认 / 完成 / 失败 / 终止 */
+.session-status {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--desk-text-tertiary);
+  opacity: 0.6;
+}
+
+.session-status--running {
+  background: var(--desk-primary);
+}
+
+.session-status--waiting-confirm {
+  background: var(--desk-warning);
+}
+
+.session-status--completed {
+  background: var(--desk-success);
+}
+
+.session-status--failed {
+  background: var(--desk-danger);
+}
+
+.session-status--aborted {
+  background: var(--desk-text-tertiary);
+}
+
 .session-empty {
   padding: 6px 12px;
   font-size: var(--desk-font-xs);
@@ -284,6 +340,7 @@ async function onDeleteSession(id: number): Promise<void> {
   display: flex;
   align-items: center;
   gap: 4px;
+  width: 100%;
   min-width: 0;
 }
 

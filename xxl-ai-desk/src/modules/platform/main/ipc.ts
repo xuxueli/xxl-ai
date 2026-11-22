@@ -14,7 +14,7 @@ import { applyAppIconDataUrl } from './appIconService'
 import { detectExecutable } from './envService'
 import { checkForUpdate, openDownload } from './updateService'
 import { listOpenWithApps, openWith } from './openWithService'
-import { disposeAgentRuntime } from '@modules/agent/main'
+import { disposeAgentRuntime } from '@modules/chat/harness'
 import { disposeAllTerminals } from '@modules/terminal/main'
 
 export function registerPlatformIpc(ipc: IpcContext): void {

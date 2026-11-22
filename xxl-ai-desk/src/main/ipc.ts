@@ -23,7 +23,7 @@ import { registerMcpIpc } from '@modules/mcp/main/ipc'
 import { registerSkillIpc } from '@modules/skill/main/ipc'
 import { registerDiagnosticsIpc } from '@modules/diagnostics/main/ipc'
 import { registerScheduleIpc } from '@modules/schedule/main/ipc'
-import { countSessionsByAgents, listSessionIdsByAgent, listSessionIdsByProject } from '@modules/chat/main'
+import { countSessionsByAgents } from '@modules/chat/main'
 
 /* 注册全部 IPC 处理器 */
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -32,7 +32,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   registerAppCenterIpc(ipc)
   registerSettingsIpc(ipc)
   /* Agent 删除保护与会话占用统计由会话域提供，避免 agent 反向依赖 chat */
-  registerAgentIpc(ipc, { countSessionsByAgents, listSessionIdsByAgent, listSessionIdsByProject })
+  registerAgentIpc(ipc, { countSessionsByAgents })
   registerProviderIpc(ipc)
   registerProjectIpc(ipc)
   registerChatIpc(ipc)

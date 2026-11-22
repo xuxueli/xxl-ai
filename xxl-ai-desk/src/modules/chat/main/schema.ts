@@ -16,8 +16,11 @@ export const sessionTable = sqliteTable('desk_session', {
   modelId: text('model_id').notNull().default(''), /* 绑定模型 ID */
   reasoningLevel: text('reasoning_level').notNull().default('default'), /* 推理等级 default / low / high / max */
   permissionMode: text('permission_mode').notNull().default('workspace-write'), /* 权限模式 read-only / workspace-write / full-access */
-  triggerType: text('trigger_type').notNull().default('manual'), /* 触发来源 manual / schedule */
+  triggerType: text('trigger_type').notNull().default('manual'), /* 触发来源 manual / schedule / resume */
   scheduleTaskId: integer('schedule_task_id').notNull().default(0), /* 定时任务触发时的来源任务 ID */
+  humanMode: text('human_mode').notNull().default('on'), /* 人机模式 on / off（定时任务固定 off） */
+  loopMode: text('loop_mode').notNull().default('normal'), /* Loop 模式 normal / goal（goal 预留） */
+  status: text('status').notNull().default('idle'), /* 会话状态 idle / running / waiting-confirm / completed / failed / aborted */
   summary: text('summary').notNull().default(''), /* 历史会话压缩摘要（定长） */
   summaryLastMessageId: integer('summary_last_message_id').notNull().default(0), /* 摘要覆盖到的最后一条消息 ID */
   summaryUpdateTime: text('summary_update_time').notNull().default(''), /* 摘要生成时间（ISO） */

@@ -1,5 +1,5 @@
 /*
- * Agent 运行时进程（Electron utilityProcess 入口）：
+ * 会话 Harness 运行时进程（Electron utilityProcess 入口）：
  * 承接全部模型调用、工具执行与文件沙箱，经 process.parentPort 与主进程通信。
  * 如此 LLM 流式与工具重活不再占用主进程事件循环，UI 与 IPC 始终保持顺滑。
  */
@@ -7,25 +7,23 @@
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import './i18n'
-import { initWorkerLogger } from '@modules/agent/worker/logger'
+import { initWorkerLogger } from './logger'
 import {
   beginTraceRun,
   clearTraceRuns,
   createTraceTarget,
   endTraceRun,
   setTraceSink
-} from '@modules/agent/worker/trace'
+} from './trace'
 import {
   abortAgent,
   applyRunMessages,
   clearSessionAbort,
   evictAgent,
   getAgent,
-  hasActiveRuns,
   isSessionAborted,
-  resetAgents,
   runPrompt
-} from '@modules/agent/worker/session'
+} from './loop'
 import { setBrowserActionInvoker, setRuntimePath } from '@modules/agent/worker/tools'
 import {
   closeAllMcpClients,
@@ -35,8 +33,8 @@ import {
   testMcpServer
 } from '@modules/mcp/worker'
 import { clearSessionPermissions } from '@modules/agent/worker/sandbox'
-import { generateMemoryContent } from '@modules/agent/worker/memory'
-import { generateSessionSummaryContent } from '@modules/agent/worker/summary'
+import { generateMemoryContent } from './memory'
+import { generateSessionSummaryContent } from './summary'
 import {
   cancelAllInteractions,
   cancelSessionInteractions,
@@ -151,6 +149,7 @@ async function handleRun(input: RunAgentInput): Promise<void> {
       systemPrompt: input.systemPrompt,
       permissionMode: input.permissionMode,
       rootDir: input.rootDir,
+      runtimeFingerprint: input.runtimeFingerprint,
       language: input.language,
       runtimePath: input.mcpRuntimePath,
       mcpServers: input.mcpServers ?? [],
@@ -216,9 +215,6 @@ async function handleRun(input: RunAgentInput): Promise<void> {
     cancelSessionInteractions(input.sessionId)
     evictAgent(input.sessionId)
     post({ type: 'run-error', sessionId: input.sessionId, message: (error as Error).message })
-  } finally {
-    /* 本轮结束：若期间收到过配置重置，且已无运行中的轮次，补做重置 */
-    flushPendingReset()
   }
 }
 
@@ -287,36 +283,6 @@ async function handleMcpTools(
   }
 }
 
-/*
- * 配置重置：存在运行中的轮次时延后执行，避免多步执行中途被清掉工具 / 交互；
- * 等全部运行结束后再统一重建，下一轮自然使用新配置。
- */
-let resetPending = false
-
-/* 立即执行运行时重置 */
-function applyReset(): void {
-  resetPending = false
-  for (const buffer of deltaBuffers.values()) {
-    if (buffer.timer) {
-      clearTimeout(buffer.timer)
-    }
-  }
-  deltaBuffers.clear()
-  cancelAllInteractions()
-  resetAgents()
-  /* 运行时重置：丢弃全部未完成的采集状态 */
-  clearTraceRuns()
-  /* 配置变更/退出：关闭全部 MCP 连接，释放 stdio 子进程 */
-  void closeAllMcpClients()
-}
-
-/* 全部运行结束后补做延后的重置 */
-function flushPendingReset(): void {
-  if (resetPending && !hasActiveRuns()) {
-    applyReset()
-  }
-}
-
 /* 处理来自主进程的请求 */
 function handleRequest(message: WorkerRequest): void {
   switch (message.type) {
@@ -361,14 +327,6 @@ function handleRequest(message: WorkerRequest): void {
     }
     case 'clear-permissions':
       clearSessionPermissions(message.sessionId)
-      break
-    case 'reset':
-      /* 执行中的轮次优先跑完：重置延后到全部结束后补做 */
-      if (hasActiveRuns()) {
-        resetPending = true
-      } else {
-        applyReset()
-      }
       break
     case 'shutdown':
       cancelAllInteractions()

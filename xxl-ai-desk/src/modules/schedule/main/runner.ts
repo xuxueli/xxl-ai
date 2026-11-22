@@ -11,7 +11,7 @@ import log from 'electron-log/main'
 import { t } from '@common/main/i18n'
 import { abortChat, createSession, getSession, sendChat, updateSession } from '@modules/chat/main'
 import type { ChatEventPayload } from '@modules/chat/main'
-import { isAgentRunning } from '@modules/agent/main'
+import { isAgentRunning } from '@modules/chat/harness'
 import { getSettings } from '@modules/settings/main'
 import type {
   ScheduleLogStatus,

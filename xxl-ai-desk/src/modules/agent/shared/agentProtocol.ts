@@ -69,6 +69,8 @@ export interface RunAgentInput {
   permissionMode: PermissionMode
   /* 项目根目录（文件沙箱根） */
   rootDir: string
+  /* 运行时装配指纹：配置变化时由运行时按指纹重建会话 Agent */
+  runtimeFingerprint: string
   /* 运行时 PATH（含设置的 Node / Python 环境，供 run_command 使用） */
   runtimePath: string
   /* MCP stdio 专用 PATH：优先系统 Node，避免 Electron-as-Node 子进程产生 Dock 图标 */
@@ -133,7 +135,6 @@ export type WorkerRequest =
   | { type: 'abort'; sessionId: number } /* 中止指定会话生成 */
   | { type: 'evict'; sessionId: number } /* 释放会话缓存 */
   | { type: 'clear-permissions'; sessionId: number } /* 清空会话越界白名单 */
-  | { type: 'reset' } /* 重置全部运行时状态 */
   | { type: 'shutdown' } /* 退出前优雅关闭：释放 MCP 子进程后自行退出 */
   | { type: 'interaction-response'; requestId: string; result: InteractionResult } /* 回传用户交互结果 */
   | { type: 'mcp-test'; requestId: string; server: McpRuntimeConfig; runtimePath: string; language: 'zh' | 'en' } /* 连通测试（临时连接） */

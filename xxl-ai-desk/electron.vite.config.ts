@@ -17,10 +17,10 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
-        /* 双入口：主进程 + Agent 运行时进程（utilityProcess） */
+        /* 双入口：主进程 + 会话 Harness 运行时进程（utilityProcess） */
         input: {
           index: resolve('src/main/index.ts'),
-          'agent/worker/worker': resolve('src/modules/agent/worker/worker.ts')
+          'chat/harness/worker/worker': resolve('src/modules/chat/harness/worker/worker.ts')
         }
       }
     }

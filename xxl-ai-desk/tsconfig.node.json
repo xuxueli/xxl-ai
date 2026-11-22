@@ -29,6 +29,7 @@
     "src/modules/*/main/**/*",             /* 领域主进程实现 */
     "src/modules/*/preload/**/*",          /* 领域预加载片段 */
     "src/modules/*/worker/**/*",           /* 领域 Worker 实现 */
+    "src/modules/*/harness/**/*",          /* 会话 Harness 运行时实现 */
     "electron.vite.config.ts"              /* 构建配置本身也纳入检查 */
   ]
 }

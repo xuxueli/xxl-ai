@@ -12,7 +12,7 @@ import { PROJECT_IPC } from '../shared/ipc'
 import { createProject, deleteProject, getProject, listProjects, renameProject, setProjectMemoryEnabled } from './projectService'
 import { registerLocalFileRoot } from '@common/main/utils/localFileRoots'
 import { abortChat, deleteSession, discardSessionRuns, listSessionIdsByProject } from '@modules/chat/main'
-import { evictAgent, clearSessionPermissions } from '@modules/agent/main'
+import { evictAgent, clearSessionPermissions } from '@modules/chat/harness'
 import { clearTraces } from '@modules/diagnostics/main'
 
 export function registerProjectIpc(ipc: IpcContext): void {
@@ -56,10 +56,7 @@ export function registerProjectIpc(ipc: IpcContext): void {
       shell.showItemInFolder(project.path)
     }
   })
-  ipc.handle(PROJECT_IPC.setMemoryEnabled, (_event, id: number, enabled: boolean) => {
-    const saved = setProjectMemoryEnabled(id, enabled)
-    /* 记忆注入状态变化：清理项目下会话运行时，下一轮重新装配系统提示 */
-    listSessionIdsByProject(id).forEach((sessionId) => evictAgent(sessionId))
-    return saved
-  })
+  ipc.handle(PROJECT_IPC.setMemoryEnabled, (_event, id: number, enabled: boolean) =>
+    setProjectMemoryEnabled(id, enabled)
+  )
 }

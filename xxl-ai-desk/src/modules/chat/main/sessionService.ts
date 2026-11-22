@@ -15,18 +15,25 @@ import { DEFAULT_REASONING_LEVEL, normalizeReasoningLevel } from '@common/shared
 import type { ContextBreakdown } from '@common/shared/model'
 import {
   DEFAULT_PERMISSION_MODE,
+  DEFAULT_SESSION_HUMAN_MODE,
+  DEFAULT_SESSION_LOOP_MODE,
   messageStatusOf,
   normalizeMessageStatus,
   normalizePermissionMode,
-  normalizeSessionTriggerType
+  normalizeSessionHumanMode,
+  normalizeSessionLoopMode,
+  normalizeSessionStatus,
+  normalizeSessionTriggerType,
+  resolveSessionHumanMode
 } from '@modules/chat/shared'
-import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, StoredMessage } from '@modules/chat/shared'
+import type { MessageSource, MessageStatus, MessageStatusSource, ProjectMessageGroup, ProjectMessages, SessionDTO, SessionStatus, StoredMessage } from '@modules/chat/shared'
 
 type SessionRow = typeof sessionTable.$inferSelect
 type MessageRow = typeof messageTable.$inferSelect
 
-/* 行记录 → DTO（推理等级与权限模式在读取边界归一） */
+/* 行记录 → DTO（会话属性在读取边界归一） */
 function toSessionDTO(row: SessionRow): SessionDTO {
+  const triggerType = normalizeSessionTriggerType(row.triggerType)
   return {
     id: row.id,
     title: row.title,
@@ -36,8 +43,15 @@ function toSessionDTO(row: SessionRow): SessionDTO {
     modelId: row.modelId,
     reasoningLevel: normalizeReasoningLevel(row.reasoningLevel),
     permissionMode: normalizePermissionMode(row.permissionMode),
-    triggerType: normalizeSessionTriggerType(row.triggerType),
+    triggerType,
     scheduleTaskId: row.scheduleTaskId,
+    /* 定时任务会话固定关闭人机模式，展示与 Loop 判定保持一致 */
+    humanMode: resolveSessionHumanMode({
+      triggerType,
+      humanMode: normalizeSessionHumanMode(row.humanMode)
+    }),
+    loopMode: normalizeSessionLoopMode(row.loopMode),
+    status: normalizeSessionStatus(row.status),
     contextBreakdown: parseContextBreakdown(row.contextBreakdown),
     addTime: row.addTime,
     updateTime: row.updateTime
@@ -123,6 +137,7 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
   assertProject(projectId)
   const agentId = assertAgent(input.agentId ?? 0)
   const now = new Date().toISOString()
+  const triggerType = normalizeSessionTriggerType(input.triggerType)
   const record = {
     title: input.title || NEW_CHAT_TITLE,
     projectId,
@@ -131,8 +146,15 @@ export function createSession(input: Omit<Partial<SessionDTO>, 'id'> = {}): Sess
     modelId: input.modelId || '',
     reasoningLevel: normalizeReasoningLevel(input.reasoningLevel ?? DEFAULT_REASONING_LEVEL),
     permissionMode: normalizePermissionMode(input.permissionMode ?? DEFAULT_PERMISSION_MODE),
-    triggerType: normalizeSessionTriggerType(input.triggerType),
+    triggerType,
     scheduleTaskId: input.scheduleTaskId ?? 0,
+    /* 会话定制在 chat 域闭环：定时任务只传触发来源，人机模式由会话创建统一收敛 */
+    humanMode: resolveSessionHumanMode({
+      triggerType,
+      humanMode: normalizeSessionHumanMode(input.humanMode ?? DEFAULT_SESSION_HUMAN_MODE)
+    }),
+    loopMode: normalizeSessionLoopMode(input.loopMode ?? DEFAULT_SESSION_LOOP_MODE),
+    status: normalizeSessionStatus(input.status),
     summary: '',
     summaryLastMessageId: 0,
     summaryUpdateTime: '',
@@ -162,10 +184,37 @@ export function updateSession(id: number, patch: Partial<SessionDTO>): SessionDT
     modelId: patch.modelId ?? existing.modelId,
     reasoningLevel: normalizeReasoningLevel(patch.reasoningLevel ?? existing.reasoningLevel),
     permissionMode: normalizePermissionMode(patch.permissionMode ?? existing.permissionMode),
+    /* 定时任务会话固定关闭人机模式，禁止通过会话配置改回开启 */
+    humanMode:
+      existing.triggerType === 'schedule'
+        ? 'off'
+        : normalizeSessionHumanMode(patch.humanMode ?? existing.humanMode),
+    loopMode: normalizeSessionLoopMode(patch.loopMode ?? existing.loopMode),
     updateTime: new Date().toISOString()
   }
   db.update(sessionTable).set(record).where(eq(sessionTable.id, existing.id)).run()
   return toSessionDTO(record)
+}
+
+/* 写入会话状态：Loop 状态及时落库，外部统一据此感知会话进度 */
+export function updateSessionStatus(sessionId: number, status: SessionStatus): void {
+  if (!sessionId) {
+    return
+  }
+  getDb()
+    .update(sessionTable)
+    .set({ status: normalizeSessionStatus(status) })
+    .where(eq(sessionTable.id, sessionId))
+    .run()
+}
+
+/* 应用启动结算遗留状态：上一进程中断的运行 / 等待确认统一标记为失败 */
+export function settleInterruptedSessions(): void {
+  getDb()
+    .update(sessionTable)
+    .set({ status: 'failed' })
+    .where(inArray(sessionTable.status, ['running', 'waiting-confirm']))
+    .run()
 }
 
 /* 写入会话最近一次上下文分项：每轮结束调用一次；空值保留旧数据 */

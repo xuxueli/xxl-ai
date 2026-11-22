@@ -1,6 +1,6 @@
 /*
  * Agent 域 IPC 注册：Agent 配置 CRUD 与项目记忆。
- *   - 保存后清理关联会话运行时，使新配置下一轮立即生效；
+ *   - 保存后只落配置，运行时按装配指纹在下一轮自动重建；
  *   - 删除前校验默认 Agent 与会话占用；
  *   - 会话能力由组合根注入，避免 agent → chat 的模块反向依赖。
  * @author xuxueli 2026-11-07
@@ -11,21 +11,11 @@ import { t } from '@common/main/i18n'
 import { AGENT_IPC } from '../shared/ipc'
 import { listAgentMemories, saveAgentMemory } from './agentMemoryService'
 import { deleteAgent, getAgentById, listAgents, saveAgent } from './agentService'
-import { evictAgent } from './host/runtimeHost'
 
 /* 会话域注入能力 */
 interface AgentSessionDeps {
   /* 各 Agent 绑定会话数（一次分组统计） */
   countSessionsByAgents(): Record<number, number>
-  /* Agent 绑定会话 ID 列表 */
-  listSessionIdsByAgent(agentId: number): number[]
-  /* 项目下会话 ID 列表 */
-  listSessionIdsByProject(projectId: number): number[]
-}
-
-/* 清理指定会话运行时：配置或记忆变更后下一轮重新装配 */
-function evictSessions(sessionIds: number[]): void {
-  sessionIds.forEach((sessionId) => evictAgent(sessionId))
 }
 
 export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): void {
@@ -35,8 +25,6 @@ export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): v
   })
   ipc.handle(AGENT_IPC.save, (_event, input) => {
     const saved = saveAgent(input)
-    /* 配置变更：仅清理绑定该 Agent 的会话运行时 */
-    evictSessions(sessions.listSessionIdsByAgent(saved.id))
     const sessionCount = sessions.countSessionsByAgents()[saved.id] ?? 0
     return { ...saved, sessionCount }
   })
@@ -56,10 +44,5 @@ export function registerAgentIpc(ipc: IpcContext, sessions: AgentSessionDeps): v
   })
 
   ipc.handle(AGENT_IPC.memoryList, () => listAgentMemories())
-  ipc.handle(AGENT_IPC.memorySave, (_event, input) => {
-    const saved = saveAgentMemory(input)
-    /* 记忆变更：清理项目下会话运行时，下一轮注入最新内容 */
-    evictSessions(sessions.listSessionIdsByProject(saved.projectId))
-    return saved
-  })
+  ipc.handle(AGENT_IPC.memorySave, (_event, input) => saveAgentMemory(input))
 }

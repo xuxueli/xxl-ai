@@ -18,6 +18,18 @@
     "permissionWorkspaceWrite": "Workspace write",
     "permissionFullAccess": "Full access",
     "permissionTip": "Read only: global read, no writes or commands; Workspace write: global read, writes only in the project and system temp directories; Full access: global read/write with sensitive operations still blocked",
+    "humanModeOn": "Human-in-the-loop",
+    "humanModeOff": "Unattended",
+    "humanModeTip": "Human-in-the-loop: approvals and questions wait in the composer; Unattended: approvals are denied and questions are decided by the model",
+    "humanModeFixedOff": "Scheduled sessions always run unattended to avoid hanging tool calls",
+    "status": {
+      "idle": "Idle",
+      "running": "Running",
+      "waitingConfirm": "Waiting for confirmation",
+      "completed": "Completed",
+      "failed": "Failed",
+      "aborted": "Aborted"
+    },
     "reasoningDefault": "Default",
     "reasoningLow": "Low",
     "reasoningHigh": "High",

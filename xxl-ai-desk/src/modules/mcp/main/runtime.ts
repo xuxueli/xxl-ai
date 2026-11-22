@@ -7,7 +7,7 @@
 import { t } from '@common/main/i18n'
 import { buildMcpRuntimePath } from '@modules/platform/main'
 import { buildRuntimeConfig, getMcp, saveMcpHealth } from './service'
-import { listMcpToolsByRuntime, testMcpByRuntime } from '@modules/agent/main'
+import { listMcpToolsByRuntime, testMcpByRuntime } from '@modules/chat/harness'
 import type { McpDTO, McpHealth, McpTestResult, McpToolMeta } from '@modules/mcp/shared'
 
 /* 连通测试：支持未保存草稿；已保存记录回写检测结果 */

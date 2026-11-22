@@ -1,10 +1,10 @@
 /*
- * 会话级 Agent 宿主：在运行时进程内按会话创建/缓存 Agent，执行一轮对话并回传流式事件。
+ * 会话 Loop：在运行时进程内按会话创建/缓存 Agent，执行一轮对话并回传流式事件。
  * 模型构建与内置工具装配在此编排，是连接 Pi Agent 与主进程协议的中间层。
  */
 
 import type { Agent } from '@earendil-works/pi-agent-core'
-import { buildModels, type ProviderModelConfig } from '@modules/agent/worker/models'
+import { buildModels, type ProviderModelConfig } from './model'
 import { buildToolGuide, createBuiltinToolEntries } from '@modules/agent/worker/tools'
 import { createMcpTools } from '@modules/mcp/worker'
 import type { MessageSource, PermissionMode } from '@modules/chat/shared'
@@ -22,7 +22,7 @@ import {
   handleTraceMessageEnd,
   handleTraceToolEnd,
   handleTraceToolStart
-} from '@modules/agent/worker/trace'
+} from './trace'
 
 /* 创建/获取会话 Agent 所需的运行时配置 */
 export interface AgentRuntimeOptions {
@@ -35,6 +35,8 @@ export interface AgentRuntimeOptions {
   /* 权限模式（决定工具装配与全局读写范围）与项目根目录（工作区边界） */
   permissionMode: PermissionMode
   rootDir: string
+  /* 运行时装配指纹：与缓存不一致时重建会话 Agent */
+  runtimeFingerprint: string
   /* 应用语言：工具错误与摘要文案使用对应语言 */
   language: AppLanguage
   /* 运行时 PATH（MCP stdio 与 run_command 共用） */
@@ -51,8 +53,12 @@ export interface AgentRuntimeOptions {
   isAborted?: () => boolean
 }
 
-/* 会话级 Agent 运行时缓存：同一会话复用上下文 */
-const runtimes = new Map<number, Promise<Agent>>()
+/* 会话级 Agent 运行时缓存：同一会话复用上下文；指纹变化时重建 */
+interface CachedRuntime {
+  fingerprint: string
+  runtime: Promise<Agent>
+}
+const runtimes = new Map<number, CachedRuntime>()
 
 /*
  * 正在执行一轮的 Agent：与运行时缓存解耦。
@@ -274,7 +280,7 @@ async function createAgent(options: AgentRuntimeOptions): Promise<Agent> {
 
 /*
  * 应用本轮历史：系统指令在创建 Agent 时固化（指令 / 记忆 / 技能索引 / 模式说明），
- * 变更由主进程 evictAgent / resetAgents 触发重建；这里仅替换历史，避免把 system 消息冲掉。
+ * 配置变化由运行时装配指纹触发重建；这里仅替换历史，避免把 system 消息冲掉。
  * 协议侧消息为不透明结构，边界处统一断言为运行时消息。
  */
 export function applyRunMessages(agent: Agent, messages: unknown[]): void {
@@ -284,17 +290,18 @@ export function applyRunMessages(agent: Agent, messages: unknown[]): void {
   agent.state.messages = [...systemMessages, ...(messages as RuntimeMessage[])] as never
 }
 
-/* 获取（或创建）会话 Agent */
+/* 获取（或创建）会话 Agent：配置指纹变化时自动重建，旧上下文由历史消息恢复 */
 export function getAgent(options: AgentRuntimeOptions): Promise<Agent> {
-  let runtime = runtimes.get(options.sessionId)
-  if (!runtime) {
-    runtime = createAgent(options)
-    runtimes.set(options.sessionId, runtime)
+  const cached = runtimes.get(options.sessionId)
+  if (cached && cached.fingerprint === options.runtimeFingerprint) {
+    return cached.runtime
   }
+  const runtime = createAgent(options)
+  runtimes.set(options.sessionId, { fingerprint: options.runtimeFingerprint, runtime })
   return runtime
 }
 
-/* 释放会话 Agent（删除会话/切换模型时） */
+/* 释放会话 Agent（删除会话 / 清理运行时） */
 export function evictAgent(sessionId: number): void {
   runtimes.delete(sessionId)
 }
@@ -308,25 +315,15 @@ export async function abortAgent(sessionId: number): Promise<void> {
     active.abort()
     return
   }
-  const runtime = runtimes.get(sessionId)
-  if (runtime) {
+  const cached = runtimes.get(sessionId)
+  if (cached) {
     try {
-      const agent = await runtime
+      const agent = await cached.runtime
       agent.abort()
     } catch {
       /* Agent 创建失败无需中止 */
     }
   }
-}
-
-/* 是否存在正在执行的一轮（配置重置据此延后，避免打断多步执行） */
-export function hasActiveRuns(): boolean {
-  return activeAgents.size > 0
-}
-
-/* 清空全部运行时（退出时） */
-export function resetAgents(): void {
-  runtimes.clear()
 }
 
 /* 从异常对象中提取 HTTP 状态码 */

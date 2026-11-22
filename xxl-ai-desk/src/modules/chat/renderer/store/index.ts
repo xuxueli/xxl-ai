@@ -24,7 +24,8 @@ import {
   type ChatInteractionPrompt,
   type InteractionResult,
   type PermissionMode,
-  type SessionDTO
+  type SessionDTO,
+  type SessionHumanMode
 } from '@modules/chat/shared'
 import type { UiMessage } from '@modules/chat/renderer/types'
 
@@ -318,6 +319,18 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /* 切换人机模式：仅同步当前会话（定时任务会话由主进程固定关闭） */
+  async function updateSessionHumanMode(humanMode: SessionHumanMode): Promise<void> {
+    if (!currentId.value) {
+      return
+    }
+    const updated = await api.session.update(currentId.value, { humanMode })
+    const target = sessions.value.find((item) => item.id === updated.id)
+    if (target) {
+      target.humanMode = updated.humanMode
+    }
+  }
+
   /* 从任意会话队列移除指定请求 */
   function dropInteraction(requestId: string): void {
     const next = { ...interactions.value }
@@ -339,8 +352,12 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /* 收到交互请求：只进入所属会话队列，不打断其它会话 */
+  /* 收到交互请求：只进入所属会话队列，不打断其它会话；会话状态同步为等待确认 */
   function onInteraction(prompt: ChatInteractionPrompt): void {
+    const session = sessions.value.find((item) => item.id === prompt.sessionId)
+    if (session) {
+      session.status = 'waiting-confirm'
+    }
     const queue = interactions.value[prompt.sessionId] ?? []
     if (queue.some((item) => item.requestId === prompt.requestId)) {
       return
@@ -356,8 +373,17 @@ export const useChatStore = defineStore('chat', () => {
     dropInteraction(payload.requestId)
   }
 
-  /* 回传用户应答：先移出队列，再交主进程唤醒工具调用 */
+  /* 回传用户应答：先移出队列，再交主进程唤醒工具调用；会话恢复运行中 */
   function respondInteraction(requestId: string, result: InteractionResult): void {
+    const pending = Object.values(interactions.value)
+      .flat()
+      .find((item) => item.requestId === requestId)
+    const session = pending
+      ? sessions.value.find((item) => item.id === pending.sessionId)
+      : undefined
+    if (session) {
+      session.status = 'running'
+    }
     dropInteraction(requestId)
     void api.chat.respondInteraction(requestId, result)
   }
@@ -502,6 +528,14 @@ export const useChatStore = defineStore('chat', () => {
       return
     }
     unbind = api.chat.onEvent((event) => {
+      /* 会话状态：Loop 状态唯一来源，收到即刷新侧栏与会话状态条 */
+      if (event.type === 'status') {
+        const session = sessions.value.find((item) => item.id === event.sessionId)
+        if (session && event.status) {
+          session.status = event.status
+        }
+        return
+      }
       /* 轮次开始：本窗口发起的忽略，主进程发起的补建消息并接入流式 */
       if (event.type === 'turn-start') {
         startExternalRound(event)
@@ -685,6 +719,7 @@ export const useChatStore = defineStore('chat', () => {
     selectModel,
     updateSessionReasoningLevel,
     updateSessionPermissionMode,
+    updateSessionHumanMode,
     removeMessages,
     send,
     abort,
