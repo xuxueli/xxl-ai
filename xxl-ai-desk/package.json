@@ -31,6 +31,7 @@
     "adm-zip": "0.6.1",
     "better-sqlite3": "13.0.3",
     "cheerio": "1.2.0",
+    "croner": "11.0.1",
     "drizzle-orm": "0.45.4",
     "electron-log": "5.4.4",
     "mermaid": "12.3.0",

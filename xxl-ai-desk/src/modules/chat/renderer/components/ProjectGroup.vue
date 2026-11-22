@@ -46,11 +46,6 @@ function statusLabel(status: SessionStatus): string {
   return t(STATUS_LABEL_KEYS[status])
 }
 
-/* 运行中用三颗呼吸点表达进展，其余状态单点提醒 */
-function statusDotCount(status: SessionStatus): number {
-  return status === 'running' ? 3 : 1
-}
-
 /* 项目行下拉实例：右键项目名与悬浮「...」共用同一菜单 */
 const projectMenu = ref<DropdownInstance>()
 
@@ -276,11 +271,7 @@ async function onDeleteSession(id: number): Promise<void> {
               :title="statusLabel(session.status)"
               :aria-label="statusLabel(session.status)"
             >
-              <span
-                v-for="index in statusDotCount(session.status)"
-                :key="index"
-                class="session-status-dot"
-              />
+              <span class="session-status-dot" />
             </span>
           </span>
         </template>
@@ -311,12 +302,11 @@ async function onDeleteSession(id: number): Promise<void> {
   gap: 6px;
 }
 
-/* 会话行状态点：运行中呼吸提示，待确认 / 失败单点常驻，完成与终止不打扰 */
+/* 会话行状态点：运行中单点闪烁，待确认 / 失败单点常驻，完成与终止不打扰 */
 /* 状态点位于行尾操作区：操作图标隐藏时仍保持可见，靠右对齐 */
 .session-status {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
   flex-shrink: 0;
   visibility: visible;
 }
@@ -339,30 +329,20 @@ async function onDeleteSession(id: number): Promise<void> {
   opacity: 0.55;
 }
 
-/* 运行中：三颗小点错峰呼吸，结束后自动消失 */
+/* 运行中：单点闪烁，结束后自动消失 */
 .session-status--running .session-status-dot {
-  width: 3px;
-  height: 3px;
   background: var(--desk-warning);
-  animation: session-status-breathe 1.2s ease-in-out infinite;
+  animation: session-status-blink 1s ease-in-out infinite;
 }
 
-.session-status--running .session-status-dot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.session-status--running .session-status-dot:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes session-status-breathe {
+@keyframes session-status-blink {
   0%,
   100% {
     opacity: 0.2;
   }
 
   50% {
-    opacity: 0.8;
+    opacity: 0.9;
   }
 }
 

@@ -6,7 +6,7 @@
 import { computed, watch } from 'vue'
 import { useChatStore } from '@modules/chat/renderer'
 import { sessionKeyOf, useToolPanelStore } from '@modules/toolPanel/renderer'
-import { SidePanelIcon } from '@common/renderer/components/icons'
+import { SidePanelToggleIcon } from '@common/renderer/components/icons'
 import NavbarIconButton from '@renderer/shell/layout/components/Navbar/NavbarIconButton.vue'
 import { t } from '@common/renderer/i18n'
 
@@ -23,9 +23,9 @@ watch(sessionKey, (key) => toolPanel.ensure(key), { immediate: true })
 /* 当前会话工具面板的显隐状态 */
 const toolPanelVisible = computed(() => panelState.value.panel.visible)
 
-/* 开关提示文案：随面板状态切换 */
+/* 开关提示文案：随面板状态切换，与会话列表开关保持「收起 / 展开」同一表述 */
 const toggleTitle = computed(() =>
-  toolPanelVisible.value ? t('toolPanel.hideToolPanel') : t('toolPanel.showToolPanel')
+  toolPanelVisible.value ? t('toolPanel.collapseToolPanel') : t('toolPanel.expandToolPanel')
 )
 
 /* 切换当前会话的工具面板显隐 */
@@ -36,14 +36,6 @@ function togglePanel(): void {
 
 <template>
   <NavbarIconButton :title="toggleTitle" :active="toolPanelVisible" @click="togglePanel">
-    <SidePanelIcon class="panel-icon" />
+    <SidePanelToggleIcon :collapsed="!toolPanelVisible" />
   </NavbarIconButton>
 </template>
-
-<style scoped lang="scss">
-/* 面板图标尺寸 */
-.panel-icon {
-  width: 16px;
-  height: 16px;
-}
-</style>

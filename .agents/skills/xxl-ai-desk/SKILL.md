@@ -194,7 +194,7 @@ modules/{domain}/
 | Agent 配置 / 项目长期记忆 | `modules/agent/main/{agentService,agentMemoryService,seed}.ts`（`desk_agent`；记忆随 `desk_project.memory*` 保存） |
 | 领域运行时门面 / 审批 / 社区抓取 | `modules/{domain}/main/*`（Agent 运行时在 `modules/agent`） |
 | Agent 工具 / 会话 / MCP | `modules/{agent,mcp,skill,file,browser}/worker/*` |
-| 定时任务调度（规则 / 实例会话 / 休眠 / 并发 / 运行日志 / 巡检） | `modules/schedule/{shared,main,preload,renderer}`；`main/{scheduler,runner,runLog,runState}.ts` 分别负责计时器与巡检、运行编排、运行日志、进程内运行态；任务表 `desk_scheduled_task`，运行日志 `desk_scheduled_log`，运行实例复用 `desk_session` |
+| 定时任务调度（规则 / 实例会话 / 休眠 / 并发 / 运行日志 / 巡检） | `modules/schedule/{shared,main,preload,renderer}`；`main/{scheduler,taskJob,inspection,runner,runLog,runState}.ts` 分别负责生命周期编排、任务维度调度器 Map、统一巡检、运行编排、运行日志、进程内运行态；任务表 `desk_scheduled_task`，运行日志 `desk_scheduled_log`，运行实例复用 `desk_session` |
 | IPC 注册 | `modules/{domain}/main/ipc.ts`，由 `src/main/ipc.ts` 聚合 |
 | preload 能力片段 | `modules/{domain}/preload/index.ts`，由 `src/preload/index.ts` 聚合 |
 | DeskApi 类型聚合 | `src/preload/deskApi.ts` |
@@ -232,6 +232,7 @@ modules/{domain}/
 - **定时会话标记只由主进程写入**：`desk_session.trigger_type / schedule_task_id` 仅在调度域创建实例会话时设置，渲染层新建会话固定为 `manual`；定时会话的交互由主进程自动结算（权限拒绝 / 提问自行决策），不进入渲染层交互队列。
 - **调度「至多一次 + 阻塞策略」**：同一任务串行；复用会话进行中时按任务 `session_block_policy` 处理——`skip` 跳过本次调度并记「失败跳过」，`force` 终止进行中会话后按原计划时刻重新触发。所有触发（含失败跳过）写 `desk_scheduled_log`，`(task_id, slot_at)` 唯一（立即运行的 `slot_at` 为空，不参与唯一），禁止在任务表用 `last_*` 表达「跳过」。
 - **巡检是全局唯一兜底**：单链 `setTimeout` + 10s 存活看护，任何异常必须续排、链丢失必须自愈；间隔取 `desk_setting.scheduleWatchdogInterval`（30~600s，默认 60）。任务超时取任务字段 `timeout_minutes`（0 不限时），不得改回全局常量。
+- **任务维度调度器固定 croner**：每个启用任务一个 `Cron` 实例，统一维护在 `schedule/main/taskJob.ts` 的 Map 中；表达式适配统一走 `schedule/shared/rule.ts#toCronerExpression`（星期按 ISO 1=周一…7=周日展开，日 / 周取交集），禁止回退自研 `setTimeout` 计时器或另引第二套 cron 库。
 - **运行态不落库**：运行中标记、开始时刻、待强制调度请求只在 `schedule/main/runState.ts`（进程内），应用退出自然清空；`desk_scheduled_log` 只做触发追溯（启动时把遗留 `running` 结算为失败；不自动裁剪，由日志页「日志清理」按任务 + 时间范围删除，删除任务时级联清理），`desk_scheduled_task.last_*` 只表达真实运行结果，三者职责分离。
 - **主进程发起的轮次统一 `turn-start`**：`sendChat` 每轮下发 `turn-start`（`userText` / `startedAt`），手动与定时共用；渲染层以 `streamingIds` 去重，外部轮次补建消息并接入 `createChatStream`，复用会话先补齐历史，禁止另建定时专用流式通道。
 - **无人值守交互在主进程结算**：唯一实现在 `chat/harness/main/interactionPolicy.ts#resolveUnattendedInteraction`，按 `request.kind` 返回 `denied`（权限审批）/ `auto`（`ask_user`）；agent 侧只经 `setInteractionAutoResolver` 回调，禁止反向依赖 chat，worker 收到 `auto` 回填 `runtime.hitl.autoDecision` 并继续后续问题。

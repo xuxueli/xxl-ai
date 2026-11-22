@@ -35,7 +35,8 @@ export {
   nextRunTimes,
   normalizeScheduleExpression,
   parseScheduleExpression,
-  singleScheduleValue
+  singleScheduleValue,
+  toCronerExpression
 } from './rule'
 export type {
   ScheduleField,

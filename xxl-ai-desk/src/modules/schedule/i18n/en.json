@@ -21,6 +21,7 @@
     "allAgents": "All Agents",
     "allStatus": "All statuses",
     "allTasks": "All tasks",
+    "query": "Query",
     "reset": "Reset",
     "total": "{0} tasks",
     "status": {

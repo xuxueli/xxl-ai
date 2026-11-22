@@ -4,8 +4,8 @@
     "newTerminal": "New terminal",
     "terminalExited": "Terminal exited (code {0})",
     "terminalLimit": "Terminal limit reached; close a terminal or session first",
-    "showToolPanel": "Show tool panel",
-    "hideToolPanel": "Hide tool panel",
+    "expandToolPanel": "Expand tool panel",
+    "collapseToolPanel": "Collapse tool panel",
     "diagnostics": {
       "tab": "Diagnostics",
       "messages": "Session Messages",
@@ -81,7 +81,6 @@
     "stop": "Stop",
     "maximize": "Maximize",
     "restore": "Restore",
-    "close": "Collapse",
     "emptyTree": "Empty directory",
     "newTab": "New tab",
     "tabLimit": "Tab limit reached for this session; opened in the current tab",

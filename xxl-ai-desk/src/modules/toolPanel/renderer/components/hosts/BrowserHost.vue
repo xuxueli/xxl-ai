@@ -90,6 +90,12 @@ function bindHost(sessionId: string, el: Element | ComponentPublicInstance | nul
   setSessionHost(sessionId, el instanceof HTMLElement ? el : null)
 }
 
+/* 会话是否已有浏览器页面：仅首次出现页面时自动展开工具面板 */
+function sessionHasPage(key: string): boolean {
+  const state = browser.sessions[key]
+  return Boolean(state?.tabs.some((tab) => tab.hasPage || tab.currentUrl))
+}
+
 /* 事件解绑 */
 let offOpenTab: (() => void) | null = null
 let offActionRequest: (() => void) | null = null
@@ -99,24 +105,22 @@ onMounted(() => {
   /* 页面 window.open：写入对应会话；仅会话首次打开网页时自动展开浏览器工具（Agent 导航走动作桥） */
   offOpenTab = api.browser.onOpenTab((request) => {
     const target = request.sessionId || currentKey.value
-    const sessionState = browser.sessions[target]
-    const hasPage = Boolean(
-      sessionState?.tabs.some((tab) => tab.hasPage || tab.currentUrl)
-    )
+    const firstPage = !sessionHasPage(target)
     openBrowserRequest(target, request.url, request.newTab)
-    if (target === currentKey.value && !hasPage) {
+    if (target === currentKey.value && firstPage) {
       toolPanel.openTab(target, 'browser')
     }
   })
   /* Agent 页面动作：按会话路由，后台会话静默执行，不切换视图 */
   offActionRequest = api.browser.onActionRequest((request) => {
     const target = request.sessionId || currentKey.value
-    /* 首次导航若浏览器工具未展开，自动展开，便于实时观察 Agent 操作 */
-    if (request.action.type === 'navigate' && target === currentKey.value) {
-      const panel = toolPanel.sliceOf(target).panel
-      if (!panel.visible || panel.activeTab !== 'browser') {
-        toolPanel.openTab(target, 'browser')
-      }
+    /* 首次导航自动展开，便于观察 Agent 操作；用户折叠后不再反复弹出 */
+    if (
+      request.action.type === 'navigate' &&
+      target === currentKey.value &&
+      !sessionHasPage(target)
+    ) {
+      toolPanel.openTab(target, 'browser')
     }
     void executeBrowserAction(target, request.action).then((result) =>
       api.browser.respondAction(request.requestId, result)

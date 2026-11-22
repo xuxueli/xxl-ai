@@ -12,7 +12,6 @@ import { FilePanel } from '@modules/file/renderer'
 import {
   GitIcon,
   GlobeIcon,
-  PanelCollapseIcon,
   PanelMaximizeIcon,
   PanelRestoreIcon,
   TerminalIcon
@@ -72,11 +71,6 @@ watch(
 /* 打开指定 Tab（顶部 Tab 点击） */
 function openTab(tab: ToolPanelTab): void {
   toolPanelStore.openTab(props.sessionId, tab)
-}
-
-/* 关闭工具面板（保留布局模式，重新打开时维持） */
-function closePanel(): void {
-  toolPanelStore.setPanelVisible(props.sessionId, false)
 }
 
 /* 切换布局模式（focus 后占满正文区） */
@@ -142,11 +136,6 @@ function toggleFocus(): void {
           >
             <PanelRestoreIcon v-if="panel.mode === 'focus'" class="tool-action-icon" />
             <PanelMaximizeIcon v-else class="tool-action-icon" />
-          </button>
-        </DeskTooltip>
-        <DeskTooltip :content="t('panel.close')">
-          <button class="icon-button" :aria-label="t('panel.close')" @click="closePanel">
-            <PanelCollapseIcon class="tool-action-icon" />
           </button>
         </DeskTooltip>
       </div>

@@ -21,6 +21,7 @@
     "allAgents": "全部 Agent",
     "allStatus": "全部状态",
     "allTasks": "全部任务",
+    "query": "查询",
     "reset": "重置",
     "total": "共 {0} 个任务",
     "status": {

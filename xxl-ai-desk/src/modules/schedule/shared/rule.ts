@@ -1,10 +1,13 @@
 /*
  * 定时任务触发规则：Quartz 风格 7 段表达式的解析、格式化与下次触发计算。
  *   - 表达式 `秒 分 时 日 月 周 年` 是唯一持久化格式，UI 与调度共用同一份实现；
+ *   - 下次触发统一交给 croner 计算，避免 UI 预览与真实调度两套算法漂移；
  *   - 日 / 周同时指定时取交集，避免标准 cron 的「或」语义造成意外高频触发；
- *   - 统一按本地时区计算，夏令时不存在的时间点直接跳过。
+ *   - 统一按本地时区计算；夏令时不存在的时间点按 croner 语义顺延到当天首个有效时刻。
  * @author xuxueli 2026-11-15
  */
+
+import { Cron } from 'croner'
 
 /* 字段位 */
 export type ScheduleFieldKey = 'year' | 'month' | 'day' | 'weekday' | 'hour' | 'minute' | 'second'
@@ -273,139 +276,38 @@ export function expandScheduleField(field: ScheduleField, key: ScheduleFieldKey)
   return values
 }
 
-/* 编译后的规则：月 / 日 / 周 / 年为集合（null 表示不限），时 / 分 / 秒为有序数组 */
-interface CompiledRule {
-  seconds: number[]
-  minutes: number[]
-  hours: number[]
-  months: Set<number> | null
-  days: Set<number> | null
-  weekdays: Set<number> | null
-  years: Set<number> | null
-}
-
-/* 集合型字段：不限返回 null */
-function toSet(field: ScheduleField, key: ScheduleFieldKey): Set<number> | null {
-  return field.mode === 'any' ? null : new Set(expandScheduleField(field, key))
-}
-
-/* 编译规则，避免逐日匹配时重复展开字段 */
-function compileRule(rule: ScheduleRule): CompiledRule {
-  return {
-    seconds: expandScheduleField(rule.second, 'second'),
-    minutes: expandScheduleField(rule.minute, 'minute'),
-    hours: expandScheduleField(rule.hour, 'hour'),
-    months: toSet(rule.month, 'month'),
-    days: toSet(rule.day, 'day'),
-    weekdays: toSet(rule.weekday, 'weekday'),
-    years: toSet(rule.year, 'year')
+/* 字段位 → croner 片段：一律展开为显式值，避免 range / step 的编号与语义差异 */
+function formatCronerField(field: ScheduleField, key: ScheduleFieldKey): string {
+  if (field.mode === 'any') {
+    return '*'
   }
-}
-
-/* 日期是否命中月 / 日 / 周（日与周取交集） */
-function matchDay(rule: CompiledRule, year: number, month: number, day: number): boolean {
-  if (rule.months && !rule.months.has(month)) {
-    return false
-  }
-  if (rule.weekdays) {
-    /* ISO 星期：1=周一 … 7=周日 */
-    const weekday = ((new Date(year, month - 1, day).getDay() + 6) % 7) + 1
-    if (!rule.weekdays.has(weekday)) {
-      return false
-    }
-  }
-  if (rule.days) {
-    const lastDay = new Date(year, month, 0).getDate()
-    if (!rule.days.has(day) && !(rule.days.has(0) && day === lastDay)) {
-      return false
-    }
-  }
-  return true
-}
-
-/* 指定日期内第一个严格晚于 after 的时刻 */
-function firstTimeOnDay(
-  rule: CompiledRule,
-  year: number,
-  month: number,
-  day: number,
-  after: number
-): number | null {
-  /* 同一天时按「当日秒数」先做整数比较，避免为已过去的时刻反复构造 Date */
-  const afterDate = new Date(after)
-  const sameDay =
-    afterDate.getFullYear() === year &&
-    afterDate.getMonth() + 1 === month &&
-    afterDate.getDate() === day
-  const afterSeconds = sameDay
-    ? afterDate.getHours() * 3600 + afterDate.getMinutes() * 60 + afterDate.getSeconds()
-    : -1
-  for (const hour of rule.hours) {
-    for (const minute of rule.minutes) {
-      for (const second of rule.seconds) {
-        if (hour * 3600 + minute * 60 + second <= afterSeconds) {
-          continue
-        }
-        const date = new Date(year, month - 1, day, hour, minute, second, 0)
-        /*
-         * 夏令时跳变：本地时间不存在时 Date 会顺延到其它时刻，
-         * 构造值与请求值不一致即跳过，避免触发时间偏离规则。
-         */
-        if (
-          date.getFullYear() !== year ||
-          date.getMonth() !== month - 1 ||
-          date.getDate() !== day ||
-          date.getHours() !== hour ||
-          date.getMinutes() !== minute ||
-          date.getSeconds() !== second
-        ) {
-          continue
-        }
-        const time = date.getTime()
-        if (time > after) {
-          return time
-        }
-      }
-    }
-  }
-  return null
-}
-
-/* 距离 after 最近的下一次触发时刻（毫秒），无下次返回 null */
-function nextRunAfter(rule: CompiledRule, after: number): number | null {
-  const start = new Date(after + 1000)
-  start.setMilliseconds(0)
-  const startYear = start.getFullYear()
-  const startMonth = start.getMonth() + 1
-  const startDay = start.getDate()
-  /* 年份不限时最多向后看 8 年：足以覆盖 2 月 29 日等最稀疏的合法组合 */
-  const lastYear = rule.years ? Math.max(...rule.years) : startYear + 8
-  if (lastYear < startYear) {
-    return null
-  }
-
-  for (let year = startYear; year <= lastYear; year += 1) {
-    if (rule.years && !rule.years.has(year)) {
+  const values = expandScheduleField(field, key)
+  const tokens: string[] = []
+  let lastDay = false
+  for (const value of values) {
+    /* 日期位 0 表示当月最后一天，croner 用 L 表达且固定放末尾 */
+    if (key === 'day' && value === 0) {
+      lastDay = true
       continue
     }
-    for (let month = year === startYear ? startMonth : 1; month <= 12; month += 1) {
-      if (rule.months && !rule.months.has(month)) {
-        continue
-      }
-      const daysInMonth = new Date(year, month, 0).getDate()
-      const firstDay = year === startYear && month === startMonth ? startDay : 1
-      for (let day = firstDay; day <= daysInMonth; day += 1) {
-        if (!matchDay(rule, year, month, day)) {
-          continue
-        }
-        const candidate = firstTimeOnDay(rule, year, month, day, after)
-        if (candidate !== null) {
-          return candidate
-        }
-      }
-    }
+    tokens.push(String(value))
   }
-  return null
+  if (lastDay) {
+    tokens.push('L')
+  }
+  return tokens.length > 0 ? tokens.join(',') : '*'
+}
+
+/*
+ * 规则 → croner 表达式（7 段）：非法表达式返回 null。
+ * 星期按 ISO 1=周一 … 7=周日，展开后与 croner 的 7=周日 编号一致。
+ */
+export function toCronerExpression(expression: string): string | null {
+  const rule = parseScheduleExpression(expression)
+  if (!rule) {
+    return null
+  }
+  return EXPRESSION_ORDER.map((key) => formatCronerField(rule[key], key)).join(' ')
 }
 
 /*
@@ -413,23 +315,22 @@ function nextRunAfter(rule: CompiledRule, after: number): number | null {
  * 表达式非法或没有未来时间时返回空数组。
  */
 export function nextRunTimes(expression: string, count = 1, from = Date.now()): string[] {
-  const parsed = parseScheduleExpression(expression)
-  if (!parsed) {
+  const pattern = toCronerExpression(expression)
+  if (!pattern) {
     return []
   }
-  const rule = compileRule(parsed)
-  const total = Math.min(50, Math.max(1, Math.floor(count)))
-  const results: string[] = []
-  let cursor = from
-  for (let index = 0; index < total; index += 1) {
-    const next = nextRunAfter(rule, cursor)
-    if (next === null) {
-      break
-    }
-    results.push(new Date(next).toISOString())
-    cursor = next
+  try {
+    /* 只做规则求值，不传回调即不创建计时器 */
+    const job = new Cron(pattern, {
+      mode: '7-part',
+      domAndDow: true,
+      fixedTimeRule: 'no-wildcard'
+    })
+    const total = Math.min(50, Math.max(1, Math.floor(count)))
+    return job.nextRuns(total, new Date(from)).map((date) => date.toISOString())
+  } catch {
+    return []
   }
-  return results
 }
 
 /*

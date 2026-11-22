@@ -60,8 +60,6 @@ export const useScheduleStore = defineStore('schedule', () => {
   const logTaskId = ref(0)
   /* 运行日志触发时间范围：本地 YYYY-MM-DD，首尾日期均包含；null 表示不限 */
   const logRangeDates = ref<[string, string] | null>(null)
-  /* 运行日志是否已加载：变更事件只在日志页打开后刷新它 */
-  const logsLoaded = ref(false)
   /* 运行日志加载中 */
   const logsLoading = ref(false)
   /* 筛选条件 */
@@ -123,7 +121,6 @@ export const useScheduleStore = defineStore('schedule', () => {
       })
       logs.value = result.items
       logTotal.value = result.total
-      logsLoaded.value = true
       /* 当前页被裁剪（删除 / 数据收缩）时回退到最后一页 */
       const lastPage = Math.max(1, Math.ceil(result.total / pageSize))
       if (result.total > 0 && page > lastPage) {
@@ -208,11 +205,8 @@ export const useScheduleStore = defineStore('schedule', () => {
       return
     }
     unbindChanged = api.schedule.onChanged(() => {
+      /* 仅刷新任务列表；运行日志由日志页手动查询，不随变更自动刷新 */
       void loadTasks()
-      /* 日志页打开时才刷新日志，避免任务页每次变更都多查一次 */
-      if (logsLoaded.value) {
-        void loadLogs()
-      }
     })
   }
 

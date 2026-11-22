@@ -96,6 +96,11 @@ function onSizeChange(size: number): void {
   void schedule.loadLogs(1, size)
 }
 
+/* 手动查询：按当前筛选条件重新加载第一页 */
+function onQuery(): void {
+  void schedule.loadLogs(1)
+}
+
 /* 重置筛选：任务与触发时间范围一并回到默认 */
 function onReset(): void {
   syncTaskQuery(0)
@@ -199,12 +204,16 @@ onBeforeUnmount(() => {
               class="filter-dates"
               @change="onRangeDatesChange"
             />
+            <el-button text class="filter-query" :loading="schedule.logsLoading" @click="onQuery">
+              <el-icon><Search /></el-icon>
+              {{ t('schedule.query') }}
+            </el-button>
             <el-button text class="filter-reset" @click="onReset">
               <el-icon><Refresh /></el-icon>
               {{ t('schedule.reset') }}
             </el-button>
           </div>
-          <el-button class="toolbar-clear" @click="openClear">
+          <el-button @click="openClear">
             <el-icon><Delete /></el-icon>
             {{ t('schedule.actions.clearLogs') }}
           </el-button>
@@ -374,17 +383,15 @@ onBeforeUnmount(() => {
   width: 240px;
 }
 
+.filter-query,
 .filter-reset {
   padding: 4px 8px;
   color: var(--desk-text-tertiary);
 }
 
+.filter-query:hover,
 .filter-reset:hover {
   color: var(--desk-primary);
-}
-
-.toolbar-clear {
-  flex-shrink: 0;
 }
 
 /* 日志清理弹窗：字段行 + 说明 */

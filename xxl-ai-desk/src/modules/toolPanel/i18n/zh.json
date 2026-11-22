@@ -4,8 +4,8 @@
     "newTerminal": "新建终端",
     "terminalExited": "终端已退出（代码 {0}）",
     "terminalLimit": "终端数量已达上限，请先关闭部分终端或会话",
-    "showToolPanel": "显示工具面板",
-    "hideToolPanel": "隐藏工具面板",
+    "expandToolPanel": "展开工具面板",
+    "collapseToolPanel": "收起工具面板",
     "diagnostics": {
       "tab": "诊断",
       "messages": "会话消息",
@@ -81,7 +81,6 @@
     "stop": "停止",
     "maximize": "放大",
     "restore": "还原",
-    "close": "收起",
     "emptyTree": "目录为空",
     "newTab": "新建标签页",
     "tabLimit": "当前会话标签页已达上限，已在当前标签页打开",
